@@ -159,3 +159,6 @@ Use consistent headings so entries are easy to grep.
 ## [2026-07-23] release | GitHub repository publishing
 
 - Started work on splitting the completed prototype into logical Git commits and publishing them to a GitHub remote repository named `Property_shot`.
+- Initialized a local Git repository on `main`.
+- Split the current project into logical commits for Flutter scaffold/harness docs, deterministic simulation, Korean playable UI/renderer, CC0 icon assets, and README/AI work record.
+- GitHub publishing is currently blocked because `gh auth status` reports the saved `good5229` token is invalid and SSH authentication to GitHub fails with `Permission denied (publickey)`.
