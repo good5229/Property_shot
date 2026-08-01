@@ -1025,6 +1025,9 @@ String _levelIntroMessage(int levelIndex) {
 }
 
 String _failureAdviceFor(List<String> events) {
+  if (events.contains('switch_rejected_sticky')) {
+    return '점착 속성을 옮겨 공을 점착판에 붙인 다음 무거운 공을 준비하세요.';
+  }
   if (events.contains('switch_rejected')) {
     return '스위치에는 무거움이 필요합니다. 속성을 다시 확인하세요.';
   }
@@ -1153,8 +1156,8 @@ class _Hud extends StatelessWidget {
             ),
             Text(
               _levelObjective(state.levelIndex),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              key: const Key('compact_objective'),
+              softWrap: true,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
                 fontWeight: FontWeight.w600,
@@ -1165,8 +1168,8 @@ class _Hud extends StatelessWidget {
               label: '게임 안내: ${state.message}',
               child: Text(
                 state.message,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                key: const Key('compact_message'),
+                softWrap: true,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),

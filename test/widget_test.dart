@@ -234,6 +234,12 @@ void main() {
     expect(board.width, greaterThanOrEqualTo(280));
     expect(find.byKey(const Key('compact_hud')), findsOneWidget);
     expect(find.byKey(const Key('compact_control_panel')), findsOneWidget);
+    expect(find.byKey(const Key('compact_objective')), findsOneWidget);
+    expect(find.byKey(const Key('compact_message')), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('compact_message'))).overflow,
+      isNull,
+    );
     expect(tester.takeException(), isNull);
     await tester.binding.setSurfaceSize(null);
   });
