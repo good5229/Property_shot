@@ -774,10 +774,17 @@ class ShotResolver {
   }
 
   bool _isCollisionCandidate(EntityState entity, String movingId) {
-    if (entity.id == movingId || !entity.active || !entity.solid) {
+    if (entity.id == movingId ||
+        !entity.active ||
+        !_isSolidForPhysics(entity)) {
       return false;
     }
     return !(entity.type == EntityType.gate && entity.open);
+  }
+
+  // 벽은 렌더링 상태나 상호작용 상태와 무관하게 항상 고정 장애물이다.
+  bool _isSolidForPhysics(EntityState entity) {
+    return entity.type == EntityType.wall || entity.solid;
   }
 
   bool _collidesAt(EntityState moving, EntityState target, Vec2 position) {
@@ -1260,7 +1267,7 @@ class ShotResolver {
         entity.id == ignoreId ||
         entity.id == 'active_ball' ||
         !entity.active ||
-        !entity.solid) {
+        !_isSolidForPhysics(entity)) {
       return false;
     }
     return !(entity.type == EntityType.gate && entity.open);

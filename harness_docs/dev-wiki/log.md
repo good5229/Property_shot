@@ -662,3 +662,6 @@ Use consistent headings so entries are easy to grep.
 ## [2026-08-01] qa | responsive regression refresh
 
 - 보드 우선 레이아웃 회귀가 추가되어 최신 전체 테스트 수와 출시 검증 문서를 갱신한다.
+- ## [2026-08-01] physics | wall collision invariant
+- 벽이 상태의 `solid` 플래그에 의해 물리 후보에서 빠질 수 있는 경로를 확인했다. 벽은 항상 고정 장애물로 판정하도록 직접 후보 규칙을 보강하고, 일반 발사와 연쇄 이동의 회귀 테스트를 추가한다.
+- 벽 물리 불변식 테스트를 포함한 샷 리졸버 테스트가 통과해 검증 수를 68개로 갱신한다.

@@ -337,6 +337,26 @@ void main() {
     expect(wallHit.impactPosition, isNotNull);
   });
 
+  test('벽은 상태가 비고체여도 물리 장애물로 반사된다', () {
+    final initial = _wallState(equippedTrait: null);
+    final state = initial.copyWith(
+      entities: [
+        for (final entity in initial.entities)
+          entity.type == EntityType.wall
+              ? entity.copyWith(solid: false)
+              : entity,
+      ],
+    );
+    final result = shots.resolve(
+      state,
+      const ShotInput(direction: Vec2(1, 0), power: 0.45),
+    );
+
+    expect(result.events, contains('bounced'));
+    expect(result.events, isNot(contains('blocked_by_wall')));
+    expect(result.state.entityById('spent_ball_1')!.position.x, lessThan(106));
+  });
+
   test('물체의 아래 면을 맞으면 아래쪽으로 반사된다', () {
     final result = shots.resolve(
       _horizontalWallState(),
