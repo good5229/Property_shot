@@ -16,7 +16,7 @@ final levels = <LevelDefinition>[
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(302, 132),
-        size: Vec2(34, 34),
+        size: Vec2(42, 42),
         solid: false,
       ),
       EntityState(
@@ -64,7 +64,7 @@ final levels = <LevelDefinition>[
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(100, 110),
-        size: Vec2(34, 34),
+        size: Vec2(42, 42),
         solid: false,
       ),
       EntityState(

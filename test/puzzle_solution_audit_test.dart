@@ -64,14 +64,14 @@ void main() {
     expect(attached.state.shotCount, 1);
   });
 
-  test('첫 2단계 성공 영역은 연속 입력 폭으로 측정된다', () {
+  test('첫 2단계 성공 영역은 연결된 입력 영역으로 측정된다', () {
     final widths = <String, _SuccessWidth>{};
     for (var index = 0; index < 2; index++) {
       final state = _transfer(
         levels[index].createState(index),
         index == 0 ? 'anvil' : 'jelly',
       );
-      final successes = <({double angle, double power})>[];
+      final successes = <({int degree, int step})>{};
       for (var degree = 0; degree < 360; degree += 2) {
         final radians = degree * math.pi / 180;
         for (var step = 6; step <= 50; step++) {
@@ -85,17 +85,22 @@ void main() {
             ),
           );
           if (result.state.phase == GamePhase.success) {
-            successes.add((angle: degree.toDouble(), power: power));
+            successes.add((degree: degree ~/ 2, step: step));
           }
         }
       }
       expect(successes, isNotEmpty, reason: '${levels[index].name} 성공 입력 없음');
-      final angles = successes.map((input) => input.angle).toSet().toList()
-        ..sort();
-      final powers = successes.map((input) => input.power).toList()..sort();
       final width = _SuccessWidth(
-        angle: angles.length * 2,
-        power: powers.last - powers.first,
+        angle:
+            _largestCircularRun(
+              successes.map((input) => input.degree).toSet(),
+              180,
+            ) *
+            2,
+        power:
+            _largestLinearRun(successes.map((input) => input.step).toSet()) *
+            0.02,
+        component: _largestGridComponent(successes),
       );
       widths['${index + 1}단계'] = width;
     }
@@ -103,14 +108,84 @@ void main() {
     expect(widths['1단계']!.power, greaterThanOrEqualTo(0.20));
     expect(widths['2단계']!.angle, greaterThanOrEqualTo(16));
     expect(widths['2단계']!.power, greaterThanOrEqualTo(0.20));
+    expect(widths['1단계']!.component, greaterThanOrEqualTo(8));
+    expect(widths['2단계']!.component, greaterThanOrEqualTo(8));
   });
 }
 
 class _SuccessWidth {
-  const _SuccessWidth({required this.angle, required this.power});
+  const _SuccessWidth({
+    required this.angle,
+    required this.power,
+    required this.component,
+  });
 
   final int angle;
   final double power;
+  final int component;
+}
+
+int _largestCircularRun(Set<int> values, int period) {
+  if (values.isEmpty) {
+    return 0;
+  }
+  var longest = 0;
+  var current = 0;
+  for (var index = 0; index < period * 2; index++) {
+    if (values.contains(index % period)) {
+      current += 1;
+      longest = math.max(longest, current);
+    } else {
+      current = 0;
+    }
+  }
+  return math.min(longest, period);
+}
+
+int _largestLinearRun(Set<int> values) {
+  if (values.isEmpty) {
+    return 0;
+  }
+  final sorted = values.toList()..sort();
+  var longest = 1;
+  var current = 1;
+  for (var index = 1; index < sorted.length; index++) {
+    if (sorted[index] == sorted[index - 1] + 1) {
+      current += 1;
+      longest = math.max(longest, current);
+    } else {
+      current = 1;
+    }
+  }
+  return math.max(0, longest - 1);
+}
+
+int _largestGridComponent(Set<({int degree, int step})> cells) {
+  final remaining = Set<({int degree, int step})>.of(cells);
+  var largest = 0;
+  while (remaining.isNotEmpty) {
+    final start = remaining.first;
+    final queue = <({int degree, int step})>[start];
+    remaining.remove(start);
+    var size = 0;
+    while (queue.isNotEmpty) {
+      final cell = queue.removeLast();
+      size += 1;
+      final neighbors = <({int degree, int step})>[
+        (degree: (cell.degree + 1) % 180, step: cell.step),
+        (degree: (cell.degree + 179) % 180, step: cell.step),
+        (degree: cell.degree, step: cell.step + 1),
+        (degree: cell.degree, step: cell.step - 1),
+      ];
+      for (final neighbor in neighbors) {
+        if (remaining.remove(neighbor)) {
+          queue.add(neighbor);
+        }
+      }
+    }
+    largest = math.max(largest, size);
+  }
+  return largest;
 }
 
 GameState _transfer(GameState state, String sourceId) {
