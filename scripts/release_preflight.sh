@@ -20,8 +20,10 @@ check_item "Info.plist 문법" plutil -lint ios/Runner/Info.plist
 check_item "Bundle ID가 예시값이 아님" bash -c "! rg -q 'com\\.example\\.propertyShot' ios/Runner.xcodeproj/project.pbxproj"
 check_item "Development Team 설정" bash -c "rg -q 'DEVELOPMENT_TEAM = [A-Z0-9]+' ios/Runner.xcodeproj/project.pbxproj"
 check_item "권리 해시" shasum -a 256 -c assets/licenses/asset_hashes.txt
+check_item "CC0 원본 Git 추적" git ls-files --error-unmatch assets/downloads/smooth_physics_props.zip
 check_item "출시 문서 Git 추적" git ls-files --error-unmatch harness_docs/release/app_store_metadata.md
 check_item "권리 문서 Git 추적" git ls-files --error-unmatch assets/licenses/asset_hashes.txt
+check_item "최신 검증 문서 Git 추적" git ls-files --error-unmatch harness_docs/qa/validation_results.md
 check_item "앱 아이콘 카탈로그" bash -c "test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json && rg -q 'Icon-App-1024x1024@1x.png' ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json"
 check_item "서명 인증서 존재" bash -c "security find-identity -v -p codesigning 2>/dev/null | rg -q 'valid identities found: [1-9]'"
 check_item "iPhone 제출 캡처" test -f screenshots/iphone-portrait-gameplay.png

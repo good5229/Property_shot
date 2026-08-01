@@ -549,6 +549,10 @@ Use consistent headings so entries are easy to grep.
 
 - 기존 QA 에이전트가 생성한 버그 보고·비주얼 기준선·회귀 체크리스트를 추적하고, 이번 물리·UX 보강 결과를 체크리스트에 반영한다.
 
+## [2026-08-01] release | source tracking preflight
+
+- 권리 해시만 통과하고 원본 압축파일이 새 클론에서 누락되는 상태를 막기 위해 원본 에셋과 최신 검증 문서의 Git 추적을 사전검사한다.
+
 ## [2026-08-01] test | progression contract coverage
 
 - 기본 상태의 잠긴 단계 선택 거부와 마지막 단계 완료 후 재도전 문구를 위젯 테스트로 고정한다.
