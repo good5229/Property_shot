@@ -206,7 +206,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _setState(
       _traitResolver
           .copySelectedTrait(_state)
-          .copyWith(message: '속성을 공에 복사했습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.'),
+          .copyWith(
+            message: '원본에 속성을 남기고 공에 복사했습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
+          ),
     );
   }
 
@@ -1693,7 +1695,7 @@ class _EntityInfoPanel extends StatelessWidget {
                 if (trait != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '옮기기: 원본에서 속성을 떼어 공에 적용합니다.  복사: 원본에 속성을 남기고 공에도 적용합니다.',
+                    '옮기기: 원본에서 사라짐 · 복사: 원본에 유지됨',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: const Color(0xFF59685F),
                     ),
@@ -1709,7 +1711,7 @@ class _EntityInfoPanel extends StatelessWidget {
                           key: const Key('transfer_button'),
                           onPressed: onTransfer,
                           icon: const Icon(Icons.arrow_downward, size: 16),
-                          label: const Text('공으로 옮기기'),
+                          label: const Text('떼어 공에 옮기기'),
                           style: FilledButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                           ),
@@ -1722,7 +1724,7 @@ class _EntityInfoPanel extends StatelessWidget {
                           key: const Key('copy_button'),
                           onPressed: onCopy,
                           icon: const Icon(Icons.copy, size: 16),
-                          label: const Text('공에 복사'),
+                          label: const Text('원본에 남기고 공에 복사하기'),
                           style: OutlinedButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                           ),
