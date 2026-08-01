@@ -60,7 +60,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (widget.initialState != null) {
       _unlockedLevel = levels.length - 1;
     }
-    _game = PropertyShotGame(_state, onAnimationFinished: _onAnimationFinished);
+    _game = PropertyShotGame(
+      _state,
+      onAnimationFinished: _onAnimationFinished,
+      onAnimationImpact: _onAnimationImpact,
+    );
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
   }
@@ -216,7 +220,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     );
     _feedback.shotLaunched();
-    _feedbackForShot(result);
     _showBallInfo = false;
     _inspectedEntityId = null;
     _showFailurePopup = false;
@@ -253,17 +256,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _feedbackForShot(ShotResult result) {
-    if (result.events.any(
-      (event) =>
-          event == 'bounced' ||
-          event == 'chain_push' ||
-          event == 'momentum_transfer' ||
-          event.startsWith('chain_collision_'),
-    )) {
-      _feedback.collision();
+  void _onAnimationImpact(ShotAnimationMove move) {
+    if (!mounted || !_isAnimatingShot || move.visualState == 'opening') {
+      return;
     }
-    if (result.events.contains('switch_pressed')) {
+    _feedback.collision();
+    if (move.visualState == 'pressed') {
       _feedback.switchOpened();
     }
   }
@@ -779,16 +777,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                 ),
                                                 child: Semantics(
                                                   container: true,
-                                                  button:
-                                                      entity.type ==
-                                                          EntityType.ball ||
-                                                      entity.traits.isNotEmpty,
+                                                  button: true,
                                                   label: _semanticEntityLabel(
                                                     entity,
                                                   ),
                                                   hint: entity.traits.isNotEmpty
                                                       ? '선택하면 속성 정보를 확인할 수 있습니다'
-                                                      : null,
+                                                      : '선택하면 물체 정보를 확인할 수 있습니다',
                                                   onTap: () =>
                                                       _handleSemanticEntity(
                                                         entity.id,
@@ -889,107 +884,111 @@ class _ClearPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = _leaderboardRows(state);
-    return Semantics(
-      container: true,
-      namesRoute: true,
-      label: '클리어 결과 팝업',
-      child: Container(
-        key: const Key('clear_popup'),
-        color: const Color(0x88000000),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 360),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7DB),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFF503C2E),
-                      width: 3,
+    return FocusScope(
+      autofocus: true,
+      child: Semantics(
+        container: true,
+        namesRoute: true,
+        label: '클리어 결과 팝업',
+        child: Container(
+          key: const Key('clear_popup'),
+          color: const Color(0x88000000),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7DB),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xFF503C2E),
+                        width: 3,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x44000000),
+                          blurRadius: 18,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x44000000),
-                        blurRadius: 18,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '클리어!',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 6),
-                      Text('${state.shotCount}번 만에 성공'),
-                      if (!isFinal) ...[
-                        const SizedBox(height: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          '${state.levelIndex + 2}단계가 열렸습니다.',
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(
-                                color: const Color(0xFF236B4A),
-                                fontWeight: FontWeight.w700,
+                          '클리어!',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 6),
+                        Text('${state.shotCount}번 만에 성공'),
+                        if (!isFinal) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${state.levelIndex + 2}단계가 열렸습니다.',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: const Color(0xFF236B4A),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
+                        if (bestShot != null) ...[
+                          const SizedBox(height: 4),
+                          Text('내 최고 기록 $bestShot회'),
+                        ],
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.74),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE4C56A)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('예시 기록 · 온라인 순위 아님'),
+                              const SizedBox(height: 2),
+                              Text(
+                                '현재는 데모용 기록만 표시합니다.',
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
+                              const SizedBox(height: 8),
+                              for (var i = 0; i < rows.length; i++)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 3,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 28,
+                                        child: Text('${i + 1}위'),
+                                      ),
+                                      Expanded(child: Text(rows[i].name)),
+                                      Text('${rows[i].shots}회'),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          key: const Key('next_stage_button'),
+                          autofocus: true,
+                          onPressed: onNext,
+                          icon: const Icon(Icons.arrow_forward),
+                          label: Text(isFinal ? '처음부터 다시' : '다음'),
                         ),
                       ],
-                      if (bestShot != null) ...[
-                        const SizedBox(height: 4),
-                        Text('내 최고 기록 $bestShot회'),
-                      ],
-                      const SizedBox(height: 14),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.74),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE4C56A)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('예시 기록 · 온라인 순위 아님'),
-                            const SizedBox(height: 2),
-                            Text(
-                              '현재는 데모용 기록만 표시합니다.',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 8),
-                            for (var i = 0; i < rows.length; i++)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 3,
-                                ),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 28,
-                                      child: Text('${i + 1}위'),
-                                    ),
-                                    Expanded(child: Text(rows[i].name)),
-                                    Text('${rows[i].shots}회'),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        key: const Key('next_stage_button'),
-                        onPressed: onNext,
-                        icon: const Icon(Icons.arrow_forward),
-                        label: Text(isFinal ? '처음부터 다시' : '다음'),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -1018,80 +1017,87 @@ class _FailurePopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      namesRoute: true,
-      label: '샷 결과 팝업',
-      child: Container(
-        key: const Key('failure_popup'),
-        color: const Color(0x55000000),
-        alignment: Alignment.bottomCenter,
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 132),
-        child: SafeArea(
-          top: false,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 420,
-              maxHeight: MediaQuery.sizeOf(context).height - 150,
-            ),
-            child: Material(
-              color: const Color(0xFFF7FAF3),
-              borderRadius: BorderRadius.circular(14),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.sports_golf, color: Color(0xFFB34B36)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '이번 샷 결과',
-                            style: Theme.of(context).textTheme.titleMedium,
+    return FocusScope(
+      autofocus: true,
+      child: Semantics(
+        container: true,
+        namesRoute: true,
+        label: '발사 실패 결과 팝업',
+        child: Container(
+          key: const Key('failure_popup'),
+          color: const Color(0x55000000),
+          alignment: Alignment.bottomCenter,
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 132),
+          child: SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 420,
+                maxHeight: MediaQuery.sizeOf(context).height - 150,
+              ),
+              child: Material(
+                color: const Color(0xFFF7FAF3),
+                borderRadius: BorderRadius.circular(14),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.sports_golf,
+                            color: Color(0xFFB34B36),
                           ),
-                        ),
-                        Text('${state.shotCount}회'),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(state.message),
-                    const SizedBox(height: 2),
-                    Text(
-                      advice,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF46584E),
-                        fontWeight: FontWeight.w600,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '이번 발사 결과',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Text('${state.shotCount}회'),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        FilledButton.icon(
-                          key: const Key('failure_retry_button'),
-                          onPressed: onRetry,
-                          icon: const Icon(Icons.ads_click, size: 16),
-                          label: const Text('다시 조준'),
+                      const SizedBox(height: 4),
+                      Text(state.message),
+                      const SizedBox(height: 2),
+                      Text(
+                        advice,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF46584E),
+                          fontWeight: FontWeight.w600,
                         ),
-                        OutlinedButton.icon(
-                          key: const Key('failure_rewind_button'),
-                          onPressed: onRewind,
-                          icon: const Icon(Icons.undo, size: 16),
-                          label: const Text('되감기'),
-                        ),
-                        TextButton.icon(
-                          key: const Key('failure_reset_button'),
-                          onPressed: onReset,
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: const Text('단계 처음부터'),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          FilledButton.icon(
+                            key: const Key('failure_retry_button'),
+                            autofocus: true,
+                            onPressed: onRetry,
+                            icon: const Icon(Icons.ads_click, size: 16),
+                            label: const Text('다시 조준'),
+                          ),
+                          OutlinedButton.icon(
+                            key: const Key('failure_rewind_button'),
+                            onPressed: onRewind,
+                            icon: const Icon(Icons.undo, size: 16),
+                            label: const Text('되감기'),
+                          ),
+                          TextButton.icon(
+                            key: const Key('failure_reset_button'),
+                            onPressed: onReset,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('단계 처음부터'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1534,57 +1540,65 @@ class _InfoPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: Stack(
-        children: [
-          const ModalBarrier(color: Color(0x22000000), dismissible: false),
-          Positioned(
-            left: 18,
-            right: 18,
-            bottom: 128,
-            child: SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: 420,
-                    maxHeight: MediaQuery.sizeOf(context).height - 180,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Semantics(
-                          container: true,
-                          namesRoute: true,
-                          label: '정보 팝업',
-                          child: Material(
-                            color: Colors.transparent,
-                            child: child,
-                          ),
-                        ),
-                        Positioned(
-                          top: -10,
-                          right: -10,
-                          child: IconButton.filled(
-                            key: const Key('info_close_button'),
-                            tooltip: '닫기',
-                            onPressed: onClose,
-                            icon: const Icon(Icons.close, size: 18),
-                            style: IconButton.styleFrom(
-                              backgroundColor: const Color(0xFF24352D),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(32, 32),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      child: FocusScope(
+        autofocus: true,
+        child: Stack(
+          children: [
+            const ModalBarrier(
+              color: Color(0x22000000),
+              dismissible: false,
+              semanticsLabel: '정보 팝업이 열려 있습니다',
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 128,
+              child: SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: 420,
+                      maxHeight: MediaQuery.sizeOf(context).height - 180,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Semantics(
+                            container: true,
+                            namesRoute: true,
+                            label: '정보 팝업',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: child,
                             ),
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            top: -10,
+                            right: -10,
+                            child: IconButton.filled(
+                              key: const Key('info_close_button'),
+                              autofocus: true,
+                              tooltip: '닫기',
+                              onPressed: onClose,
+                              icon: const Icon(Icons.close, size: 18),
+                              style: IconButton.styleFrom(
+                                backgroundColor: const Color(0xFF24352D),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(48, 48),
+                                tapTargetSize: MaterialTapTargetSize.padded,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
