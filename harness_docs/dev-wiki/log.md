@@ -4,6 +4,56 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-01] commercial | parallel review synthesis and vertical-slice iteration
+
+- Ran parallel puzzle design, game design, physics, QA, evaluation, and expert-player reviews against the current repository.
+- Ran a second cross-review round by sending the shared findings back to all six roles and collecting disagreements and completion criteria.
+- Adopted the shared priorities: unify the third-stage visual language, make the first interaction flow discoverable, and verify collision-chain/clear timing; track iOS signing and asset-license evidence as separate release gates.
+- This implementation iteration will preserve the current top-view Korean UI and focus on a narrow, testable commercial-quality slice rather than adding new game systems.
+
+## [2026-08-01] commercial | store asset and rights-evidence pass
+
+- Parallel launch-gate review confirmed three independent blockers: missing iOS signing/provisioning, incomplete asset-rights evidence, and placeholder App Store icon/launch image.
+- Generated a project-specific no-text game icon direction using the game's ball, heavy, bouncy, and sticky visual language; the generated raster will replace the default Flutter icon and launch placeholder.
+- Added a rights-ledger task for each externally sourced file, including source path, source URL, license URL, retrieval record, SHA-256 hashes, transformation history, and bundle usage.
+
+## [2026-08-01] commercial | collision precision and store identity implementation
+
+- Replaced the active-ball coarse collision stepping with fine swept segments plus binary contact refinement, and applied the same segment check to pushed chain entities.
+- Added the generated project icon to all iOS AppIcon sizes and replaced the 1x1 launch placeholders with the branded icon image; matched the launch storyboard background to the game palette.
+- Added offline OpenGameArt and CC0 legal-code evidence, file hashes, a rights ledger, and store-asset provenance notes.
+- Removed truncation from object and ball detail descriptions so the popup is the canonical place for full Korean explanations.
+- Corrected every AppIcon variant to its exact square pixel dimensions after validating the generated files with `file`.
+- Verification after collision and store-asset changes: Dart format check passed; `flutter analyze` passed; `flutter test` passed with 35 tests; `flutter build web` passed.
+- iOS verification after icon and launch updates: Xcode compilation completed, but deployable output remains blocked by the missing Development Team and provisioning profile; the placeholder icon catalog and launch images now pass dimension checks.
+- iOS simulator verification: unavailable in this environment because the required iOS 18.2 simulator runtime is not installed.
+
+## [2026-08-01] commercial | QA follow-up fixes
+
+- QA recheck found the rights hash file mixed human notes with checksum rows; the file will be made machine-checkable for `shasum -c`.
+- QA recheck found the demo server session had ended during the long review; the latest web server will be restarted and verified again after all edits.
+- The leaderboard is demo data, so its Korean label will explicitly say `예시 기록` until a real local or online ranking service exists.
+- Updated the widget contract to expect the honest `예시 기록` label; final Dart format and full Flutter test pass completed with 35 tests.
+- Final QA server check: latest `build/web` returned HTTP 200 from `http://127.0.0.1:8080` after the prior server was stopped and replaced.
+- Added device-local best-shot persistence with `shared_preferences`; the clear popup now shows the player's best local record while the sample rows remain explicitly labeled.
+- Final local-record verification: `flutter pub get`, Dart format, `flutter analyze`, 35 Flutter tests, and `flutter build web` all passed.
+- Replaced the demo server once more after the final web build; latest `http://127.0.0.1:8080` returned HTTP 200.
+
+## [2026-08-01] commercial | local replay record pass
+
+- The fixed demo leaderboard is now explicitly labeled `예시 기록`; the next product pass will add device-local best-shot persistence without introducing accounts or online data collection.
+- This keeps the replay loop honest for the current demo while creating a real improvement target for App Store users.
+
+## [2026-08-01] commercial | vertical-slice QA recheck completed
+
+- Added popup-first entity inspection with in-popup `옮기기` and `복사` actions, replacing the trait-source-only selection path.
+- Replaced fading HUD message overflow with explicit ellipsis, delayed clear popup timing for chained moves, and checked every segment of an animation move path for hole entry.
+- Locked iOS orientation to portrait for the current vertical layout.
+- Enriched the top-view board with low-contrast lawn stripes, pebbles, corner leaves, and a board shadow while keeping gameplay objects readable.
+- Verification: `flutter analyze` passed; `flutter test` passed with 35 tests; `flutter build web` passed; old demo server stopped before the new server; new demo returned HTTP 200 at `http://127.0.0.1:8080`.
+- QA recheck: functional items above closed; release blockers remain for iOS signing/provisioning and preserved asset-license evidence, plus real-device/user testing, icon, physics timing, and full art consistency.
+- iOS verification: Xcode build phase completed, but deployable device output remains blocked by missing Development Team and provisioning profile; this is an environment/release gate, not a source compilation error.
+
 ## [2026-06-30] maintenance | initial harness setup
 
 - Created operating harness skeleton.
@@ -162,3 +212,294 @@ Use consistent headings so entries are easy to grep.
 - Initialized a local Git repository on `main`.
 - Split the current project into logical commits for Flutter scaffold/harness docs, deterministic simulation, Korean playable UI/renderer, CC0 icon assets, and README/AI work record.
 - GitHub publishing is currently blocked because `gh auth status` reports the saved `good5229` token is invalid and SSH authentication to GitHub fails with `Permission denied (publickey)`.
+
+## [2026-07-23] prototype | Wall, sticky, and switch feedback pass
+
+- Started work on fixing wall bounce separation, making sticky pads stop balls instead of reflecting them, and adding switch/gate opening feedback.
+- Added post-collision separation so balls rebound from walls/gates/solid objects instead of remaining inside the hitbox.
+- Changed sticky pads to stop and hold any colliding ball instead of acting like a low-energy bounce surface.
+- Changed switch behavior so ball collision presses the switch, schedules a blink/press animation, opens gates, and schedules a simple gate-opening animation.
+- Updated object descriptions, README notes, and simulation tests for wall rebound, sticky pad attachment, and switch/gate feedback.
+- Verification: `dart format lib test` passed; `flutter analyze` passed; `flutter test` passed with 32 tests; `flutter build web` passed; old demo server was stopped before starting the updated demo at `http://127.0.0.1:8080`, which returned HTTP 200.
+
+## [2026-07-23] prototype | Cascading collision physics pass
+
+- Started work on making pushed balls and objects run their own collision checks during chain reactions instead of teleporting through walls or other objects.
+- Reworked momentum pushes to advance in short collision-checked steps instead of jumping directly to a final position.
+- Added chained collision responses for pushed balls/objects against walls, gates, sticky pads, switches, bumpers, crates, weights, and other balls.
+- Prevented pushed objects from immediately re-colliding with the active ball that just struck them.
+- Added a regression test where a plain ball pushes another plain ball into a wall, confirming the pushed ball receives a wall collision event and stays inside the field.
+- Updated README to document chained collision physics.
+- Verification: `dart format lib test` passed; `flutter analyze` passed; `flutter test` passed with 33 tests; `flutter build web` passed; old demo server was stopped before starting the updated demo at `http://127.0.0.1:8080`, which returned HTTP 200.
+
+## [2026-07-23] prototype | Chained ball animation path pass
+
+- Started work on passing intermediate collision waypoints to pushed-ball animations so ball-to-ball impacts move along the calculated angle instead of blinking from start to end.
+- Added optional waypoint paths to `ShotAnimationMove`.
+- Updated the Flame renderer to interpolate pushed entities along waypoint paths when present, falling back to start/end interpolation for simple object reactions.
+- Recorded pushed-object waypoints during stepwise momentum simulation, including wall separation and reflected movement after chained collisions.
+- Added a regression check that pushed-ball wall reactions include multiple animation waypoints.
+- Updated README to document chained movement path animation.
+- Verification: `dart format lib test` passed; `flutter analyze` passed; `flutter test` passed with 33 tests; `flutter build web` passed; old demo server was stopped before starting the updated demo at `http://127.0.0.1:8080`, which returned HTTP 200.
+
+## [2026-08-01] prototype | Continuous chained-ball playback pass
+
+- Started work on the remaining report that a ball-to-ball collision can still look like a blink even when the simulation contains intermediate waypoints.
+- Will make animation duration follow the recorded movement distance and interpolate by cumulative waypoint distance, so long chained pushes do not skip across the path in a fixed short duration.
+- Will add regression coverage for bounded waypoint spacing and record the final static-analysis, test, build, and demo checks after implementation.
+
+## [2026-08-01] docs | Goal audit and evidence record
+
+- Started the required Goal documentation pass after reading the referenced pasted Goal text in full.
+- Will add evidence-based role audits, fun hypotheses, puzzle intent, physics rules, QA records, prompt history, decisions, final evaluation, and remaining-risk records.
+- These records will distinguish automated evidence and expert-proxy review from real user testing, which has not been performed in this workspace.
+
+## [2026-08-01] docs | Goal evidence completion
+
+- Added role audits, design hypotheses, puzzle intent, UX flow, physics rules, playtest protocol, improvement plan, QA records, prompt history, decision log, final evaluation, remaining risks, and AI usage summary.
+- Linked the new Goal evidence sections from `harness_docs/index.md`.
+- Recorded the final verification evidence: `flutter analyze` passed, `flutter test` passed with 33 tests, `flutter build web` passed, and the restarted demo returned HTTP 200.
+
+## [2026-08-01] prototype | Top-view and collision-event playback revision
+
+- Started work on removing the quarter/3D view entirely at the user's direction.
+- The design, physics, puzzle, QA, evaluation, and expert-player roles will cross-check the change against the current code and tests.
+- Will replace recursive animation timing offsets with collision-step timing so a pushed entity starts only after the collision that caused its movement, and record the result in the Goal evidence documents.
+
+## [2026-08-01] prototype | Top-view and collision-event playback completed
+
+- Removed `GameViewMode`, quarter projection, quarter hit-coordinate conversion, 3D block side rendering, and the view selector from the UI.
+- Changed recursive chain animation triggers to use the actual collision step, removing the previous depth-based timing offset.
+- Added a regression test that confirms the next chained object starts after the preceding object's collision event.
+- Cross-checked the change with puzzle, game design, physics, QA, evaluator, and expert-player role records.
+- Verification: `flutter analyze` passed; `flutter test` passed with 34 tests; `flutter build web` passed; existing 8080 server was stopped before the new demo started; `curl http://127.0.0.1:8080` returned HTTP 200.
+
+## [2026-08-01] prototype | Continuous improvement iteration baseline
+
+- Started the continuous Subagent collaboration iteration from the referenced prompt.
+- Baseline: `dart format --output=none --set-exit-if-changed .` passed with no changes; `flutter analyze` passed; `flutter test` passed with 34 tests; `flutter build web` passed.
+- Existing demo server was found listening on `127.0.0.1:8080` and will be preserved until a replacement build is ready, then stopped before restart.
+- Six role reviews will focus on high-speed tunneling, deterministic same-step collision ordering, tutorial clarity, and whether collision-triggered animation remains aligned with the physics result.
+
+## [2026-08-01] prototype | High-speed collision and deterministic ordering pass
+
+- Independent role reviews identified endpoint-only active-ball collision checks as a tunneling risk for small or thin objects at high power.
+- Added segment sampling at up to 4 logical units per sample and used the first sampled impact position for the collision response and animation path.
+- Added deterministic collision candidate selection by nearest boundary metric, with entity ID tie-breaking.
+- Reduced pushed-entity movement steps to 4 logical units and added a small-ball high-speed regression test.
+- Strengthened determinism coverage to compare final state, path, events, and animation trigger ordering.
+- Completed cross-review and post-implementation review across puzzle, design, physics, QA, evaluator, and expert-player roles.
+- Verification: format check passed with no changes; `flutter analyze` passed; `flutter test` passed with 35 tests; `flutter build web` passed; old 8080 server was stopped before restart; new demo returned HTTP 200.
+- `flutter build ios --no-codesign` reached a completed Xcode build but the deployable app step was blocked by the missing Development Team and provisioning profile; this is recorded as an environment limitation, not a code test pass.
+- Final test cleanup removed the obsolete view-selector assertion; the final format check passed with no changes, `flutter analyze` passed, and `flutter test` passed with 35 tests.
+
+## [2026-08-01] visual | Moving object sprite animation pass
+
+- Started work on the report that moving stones and boxes look like rectangular hitbox boxes instead of their actual shapes.
+- The current renderer paints a rectangular base path before clipping the crate/stone image; this pass will render image-backed moving objects as transformed sprites with separate shadows and motion deformation.
+- Will preserve the logical hitbox and deterministic simulation while adding crate tilt, stone roll, impact squash, and jelly-shaped movement feedback.
+
+## [2026-08-01] visual | Moving object sprite animation completed
+
+- Removed the rectangular base fill from image-backed crate and stone rendering during movement.
+- Added direct sprite rendering with a separate ground shadow, motion tilt for crates, rolling rotation for stones, and impact squash/bob deformation.
+- Changed jelly rendering from a rectangular path to a rounded soft body with impact deformation and ripple feedback.
+- Kept balls as spherical Canvas objects and kept all hitboxes and simulation state unchanged.
+- Verification: `dart format lib test` passed; `flutter analyze` passed; `flutter test` passed with 35 tests; `flutter build web` passed; old 8080 server was stopped before restarting the updated demo; `curl http://127.0.0.1:8080` returned HTTP 200.
+
+## [2026-08-01] process | Continuous QA and Subagent collaboration loop
+
+- Started a continuous collaboration loop at the user's request for commercial-quality visual and gameplay improvement.
+- QA is the first gate: reproduce the issue, assign severity, define expected behavior, and add a regression scenario before implementation.
+- Puzzle, design, physics, evaluator, and expert-player roles then review the QA finding independently and exchange objections before an implementation is selected.
+- The loop will keep code, tests, visual assets, licenses, demo verification, and unresolved risks synchronized after every iteration.
+
+## [2026-08-01] QA | collision ordering and puzzle-rule audit
+
+- Parallel QA reviewed swept collision ordering, tutorial rule consistency, mobile UI, and store readiness.
+- Physics finding: collision selection can still depend on entity array order when multiple candidates overlap in one sampled segment; the next implementation will select the earliest candidate per entity and use ID only for deterministic ties.
+- Puzzle finding: heavy, elastic, sticky, and switch rules need explicit positive and negative tests so the first three stages teach properties rather than accepting broad physics-based bypasses.
+- External release gates remain separate from local code quality: Apple signing/team, public privacy/support URLs, screenshots, TestFlight, and real-device verification.
+
+## [2026-08-01] QA | deterministic collision and mobile guardrails integrated
+
+- Replaced sampled global collision selection with per-entity swept refinement and deterministic earliest-progress tie-breaking for active and pushed entities.
+- Added a zero-distance collision normal fallback so overlapping balls do not produce a zero reflection vector.
+- Aligned the level-3 switch with the harness rule: a ball without `무거움` is rejected and the gate remains closed; successful switches now report that the gate opened.
+- Removed HUD/control ellipsis, made the inspection popup scroll within the viewport, added long-press cancellation, and guarded local best-shot writes until preferences load.
+- Expanded widget coverage to a 320x568 viewport; `flutter test` passed with 35 tests and `flutter analyze` passed with no issues.
+
+## [2026-08-01] polish | launch feedback pass
+
+- The commercial-quality pass keeps the deterministic resolver as the source of truth and adds feedback only at the presentation boundary.
+- Planned changes in this pass: launch haptic feedback, impact rings for collision-triggered animation moves, and regression coverage that these presentation additions do not alter simulation results.
+
+## [2026-08-01] store | screenshot font QA correction
+
+- A generated iPhone screenshot was inspected pixel-wise and rejected because Korean text rendered as missing-glyph boxes.
+- The invalid capture was removed; store materials must only list screenshots after Korean glyph rendering and the full gameplay canvas are visibly verified.
+- The remaining external store gate is therefore intentionally still open for real-device or correctly configured Korean-font capture.
+
+## [2026-08-01] mobile | browser screenshot overflow correction
+
+- A real browser capture exposed a layout issue not caught by widget exception checks: the level chips and live guidance text shared one narrow row and the guidance was clipped on small screens.
+- The HUD will use separate rows for level selection and guidance so the first viewport remains fully readable at 390px and below.
+
+## [2026-08-01] mobile | game canvas constraint correction
+
+- The follow-up browser capture showed the Flame canvas retaining its 520px max width inside a 390px viewport, which clipped the right wall and hole.
+- The game widget will be explicitly constrained to the available field size; this preserves the logical board aspect ratio while keeping all gameplay objects visible.
+
+## [2026-08-01] integration | parallel commercial QA merge
+
+- Physics QA expanded recursive chain handling to the current entity count and added regression coverage for reordered candidates, five-step chains, pushed-ball wall impacts, frame-independent replay, and animation-path continuity.
+- Puzzle QA adjusted level-1 and level-2 layouts to reduce bypass routes and added representative-intent and alternative-solution probes.
+- Mobile QA added popup touch shielding, Korean semantics, long-press cancellation coverage, narrow-screen popup checks, and control meaning labels.
+- Store QA added Korean localization metadata, non-exempt encryption declaration, age-rating draft, bundle asset manifest, and screenshot manifest. A generated screenshot with missing Korean glyphs was rejected; only the separately labeled web validation capture remains.
+- Current verification: 49 Flutter tests pass, `flutter analyze` passes, `flutter build web --release` passes, asset hashes pass, and the restarted demo returns HTTP 200.
+- Final audit: `Info.plist` lint passed; `flutter build ios --no-codesign` completed Xcode compilation but stopped at the expected missing Development Team/provisioning step. The Bundle ID remains the placeholder `com.example.propertyShot`.
+
+## [2026-08-01] ux | tutorial objective copy pass
+
+- QA found that the level name alone did not tell a first-time player which property and order mattered.
+- Add one concise Korean objective line per level in the HUD, keeping the puzzle rule in the UI aligned with the resolver and the puzzle-intent document.
+
+## [2026-08-01] feedback | semantic haptic pass
+
+- The harness requires feedback for property selection/transfer, launch, collision, switch use, success, and failure while remaining understandable with sound disabled.
+- Extend haptics at the UI boundary: selection and transfer use light feedback; one shot emits a light, medium, or heavy impact based on its deterministic result, avoiding per-frame vibration.
+
+## [2026-08-01] physics | contact timeline hardening
+
+- Parallel physics review found three remaining presentation/edge-case risks: initial-overlap collision refinement used the end of the sample, chain paths omitted the contact point, and a large render `dt` could skip impact feedback.
+- The next patch will preserve the deterministic resolver while making `t=0` overlap explicit, recording contact and separation points, and clamping animation time advancement.
+
+## [2026-08-01] ux | first-shot guidance and popup ownership
+
+- UX review found that the first screen named the objective but not the action sequence, and that transfer/copy left the source popup open after applying a trait.
+- Add level-specific first instructions, transition to an aim instruction after transfer/copy, and use a full-screen modal barrier so only the active popup owns input.
+## [2026-08-01] release | store visual and accessibility evidence pass
+
+- 스토어·비주얼 역할로 현재 에셋, iOS 설정, 권리대장, 제출 문서를 재감사했다.
+- 이번 작업 범위는 저장소 안에서 확정할 수 있는 상업 이용 증빙, 스토어용 실제 화면 캡처, 접근성 점검 자료, 최종 번들 자산 목록이다.
+- Apple 팀·Bundle ID·서명·공개 정책 URL·실기기 캡처처럼 외부 계정이나 운영 주체가 필요한 값은 임의로 확정하지 않고 차단 요인으로 남긴다.
+
+## [2026-08-01] design | tutorial property-necessity audit
+
+- `harness_docs/design/puzzle_intent.md`, `harness_docs/readme.md`, `levels.dart`, 관련 테스트를 대조해 1~3라운드의 의도 풀이와 대표 대체 풀이를 점검한다.
+- 물리 규칙을 바꾸지 않고 레벨 배치로 줄일 수 있는 1라운드의 직선 우회만 조정하며, 일반 공도 벽에서 반사되고 점착판이 모든 공을 붙잡는 현재 규칙은 테스트로 명시한다.
+- 변경 범위는 `levels.dart`와 관련 테스트로 제한하고, 분석·전체 테스트로 회귀를 확인한다.
+
+## [2026-08-01] design | tutorial property-necessity audit completed
+
+- 1라운드 홀을 `Vec2(302,132)`로 조정해 상자 뒤의 대표 조준을 명확히 하고, 같은 `Vec2(1,-1.3)` 풀파워 샷에서 무거운 공만 상자를 충분히 밀어 클리어하는 회귀 테스트를 추가했다.
+- 2라운드는 홀을 좌상단으로 옮기고 수직 반사 벽을 배치했으며, 젤리 속성을 옮긴 `Vec2(1,-1.5)` 샷의 성공과 탄성 예상 경로를 검증했다. 현재 벽 규칙상 일반 공도 같은 경로로 성공하는 대체 풀이임을 별도 테스트로 명시했다.
+- 3라운드는 실제 레벨에서 무거운 공의 스위치·문·홀 성공과 일반 공의 스위치 거절을 검증했다. 점착판과 일반 공의 동작은 현재 물리 규칙상 동일하므로 점착 필수성으로 주장하지 않았다.
+- 검증: 퍼즐·물리 테스트 33개 통과, `flutter analyze` 통과, `flutter build web` 통과, `git diff --check` 통과. 기존 위젯 테스트의 속성 팝업 버튼 2개는 화면 밖 탭으로 단독 재현됐으며 이번 허용 범위 밖의 기존 UI 배치 이슈로 남겼다.
+- 기존 8080 서버를 종료한 뒤 변경된 `build/web`을 재기동했고 `curl -I http://127.0.0.1:8080`에서 HTTP 200을 확인했다.
+
+## [2026-08-01] ux | property action consolidation
+
+- QA 피드백에 따라 하단의 중복된 속성 옮기기·복사 메뉴를 제거한다.
+- 물체 클릭 팝업을 속성 확인과 이전·복사의 단일 진입점으로 삼고, 위젯 테스트도 실제 사용자 흐름을 따라 검증한다.
+
+## [2026-08-01] test | property action copy alignment
+
+- 속성 이전 후 안내 문구가 사용자의 다음 행동까지 설명하도록 바뀐 상태를 위젯 테스트 기대값에 반영한다.
+
+## [2026-08-01] visual | stable mobile board frame
+
+- 세로 화면이 길어질수록 게임판이 불필요하게 늘어난 영역 안에서 작게 보이지 않도록, 게임판 렌더 영역을 논리 좌표와 같은 종횡비로 고정한다.
+- 조준 입력 영역은 전체 가용 영역을 유지해 기존 터치 좌표 변환과 시각 보드의 중심을 일치시킨다.
+
+## [2026-08-01] visual | material feedback and ball trait texture
+
+- 공에도 무거움·탄성·점착의 무늬를 적용해 속성 식별을 색상에만 의존하지 않게 한다.
+- 충돌 대상 재질에 따라 이펙트의 색·선 스타일·파편 모양을 구분해 연쇄 충돌 원인을 읽기 쉽게 한다.
+
+## [2026-08-01] release | preserve submission evidence
+
+- 스토어 메타데이터·스크린샷 명세·권리대장은 새 클론에서도 검토 가능해야 하므로 출시 증빙 문서만 Git 추적 대상으로 예외 처리한다.
+- 원본 다운로드 폴더와 생성 빌드는 계속 제외해 저장소에 불필요한 대용량 산출물이 들어가지 않게 한다.
+
+## [2026-08-01] release | ignore-rule verification correction
+
+- 예외 규칙 뒤에 남아 있던 중복 `/harness_docs/` 규칙이 출시 문서를 다시 무시하는 것을 확인하고 제거한다.
+
+## [2026-08-01] animation | chained event timeline completion
+
+- 연쇄 이동의 트리거 인덱스가 발사 공 경로보다 늦을 수 있으므로, 렌더러가 발사 경로와 모든 연쇄 이동 종료 시점 중 더 늦은 시점까지 애니메이션을 유지한다.
+- 발사 공은 경로 마지막 위치에 머물고, 후속 물체는 실제 트리거 시점에 순차적으로 움직이도록 한다.
+
+## [2026-08-01] ux | clear timing follows animation
+
+- 클리어 팝업 지연 시간을 발사 경로 길이만으로 계산하지 않고 가장 늦은 연쇄 이동의 트리거·이동 길이까지 반영한다.
+
+## [2026-08-01] accessibility | semantic game objects and aim actions
+
+- Canvas 내부의 핵심 요소를 실제 위치에 대응하는 한국어 Semantics 노드로 노출한다.
+- 스크린리더 사용자가 조준 방향을 증감하고 발사를 실행할 수 있도록 대체 접근성 액션을 제공한다.
+
+## [2026-08-01] accessibility | explicit semantics dependency
+
+- 사용자 정의 접근성 동작을 Flutter Semantics 라이브러리에서 명시적으로 가져와 SDK 노출 범위에 의존하지 않게 한다.
+
+## [2026-08-01] accessibility | semantics value contract
+
+- 방향·힘 조절 Semantics에 증감 후 값을 함께 제공해 Flutter 접근성 노드의 런타임 계약을 만족시킨다.
+
+## [2026-08-01] test | semantic scene regression
+
+- 첫 단계의 공·무거운 돌·홀·벽이 한국어 접근성 트리에 존재하는지 위젯 회귀 테스트로 고정한다.
+
+## [2026-08-01] ux | shot animation input lock
+
+- 발사 결과의 논리 상태와 화면 연쇄 애니메이션 사이에 입력 잠금을 둔다.
+- 애니메이션이 끝난 뒤에만 다음 조준·되감기·단계 이동을 허용해 중복 샷과 상태 경합을 막는다.
+
+## [2026-08-01] build | shared shot unlock duration
+
+- 성공·실패 샷 모두 같은 연쇄 애니메이션 길이를 사용하도록 잠금 해제 지연 계산을 공통 경로로 이동한다.
+
+## [2026-08-01] test | duplicate shot lock regression
+
+- 첫 샷의 연쇄 애니메이션 중 두 번째 롱프레스가 추가 샷을 만들지 않는지 위젯 테스트로 고정한다.
+
+## [2026-08-01] ux | first action and aim handoff
+
+- 기본 시작 상태에도 1단계 행동 안내를 적용한다.
+- 속성 이전·복사 후 정보 팝업을 닫아 사용자가 안내된 다음 조준 동작으로 바로 이어갈 수 있게 한다.
+
+## [2026-08-01] accessibility | popup route semantics
+
+- 정보 팝업과 클리어 팝업을 대화상자에 해당하는 한국어 경로 Semantics로 묶어 스크린리더가 화면 전환을 인식하게 한다.
+
+## [2026-08-01] release | automated submission preflight
+
+- Apple 계정 없이도 저장소에서 반복 검증할 수 있는 출품 사전검사 스크립트를 추가한다.
+- 예시 Bundle ID·서명 팀 누락·실기기 스크린샷 미확보·정책 초안 상태·권리 해시 오류를 명확한 한국어 실패 항목으로 출력한다.
+
+## [2026-08-01] release | preserve required work log
+
+- 프로젝트 규정상 필요한 개발 작업 로그도 출시 증빙과 함께 새 클론에서 재현되도록 추적 예외에 포함한다.
+
+## [2026-08-01] release | shell portability correction
+
+- 사전검사 스크립트의 내부 식별자를 ASCII로 바꿔 macOS 기본 셸 환경에서도 한글 출력과 실행을 분리한다.
+
+## [2026-08-01] build | shared animation math import
+
+- 클리어 지연 계산에 사용하는 최대값 연산을 화면 모듈의 표준 수학 라이브러리로 연결한다.
+
+## [2026-08-01] physics | closed field boundary
+
+- 물리 QA에서 하단 경계가 충돌 후보에 없어서 공이 필드 밖으로 이탈하는 결함을 재현했다.
+- 렌더링하지 않는 가상 고정 하단벽을 발사·연쇄·미리보기 판정에 공통 적용하고, 최종 게임 상태에서는 제거한다.
+
+## [2026-08-01] test | boundary regression coverage
+
+- 하단 벽이 없는 최소 상태에서 아래로 발사한 공이 `bounced` 이벤트를 만들고 논리 필드 안에 남는지 회귀 테스트를 추가한다.
+
+## [2026-08-01] physics | shared logical field size
+
+- 가상 경계가 렌더러의 화면 크기에 묶이지 않도록 레벨 정의의 공통 논리 크기를 물리 해결기에서 명시적으로 사용한다.

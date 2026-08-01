@@ -44,3 +44,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 출품 검토 문서는 감사 기록이므로 보존하고, 원본 다운로드와 생성 빌드는 제외한다.
+!/harness_docs/
+harness_docs/*
+!harness_docs/release/
+!harness_docs/release/**
+!harness_docs/dev-wiki/
+harness_docs/dev-wiki/*
+!harness_docs/dev-wiki/log.md

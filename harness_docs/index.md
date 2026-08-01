@@ -35,3 +35,19 @@ copied here.
 ## Harness
 
 - [Local Harness Notes](harness/index.md)
+
+## Goal Evidence
+
+- [Current Shared Context](agents/current_shared_context.md)
+- [Agent Audits](agents/puzzle_review.md)
+- [Cross Review](agents/cross_review.md)
+- [Post-Implementation Review](agents/post_implementation_review.md)
+- [Collaboration Protocol](agents/collaboration_protocol.md)
+- [Design Records](design/fun_hypotheses.md)
+- [Current Iteration](plans/current_iteration.md)
+- [Plans](plans/improvement_backlog.md)
+- [QA Records](qa/validation_results.md)
+- [Commercial Visual QA](qa/commercial_visual_baseline.md)
+- [Prompt Records](prompts/current_goal.md)
+- [Decisions](decisions/decision_log.md)
+- [Final Records](final/final_evaluation.md)
