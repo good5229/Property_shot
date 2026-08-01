@@ -29,6 +29,12 @@
 - [ ] 앱 아이콘·런치 화면 실기기 확인
 - [ ] 외부 에셋 출처 표기와 권리대장 첨부
 
+## 공개 페이지 준비본
+
+- 개인정보 처리방침 공개 예정 경로: `https://good5229.github.io/Property_shot/privacy-policy.html`
+- 지원 페이지 공개 예정 경로: `https://good5229.github.io/Property_shot/support.html`
+- GitHub Pages 활성화와 HTTPS 응답 확인 전에는 위 경로를 제출 URL로 사용하지 않는다.
+
 ## 접근성 안내
 
 - 주요 조작 버튼에는 한국어 이름과 아이콘 설명이 있다.

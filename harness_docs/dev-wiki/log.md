@@ -487,6 +487,11 @@ Use consistent headings so entries are easy to grep.
 
 - 사전검사 스크립트의 내부 식별자를 ASCII로 바꿔 macOS 기본 셸 환경에서도 한글 출력과 실행을 분리한다.
 
+## [2026-08-01] release | preflight evidence depth
+
+- 출시 문서가 실제 Git 추적 파일인지 확인하고, iOS 아이콘 카탈로그와 코드 서명 자격의 존재까지 사전검사 범위를 확장한다.
+- 개인정보 처리방침과 지원 페이지의 공개 준비본을 한국어 정적 문서로 추가한다.
+
 ## [2026-08-01] build | shared animation math import
 
 - 클리어 지연 계산에 사용하는 최대값 연산을 화면 모듈의 표준 수학 라이브러리로 연결한다.
