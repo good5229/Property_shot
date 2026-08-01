@@ -164,7 +164,12 @@ class _GameScreenState extends State<GameScreen> {
     unawaited(HapticFeedback.selectionClick());
     _showBallInfo = false;
     _inspectedEntityId = sourceId;
-    _setState(_traitResolver.selectSource(_state, sourceId));
+    final next = _traitResolver.selectSource(_state, sourceId);
+    _setState(
+      _state.levelIndex == 0
+          ? next.copyWith(message: '2/3 설명을 읽고 속성 옮기기를 누르세요.')
+          : next,
+    );
   }
 
   void _transferTrait() {
@@ -174,7 +179,11 @@ class _GameScreenState extends State<GameScreen> {
     _setState(
       _traitResolver
           .transferSelectedTrait(_state)
-          .copyWith(message: '속성을 공에 담았습니다. 공을 길게 누르고 방향을 정하세요.'),
+          .copyWith(
+            message: _state.levelIndex == 0
+                ? '3/3 공을 길게 누르고 방향을 정한 뒤 손을 떼세요.'
+                : '속성을 공에 담았습니다. 공을 길게 누르고 방향을 정하세요.',
+          ),
     );
   }
 
@@ -1009,7 +1018,7 @@ String _levelObjective(int levelIndex) {
 
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 => '반짝이는 무거운 돌을 누르고, 옮기기를 선택하세요.',
+    0 => '1/3 반짝이는 무거운 돌을 눌러 속성을 확인하세요.',
     1 => '초록 젤리를 누르고, 탄성을 공에 담아보세요.',
     _ => '점착판에 공을 붙여 보고, 무거운 공으로 스위치를 준비하세요.',
   };

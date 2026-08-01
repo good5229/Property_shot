@@ -24,6 +24,10 @@ Use consistent headings so entries are easy to grep.
 
 - 2단계의 탄성 필수성과 벽 충돌 반발력 차이를 퍼즐 의도·물리 규칙 문서에 반영한다.
 
+## [2026-08-01] ux | first-step coach copy
+
+- 첫 단계의 속성 선택·옮기기·발사 순서를 현재 화면 행동과 일치하는 단계형 한글 안내로 연결한다.
+
 ## [2026-08-01] physics | material restitution
 
 - 전역 벽 감쇠로 기존 물리를 훼손하지 않도록 엔티티별 반발력을 도입하고, 탄성 튜토리얼 장애물만 낮은 반발력으로 설정한다.

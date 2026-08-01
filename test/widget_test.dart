@@ -11,13 +11,16 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
+    expect(find.textContaining('1/3'), findsOneWidget);
+
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
+    expect(find.textContaining('2/3'), findsOneWidget);
     await tester.tap(find.byKey(const Key('transfer_button')));
     await tester.pump();
 
     expect(find.textContaining('공: 무거움'), findsOneWidget);
-    expect(find.textContaining('속성을 공에 담았습니다'), findsOneWidget);
+    expect(find.textContaining('3/3'), findsOneWidget);
   });
 
   testWidgets('속성을 선택해 공으로 복사할 수 있다', (tester) async {
