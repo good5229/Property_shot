@@ -27,6 +27,11 @@ class PropertyShotGame extends FlameGame {
   Timer? _animationCompletionTimer;
   final Map<EntityType, ui.Image> _objectImages = {};
 
+  // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
+  static const Offset _lightDirection = Offset(-0.72, -0.69);
+  static const Color _lightColor = Color(0xB8FFF4D6);
+  static const Color _occlusionColor = Color(0x4A24352D);
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -489,6 +494,7 @@ class PropertyShotGame extends FlameGame {
             ..strokeWidth = 4,
         );
       }
+      _drawCircularContactShadow(canvas, entity);
       if (entity.type == EntityType.ball && entity.traits.isNotEmpty) {
         canvas.drawCircle(
           center,
@@ -499,13 +505,7 @@ class PropertyShotGame extends FlameGame {
         );
       }
       if (entity.type == EntityType.hole) {
-        final oval = Rect.fromCenter(
-          center: center,
-          width: entity.radius * 2,
-          height: entity.radius * 2,
-        );
-        canvas.drawOval(oval, paint);
-        canvas.drawOval(oval, stroke);
+        _drawHoleSurface(canvas, entity, stroke);
       } else {
         _drawBallSphere(canvas, entity, paint, stroke);
         _drawBallTraitTexture(canvas, entity);
@@ -523,6 +523,7 @@ class PropertyShotGame extends FlameGame {
         _drawMovingObjectSprite(canvas, entity, rect, image);
       } else {
         _drawContactShadow(canvas, entity, rect);
+        _drawDepthFaces(canvas, entity, topPoints);
         if (entity.traits.isNotEmpty &&
             state.phase == GamePhase.planning &&
             _animationPath.isEmpty) {
@@ -541,6 +542,7 @@ class PropertyShotGame extends FlameGame {
           canvas.drawPath(topPath, stroke);
         }
         _drawCuteBlockDetails(canvas, entity, rect, topPath);
+        _drawDirectionalLight(canvas, entity, rect, topPath);
       }
       _drawTraitTexture(canvas, entity, rect);
     }
@@ -575,6 +577,135 @@ class PropertyShotGame extends FlameGame {
       ),
       shadow,
     );
+  }
+
+  void _drawCircularContactShadow(Canvas canvas, EntityState entity) {
+    if (entity.type == EntityType.hole) {
+      return;
+    }
+    final center = _project(entity.position);
+    final shadow = Paint()
+      ..color = const Color(0x3D30362E)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.2);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(2, entity.radius * 0.78),
+        width: entity.radius * 1.65,
+        height: math.max(3, entity.radius * 0.42),
+      ),
+      shadow,
+    );
+  }
+
+  void _drawDepthFaces(
+    Canvas canvas,
+    EntityState entity,
+    List<Offset> topPoints,
+  ) {
+    if (entity.type != EntityType.wall && entity.type != EntityType.gate) {
+      return;
+    }
+    final depth = entity.type == EntityType.wall ? 9.0 : 7.0;
+    final down = Offset(0, depth);
+    final base = _colorFor(entity);
+    final side = Paint()
+      ..color = Color.lerp(base, const Color(0xFF17231E), 0.3)!;
+    final end = Paint()
+      ..color = Color.lerp(base, const Color(0xFF17231E), 0.46)!;
+    final leftFace = Path()
+      ..moveTo(topPoints[0].dx, topPoints[0].dy)
+      ..lineTo(topPoints[3].dx, topPoints[3].dy)
+      ..lineTo((topPoints[3] + down).dx, (topPoints[3] + down).dy)
+      ..lineTo((topPoints[0] + down).dx, (topPoints[0] + down).dy)
+      ..close();
+    final rightFace = Path()
+      ..moveTo(topPoints[1].dx, topPoints[1].dy)
+      ..lineTo(topPoints[2].dx, topPoints[2].dy)
+      ..lineTo((topPoints[2] + down).dx, (topPoints[2] + down).dy)
+      ..lineTo((topPoints[1] + down).dx, (topPoints[1] + down).dy)
+      ..close();
+    canvas.drawPath(leftFace, side);
+    canvas.drawPath(rightFace, end);
+    canvas.drawLine(
+      topPoints[3] + down,
+      topPoints[2] + down,
+      Paint()
+        ..color = const Color(0x6624352D)
+        ..strokeWidth = 2,
+    );
+  }
+
+  void _drawDirectionalLight(
+    Canvas canvas,
+    EntityState entity,
+    Rect rect,
+    Path topPath,
+  ) {
+    final highlight = Paint()
+      ..color = _lightColor.withValues(
+        alpha: entity.type == EntityType.gate ? 0.36 : 0.28,
+      )
+      ..strokeWidth = entity.type == EntityType.wall ? 3 : 2
+      ..strokeCap = StrokeCap.round;
+    final shadow = Paint()
+      ..color = _occlusionColor.withValues(
+        alpha: entity.type == EntityType.gate ? 0.5 : 0.34,
+      )
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    canvas.save();
+    canvas.clipPath(topPath);
+    final lightOffset = Offset(
+      _lightDirection.dx * rect.width * 0.08,
+      _lightDirection.dy * rect.height * 0.08,
+    );
+    canvas.drawLine(
+      rect.topLeft.translate(3, 3) + lightOffset,
+      rect.topRight.translate(-3, 3) + lightOffset,
+      highlight,
+    );
+    canvas.drawLine(
+      rect.bottomLeft.translate(3, -3),
+      rect.bottomRight.translate(-3, -3),
+      shadow,
+    );
+    canvas.restore();
+  }
+
+  void _drawHoleSurface(Canvas canvas, EntityState entity, Paint stroke) {
+    final center = _project(entity.position);
+    final radius = entity.radius;
+    final outer = Rect.fromCircle(center: center, radius: radius + 1);
+    final inner = Rect.fromCircle(
+      center: center.translate(0, 1.5),
+      radius: radius - 2,
+    );
+    canvas.drawOval(
+      outer,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.4, -0.55),
+          radius: 1,
+          colors: const [
+            Color(0xFF55605B),
+            Color(0xFF1D2521),
+            Color(0xFF050807),
+          ],
+          stops: const [0.0, 0.38, 1.0],
+        ).createShader(outer),
+    );
+    canvas.drawOval(inner, Paint()..color = const Color(0xFF090D0B));
+    canvas.drawArc(
+      outer,
+      math.pi * 1.03,
+      math.pi * 0.92,
+      false,
+      Paint()
+        ..color = const Color(0xB8FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawOval(outer, stroke);
   }
 
   void _drawSelectablePulse(Canvas canvas, EntityState entity) {
@@ -625,6 +756,21 @@ class PropertyShotGame extends FlameGame {
       Radius.circular(math.min(width, height) * 0.38),
     );
     canvas.drawRRect(blob, paint);
+    final inner = blob.deflate(math.min(width, height) * 0.08);
+    canvas.drawRRect(
+      inner,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: const [
+            Color(0x66FFFFFF),
+            Color(0x120FFFFF),
+            Color(0x3D261832),
+          ],
+          stops: const [0.0, 0.42, 1.0],
+        ).createShader(inner.outerRect),
+    );
     final shine = Paint()
       ..color = const Color(0x55FFFFFF)
       ..style = PaintingStyle.stroke
