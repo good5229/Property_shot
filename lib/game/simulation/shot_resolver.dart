@@ -160,18 +160,26 @@ class ShotResolver {
 
       if (hit.type == EntityType.switchPad) {
         if (!ball.traits.contains(TraitType.heavy)) {
+          position = _separateFromCollision(
+            hit,
+            ball,
+            position,
+            collision.normal,
+          );
+          path[path.length - 1] = position;
           events.add('switch_rejected');
           direction = _reflect(direction, collision.normal);
           speed *= 0.42;
           continue;
         }
-        if (state.requiresStickyAnchor &&
-            !entities.any(
-              (entity) =>
-                  entity.type == EntityType.ball &&
-                  entity.visualState == 'stuck' &&
-                  !entity.movable,
-            )) {
+        if (state.requiresStickyAnchor && !_hasStickyAnchor(entities)) {
+          position = _separateFromCollision(
+            hit,
+            ball,
+            position,
+            collision.normal,
+          );
+          path[path.length - 1] = position;
           events.add('switch_rejected_sticky');
           direction = _reflect(direction, collision.normal);
           speed *= 0.42;
@@ -272,6 +280,7 @@ class ShotResolver {
             collision.normal,
             0,
             heavy,
+            state.requiresStickyAnchor,
           );
           events.add('crate_pushed');
           speed *= heavy ? 0.78 : 0.56;
@@ -318,6 +327,7 @@ class ShotResolver {
           collision.normal,
           0,
           ball.traits.contains(TraitType.heavy),
+          state.requiresStickyAnchor,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -389,6 +399,7 @@ class ShotResolver {
           collision.normal,
           0,
           ball.traits.contains(TraitType.heavy),
+          state.requiresStickyAnchor,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -641,6 +652,15 @@ class ShotResolver {
     return entities
         .where((entity) => entity.type == EntityType.gate)
         .every((entity) => entity.open);
+  }
+
+  bool _hasStickyAnchor(List<EntityState> entities) {
+    return entities.any(
+      (entity) =>
+          entity.type == EntityType.ball &&
+          entity.visualState == 'stuck' &&
+          !entity.movable,
+    );
   }
 
   CollisionHit? _firstCollision(
@@ -984,6 +1004,7 @@ class ShotResolver {
     Vec2 contactNormal = Vec2.zero,
     int depth = 0,
     bool carriesHeavy = false,
+    bool requiresStickyAnchor = false,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -1067,6 +1088,11 @@ class ShotResolver {
           current = current.copyWith(visualState: 'blocked');
           break;
         }
+        if (requiresStickyAnchor && !_hasStickyAnchor(entities)) {
+          events.add('switch_rejected_sticky');
+          current = current.copyWith(visualState: 'blocked');
+          break;
+        }
         entities = _replace(
           entities,
           hit.copyWith(pressed: true, solid: false, visualState: 'pressed'),
@@ -1137,6 +1163,7 @@ class ShotResolver {
           normal,
           depth + 1,
           carriesHeavy || current.traits.contains(TraitType.heavy),
+          requiresStickyAnchor,
         );
         events.add('chain_push');
         if (target.type != EntityType.ball) {

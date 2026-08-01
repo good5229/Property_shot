@@ -482,6 +482,21 @@ void main() {
     expect(result.state.entityById('gate')!.open, isTrue);
   });
 
+  test('점착 선행 조건은 무거운 상자 연쇄에서도 우회할 수 없다', () {
+    final result = shots.resolve(
+      _chainedSwitchState(heavy: true, requiresStickyAnchor: true),
+      const ShotInput(
+        direction: Vec2(1, 0),
+        power: 1,
+        equippedTrait: TraitType.heavy,
+      ),
+    );
+
+    expect(result.events, contains('switch_rejected_sticky'));
+    expect(result.events, isNot(contains('switch_pressed')));
+    expect(result.state.entityById('gate')!.open, isFalse);
+  });
+
   test('밀려난 공도 벽 충돌 판정을 받아 필드 밖으로 나가지 않는다', () {
     final result = shots.resolve(
       _pushedBallWallState(),
@@ -934,12 +949,16 @@ GameState _wallState({required TraitType? equippedTrait}) {
   );
 }
 
-GameState _chainedSwitchState({bool heavy = false}) {
+GameState _chainedSwitchState({
+  bool heavy = false,
+  bool requiresStickyAnchor = false,
+}) {
   final ballTraits = heavy ? {TraitType.heavy} : <TraitType>{};
   return GameState(
     levelIndex: 100,
     levelName: '연쇄 스위치 조건 테스트',
     ballSpawn: const Vec2(40, 80),
+    requiresStickyAnchor: requiresStickyAnchor,
     entities: [
       EntityState(
         id: 'active_ball',
