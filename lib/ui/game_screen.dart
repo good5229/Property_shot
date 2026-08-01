@@ -557,6 +557,12 @@ class _GameScreenState extends State<GameScreen> {
                                   final semanticAimLeft = CustomSemanticsAction(
                                     label: '왼쪽으로 조준',
                                   );
+                                  final semanticAimUp = CustomSemanticsAction(
+                                    label: '위쪽으로 조준',
+                                  );
+                                  final semanticAimDown = CustomSemanticsAction(
+                                    label: '아래쪽으로 조준',
+                                  );
                                   final fieldSize = constraints.biggest;
                                   final scale = math.min(
                                     fieldSize.width / logicalSize.x,
@@ -634,6 +640,10 @@ class _GameScreenState extends State<GameScreen> {
                                                   _nudgeAim(math.pi / 18),
                                               semanticAimLeft: () =>
                                                   _nudgeAim(-math.pi / 18),
+                                              semanticAimUp: () =>
+                                                  _nudgeAim(-math.pi / 18),
+                                              semanticAimDown: () =>
+                                                  _nudgeAim(math.pi / 18),
                                             },
                                             child: ClipRRect(
                                               borderRadius:
