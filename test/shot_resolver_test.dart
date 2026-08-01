@@ -584,6 +584,10 @@ void main() {
     );
     expect(wallHit.impactNormal, isNotNull);
     expect(wallHit.impactPosition, isNotNull);
+    final wallImpact = result.impacts.firstWhere(
+      (impact) => impact.entityType == EntityType.wall,
+    );
+    expect(wallHit.impactPosition, wallImpact.position);
   });
 
   test('벽은 상태가 비고체여도 물리 장애물로 반사된다', () {

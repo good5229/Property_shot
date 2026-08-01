@@ -411,10 +411,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _dismissInfo();
       return;
     }
-    if (_showFailurePopup || _showClearPopup) {
+    if (_showClearPopup) {
+      _showClearPopup = false;
+      _setState(
+        _state.copyWith(phase: GamePhase.planning, message: '다시 조준할 수 있습니다.'),
+      );
+      return;
+    }
+    if (_showFailurePopup) {
       setState(() {
         _showFailurePopup = false;
-        _showClearPopup = false;
       });
     }
   }

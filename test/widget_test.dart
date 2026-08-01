@@ -223,6 +223,20 @@ void main() {
     expect(find.textContaining('3. 연쇄 문 열기'), findsOneWidget);
   });
 
+  testWidgets('클리어 팝업을 뒤로가기로 닫으면 다시 조준할 수 있다', (tester) async {
+    final clearState = levels[1]
+        .createState(1)
+        .copyWith(phase: GamePhase.success, shotCount: 3, message: '홀 진입 성공!');
+    await tester.pumpWidget(PropertyShotApp(initialState: clearState));
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    expect(find.byKey(const Key('clear_popup')), findsNothing);
+    expect(find.byKey(const Key('aim_area')), findsOneWidget);
+  });
+
   testWidgets('기본 상태에서는 다음 단계가 잠겨 있다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();

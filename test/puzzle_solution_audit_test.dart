@@ -7,6 +7,7 @@ import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/simulation/trait_resolver.dart';
+import 'package:property_shot/game/domain/trait.dart';
 
 void main() {
   const shots = ShotResolver();
@@ -57,6 +58,23 @@ void main() {
       isTrue,
     );
     expect(attached.state.shotCount, 1);
+
+    final direct = _transfer(initial, 'anvil');
+    final exactDirect = shots.resolve(
+      direct,
+      const ShotInput(
+        direction: Vec2(1, -1.3),
+        power: 1,
+        equippedTrait: TraitType.heavy,
+      ),
+    );
+    expect(
+      exactDirect.state.phase,
+      GamePhase.success,
+      reason: '점착 없이 무거운 공으로 스위치를 거쳐 홀에 도달하는 경로가 없음',
+    );
+    expect(exactDirect.events, contains('switch_pressed'));
+    expect(exactDirect.events, contains('hole_entered'));
   });
 
   test('첫 2단계 성공 영역은 연결된 입력 영역으로 측정된다', () {

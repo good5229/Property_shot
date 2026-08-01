@@ -202,6 +202,7 @@ class ShotResolver {
           strength: (speed / 24).clamp(0.18, 1.0),
         ),
       );
+      final contactPosition = position;
 
       if (hit.type == EntityType.gate && hit.open) {
         continue;
@@ -286,7 +287,7 @@ class ShotResolver {
             to: hit.position,
             triggerPathIndex: path.length - 1,
             visualState: 'stuck',
-            impactPosition: position,
+            impactPosition: contactPosition,
             impactNormal: collision.normal,
           ),
         );
@@ -444,7 +445,7 @@ class ShotResolver {
             to: hit.position,
             triggerPathIndex: path.length - 1,
             visualState: 'pushed',
-            impactPosition: position,
+            impactPosition: contactPosition,
             impactNormal: collision.normal,
           ),
         );
@@ -516,7 +517,7 @@ class ShotResolver {
             to: hit.position,
             triggerPathIndex: path.length - 1,
             visualState: 'wall_hit',
-            impactPosition: position,
+            impactPosition: contactPosition,
             impactNormal: collision.normal,
           ),
         );
@@ -1142,13 +1143,13 @@ class ShotResolver {
 
   String _messageFor(List<String> events) {
     if (events.contains('hole_rejected_crate')) {
-      return '상자를 먼저 밀어야 홀에 들어갈 수 있습니다.';
+      return '홀에 닿지 못했어요. 상자와의 충돌 또는 다른 경로를 시도해 보세요.';
     }
     if (events.contains('hole_rejected_trait')) {
-      return '이 단계의 홀에는 탄성 속성이 필요합니다.';
+      return '홀에 닿지 못했어요. 속성 없이도 다른 각도와 경로를 시도해 보세요.';
     }
     if (events.contains('switch_rejected_sticky')) {
-      return '점착판에 공을 먼저 붙여 발판을 만들어야 합니다.';
+      return '스위치는 무거운 공에 반응합니다. 점착판 없이 다른 경로도 시도해 보세요.';
     }
     if (events.contains('switch_pressed')) {
       return '무거운 공이 스위치를 눌렀습니다. 문이 열렸습니다.';
@@ -1207,8 +1208,9 @@ class ShotResolver {
         ? travelDirection
         : normalImpulse;
     var current = target;
-    final chainCollisionIds = chainIds.isEmpty ? <String>{target.id} : chainIds;
-    chainCollisionIds.add(target.id);
+    // 직전 부모만 제외한다. 전체 연쇄에서 충돌한 대상을 영구 제외하면
+    // 반사 후 다시 닿는 합법적인 충돌 이벤트가 누락된다.
+    final temporarilyIgnoredIds = Set<String>.from(chainIds);
     var remaining = distance * strength;
     var velocity = impulseDirection * remaining;
     var iterations = 0;
@@ -1230,7 +1232,7 @@ class ShotResolver {
         current,
         candidate,
         target.id,
-        chainCollisionIds,
+        temporarilyIgnoredIds,
       );
       final hole = _findHole(entities);
       final holeCaptureRadius = hole == null
@@ -1291,9 +1293,6 @@ class ShotResolver {
       }
 
       final hit = collision.entity;
-      if (hit.type != EntityType.wall && hit.type != EntityType.gate) {
-        chainCollisionIds.add(hit.id);
-      }
       final collisionEntity = candidate.copyWith(position: collision.position);
       final normal = _collisionNormalForMovingEntity(collisionEntity, hit);
       final collisionTrigger = triggerPathIndex + iterations;
@@ -1431,7 +1430,7 @@ class ShotResolver {
           normal,
           depth + 1,
           carriesHeavy || current.traits.contains(TraitType.heavy),
-          chainCollisionIds,
+          {target.id},
           impacts,
         );
         events.add('chain_push');
