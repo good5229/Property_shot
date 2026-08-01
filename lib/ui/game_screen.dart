@@ -473,7 +473,9 @@ class _GameScreenState extends State<GameScreen> {
         : _state.entityById(_inspectedEntityId!);
     final screenSize = MediaQuery.sizeOf(context);
     final compactLayout = screenSize.width <= 800;
-    final contentWidth = screenSize.width < 520 ? screenSize.width : 520.0;
+    final contentWidth = compactLayout
+        ? screenSize.width
+        : math.min(screenSize.width * 0.78, 760.0);
     final clearPopupOpen = _state.phase == GamePhase.success && _showClearPopup;
     final failurePopupOpen =
         _showFailurePopup && !_showBallInfo && inspectedEntity == null;
