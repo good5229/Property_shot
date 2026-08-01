@@ -552,9 +552,10 @@ class PropertyShotGame extends FlameGame {
         }
         if (entity.type == EntityType.bumper) {
           _drawJellyBody(canvas, entity, litPaint, stroke);
-        } else if (entity.type == EntityType.switchPad &&
-            entity.visualState == 'pressed') {
-          _drawSwitchPress(canvas, entity, topPath, stroke);
+        } else if (entity.type == EntityType.stickySurface) {
+          _drawStickySurface(canvas, entity, topPath, litPaint, stroke);
+        } else if (entity.type == EntityType.switchPad) {
+          _drawSwitchPad(canvas, entity, topPath, litPaint, stroke);
         } else if (entity.type == EntityType.gate &&
             entity.visualState == 'opening') {
           _drawGateOpening(canvas, entity, topPoints);
@@ -909,20 +910,27 @@ class PropertyShotGame extends FlameGame {
     canvas.translate(center.dx, center.dy + motion.bob);
     canvas.rotate(motion.rotation);
     canvas.scale(motion.scaleX, motion.scaleY);
-    canvas.drawImageRect(
-      image,
-      source,
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: sprite.width,
-        height: sprite.height,
-      ),
-      Paint()..filterQuality = FilterQuality.high,
-    );
     final target = Rect.fromCenter(
       center: Offset.zero,
       width: sprite.width,
       height: sprite.height,
+    );
+    final outlinePaint = Paint()
+      ..colorFilter = const ColorFilter.mode(Color(0xFF24352D), BlendMode.srcIn)
+      ..filterQuality = FilterQuality.high;
+    for (final offset in const [
+      Offset(-1.5, 0),
+      Offset(1.5, 0),
+      Offset(0, -1.5),
+      Offset(0, 1.5),
+    ]) {
+      canvas.drawImageRect(image, source, target.shift(offset), outlinePaint);
+    }
+    canvas.drawImageRect(
+      image,
+      source,
+      target,
+      Paint()..filterQuality = FilterQuality.high,
     );
     canvas.save();
     canvas.clipRRect(
@@ -1072,31 +1080,98 @@ class PropertyShotGame extends FlameGame {
     }
   }
 
-  void _drawSwitchPress(
+  void _drawStickySurface(
     Canvas canvas,
     EntityState entity,
     Path topPath,
+    Paint paint,
+    Paint stroke,
+  ) {
+    final rect = _projectedRect(entity);
+    final center = _project(entity.position);
+    final pulse = (math.sin(_pulseClock * math.pi * 1.6) + 1) / 2;
+    canvas.drawPath(topPath, paint);
+    canvas.save();
+    canvas.clipPath(topPath);
+    final shine = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0x99FFFFFF),
+          const Color(0x18FFFFFF),
+          const Color(0x440D0712),
+        ],
+      ).createShader(rect);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(-rect.width * 0.16, -rect.height * 0.18),
+        width: rect.width * 0.62,
+        height: rect.height * 0.3,
+      ),
+      shine,
+    );
+    final droplet = Paint()
+      ..color = const Color(0xBFFFFFFF)
+      ..style = PaintingStyle.fill;
+    for (var index = 0; index < 5; index++) {
+      final x = rect.left + rect.width * (0.2 + index * 0.16);
+      final y = rect.top + rect.height * (0.26 + (index.isEven ? 0.12 : 0.42));
+      canvas.drawCircle(Offset(x, y), 2.2 + (index % 3) * 0.8, droplet);
+    }
+    canvas.restore();
+    canvas.drawPath(topPath, stroke);
+    if (entity.visualState == 'stuck') {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          rect.inflate(5 + pulse * 2),
+          const Radius.circular(12),
+        ),
+        Paint()
+          ..color = const Color(0xA8F3D7FF)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3 + pulse,
+      );
+    }
+  }
+
+  void _drawSwitchPad(
+    Canvas canvas,
+    EntityState entity,
+    Path topPath,
+    Paint paint,
     Paint stroke,
   ) {
     final center = _project(entity.position);
-    final pulse = (math.sin(_pulseClock * math.pi * 8).abs());
+    final pressed = entity.pressed || entity.visualState == 'pressed';
+    final pulse = pressed ? math.sin(_pulseClock * math.pi * 7).abs() : 0.0;
     canvas.drawPath(
       topPath,
       Paint()
-        ..color = Color.lerp(
-          const Color(0xFFE2C044),
-          const Color(0xFF4EAF7C),
-          0.55 + pulse * 0.45,
-        )!,
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: pressed
+              ? const [Color(0xFF8EE0A7), Color(0xFF318E5D)]
+              : const [Color(0xFFFFE98D), Color(0xFFC79627)],
+        ).createShader(_projectedRect(entity)),
     );
     canvas.drawPath(topPath, stroke);
+    final plate = Paint()
+      ..color = pressed ? const Color(0xFF2B7D52) : const Color(0xFF9E7420)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center.translate(0, pressed ? 3 : 0), 13, plate);
     canvas.drawCircle(
-      center,
-      12 + pulse * 5,
+      center.translate(0, pressed ? 4 : 0),
+      8 + pulse * 2,
       Paint()
-        ..color = const Color(0x884EAF7C)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
+        ..color = pressed ? const Color(0xFFB9FFD0) : const Color(0xFFFFF2A8),
+    );
+    canvas.drawCircle(
+      center.translate(-3, -3 + (pressed ? 3 : 0)),
+      2.2,
+      Paint()..color = const Color(0xCCFFFFFF),
     );
   }
 
@@ -1154,6 +1229,17 @@ class PropertyShotGame extends FlameGame {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2,
     );
+    final hinge = Paint()
+      ..color = const Color(0xAA3B302A)
+      ..style = PaintingStyle.fill;
+    final leftHingeX = leftDoor.left;
+    final rightHingeX = rightDoor.right;
+    final upperHingeY = leftDoor.top + leftDoor.height * 0.22;
+    final lowerHingeY = leftDoor.bottom - leftDoor.height * 0.22;
+    canvas.drawCircle(Offset(leftHingeX, upperHingeY), 2.5, hinge);
+    canvas.drawCircle(Offset(leftHingeX, lowerHingeY), 2.5, hinge);
+    canvas.drawCircle(Offset(rightHingeX, upperHingeY), 2.5, hinge);
+    canvas.drawCircle(Offset(rightHingeX, lowerHingeY), 2.5, hinge);
   }
 
   void _drawBallPulse(Canvas canvas, EntityState entity) {
@@ -1424,6 +1510,18 @@ class PropertyShotGame extends FlameGame {
         ..strokeWidth = 1.4;
       canvas.drawLine(rect.centerLeft, rect.centerRight, line);
       canvas.drawLine(rect.topCenter, rect.bottomCenter, line);
+    }
+    if (entity.type == EntityType.gate && entity.visualState != 'opening') {
+      final detail = Paint()
+        ..color = const Color(0x663B302A)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(rect.centerLeft, rect.centerRight, detail);
+      canvas.drawCircle(
+        rect.center,
+        4,
+        Paint()..color = const Color(0xCCFFE49B),
+      );
     }
   }
 
