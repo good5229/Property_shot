@@ -541,6 +541,10 @@ Use consistent headings so entries are easy to grep.
 
 - 연쇄 이동 중 스위치가 무거운 충격 없이 열리던 우회 경로를 차단하고, 무거운 충격 전달 여부를 연쇄 계산에 명시한다.
 
+## [2026-08-01] release | reproducible validation evidence
+
+- 최신 전체 테스트 수를 출시 검증 문서와 일치시키고, CC0 원본 압축파일을 Git 추적해 새 클론에서도 권리 해시 검증이 재현되도록 준비한다.
+
 ## [2026-08-01] test | progression contract coverage
 
 - 기본 상태의 잠긴 단계 선택 거부와 마지막 단계 완료 후 재도전 문구를 위젯 테스트로 고정한다.
