@@ -4,6 +4,10 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-01] docs | interaction contract sync
+
+- 사용자 확정 조작 방식과 현재 구현이 분리 발사 버튼·예상 경로를 필수로 요구하는 오래된 하네스 문구와 충돌하지 않도록 계약 문장을 동기화한다.
+
 ## [2026-08-01] visual | collision direction feedback
 
 - 충돌 법선을 애니메이션 이벤트에 전달해 벽·젤리·물체의 타격 효과가 실제 충돌면 방향을 따르도록 개선한다.
@@ -589,3 +593,16 @@ Use consistent headings so entries are easy to grep.
 ## [2026-08-01] physics | shared logical field size
 
 - 가상 경계가 렌더러의 화면 크기에 묶이지 않도록 레벨 정의의 공통 논리 크기를 물리 해결기에서 명시적으로 사용한다.
+## [2026-08-01] ui | compact mobile board layout
+- 320x568에서 보드 우선 레이아웃을 적용하고 HUD와 조작 패널을 축약 오버레이로 배치한다.
+## [2026-08-01] animation | shared physical timeline sampler
+
+- `ShotAnimationMove`의 경로 샘플 인덱스와 `triggerPathIndex`를 공·이동 물체에 공통 적용해 충돌 시점의 렌더링 시간축을 통합한다.
+
+## [2026-08-01] test | compact board and short move timing
+
+- 축약 모바일 보드의 실제 폭과 단일 구간 이동 애니메이션의 시간 진행을 회귀 검증한다.
+
+## [2026-08-01] qa | responsive regression refresh
+
+- 보드 우선 레이아웃 회귀가 추가되어 최신 전체 테스트 수와 출시 검증 문서를 갱신한다.

@@ -209,11 +209,10 @@ class PropertyShotGame extends FlameGame {
     for (final move in _animationMoves.where(
       (move) => move.entityId == entity.id,
     )) {
+      final elapsed = _animationCursor - move.triggerPathIndex;
       final duration = _moveDuration(move);
-      final local = ((_animationCursor - move.triggerPathIndex) / duration)
-          .clamp(0.0, 1.0);
-      final eased = Curves.easeOut.transform(local);
-      final position = _movePositionAt(move, eased);
+      final local = (elapsed / duration).clamp(0.0, 1.0);
+      final position = _sampleMovePath(move, elapsed);
       animated = animated.copyWith(
         position: position,
         visualState: local > 0 ? move.visualState : entity.visualState,
@@ -226,10 +225,9 @@ class PropertyShotGame extends FlameGame {
     if (move.path.length < 2) {
       return 12;
     }
-    final distance = _pathDistance(move.path);
-    // One animation unit represents roughly one simulation step. Keeping the
-    // duration tied to distance prevents long chain reactions from skipping.
-    return (distance / 7).clamp(8.0, 96.0);
+    // Each path sample represents one simulation step. This keeps
+    // triggerPathIndex as the shared physical clock for every moving entity.
+    return math.max(1, move.path.length - 1).toDouble();
   }
 
   double get _animationEndCursor {
@@ -240,29 +238,25 @@ class PropertyShotGame extends FlameGame {
     return end;
   }
 
-  Vec2 _movePositionAt(ShotAnimationMove move, double progress) {
+  Vec2 _sampleMovePath(ShotAnimationMove move, double elapsed) {
     final points = move.path.length >= 2 ? move.path : [move.from, move.to];
+    final clock = points.length == 2 ? elapsed / _moveDuration(move) : elapsed;
+    return _samplePathAtTime(points, clock);
+  }
+
+  Vec2 _samplePathAtTime(List<Vec2> points, double elapsed) {
     if (points.length == 2) {
       final from = points.first;
       final to = points.last;
+      final progress = elapsed.clamp(0.0, 1.0);
       return Vec2(
         from.x + (to.x - from.x) * progress,
         from.y + (to.y - from.y) * progress,
       );
     }
-    final lengths = <double>[0];
-    for (var index = 1; index < points.length; index++) {
-      lengths.add(lengths.last + points[index - 1].distanceTo(points[index]));
-    }
-    final targetDistance = progress * lengths.last;
-    var index = 0;
-    while (index < lengths.length - 2 && lengths[index + 1] < targetDistance) {
-      index++;
-    }
-    final segmentLength = lengths[index + 1] - lengths[index];
-    final local = segmentLength <= 0
-        ? 0.0
-        : (targetDistance - lengths[index]) / segmentLength;
+    final sample = elapsed.clamp(0.0, points.length - 1.0);
+    final index = sample.floor();
+    final local = sample - index;
     final from = points[index];
     final to = points[index + 1];
     return Vec2(
@@ -664,7 +658,9 @@ class PropertyShotGame extends FlameGame {
     if (local <= 0 || local >= 1) {
       return const _MotionVisual();
     }
-    final progress = Curves.easeOut.transform(local);
+    // Keep visual deformation on the same physical timeline as position;
+    // easing here would make the sprite arrive before its collision sample.
+    final progress = local;
     final delta = move.to - move.from;
     final distance = _pathDistance(move.path);
     final direction = delta.normalized();
@@ -1119,22 +1115,16 @@ class PropertyShotGame extends FlameGame {
 
   void _drawAnimatedBall(Canvas canvas) {
     final index = _animationCursor.floor().clamp(0, _animationPath.length - 1);
-    final nextIndex = (index + 1).clamp(0, _animationPath.length - 1);
-    final t = _animationCursor - index;
-    final from = _animationPath[index];
-    final to = _animationPath[nextIndex];
-    final position = Vec2(
-      from.x + (to.x - from.x) * t,
-      from.y + (to.y - from.y) * t,
-    );
+    final position = _samplePathAtTime(_animationPath, _animationCursor);
     final trait = _animationTrait;
     final trailPaint = Paint()
       ..color = const Color(0x55FFFFFF)
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
     for (var i = 1; i <= 4; i++) {
-      final trailIndex = (index - i * 2).clamp(0, _animationPath.length - 1);
-      final trail = _project(_animationPath[trailIndex]);
+      final trail = _project(
+        _samplePathAtTime(_animationPath, _animationCursor - i * 2),
+      );
       canvas.drawCircle(trail, (6 - i).toDouble(), trailPaint);
     }
     _drawCueStrike(canvas, index, position);
