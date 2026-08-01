@@ -4,6 +4,26 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-01] release | submission evidence preflight depth
+
+- 제출 스크린샷의 실제 픽셀 규격과 정책 URL의 확정 상태를 사전검사에서 확인해 파일 존재만으로 통과하는 허점을 줄인다.
+
+## [2026-08-01] ux | popup interaction isolation
+
+- 정보·실패·클리어 팝업이 열리는 동안 배경 게임판의 포인터 입력과 접근성 포커스를 격리한다.
+
+## [2026-08-01] ux | failure popup text scaling
+
+- 실패 안내와 복구 버튼을 제한된 높이의 스크롤 영역에 넣어 큰 글자 환경에서도 화면 밖으로 밀리지 않게 한다.
+
+## [2026-08-01] test | popup semantic isolation
+
+- 클리어 팝업이 열린 동안 배경 조준 영역이 보조기술 대상에서 제외되는 계약을 위젯 테스트로 고정한다.
+
+## [2026-08-01] qa | verified count correction
+
+- 기존 클리어 팝업 테스트에 검증을 추가한 것이므로 테스트 개수는 증가하지 않았음을 검증 문서에 정확히 반영한다.
+
 ## [2026-08-01] docs | interaction contract sync
 
 - 사용자 확정 조작 방식과 현재 구현이 분리 발사 버튼·예상 경로를 필수로 요구하는 오래된 하네스 문구와 충돌하지 않도록 계약 문장을 동기화한다.

@@ -486,21 +486,19 @@ class PropertyShotGame extends FlameGame {
       final rect = _projectedRect(entity);
       final topPoints = _projectedEntityCorners(entity);
       final topPath = _pathFromPoints(topPoints);
+      final litPaint = _materialPaint(entity, rect);
       final image = _objectImages[entity.type];
       if (image != null) {
         _drawMovingObjectSprite(canvas, entity, rect, image);
       } else {
-        canvas.drawPath(
-          topPath.shift(const Offset(5, 7)),
-          Paint()..color = const Color(0x3F503C2E),
-        );
+        _drawContactShadow(canvas, entity, rect);
         if (entity.traits.isNotEmpty &&
             state.phase == GamePhase.planning &&
             _animationPath.isEmpty) {
           _drawSelectablePulse(canvas, entity);
         }
         if (entity.type == EntityType.bumper) {
-          _drawJellyBody(canvas, entity, paint, stroke);
+          _drawJellyBody(canvas, entity, litPaint, stroke);
         } else if (entity.type == EntityType.switchPad &&
             entity.visualState == 'pressed') {
           _drawSwitchPress(canvas, entity, topPath, stroke);
@@ -508,7 +506,7 @@ class PropertyShotGame extends FlameGame {
             entity.visualState == 'opening') {
           _drawGateOpening(canvas, entity, topPoints);
         } else {
-          canvas.drawPath(topPath, paint);
+          canvas.drawPath(topPath, litPaint);
           canvas.drawPath(topPath, stroke);
         }
         _drawCuteBlockDetails(canvas, entity, rect, topPath);
@@ -517,6 +515,35 @@ class PropertyShotGame extends FlameGame {
     }
 
     _drawEntityIcon(canvas, entity);
+  }
+
+  Paint _materialPaint(EntityState entity, Rect rect) {
+    final base = _colorFor(entity);
+    final highlight = Color.lerp(base, Colors.white, 0.24)!;
+    final shade = Color.lerp(base, const Color(0xFF17231E), 0.24)!;
+    return Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [highlight, base, shade],
+        stops: const [0.0, 0.46, 1.0],
+      ).createShader(rect.inflate(8));
+  }
+
+  void _drawContactShadow(Canvas canvas, EntityState entity, Rect rect) {
+    final motion = _motionVisual(entity);
+    final lift = math.max(0.0, -motion.bob);
+    final shadow = Paint()
+      ..color = Color.fromRGBO(48, 52, 42, 0.18 + motion.impact * 0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: rect.center.translate(0, rect.height * 0.47),
+        width: rect.width * (0.72 + motion.impact * 0.08),
+        height: math.max(3, rect.height * (0.16 - lift * 0.012)),
+      ),
+      shadow,
+    );
   }
 
   void _drawSelectablePulse(Canvas canvas, EntityState entity) {
@@ -550,11 +577,11 @@ class PropertyShotGame extends FlameGame {
   ) {
     final center = _project(entity.position);
     final motion = _motionVisual(entity);
-    final wobble = entity.visualState == 'pushed'
-        ? math.sin(_pulseClock * math.pi * 8).abs()
+    final wobble = motion.impact > 0 || entity.visualState == 'stuck'
+        ? (math.sin(_pulseClock * math.pi * 8).abs())
         : 0.0;
-    final width = entity.size.x * (1.0 + motion.impact * 0.1);
-    final height = entity.size.y * (1.0 - motion.impact * 0.12);
+    final width = entity.size.x * (1.0 + motion.impact * 0.18);
+    final height = entity.size.y * (1.0 - motion.impact * 0.16);
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(motion.rotation * 0.25);
@@ -567,6 +594,22 @@ class PropertyShotGame extends FlameGame {
       Radius.circular(math.min(width, height) * 0.38),
     );
     canvas.drawRRect(blob, paint);
+    final shine = Paint()
+      ..color = const Color(0x55FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(-width * 0.14, -height * 0.2 + motion.bob),
+        width: width * 0.52,
+        height: height * 0.42,
+      ),
+      math.pi * 1.05,
+      math.pi * 0.62,
+      false,
+      shine,
+    );
     canvas.drawRRect(blob, stroke);
     canvas.restore();
 
@@ -603,7 +646,9 @@ class PropertyShotGame extends FlameGame {
   ) {
     final center = _project(entity.position);
     final motion = _motionVisual(entity);
-    final shadow = Paint()..color = const Color(0x3F503C2E);
+    final shadow = Paint()
+      ..color = Color.fromRGBO(48, 52, 42, 0.22 + motion.impact * 0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
     canvas.drawOval(
       Rect.fromCenter(
         center: center.translate(0, entity.size.y * 0.44),
@@ -633,11 +678,46 @@ class PropertyShotGame extends FlameGame {
       ),
       Paint()..filterQuality = FilterQuality.high,
     );
+    final target = Rect.fromCenter(
+      center: Offset.zero,
+      width: sprite.width,
+      height: sprite.height,
+    );
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(
+        target,
+        Radius.circular(entity.type == EntityType.weight ? 12 : 6),
+      ),
+    );
+    canvas.drawRect(
+      target,
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0x66FFFFFF), Color(0x00FFFFFF), Color(0x3D101A16)],
+          stops: [0.0, 0.42, 1.0],
+        ).createShader(target),
+    );
+    canvas.restore();
     canvas.restore();
   }
 
   _MotionVisual _motionVisual(EntityState entity) {
+    final isCollisionState =
+        entity.visualState == 'pushed' ||
+        entity.visualState == 'wall_bounced' ||
+        entity.visualState == 'stuck';
     if (_animationPath.isEmpty || !entity.movable) {
+      if (!isCollisionState) {
+        return const _MotionVisual();
+      }
+      final pulse = (math.sin(_pulseClock * math.pi * 2.2).abs());
+      return _materialMotion(entity, pulse, 0, 0);
+    }
+    if (!entity.movable && !isCollisionState) {
       return const _MotionVisual();
     }
     ShotAnimationMove? move;
@@ -668,15 +748,49 @@ class PropertyShotGame extends FlameGame {
     final roll =
         distance / math.max(entity.size.x, 1) * (direction.x < 0 ? -1 : 1);
     final impact = math.sin(progress * math.pi);
-    return _MotionVisual(
-      rotation: entity.type == EntityType.weight
-          ? roll * progress
-          : angle * 0.08,
-      scaleX: 1 + impact * 0.06,
-      scaleY: 1 - impact * 0.045,
-      bob: -impact * 2.5,
-      impact: impact,
-    );
+    return _materialMotion(entity, impact, roll, angle);
+  }
+
+  _MotionVisual _materialMotion(
+    EntityState entity,
+    double impact,
+    double roll,
+    double angle,
+  ) {
+    switch (entity.type) {
+      case EntityType.bumper:
+        return _MotionVisual(
+          rotation: angle * 0.12,
+          scaleX: 1 + impact * 0.18,
+          scaleY: 1 - impact * 0.16,
+          bob: -impact * 2.8,
+          impact: impact,
+        );
+      case EntityType.weight:
+        return _MotionVisual(
+          rotation: roll * 0.58,
+          scaleX: 1 + impact * 0.035,
+          scaleY: 1 - impact * 0.025,
+          bob: -impact * 1.3,
+          impact: impact,
+        );
+      case EntityType.crate:
+        return _MotionVisual(
+          rotation: roll * 0.32,
+          scaleX: 1 + impact * 0.09,
+          scaleY: 1 - impact * 0.07,
+          bob: -impact * 2.1,
+          impact: impact,
+        );
+      default:
+        return _MotionVisual(
+          rotation: angle * 0.08,
+          scaleX: 1 + impact * 0.06,
+          scaleY: 1 - impact * 0.045,
+          bob: -impact * 2.5,
+          impact: impact,
+        );
+    }
   }
 
   void _drawSwitchPress(
