@@ -58,7 +58,7 @@ void main() {
     await tester.drag(aimArea, const Offset(-80, 80));
     await tester.pump();
 
-    expect(find.textContaining('샷 0'), findsOneWidget);
+    expect(find.textContaining('시도 0'), findsOneWidget);
     expect(find.byKey(const Key('launch_button')), findsNothing);
   });
 
@@ -71,7 +71,7 @@ void main() {
     await gesture.up();
     await tester.pump();
 
-    expect(find.textContaining('샷 1'), findsOneWidget);
+    expect(find.textContaining('시도 1'), findsOneWidget);
   });
 
   testWidgets('발사 애니메이션 중에는 두 번째 샷을 만들지 않는다', (tester) async {
@@ -88,8 +88,8 @@ void main() {
     await second.up();
     await tester.pump(const Duration(milliseconds: 80));
 
-    expect(find.textContaining('샷 1'), findsOneWidget);
-    expect(find.textContaining('샷 2'), findsNothing);
+    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(find.textContaining('시도 2'), findsNothing);
   });
 
   testWidgets('발사 애니메이션 중에는 물체 정보 팝업이 열리지 않는다', (tester) async {
@@ -138,7 +138,7 @@ void main() {
     await gesture.up();
     await tester.pump();
 
-    expect(find.textContaining('샷 0'), findsOneWidget);
+    expect(find.textContaining('시도 0'), findsOneWidget);
   });
 
   testWidgets('롱프레스가 취소되면 발사하지 않는다', (tester) async {
@@ -150,7 +150,7 @@ void main() {
     await gesture.cancel();
     await tester.pump();
 
-    expect(find.textContaining('샷 0'), findsOneWidget);
+    expect(find.textContaining('시도 0'), findsOneWidget);
     expect(find.textContaining('발사를 취소했습니다'), findsOneWidget);
   });
 
@@ -163,7 +163,7 @@ void main() {
     await gesture.cancel();
     await tester.pump();
 
-    expect(find.textContaining('샷 0'), findsOneWidget);
+    expect(find.textContaining('시도 0'), findsOneWidget);
   });
 
   testWidgets('앱 생명주기 전환 중 충전은 취소되고 복귀 후 발사되지 않는다', (tester) async {
@@ -180,7 +180,7 @@ void main() {
     await gesture.up();
     await tester.pump();
 
-    expect(find.textContaining('샷 0'), findsOneWidget);
+    expect(find.textContaining('시도 0'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
