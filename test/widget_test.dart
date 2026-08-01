@@ -480,7 +480,10 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('level_progress')), findsOneWidget);
-    expect(find.textContaining('추천 1  점착 속성을 옮겨 점착판에 붙여 보세요.'), findsOneWidget);
+    expect(
+      find.textContaining('추천 경로: 점착 속성을 옮겨 점착판에 붙여 보세요.'),
+      findsOneWidget,
+    );
   });
 }
 

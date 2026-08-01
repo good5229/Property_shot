@@ -1189,13 +1189,13 @@ String? _levelProgressHint(GameState state) {
         !entity.movable,
   );
   if (!hasAnchor) {
-    return '추천 1  점착 속성을 옮겨 점착판에 붙여 보세요. 다른 경로도 가능합니다.';
+    return '추천 경로: 점착 속성을 옮겨 점착판에 붙여 보세요. 다른 경로도 가능합니다.';
   }
   final hasHeavy = state.activeBall.traits.contains(TraitType.heavy);
   if (!hasHeavy) {
-    return '추천 2  무거움을 공에 옮겨 스위치를 눌러 보세요. 직접 가는 길도 찾아보세요.';
+    return '추천 경로: 무거움을 공에 옮겨 스위치를 눌러 보세요. 점착 없이 직접 가는 길도 찾아보세요.';
   }
-  return '추천 3  무거운 공으로 스위치를 눌러 보세요. 목표에 먼저 닿으면 성공입니다.';
+  return '추천 경로: 무거운 공으로 스위치를 눌러 보세요. 홀에 먼저 닿으면 성공입니다.';
 }
 
 String _levelIntroMessage(int levelIndex) {
