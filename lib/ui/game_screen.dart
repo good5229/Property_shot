@@ -542,66 +542,73 @@ class _GameScreenState extends State<GameScreen> {
                                 (fieldSize.width - logicalSize.x * scale) / 2,
                                 (fieldSize.height - logicalSize.y * scale) / 2,
                               );
+                              final boardSize = Size(
+                                logicalSize.x * scale,
+                                logicalSize.y * scale,
+                              );
                               return Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  GestureDetector(
-                                    key: const Key('aim_area'),
-                                    onTapUp: (details) => _handleFieldTap(
-                                      details.localPosition,
-                                      fieldSize,
-                                    ),
-                                    onLongPressStart: (details) =>
-                                        _startPowerCharge(
-                                          details.localPosition,
-                                          fieldSize,
-                                        ),
-                                    onLongPressMoveUpdate: (details) =>
-                                        _updateAim(
-                                          details.localPosition,
-                                          fieldSize,
-                                        ),
-                                    onLongPressEnd: (_) => _stopPowerCharge(),
-                                    onLongPressCancel: _cancelPowerCharge,
-                                    onPanUpdate: (details) => _updateAim(
-                                      details.localPosition,
-                                      fieldSize,
-                                    ),
-                                    onPanEnd: (_) {
-                                      if (_state.phase == GamePhase.planning) {
-                                        _setState(
-                                          _state.copyWith(message: '조준 고정'),
-                                        );
-                                      }
-                                    },
-                                    child: Semantics(
-                                      container: true,
-                                      label: '공을 조준하는 게임 화면',
-                                      value:
-                                          '힘 ${(_state.aimPower * 100).round()}퍼센트',
-                                      increasedValue:
-                                          '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                      decreasedValue:
-                                          '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                      hint:
-                                          '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
-                                      onIncrease: () => _adjustPower(0.055),
-                                      onDecrease: () => _adjustPower(-0.055),
-                                      customSemanticsActions: {
-                                        semanticLaunch: _launch,
-                                        semanticAimRight: () =>
-                                            _nudgeAim(math.pi / 18),
-                                        semanticAimLeft: () =>
-                                            _nudgeAim(-math.pi / 18),
-                                      },
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Center(
-                                          child: AspectRatio(
-                                            aspectRatio:
-                                                logicalSize.x / logicalSize.y,
-                                            child: GameWidget(game: _game),
+                                  Positioned(
+                                    left: origin.dx,
+                                    top: origin.dy,
+                                    width: boardSize.width,
+                                    height: boardSize.height,
+                                    child: GestureDetector(
+                                      key: const Key('aim_area'),
+                                      onTapUp: (details) => _handleFieldTap(
+                                        details.localPosition,
+                                        boardSize,
+                                      ),
+                                      onLongPressStart: (details) =>
+                                          _startPowerCharge(
+                                            details.localPosition,
+                                            boardSize,
                                           ),
+                                      onLongPressMoveUpdate: (details) =>
+                                          _updateAim(
+                                            details.localPosition,
+                                            boardSize,
+                                          ),
+                                      onLongPressEnd: (_) => _stopPowerCharge(),
+                                      onLongPressCancel: _cancelPowerCharge,
+                                      onPanUpdate: (details) => _updateAim(
+                                        details.localPosition,
+                                        boardSize,
+                                      ),
+                                      onPanEnd: (_) {
+                                        if (_state.phase ==
+                                            GamePhase.planning) {
+                                          _setState(
+                                            _state.copyWith(message: '조준 고정'),
+                                          );
+                                        }
+                                      },
+                                      child: Semantics(
+                                        container: true,
+                                        label: '공을 조준하는 게임 화면',
+                                        value:
+                                            '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                        increasedValue:
+                                            '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                        decreasedValue:
+                                            '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                        hint:
+                                            '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
+                                        onIncrease: () => _adjustPower(0.055),
+                                        onDecrease: () => _adjustPower(-0.055),
+                                        customSemanticsActions: {
+                                          semanticLaunch: _launch,
+                                          semanticAimRight: () =>
+                                              _nudgeAim(math.pi / 18),
+                                          semanticAimLeft: () =>
+                                              _nudgeAim(-math.pi / 18),
+                                        },
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: GameWidget(game: _game),
                                         ),
                                       ),
                                     ),
