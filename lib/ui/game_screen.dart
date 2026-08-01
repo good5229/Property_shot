@@ -1200,8 +1200,7 @@ String? _levelProgressHint(GameState state) {
 
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 =>
-      '1/3 무거운 돌을 눌러 속성을 확인하세요. 추천 경로는 속성을 공으로 옮긴 뒤, 공을 길게 눌렀다 손을 떼 발사하는 것입니다.',
+    0 => '1/3 무거운 돌을 눌러 속성을 공에 옮긴 뒤, 공을 길게 눌렀다 손을 떼 발사하세요.',
     1 =>
       '2/3 젤리를 눌러 탄성을 확인하세요. 속성을 쓰지 않는 경로도 시도할 수 있습니다. 공을 길게 눌렀다 손을 떼면 발사됩니다.',
     _ =>
