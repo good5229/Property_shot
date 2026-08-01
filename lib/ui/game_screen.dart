@@ -487,6 +487,14 @@ class _GameScreenState extends State<GameScreen> {
     final screenSize = MediaQuery.sizeOf(context);
     final compactLayout = screenSize.width <= 800;
     final contentWidth = screenSize.width < 520 ? screenSize.width : 520.0;
+    final clearPopupOpen = _state.phase == GamePhase.success && _showClearPopup;
+    final failurePopupOpen =
+        _showFailurePopup && !_showBallInfo && inspectedEntity == null;
+    final popupOpen =
+        _showBallInfo ||
+        inspectedEntity != null ||
+        failurePopupOpen ||
+        clearPopupOpen;
     return Scaffold(
       backgroundColor: const Color(0xFFE3E8DF),
       appBar: AppBar(
@@ -507,190 +515,206 @@ class _GameScreenState extends State<GameScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            Center(
-              child: SizedBox(
-                width: contentWidth,
-                height: math.max(0, screenSize.height - kToolbarHeight),
-                child: Column(
-                  children: [
-                    if (!compactLayout)
-                      _Hud(
-                        state: _state,
-                        unlockedLevel: _unlockedLevel,
-                        onSelectLevel: _selectLevel,
-                      ),
-                    Expanded(
-                      child: AbsorbPointer(
-                        absorbing: _showBallInfo || inspectedEntity != null,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: compactLayout ? 4 : 12,
+            AbsorbPointer(
+              absorbing: popupOpen,
+              child: ExcludeSemantics(
+                excluding: popupOpen,
+                child: Center(
+                  child: SizedBox(
+                    width: contentWidth,
+                    height: math.max(0, screenSize.height - kToolbarHeight),
+                    child: Column(
+                      children: [
+                        if (!compactLayout)
+                          _Hud(
+                            state: _state,
+                            unlockedLevel: _unlockedLevel,
+                            onSelectLevel: _selectLevel,
                           ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final semanticLaunch = CustomSemanticsAction(
-                                label: '공 발사',
-                              );
-                              final semanticAimRight = CustomSemanticsAction(
-                                label: '오른쪽으로 조준',
-                              );
-                              final semanticAimLeft = CustomSemanticsAction(
-                                label: '왼쪽으로 조준',
-                              );
-                              final fieldSize = constraints.biggest;
-                              final scale = math.min(
-                                fieldSize.width / logicalSize.x,
-                                fieldSize.height / logicalSize.y,
-                              );
-                              final origin = Offset(
-                                (fieldSize.width - logicalSize.x * scale) / 2,
-                                (fieldSize.height - logicalSize.y * scale) / 2,
-                              );
-                              final boardSize = Size(
-                                logicalSize.x * scale,
-                                logicalSize.y * scale,
-                              );
-                              return Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Positioned(
-                                    left: origin.dx,
-                                    top: origin.dy,
-                                    width: boardSize.width,
-                                    height: boardSize.height,
-                                    child: GestureDetector(
-                                      key: const Key('aim_area'),
-                                      onTapUp: (details) => _handleFieldTap(
-                                        details.localPosition,
-                                        boardSize,
-                                      ),
-                                      onLongPressStart: (details) =>
-                                          _startPowerCharge(
-                                            details.localPosition,
-                                            boardSize,
-                                          ),
-                                      onLongPressMoveUpdate: (details) =>
-                                          _updateAim(
-                                            details.localPosition,
-                                            boardSize,
-                                          ),
-                                      onLongPressEnd: (_) => _stopPowerCharge(),
-                                      onLongPressCancel: _cancelPowerCharge,
-                                      onPanUpdate: (details) => _updateAim(
-                                        details.localPosition,
-                                        boardSize,
-                                      ),
-                                      onPanEnd: (_) {
-                                        if (_state.phase ==
-                                            GamePhase.planning) {
-                                          _setState(
-                                            _state.copyWith(message: '조준 고정'),
-                                          );
-                                        }
-                                      },
-                                      child: Semantics(
-                                        container: true,
-                                        label: '공을 조준하는 게임 화면',
-                                        value:
-                                            '힘 ${(_state.aimPower * 100).round()}퍼센트',
-                                        increasedValue:
-                                            '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                        decreasedValue:
-                                            '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                        hint:
-                                            '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
-                                        onIncrease: () => _adjustPower(0.055),
-                                        onDecrease: () => _adjustPower(-0.055),
-                                        customSemanticsActions: {
-                                          semanticLaunch: _launch,
-                                          semanticAimRight: () =>
-                                              _nudgeAim(math.pi / 18),
-                                          semanticAimLeft: () =>
-                                              _nudgeAim(-math.pi / 18),
-                                        },
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: GameWidget(game: _game),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  for (final entity in _state.entities)
-                                    if (entity.active)
+                        Expanded(
+                          child: AbsorbPointer(
+                            absorbing: popupOpen,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: compactLayout ? 4 : 12,
+                              ),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final semanticLaunch = CustomSemanticsAction(
+                                    label: '공 발사',
+                                  );
+                                  final semanticAimRight =
+                                      CustomSemanticsAction(label: '오른쪽으로 조준');
+                                  final semanticAimLeft = CustomSemanticsAction(
+                                    label: '왼쪽으로 조준',
+                                  );
+                                  final fieldSize = constraints.biggest;
+                                  final scale = math.min(
+                                    fieldSize.width / logicalSize.x,
+                                    fieldSize.height / logicalSize.y,
+                                  );
+                                  final origin = Offset(
+                                    (fieldSize.width - logicalSize.x * scale) /
+                                        2,
+                                    (fieldSize.height - logicalSize.y * scale) /
+                                        2,
+                                  );
+                                  final boardSize = Size(
+                                    logicalSize.x * scale,
+                                    logicalSize.y * scale,
+                                  );
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
                                       Positioned(
-                                        left:
-                                            origin.dx +
-                                            (entity.position.x -
-                                                    entity.size.x / 2) *
-                                                scale,
-                                        top:
-                                            origin.dy +
-                                            (entity.position.y -
-                                                    entity.size.y / 2) *
-                                                scale,
-                                        width: math.max(
-                                          32,
-                                          entity.size.x * scale,
-                                        ),
-                                        height: math.max(
-                                          32,
-                                          entity.size.y * scale,
-                                        ),
-                                        child: Semantics(
-                                          container: true,
-                                          button:
-                                              entity.type == EntityType.ball ||
-                                              entity.traits.isNotEmpty,
-                                          label: _semanticEntityLabel(entity),
-                                          hint: entity.traits.isNotEmpty
-                                              ? '선택하면 속성 정보를 확인할 수 있습니다'
-                                              : null,
-                                          onTap: () =>
-                                              _handleSemanticEntity(entity.id),
-                                          child: const SizedBox.expand(),
+                                        left: origin.dx,
+                                        top: origin.dy,
+                                        width: boardSize.width,
+                                        height: boardSize.height,
+                                        child: GestureDetector(
+                                          key: const Key('aim_area'),
+                                          onTapUp: (details) => _handleFieldTap(
+                                            details.localPosition,
+                                            boardSize,
+                                          ),
+                                          onLongPressStart: (details) =>
+                                              _startPowerCharge(
+                                                details.localPosition,
+                                                boardSize,
+                                              ),
+                                          onLongPressMoveUpdate: (details) =>
+                                              _updateAim(
+                                                details.localPosition,
+                                                boardSize,
+                                              ),
+                                          onLongPressEnd: (_) =>
+                                              _stopPowerCharge(),
+                                          onLongPressCancel: _cancelPowerCharge,
+                                          onPanUpdate: (details) => _updateAim(
+                                            details.localPosition,
+                                            boardSize,
+                                          ),
+                                          onPanEnd: (_) {
+                                            if (_state.phase ==
+                                                GamePhase.planning) {
+                                              _setState(
+                                                _state.copyWith(
+                                                  message: '조준 고정',
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          child: Semantics(
+                                            container: true,
+                                            label: '공을 조준하는 게임 화면',
+                                            value:
+                                                '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                            increasedValue:
+                                                '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                            decreasedValue:
+                                                '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                            hint:
+                                                '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
+                                            onIncrease: () =>
+                                                _adjustPower(0.055),
+                                            onDecrease: () =>
+                                                _adjustPower(-0.055),
+                                            customSemanticsActions: {
+                                              semanticLaunch: _launch,
+                                              semanticAimRight: () =>
+                                                  _nudgeAim(math.pi / 18),
+                                              semanticAimLeft: () =>
+                                                  _nudgeAim(-math.pi / 18),
+                                            },
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: GameWidget(game: _game),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                  if (compactLayout)
-                                    Positioned(
-                                      top: 6,
-                                      left: 6,
-                                      right: 6,
-                                      child: _Hud(
-                                        compact: true,
-                                        state: _state,
-                                        unlockedLevel: _unlockedLevel,
-                                        onSelectLevel: _selectLevel,
-                                      ),
-                                    ),
-                                  if (compactLayout)
-                                    Positioned(
-                                      left: 6,
-                                      right: 6,
-                                      bottom: 6,
-                                      child: _ControlPanel(
-                                        compact: true,
-                                        state: _state,
-                                        onRewind: _rewind,
-                                        onReset: () =>
-                                            _selectLevel(_state.levelIndex),
-                                      ),
-                                    ),
-                                ],
-                              );
-                            },
+                                      for (final entity in _state.entities)
+                                        if (entity.active)
+                                          Positioned(
+                                            left:
+                                                origin.dx +
+                                                (entity.position.x -
+                                                        entity.size.x / 2) *
+                                                    scale,
+                                            top:
+                                                origin.dy +
+                                                (entity.position.y -
+                                                        entity.size.y / 2) *
+                                                    scale,
+                                            width: math.max(
+                                              32,
+                                              entity.size.x * scale,
+                                            ),
+                                            height: math.max(
+                                              32,
+                                              entity.size.y * scale,
+                                            ),
+                                            child: Semantics(
+                                              container: true,
+                                              button:
+                                                  entity.type ==
+                                                      EntityType.ball ||
+                                                  entity.traits.isNotEmpty,
+                                              label: _semanticEntityLabel(
+                                                entity,
+                                              ),
+                                              hint: entity.traits.isNotEmpty
+                                                  ? '선택하면 속성 정보를 확인할 수 있습니다'
+                                                  : null,
+                                              onTap: () =>
+                                                  _handleSemanticEntity(
+                                                    entity.id,
+                                                  ),
+                                              child: const SizedBox.expand(),
+                                            ),
+                                          ),
+                                      if (compactLayout)
+                                        Positioned(
+                                          top: 6,
+                                          left: 6,
+                                          right: 6,
+                                          child: _Hud(
+                                            compact: true,
+                                            state: _state,
+                                            unlockedLevel: _unlockedLevel,
+                                            onSelectLevel: _selectLevel,
+                                          ),
+                                        ),
+                                      if (compactLayout)
+                                        Positioned(
+                                          left: 6,
+                                          right: 6,
+                                          bottom: 6,
+                                          child: _ControlPanel(
+                                            compact: true,
+                                            state: _state,
+                                            onRewind: _rewind,
+                                            onReset: () =>
+                                                _selectLevel(_state.levelIndex),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        if (!compactLayout)
+                          _ControlPanel(
+                            state: _state,
+                            onRewind: _rewind,
+                            onReset: () => _selectLevel(_state.levelIndex),
+                          ),
+                      ],
                     ),
-                    if (!compactLayout)
-                      _ControlPanel(
-                        state: _state,
-                        onRewind: _rewind,
-                        onReset: () => _selectLevel(_state.levelIndex),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -710,7 +734,7 @@ class _GameScreenState extends State<GameScreen> {
                   onCopy: inspectedEntity.traits.isEmpty ? null : _copyTrait,
                 ),
               ),
-            if (_showFailurePopup && !_showBallInfo && inspectedEntity == null)
+            if (failurePopupOpen)
               _FailurePopup(
                 state: _state,
                 advice: _failureAdvice,
@@ -721,7 +745,7 @@ class _GameScreenState extends State<GameScreen> {
                   _selectLevel(_state.levelIndex);
                 },
               ),
-            if (_state.phase == GamePhase.success && _showClearPopup)
+            if (clearPopupOpen)
               _ClearPopup(
                 state: _state,
                 bestShot: _bestShots[_state.levelIndex],
@@ -892,11 +916,14 @@ class _FailurePopup extends StatelessWidget {
         child: SafeArea(
           top: false,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: BoxConstraints(
+              maxWidth: 420,
+              maxHeight: MediaQuery.sizeOf(context).height - 150,
+            ),
             child: Material(
               color: const Color(0xFFF7FAF3),
               borderRadius: BorderRadius.circular(14),
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

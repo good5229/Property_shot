@@ -154,6 +154,7 @@ void main() {
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
     expect(find.textContaining('예시 기록'), findsOneWidget);
+    expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsNothing);
 
     await tester.tap(find.byKey(const Key('next_stage_button')));
     await tester.pump();
