@@ -550,6 +550,18 @@ void main() {
     expect(result.state.entityById('spent_ball_1')!.visualState, 'stuck');
   });
 
+  test('연쇄로 이동한 물체도 점착판에 닿으면 고정된다', () {
+    final result = shots.resolve(
+      _chainedStickyState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final crate = result.state.entityById('crate_a')!;
+
+    expect(result.events, contains('chain_collision_stickySurface'));
+    expect(crate.visualState, 'stuck');
+    expect(crate.movable, isFalse);
+  });
+
   test('속성을 옮기면 원래 물체에서 제거된다', () {
     final state = traits.transferSelectedTrait(
       traits.selectSource(levels[2].createState(2), 'glue'),
@@ -1311,6 +1323,43 @@ GameState _stickyPadState() {
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(260, 80),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _chainedStickyState() {
+  return const GameState(
+    levelIndex: 101,
+    levelName: '연쇄 점착 고정 테스트',
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(92, 80),
+        size: Vec2(28, 28),
+        movable: true,
+      ),
+      EntityState(
+        id: 'glue',
+        type: EntityType.stickySurface,
+        position: Vec2(154, 80),
+        size: Vec2(42, 42),
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(320, 300),
         size: Vec2(34, 34),
         solid: false,
       ),

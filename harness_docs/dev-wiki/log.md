@@ -553,6 +553,10 @@ Use consistent headings so entries are easy to grep.
 
 - 권리 해시만 통과하고 원본 압축파일이 새 클론에서 누락되는 상태를 막기 위해 원본 에셋과 최신 검증 문서의 Git 추적을 사전검사한다.
 
+## [2026-08-01] physics | chained sticky immobilization
+
+- 연쇄 이동 물체가 점착판에 닿을 때 외형만 멈추고 운동 가능 상태로 남던 문제를 고정 상태로 통합한다.
+
 ## [2026-08-01] test | progression contract coverage
 
 - 기본 상태의 잠긴 단계 선택 거부와 마지막 단계 완료 후 재도전 문구를 위젯 테스트로 고정한다.

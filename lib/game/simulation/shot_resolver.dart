@@ -997,6 +997,7 @@ class ShotResolver {
           collisionEntity,
           normal,
         ),
+        movable: hit.type == EntityType.stickySurface ? false : current.movable,
         visualState: hit.type == EntityType.stickySurface ? 'stuck' : 'pushed',
       );
       _appendMovePoint(path, collision.position);
