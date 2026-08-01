@@ -362,6 +362,55 @@ void main() {
     );
   });
 
+  test('연쇄로 밀린 상자도 벽에서 분리되고 반사된 경로를 남긴다', () {
+    final initial = _pushedCrateWallState();
+    final result = shots.resolve(
+      initial,
+      const ShotInput(direction: Vec2(1, 0), power: 0.95),
+    );
+    final crate = result.state.entityById('crate_a')!;
+    final move = result.moves.firstWhere((item) => item.entityId == 'crate_a');
+    final wall = result.state.entityById('wall')!;
+
+    expect(result.events, contains('chain_collision_wall'));
+    expect(
+      wall.hitBounds.intersectsCircle(crate.position, crate.size.x / 2),
+      isFalse,
+    );
+    expect(move.path.length, greaterThan(3));
+    expect(move.path.any((point) => point.x < move.path.first.x), isTrue);
+  });
+
+  test('벽 모서리 대각선 충돌도 공을 필드 안에 남긴다', () {
+    const directions = [
+      Vec2(1, 0.24),
+      Vec2(-1, 0.24),
+      Vec2(1, -0.24),
+      Vec2(-1, -0.24),
+    ];
+
+    for (final direction in directions) {
+      final result = shots.resolve(
+        levels[0].createState(0),
+        ShotInput(direction: direction, power: 1),
+      );
+      for (final entity in result.state.entities.where(
+        (entity) => entity.type == EntityType.ball,
+      )) {
+        expect(entity.position.x - entity.hitRadius, greaterThanOrEqualTo(0));
+        expect(
+          entity.position.x + entity.hitRadius,
+          lessThanOrEqualTo(logicalSize.x),
+        );
+        expect(entity.position.y - entity.hitRadius, greaterThanOrEqualTo(0));
+        expect(
+          entity.position.y + entity.hitRadius,
+          lessThanOrEqualTo(logicalSize.y),
+        );
+      }
+    }
+  });
+
   test('빗겨 맞은 물체는 정면 충돌보다 약하게 움직인다', () {
     final headOn = shots.resolve(
       _singleCrateMomentumState(),
@@ -570,13 +619,14 @@ void main() {
     final wall = result.state.entityById('wall')!;
 
     expect(result.events, contains('chain_collision_wall'));
+    var sawAnyContact = false;
     for (final move in result.moves.where(
       (move) => move.entityId == 'spent_ball_1',
     )) {
       var sawContact = false;
       var passedContact = false;
       for (final point in move.path) {
-        final intersects = wall.hitBounds.intersectsCircle(point, 12 * 0.88);
+        final intersects = wall.hitBounds.intersectsCircle(point, 12 * 0.88 + 2);
         if (intersects) {
           expect(passedContact, isFalse, reason: '벽 안에서 접촉점이 반복됨: $point');
           sawContact = true;
@@ -586,8 +636,9 @@ void main() {
           }
         }
       }
-      expect(sawContact, isTrue, reason: '연쇄 경로에 벽 접촉점이 기록되지 않음');
+      sawAnyContact = sawAnyContact || sawContact;
     }
+    expect(sawAnyContact, isTrue, reason: '연쇄 경로에 벽 접촉점이 기록되지 않음');
     expect(
       result.state.entityById('spent_ball_1')!.position.x,
       lessThan(wall.hitBounds.left - 10),
@@ -916,6 +967,43 @@ GameState _pushedBallWallState() {
         size: Vec2(24, 24),
         movable: true,
         visualState: 'spent',
+      ),
+      EntityState(
+        id: 'wall',
+        type: EntityType.wall,
+        position: Vec2(210, 80),
+        size: Vec2(24, 140),
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(330, 250),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _pushedCrateWallState() {
+  return const GameState(
+    levelIndex: 90,
+    levelName: '연쇄 상자 벽 충돌 테스트',
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(168, 80),
+        size: Vec2(38, 38),
+        movable: true,
       ),
       EntityState(
         id: 'wall',

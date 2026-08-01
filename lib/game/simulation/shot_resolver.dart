@@ -627,10 +627,35 @@ class ShotResolver {
   List<EntityState> _fieldBoundaryEntities() {
     return [
       EntityState(
+        id: 'field_boundary_top',
+        type: EntityType.wall,
+        position: Vec2(logicalSize.x / 2, -12),
+        size: Vec2(logicalSize.x + 48, 24),
+        hitboxScale: 1,
+        movable: false,
+      ),
+      EntityState(
         id: 'field_boundary_bottom',
         type: EntityType.wall,
         position: Vec2(logicalSize.x / 2, logicalSize.y + 12),
-        size: Vec2(logicalSize.x, 24),
+        size: Vec2(logicalSize.x + 48, 24),
+        hitboxScale: 1,
+        movable: false,
+      ),
+      EntityState(
+        id: 'field_boundary_left',
+        type: EntityType.wall,
+        position: Vec2(-12, logicalSize.y / 2),
+        size: Vec2(24, logicalSize.y + 48),
+        hitboxScale: 1,
+        movable: false,
+      ),
+      EntityState(
+        id: 'field_boundary_right',
+        type: EntityType.wall,
+        position: Vec2(logicalSize.x + 12, logicalSize.y / 2),
+        size: Vec2(24, logicalSize.y + 48),
+        hitboxScale: 1,
         movable: false,
       ),
     ];
@@ -1045,29 +1070,18 @@ class ShotResolver {
 
       if (hit.type == EntityType.wall || hit.type == EntityType.gate) {
         events.add('bounced');
-        if (target.type == EntityType.ball) {
-          current = current.copyWith(
-            position: _separateMovingEntityFromCollision(
-              hit,
-              collisionEntity,
-              normal,
-            ),
-          );
-          _appendMovePoint(path, current.position);
-          impulseDirection = _reflect(impulseDirection, normal);
-          remaining *= 0.58;
-          continue;
-        }
         current = current.copyWith(
           position: _separateMovingEntityFromCollision(
             hit,
             collisionEntity,
             normal,
           ),
-          visualState: 'blocked',
+          visualState: 'wall_bounced',
         );
         _appendMovePoint(path, current.position);
-        break;
+        impulseDirection = _reflect(impulseDirection, normal);
+        remaining *= target.type == EntityType.ball ? 0.58 : 0.34;
+        continue;
       }
 
       if (hit.type == EntityType.weight || hit.type == EntityType.crate) {
