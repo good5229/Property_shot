@@ -283,7 +283,7 @@ class ShotResolver {
             state.requiresStickyAnchor,
           );
           events.add('crate_pushed');
-          speed *= heavy ? 0.78 : 0.56;
+          speed *= (heavy ? 0.78 : 0.56) * _restitutionMultiplier(ball, hit);
           if (_anyBallInHole(entities) ||
               _anyBallMoveEnteredHole(entities, moves)) {
             events.add('existing_ball_hole_entered');
@@ -351,7 +351,9 @@ class ShotResolver {
           movingMass,
           targetMass,
         );
-        speed *= _postImpactSpeedFactor(movingMass, targetMass);
+        speed *=
+            _postImpactSpeedFactor(movingMass, targetMass) *
+            _restitutionMultiplier(ball, hit);
         events.add('momentum_transfer');
         continue;
       }
@@ -376,7 +378,7 @@ class ShotResolver {
         );
         path[path.length - 1] = position;
         direction = _reflect(direction, collision.normal);
-        speed *= 0.72;
+        speed *= 0.72 * _restitutionMultiplier(ball, hit);
         events.add('jelly_bounced');
         continue;
       }
@@ -408,7 +410,7 @@ class ShotResolver {
           break;
         }
         direction = _reflect(direction, collision.normal);
-        speed *= 0.68;
+        speed *= 0.68 * _restitutionMultiplier(ball, hit);
         events.add('momentum_transfer');
         continue;
       }
@@ -455,7 +457,10 @@ class ShotResolver {
           movingMass,
           _massOf(hit),
         );
-        speed *= _postImpactSpeedFactor(movingMass, _massOf(hit)) * 0.82;
+        speed *=
+            _postImpactSpeedFactor(movingMass, _massOf(hit)) *
+            0.82 *
+            _restitutionMultiplier(ball, hit);
         events.add('bounced');
         continue;
       }
@@ -474,7 +479,7 @@ class ShotResolver {
         );
         path[path.length - 1] = position;
         direction = _reflect(direction, collision.normal);
-        speed *= 0.88;
+        speed *= 0.88 * _restitutionMultiplier(ball, hit);
         events.add('bounced');
         continue;
       }
@@ -671,7 +676,9 @@ class ShotResolver {
     CollisionHit? best;
     var bestMetric = double.infinity;
     for (final entity in entities) {
-      if (entity.id == ball.id || !entity.active || !entity.solid) {
+      if (entity.id == ball.id ||
+          !entity.active ||
+          !_isSolidForPhysics(entity)) {
         continue;
       }
       if (entity.type == EntityType.gate && entity.open) {
@@ -903,6 +910,19 @@ class ShotResolver {
       0.35,
       0.7,
     );
+  }
+
+  double _effectiveRestitution(EntityState entity) {
+    final base = entity.restitution.clamp(0.12, 0.98).toDouble();
+    return entity.traits.contains(TraitType.bouncy)
+        ? math.max(base, 0.88)
+        : base;
+  }
+
+  double _restitutionMultiplier(EntityState moving, EntityState hit) {
+    final pair =
+        (_effectiveRestitution(moving) + _effectiveRestitution(hit)) / 2;
+    return (pair / 0.72).clamp(0.2, 1.35).toDouble();
   }
 
   double _massOf(EntityState entity) {
@@ -1140,7 +1160,9 @@ class ShotResolver {
           ),
         );
         impulseDirection = _reflect(impulseDirection, normal);
-        remaining *= target.type == EntityType.ball ? 0.7 : 0.28;
+        remaining *=
+            (target.type == EntityType.ball ? 0.7 : 0.28) *
+            _restitutionMultiplier(current, hit);
         events.add('jelly_bounced');
         continue;
       }
@@ -1156,7 +1178,10 @@ class ShotResolver {
           entities,
           hit,
           impulseDirection,
-          remaining * 0.68 * transferRatio,
+          remaining *
+              0.68 *
+              transferRatio *
+              _restitutionMultiplier(current, hit),
           events,
           moves,
           collisionTrigger,
@@ -1175,7 +1200,10 @@ class ShotResolver {
           targetMass,
           hitMass,
         );
-        remaining *= _postImpactSpeedFactor(targetMass, hitMass) * 0.76;
+        remaining *=
+            _postImpactSpeedFactor(targetMass, hitMass) *
+            0.76 *
+            _restitutionMultiplier(current, hit);
         continue;
       }
 
@@ -1191,7 +1219,9 @@ class ShotResolver {
         );
         _appendMovePoint(path, current.position);
         impulseDirection = _reflect(impulseDirection, normal);
-        remaining *= target.type == EntityType.ball ? 0.58 : 0.34;
+        remaining *=
+            (target.type == EntityType.ball ? 0.58 : 0.34) *
+            _restitutionMultiplier(current, hit);
         continue;
       }
 
@@ -1206,7 +1236,10 @@ class ShotResolver {
             targetMass,
             hitMass,
           );
-          remaining *= _postImpactSpeedFactor(targetMass, hitMass) * 0.72;
+          remaining *=
+              _postImpactSpeedFactor(targetMass, hitMass) *
+              0.72 *
+              _restitutionMultiplier(current, hit);
           continue;
         }
         current = current.copyWith(visualState: 'blocked');
@@ -1363,10 +1396,10 @@ class ShotResolver {
     if (b.isCircle) {
       return a.hitBounds.intersectsCircle(b.position, b.hitRadius);
     }
-    return a.hitBounds.left < b.hitBounds.right &&
-        a.hitBounds.right > b.hitBounds.left &&
-        a.hitBounds.top < b.hitBounds.bottom &&
-        a.hitBounds.bottom > b.hitBounds.top;
+    return a.hitBounds.left <= b.hitBounds.right &&
+        a.hitBounds.right >= b.hitBounds.left &&
+        a.hitBounds.top <= b.hitBounds.bottom &&
+        a.hitBounds.bottom >= b.hitBounds.top;
   }
 
   double _segmentDistance(Vec2 a, Vec2 b, Vec2 point) {

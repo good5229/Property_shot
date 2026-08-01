@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'geometry.dart';
 import 'trait.dart';
 
@@ -45,7 +47,7 @@ class EntityState {
   final double restitution;
 
   bool get isCircle => type == EntityType.ball || type == EntityType.hole;
-  double get radius => size.x / 2;
+  double get radius => math.min(size.x, size.y) / 2;
   double get hitRadius => radius * hitboxScale;
   Bounds get bounds => Bounds(
     left: position.x - size.x / 2,

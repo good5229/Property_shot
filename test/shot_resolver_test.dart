@@ -130,6 +130,37 @@ void main() {
     expect(highDistance, greaterThan(lowDistance));
   });
 
+  test('충돌 대상의 반발값이 상자 연쇄 이동량에 반영된다', () {
+    final low = shots.resolve(
+      _restitutionCrateState(0.2),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final high = shots.resolve(
+      _restitutionCrateState(0.92),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final start = _restitutionCrateState(0.2).entityById('crate')!.position;
+
+    expect(low.events, contains('crate_pushed'));
+    expect(high.events, contains('crate_pushed'));
+    expect(
+      high.state.entityById('crate')!.position.distanceTo(start),
+      greaterThan(low.state.entityById('crate')!.position.distanceTo(start)),
+    );
+  });
+
+  test('비정사각형 원형 요소의 히트박스는 짧은 축을 따른다', () {
+    const entity = EntityState(
+      id: '타원형_공',
+      type: EntityType.ball,
+      position: Vec2(40, 40),
+      size: Vec2(30, 18),
+    );
+
+    expect(entity.radius, 9);
+    expect(entity.hitRadius, 7.92);
+  });
+
   test('1라운드는 같은 대표 조준에서 무거움 없이는 홀에 도달하지 못한다', () {
     const input = ShotInput(direction: Vec2(1, -1.3), power: 1);
     final normal = shots.resolve(levels[0].createState(0), input);
@@ -187,6 +218,23 @@ void main() {
 
     expect(result.events, contains('bounced'));
     expect(result.state.phase, isNot(GamePhase.success));
+  });
+
+  test('미리보기에서도 상태가 비고체인 벽을 실제 장애물로 본다', () {
+    final initial = _wallState(equippedTrait: null);
+    final state = initial.copyWith(
+      entities: [
+        for (final entity in initial.entities)
+          entity.type == EntityType.wall
+              ? entity.copyWith(solid: false)
+              : entity,
+      ],
+    );
+    final preview = shots.preview(
+      state.copyWith(aimDirection: const Vec2(1, 0), aimPower: 0.5),
+    );
+
+    expect(preview.points.last.x, lessThan(128));
   });
 
   test('2라운드는 홀 직선 조준 우회를 막고 탄성 반사 풀이를 남긴다', () {
@@ -1120,6 +1168,39 @@ GameState _movableWeightPowerState() {
         movable: true,
       ),
       EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(320, 300),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _restitutionCrateState(double restitution) {
+  return GameState(
+    levelIndex: 93,
+    levelName: '재질 반발 테스트',
+    ballSpawn: const Vec2(40, 80),
+    aimPower: 1,
+    entities: [
+      const EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate',
+        type: EntityType.crate,
+        position: const Vec2(92, 80),
+        size: const Vec2(28, 28),
+        movable: true,
+        restitution: restitution,
+      ),
+      const EntityState(
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(320, 300),
