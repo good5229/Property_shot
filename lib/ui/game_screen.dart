@@ -273,7 +273,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!mounted || !_isAnimatingShot) {
       return;
     }
-    _feedback.collision();
+    _feedback.collision(impact.entityType);
   }
 
   void _rewind() {

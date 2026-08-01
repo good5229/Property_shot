@@ -69,7 +69,6 @@ class PropertyShotGame extends FlameGame {
   }) {
     state = next;
     if (path.length > 1) {
-      _animationCompletionTimer?.cancel();
       _animationPath = path;
       _animationMoves = moves;
       _animationImpacts = impacts;
@@ -83,12 +82,7 @@ class PropertyShotGame extends FlameGame {
           ? const <TraitType>{}
           : spentBalls.last.traits;
       _animationTrait = traits.isEmpty ? next.equippedTrait : traits.first;
-      _animationCompletionTimer = Timer(
-        Duration(
-          milliseconds: ((_animationEndCursor / 34) * 1000 + 120).ceil(),
-        ),
-        _finishAnimation,
-      );
+      _scheduleAnimationCompletion();
     } else if (animationTransaction) {
       Future<void>.microtask(() => onAnimationFinished?.call());
     }
@@ -120,8 +114,9 @@ class PropertyShotGame extends FlameGame {
           }
         }
       }
-      // 종료 콜백은 예약된 애니메이션 타이머만 소유한다. 프레임 지연으로
-      // 커서가 끝을 넘어도 팝업 전환이 중복 호출되지 않게 한다.
+      if (_animationCursor >= _animationEndCursor) {
+        _finishAnimation();
+      }
     }
     _pulseClock += dt;
   }
@@ -138,6 +133,18 @@ class PropertyShotGame extends FlameGame {
     _animationStartState = null;
     _animationTrait = null;
     onAnimationFinished?.call();
+  }
+
+  void _scheduleAnimationCompletion() {
+    _animationCompletionTimer?.cancel();
+    final milliseconds = math.max(
+      120,
+      ((_animationEndCursor / 34) * 1000 + 120).ceil(),
+    );
+    _animationCompletionTimer = Timer(
+      Duration(milliseconds: milliseconds),
+      _finishAnimation,
+    );
   }
 
   @override
@@ -1381,10 +1388,26 @@ class PropertyShotGame extends FlameGame {
     List<Offset> topPoints,
   ) {
     final center = _project(entity.position);
-    final pulse = (math.sin(_pulseClock * math.pi * 5).abs());
+    final openingMove = _animationMoves
+        .where(
+          (move) => move.entityId == entity.id && move.visualState == 'opening',
+        )
+        .fold<ShotAnimationMove?>(
+          null,
+          (latest, move) =>
+              latest == null || move.triggerPathIndex > latest.triggerPathIndex
+              ? move
+              : latest,
+        );
+    final openingProgress = openingMove == null
+        ? 1.0
+        : ((_animationCursor - openingMove.triggerPathIndex) / 12)
+              .clamp(0.0, 1.0)
+              .toDouble();
+    final easedOpening = 1 - math.pow(1 - openingProgress, 3).toDouble();
     final width = entity.size.x;
     final height = entity.size.y;
-    final gap = 6 + pulse * 12;
+    final gap = 6 + easedOpening * 16;
     final rail = Paint()
       ..color = const Color(0x66596B60)
       ..strokeWidth = 2
@@ -1395,7 +1418,7 @@ class PropertyShotGame extends FlameGame {
       ..color = Color.lerp(
         const Color(0xFFC24E3A),
         const Color(0x774EAF7C),
-        0.62 + pulse * 0.38,
+        0.62 + easedOpening * 0.38,
       )!;
     final leftDoor = RRect.fromRectAndRadius(
       Rect.fromCenter(

@@ -1155,6 +1155,33 @@ void main() {
     );
   });
 
+  test('상용 감사: 연쇄 공이 홀에 먼저 들어가면 뒤 벽과 충돌하지 않는다', () {
+    final result = shots.resolve(
+      _chainedBallHoleWallState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+
+    expect(result.events, contains('chain_hole_entered'));
+    expect(result.events, contains('existing_ball_hole_entered'));
+    expect(result.events, isNot(contains('chain_collision_wall')));
+    final holeImpact = result.impacts.firstWhere(
+      (impact) => impact.entityType == EntityType.hole,
+    );
+    expect(holeImpact.entityId, 'hole');
+    expect(
+      result.impacts.any(
+        (impact) =>
+            impact.entityType == EntityType.wall &&
+            impact.entityId == 'wall_behind_hole',
+      ),
+      isFalse,
+    );
+    expect(
+      result.state.entityById('spent_ball_1')!.position,
+      const Vec2(164, 80),
+    );
+  });
+
   test('상용 감사: 밀려난 공은 벽의 충돌 경계를 통과하지 않는다', () {
     final state = _pushedBallWallAuditState();
     final result = shots.resolve(
@@ -1816,6 +1843,45 @@ GameState _pushedBallWallState() {
         position: Vec2(330, 250),
         size: Vec2(34, 34),
         solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _chainedBallHoleWallState() {
+  return const GameState(
+    levelIndex: 211,
+    levelName: '연쇄 홀 포획 종결 테스트',
+    shotCount: 1,
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'spent_ball_1',
+        type: EntityType.ball,
+        position: Vec2(106, 80),
+        size: Vec2(24, 24),
+        movable: true,
+        visualState: 'spent',
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(164, 80),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+      EntityState(
+        id: 'wall_behind_hole',
+        type: EntityType.wall,
+        position: Vec2(230, 80),
+        size: Vec2(24, 140),
       ),
     ],
   );

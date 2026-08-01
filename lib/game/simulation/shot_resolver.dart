@@ -25,6 +25,7 @@ class ShotResult {
 
 class ShotImpact {
   const ShotImpact({
+    required this.entityId,
     required this.entityType,
     required this.position,
     required this.normal,
@@ -32,6 +33,7 @@ class ShotImpact {
     required this.strength,
   });
 
+  final String entityId;
   final EntityType entityType;
   final Vec2 position;
   final Vec2 normal;
@@ -172,6 +174,7 @@ class ShotResolver {
           path[path.length - 1] = position;
           impacts.add(
             ShotImpact(
+              entityId: hole.id,
               entityType: EntityType.hole,
               position: position,
               normal: direction * -1,
@@ -205,6 +208,7 @@ class ShotResolver {
       final hit = collision.entity;
       impacts.add(
         ShotImpact(
+          entityId: hit.id,
           entityType: hit.type,
           position: position,
           normal: collision.normal,
@@ -350,14 +354,14 @@ class ShotResolver {
             direction,
             (heavy ? 42 : 24) + (heavy ? 100 : 60) * impulseScale,
             events,
-          moves,
-          path.length - 1,
-          collision.normal,
-          0,
-          heavy,
-          state.requiresStickyAnchor,
-          const {},
-          impacts,
+            moves,
+            path.length - 1,
+            collision.normal,
+            0,
+            heavy,
+            state.requiresStickyAnchor,
+            const {},
+            impacts,
           );
           final pushedCrate =
               entities
@@ -1331,6 +1335,55 @@ class ShotResolver {
         target.id,
         chainCollisionIds,
       );
+      final hole = _findHole(entities);
+      final holeCaptureRadius = hole == null
+          ? 0.0
+          : hole.radius + current.hitRadius;
+      final holeProgress =
+          current.type == EntityType.ball && hole != null && _gateOpen(entities)
+          ? _segmentCircleEntryProgress(
+              current.position,
+              candidate.position,
+              hole.position,
+              holeCaptureRadius,
+            )
+          : double.infinity;
+      final collisionProgress = collision == null
+          ? double.infinity
+          : _segmentProgress(
+              current.position,
+              candidate.position,
+              collision.position,
+            );
+      if (hole != null &&
+          holeProgress.isFinite &&
+          _segmentDistance(
+                current.position,
+                candidate.position,
+                hole.position,
+              ) <=
+              holeCaptureRadius &&
+          holeProgress <= collisionProgress + 0.001) {
+        current = current.copyWith(
+          position: hole.position,
+          movable: false,
+          visualState: 'hole_captured',
+        );
+        _appendMovePoint(path, hole.position);
+        impacts?.add(
+          ShotImpact(
+            entityId: hole.id,
+            entityType: EntityType.hole,
+            position: hole.position,
+            normal: stepDirection * -1,
+            pathIndex: triggerPathIndex + iterations,
+            strength: (velocity.length / 24).clamp(0.18, 1.0),
+          ),
+        );
+        entities = _replace(entities, current);
+        events.add('chain_hole_entered');
+        break;
+      }
       if (collision == null) {
         current = candidate;
         velocity = stepDirection * math.max(0.0, availableSpeed - step);
@@ -1349,6 +1402,7 @@ class ShotResolver {
       final collisionTrigger = triggerPathIndex + iterations;
       impacts?.add(
         ShotImpact(
+          entityId: hit.id,
           entityType: hit.type,
           position: collision.position,
           normal: normal,
@@ -1489,6 +1543,9 @@ class ShotResolver {
           impacts,
         );
         events.add('chain_push');
+        if (_anyBallInHole(entities)) {
+          break;
+        }
         final postVelocity = _collisionVelocity(
           velocity,
           normal,

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+import '../game/domain/entity_state.dart';
+
 /// 외부 오디오 파일 없이 플랫폼 기본 피드백을 조합한다.
 /// 웹이나 무음·미지원 플랫폼에서 실패해도 게임 상태에는 영향을 주지 않는다.
 class GameFeedback {
@@ -27,11 +29,22 @@ class GameFeedback {
     _emit('shot_launched', haptic: HapticFeedback.mediumImpact);
   }
 
-  void collision() {
+  void collision(EntityType type) {
+    final haptic = switch (type) {
+      EntityType.wall ||
+      EntityType.gate ||
+      EntityType.weight => HapticFeedback.heavyImpact,
+      EntityType.crate ||
+      EntityType.ball ||
+      EntityType.switchPad => HapticFeedback.mediumImpact,
+      EntityType.bumper => HapticFeedback.lightImpact,
+      EntityType.stickySurface => HapticFeedback.selectionClick,
+      EntityType.hole => HapticFeedback.heavyImpact,
+    };
     _emit(
-      'collision',
+      'collision_${type.name}',
       minimumInterval: const Duration(milliseconds: 70),
-      haptic: HapticFeedback.lightImpact,
+      haptic: haptic,
     );
   }
 
