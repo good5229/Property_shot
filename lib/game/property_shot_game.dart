@@ -18,13 +18,16 @@ class PropertyShotGame extends FlameGame {
     this.state, {
     this.onAnimationFinished,
     this.onAnimationImpact,
+    this.onShotImpact,
   });
 
   GameState state;
   final VoidCallback? onAnimationFinished;
   final ValueChanged<ShotAnimationMove>? onAnimationImpact;
+  final ValueChanged<ShotImpact>? onShotImpact;
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
+  List<ShotImpact> _animationImpacts = const [];
   GameState? _animationStartState;
   double _animationCursor = 0;
   TraitType? _animationTrait;
@@ -61,6 +64,7 @@ class PropertyShotGame extends FlameGame {
     List<Vec2> path = const [],
     GameState? transitionStart,
     List<ShotAnimationMove> moves = const [],
+    List<ShotImpact> impacts = const [],
     bool animationTransaction = false,
   }) {
     state = next;
@@ -68,6 +72,7 @@ class PropertyShotGame extends FlameGame {
       _animationCompletionTimer?.cancel();
       _animationPath = path;
       _animationMoves = moves;
+      _animationImpacts = impacts;
       _animationStartState = transitionStart;
       _animationCursor = 0;
       _reportedImpactKeys.clear();
@@ -106,6 +111,15 @@ class PropertyShotGame extends FlameGame {
           onAnimationImpact?.call(move);
         }
       }
+      for (var index = 0; index < _animationImpacts.length; index++) {
+        final impact = _animationImpacts[index];
+        if (impact.pathIndex <= _animationCursor) {
+          final key = 'impact:$index:${impact.pathIndex}';
+          if (_reportedImpactKeys.add(key)) {
+            onShotImpact?.call(impact);
+          }
+        }
+      }
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
       }
@@ -121,6 +135,7 @@ class PropertyShotGame extends FlameGame {
     _animationCompletionTimer = null;
     _animationPath = const [];
     _animationMoves = const [];
+    _animationImpacts = const [];
     _animationStartState = null;
     _animationTrait = null;
     onAnimationFinished?.call();
@@ -158,6 +173,7 @@ class PropertyShotGame extends FlameGame {
     if (animated) {
       _drawAnimatedBall(canvas);
       _drawImpactFeedback(canvas);
+      _drawDirectImpactFeedback(canvas);
     }
     canvas.restore();
   }
@@ -242,6 +258,42 @@ class PropertyShotGame extends FlameGame {
           );
         }
       }
+    }
+  }
+
+  void _drawDirectImpactFeedback(Canvas canvas) {
+    for (final impact in _animationImpacts) {
+      final elapsed = _animationCursor - impact.pathIndex;
+      if (elapsed < 0 || elapsed > 14) {
+        continue;
+      }
+      final progress = (elapsed / 14).clamp(0.0, 1.0);
+      final center = _project(impact.position);
+      final accent = switch (impact.entityType) {
+        EntityType.hole => const Color(0xFFFFD76A),
+        EntityType.wall || EntityType.gate => const Color(0xFFB9E3C4),
+        EntityType.bumper => const Color(0xFF7BE7CC),
+        EntityType.stickySurface => const Color(0xFFC7A2E8),
+        EntityType.weight => const Color(0xFFB4CAD2),
+        EntityType.crate => const Color(0xFFE9B866),
+        EntityType.switchPad => const Color(0xFFFFE17C),
+        EntityType.ball => const Color(0xFFFFF7D1),
+      };
+      final ring = Paint()
+        ..color = accent.withValues(alpha: 0.82 * (1 - progress))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5 + impact.strength * 2;
+      canvas.drawCircle(center, 8 + progress * 20 * impact.strength, ring);
+      final normal = impact.normal.normalized();
+      final flash = Paint()
+        ..color = accent.withValues(alpha: 0.8 * (1 - progress))
+        ..strokeWidth = 2 + impact.strength * 2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        center - Offset(normal.y, -normal.x) * (8 + progress * 7),
+        center + Offset(normal.y, -normal.x) * (8 + progress * 7),
+        flash,
+      );
     }
   }
 
@@ -368,9 +420,26 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawBoard(Canvas canvas) {
-    final fieldShadow = Paint()..color = const Color(0x25503C2E);
-    final border = Paint()
-      ..color = const Color(0xFF5D8B62)
+    final boardBounds = const Rect.fromLTWH(-8, -8, 376, 576);
+    canvas.drawRect(
+      boardBounds,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFE9B5), Color(0xFFF5C978)],
+        ).createShader(boardBounds),
+    );
+    final fieldShadow = Paint()
+      ..color = const Color(0x553B2B24)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    final frame = Paint()
+      ..color = const Color(0xFF8B5A35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..strokeJoin = StrokeJoin.round;
+    final innerFrame = Paint()
+      ..color = const Color(0xFFE9B866)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     final boardPath = _pathFromPoints([
@@ -379,22 +448,28 @@ class PropertyShotGame extends FlameGame {
       _project(Vec2(logicalSize.x, logicalSize.y)),
       _project(Vec2(0, logicalSize.y)),
     ]);
-    canvas.drawPath(boardPath.shift(const Offset(0, 5)), fieldShadow);
+    canvas.drawPath(boardPath.shift(const Offset(0, 7)), fieldShadow);
+    canvas.drawPath(boardPath, frame);
     final fieldGradient = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFD8F5D8), Color(0xFFB8E8C8), Color(0xFFA9DEC0)],
-        stops: [0.0, 0.56, 1.0],
+        colors: [Color(0xFFE4F7C9), Color(0xFFB9E6B7), Color(0xFF8ECFAD)],
+        stops: [0.0, 0.52, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, logicalSize.x, logicalSize.y));
     canvas.drawPath(boardPath, fieldGradient);
     canvas.save();
     canvas.clipPath(boardPath);
-    final lawnStripe = Paint()..color = const Color(0x120F8A54);
+    final lawnStripe = Paint()..color = const Color(0x160F8A54);
     for (var y = 10.0; y < logicalSize.y; y += 28) {
       canvas.drawRect(Rect.fromLTWH(0, y, logicalSize.x, 12), lawnStripe);
     }
-    final pebble = Paint()..color = const Color(0x22658E70);
+    final sun = Paint()
+      ..shader = RadialGradient(
+        colors: const [Color(0x55FFF7C7), Color(0x00FFF7C7)],
+      ).createShader(const Rect.fromLTWH(18, 18, 180, 180));
+    canvas.drawCircle(const Offset(58, 58), 92, sun);
+    final pebble = Paint()..color = const Color(0x33658E70);
     for (final dot in const [
       Vec2(28, 42),
       Vec2(338, 64),
@@ -406,6 +481,19 @@ class PropertyShotGame extends FlameGame {
         Rect.fromCenter(center: _project(dot), width: 10, height: 5),
         pebble,
       );
+    }
+    final island = Paint()..color = const Color(0x1F5E9C62);
+    for (final center in const [
+      Offset(32, 106),
+      Offset(330, 474),
+      Offset(320, 72),
+    ]) {
+      canvas.drawOval(
+        Rect.fromCenter(center: center, width: 34, height: 16),
+        island,
+      );
+      canvas.drawCircle(center.translate(-8, -1), 3, pebble);
+      canvas.drawCircle(center.translate(4, 2), 4, pebble);
     }
     canvas.restore();
     final tileLine = Paint()
@@ -425,7 +513,7 @@ class PropertyShotGame extends FlameGame {
         tileLine,
       );
     }
-    final flower = Paint()..color = const Color(0xFFFFF2A8);
+    final flower = Paint()..color = const Color(0xFFFFE17C);
     for (final dot in const [
       Vec2(44, 86),
       Vec2(318, 174),
@@ -435,25 +523,30 @@ class PropertyShotGame extends FlameGame {
     ]) {
       canvas.drawCircle(_project(dot), 2.6, flower);
     }
-    final cornerLeaf = Paint()..color = const Color(0x6656A66A);
+    final cornerLeaf = Paint()..color = const Color(0x88639D64);
     for (final center in const [
-      Vec2(18, 18),
-      Vec2(342, 18),
-      Vec2(18, 542),
-      Vec2(342, 542),
+      Vec2(24, 22),
+      Vec2(336, 22),
+      Vec2(24, 538),
+      Vec2(336, 538),
     ]) {
+      final c = _project(center);
       canvas.drawOval(
-        Rect.fromCenter(center: _project(center), width: 16, height: 7),
+        Rect.fromCenter(center: c.translate(-5, 0), width: 18, height: 8),
+        cornerLeaf,
+      );
+      canvas.drawOval(
+        Rect.fromCenter(center: c.translate(5, 4), width: 18, height: 8),
         cornerLeaf,
       );
     }
-    canvas.drawPath(boardPath, border);
+    canvas.drawPath(boardPath, innerFrame);
     canvas.drawRect(
       Rect.fromLTWH(5, 5, logicalSize.x - 10, logicalSize.y - 10),
       Paint()
-        ..color = const Color(0x5572B77D)
+        ..color = const Color(0x6672B77D)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2,
+        ..strokeWidth = 2,
     );
   }
 
@@ -463,8 +556,19 @@ class PropertyShotGame extends FlameGame {
     final start = ball.position;
     final length = 46 + state.aimPower * 80;
     final end = start + direction * length;
+    final accent = Color.lerp(
+      const Color(0xFF2E9D76),
+      const Color(0xFFE06C4E),
+      state.aimPower,
+    )!;
+    final arrowShadow = Paint()
+      ..color = const Color(0x553B2B24)
+      ..strokeWidth = 9
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(_project(start), _project(end), arrowShadow);
     final arrowPaint = Paint()
-      ..color = const Color(0xFFE23D3D)
+      ..color = accent
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
@@ -481,17 +585,32 @@ class PropertyShotGame extends FlameGame {
     canvas.drawLine(_project(end), _project(end + left * 24), arrowPaint);
     canvas.drawLine(_project(end), _project(end + right * 24), arrowPaint);
 
-    final gaugePaint = Paint()
-      ..color = const Color(0xFFE23D3D)
-      ..strokeWidth = 4
+    final gaugeTrack = Paint()
+      ..color = const Color(0x553B2B24)
+      ..strokeWidth = 7
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
+    final gaugePaint = Paint()
+      ..color = accent
+      ..strokeWidth = 5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final gaugeRect = Rect.fromCircle(
+      center: _project(start),
+      radius: ball.radius + 12,
+    );
+    canvas.drawArc(gaugeRect, -math.pi / 2, math.pi * 2, false, gaugeTrack);
     canvas.drawArc(
-      Rect.fromCircle(center: _project(start), radius: ball.radius + 12),
-      -1.57,
-      state.aimPower * 6.28,
+      gaugeRect,
+      -math.pi / 2,
+      state.aimPower * math.pi * 2,
       false,
       gaugePaint,
+    );
+    canvas.drawCircle(
+      _project(end),
+      4 + state.aimPower * 3,
+      Paint()..color = accent.withValues(alpha: 0.92),
     );
   }
 
@@ -740,6 +859,11 @@ class PropertyShotGame extends FlameGame {
   void _drawHoleSurface(Canvas canvas, EntityState entity, Paint stroke) {
     final center = _project(entity.position);
     final radius = entity.radius;
+    canvas.drawCircle(
+      center.translate(0, 1),
+      radius + 5,
+      Paint()..color = const Color(0xFF75C98C),
+    );
     final outer = Rect.fromCircle(center: center, radius: radius + 1);
     final inner = Rect.fromCircle(
       center: center.translate(0, 1.5),
@@ -780,11 +904,11 @@ class PropertyShotGame extends FlameGame {
       center,
       entity.radius + 13 + pulse * 4,
       Paint()
-        ..color = const Color(0x2257B96B)
+        ..color = const Color(0x33FFD76A)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
     );
     final target = Paint()
-      ..color = const Color(0x6657B96B).withValues(alpha: 0.4 - pulse * 0.16)
+      ..color = const Color(0xFFFFD76A).withValues(alpha: 0.52 - pulse * 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2;
     canvas.drawCircle(center, entity.radius + 9 + pulse * 5, target);
@@ -1586,11 +1710,11 @@ class PropertyShotGame extends FlameGame {
       case EntityType.hole:
         return const Color(0xFF1D1D1D);
       case EntityType.wall:
-        return const Color(0xFF6E7F80);
+        return const Color(0xFF536F72);
       case EntityType.crate:
         return const Color(0xFFB7854B);
       case EntityType.bumper:
-        return const Color(0xFF4EAF7C);
+        return const Color(0xFF6ED6B0);
       case EntityType.stickySurface:
         return const Color(0xFF8E5AA9);
       case EntityType.weight:

@@ -14,7 +14,11 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
-- _(empty)_
+- [ ] 상용 수직 슬라이스 고도화
+  - branch: commercial/wall-physics-qa
+  - issue: 없음
+  - summary: 대표 무거움 스테이지의 보드·오브젝트·조준 UI·실패 피드백을 개선하고 첫 3스테이지의 난이도와 속성 선택을 재검증한다.
+  - notes: 결정론적 물리와 기존 테스트를 보존한다. 복사 자원의 최종 모델은 사용자 결정 전까지 확정하지 않는다.
 
 ## Recently Closed
 
