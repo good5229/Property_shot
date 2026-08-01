@@ -14,10 +14,15 @@ import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 
 class PropertyShotGame extends FlameGame {
-  PropertyShotGame(this.state, {this.onAnimationFinished});
+  PropertyShotGame(
+    this.state, {
+    this.onAnimationFinished,
+    this.onAnimationImpact,
+  });
 
   GameState state;
   final VoidCallback? onAnimationFinished;
+  final ValueChanged<ShotAnimationMove>? onAnimationImpact;
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   GameState? _animationStartState;
@@ -25,6 +30,7 @@ class PropertyShotGame extends FlameGame {
   TraitType? _animationTrait;
   double _pulseClock = 0;
   Timer? _animationCompletionTimer;
+  final Set<String> _reportedImpactKeys = <String>{};
   final Map<EntityType, ui.Image> _objectImages = {};
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
@@ -64,6 +70,7 @@ class PropertyShotGame extends FlameGame {
       _animationMoves = moves;
       _animationStartState = transitionStart;
       _animationCursor = 0;
+      _reportedImpactKeys.clear();
       final spentBalls = next.entities.where(
         (entity) => entity.id.startsWith('spent_ball_'),
       );
@@ -91,6 +98,14 @@ class PropertyShotGame extends FlameGame {
           ? (_animationEndCursor - _animationCursor) / 34
           : dt.clamp(0.0, 1 / 30).toDouble();
       _animationCursor += boundedDt * 34;
+      for (var index = 0; index < _animationMoves.length; index++) {
+        final move = _animationMoves[index];
+        final key = '$index:${move.entityId}:${move.triggerPathIndex}';
+        if (move.triggerPathIndex <= _animationCursor &&
+            _reportedImpactKeys.add(key)) {
+          onAnimationImpact?.call(move);
+        }
+      }
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
       }
