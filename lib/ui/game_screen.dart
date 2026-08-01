@@ -1120,13 +1120,22 @@ String? _levelProgressHint(GameState state) {
 
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 => '1/3 무거운 돌을 눌러 속성을 확인하세요.',
-    1 => '1/2 젤리를 눌러 탄성을 확인하세요. 방향을 정한 뒤 공을 길게 눌러 발사합니다.',
-    _ => '1/3 점착을 먼저 옮겨 붙이세요. 이후 무거운 공으로 스위치를 누릅니다.',
+    0 => '1/3 무거운 돌을 눌러 속성을 확인하세요. 속성을 공으로 옮긴 뒤 발사합니다.',
+    1 => '젤리를 눌러 탄성을 확인하세요. 방향을 정한 뒤 공을 길게 눌러 발사합니다.',
+    _ => '점착을 먼저 공에 옮겨 붙이세요. 이후 무거운 공으로 스위치를 누릅니다.',
   };
 }
 
 String _failureAdviceFor(List<String> events) {
+  if (events.contains('hole_rejected_trait')) {
+    return '이 홀에는 필요한 속성이 있습니다. 홀 안내를 확인하고 알맞은 속성을 공에 옮기세요.';
+  }
+  if (events.contains('hole_rejected_crate')) {
+    return '상자를 먼저 밀어야 이 홀을 열 수 있습니다. 상자의 이동 경로를 확인하세요.';
+  }
+  if (events.contains('crate_blocked')) {
+    return '상자가 움직이지 않았습니다. 더 강한 힘이나 다른 면을 노려 보세요.';
+  }
   if (events.contains('switch_rejected_sticky')) {
     return '점착 속성을 옮겨 공을 점착판에 붙인 다음 무거운 공을 준비하세요.';
   }
@@ -1260,8 +1269,7 @@ class _Hud extends StatelessWidget {
             Text(
               _levelObjective(state.levelIndex),
               key: const Key('compact_objective'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
               softWrap: true,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
@@ -1272,8 +1280,7 @@ class _Hud extends StatelessWidget {
               Text(
                 progressHint,
                 key: const Key('level_progress'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
                 softWrap: true,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: const Color(0xFF2F8A62),
@@ -1598,6 +1605,13 @@ class _EntityInfoPanel extends StatelessWidget {
                       : '${trait.label}: ${trait.description}',
                 ),
                 if (trait != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '옮기기: 원본에서 속성을 떼어 공에 적용합니다.  복사: 원본에 속성을 남기고 공에도 적용합니다.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF59685F),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
@@ -1609,7 +1623,7 @@ class _EntityInfoPanel extends StatelessWidget {
                           key: const Key('transfer_button'),
                           onPressed: onTransfer,
                           icon: const Icon(Icons.arrow_downward, size: 16),
-                          label: const Text('옮기기'),
+                          label: const Text('공으로 옮기기'),
                           style: FilledButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                           ),
@@ -1622,7 +1636,7 @@ class _EntityInfoPanel extends StatelessWidget {
                           key: const Key('copy_button'),
                           onPressed: onCopy,
                           icon: const Icon(Icons.copy, size: 16),
-                          label: const Text('복사'),
+                          label: const Text('공에 복사'),
                           style: OutlinedButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                           ),
@@ -1962,7 +1976,7 @@ class _GameBallIconPainter extends CustomPainter {
 String? _assetPath(EntityState entity) {
   return switch (entity.type) {
     EntityType.crate => 'assets/generated/crate-v2.png',
-    EntityType.weight => 'assets/icons/stone_boulder.png',
+    EntityType.weight => 'assets/generated/stone-v2.png',
     _ => null,
   };
 }
