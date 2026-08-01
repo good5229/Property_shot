@@ -242,10 +242,17 @@ class PropertyShotGame extends FlameGame {
 
   EntityState _entityAtAnimationTime(EntityState entity) {
     var animated = entity;
-    for (final move in _animationMoves.where(
-      (move) => move.entityId == entity.id,
-    )) {
+    final moves =
+        _animationMoves.where((move) => move.entityId == entity.id).toList()
+          ..sort(
+            (first, second) =>
+                first.triggerPathIndex.compareTo(second.triggerPathIndex),
+          );
+    for (final move in moves) {
       final elapsed = _animationCursor - move.triggerPathIndex;
+      if (elapsed < 0) {
+        continue;
+      }
       final duration = _moveDuration(move);
       final local = (elapsed / duration).clamp(0.0, 1.0);
       final position = _sampleMovePath(move, elapsed);
@@ -899,9 +906,13 @@ class PropertyShotGame extends FlameGame {
     }
     ShotAnimationMove? move;
     for (final candidate in _animationMoves) {
-      if (candidate.entityId == entity.id) {
+      if (candidate.entityId != entity.id ||
+          candidate.path.length < 2 ||
+          candidate.triggerPathIndex > _animationCursor) {
+        continue;
+      }
+      if (move == null || candidate.triggerPathIndex > move.triggerPathIndex) {
         move = candidate;
-        break;
       }
     }
     if (move == null || move.path.length < 2) {
