@@ -4,10 +4,20 @@ import 'package:flutter/services.dart';
 
 import '../game/domain/entity_state.dart';
 
+typedef SoundPlayer = Future<void> Function(SystemSoundType type);
+
 /// 외부 오디오 파일 없이 플랫폼 기본 피드백을 조합한다.
 /// 웹이나 무음·미지원 플랫폼에서 실패해도 게임 상태에는 영향을 주지 않는다.
 class GameFeedback {
+  GameFeedback({SoundPlayer? soundPlayer})
+    : _soundPlayer = soundPlayer ?? _playSystemSound;
+
+  final SoundPlayer _soundPlayer;
   final Map<String, DateTime> _lastPlayed = <String, DateTime>{};
+
+  static Future<void> _playSystemSound(SystemSoundType type) {
+    return SystemSound.play(type);
+  }
 
   void traitSelected() {
     _emit(
@@ -45,6 +55,11 @@ class GameFeedback {
       'collision_${type.name}',
       minimumInterval: const Duration(milliseconds: 70),
       haptic: haptic,
+      alert:
+          type == EntityType.wall ||
+          type == EntityType.gate ||
+          type == EntityType.weight ||
+          type == EntityType.hole,
     );
   }
 
@@ -95,7 +110,7 @@ class GameFeedback {
         if (haptic != null) _safe(haptic),
         if (sound)
           _safe(
-            () => SystemSound.play(
+            () => _soundPlayer(
               alert ? SystemSoundType.alert : SystemSoundType.click,
             ),
           ),
