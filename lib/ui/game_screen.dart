@@ -394,6 +394,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _handleSystemBack() {
+    if (_showBallInfo || _inspectedEntityId != null) {
+      _dismissInfo();
+      return;
+    }
+    if (_showFailurePopup || _showClearPopup) {
+      setState(() {
+        _showFailurePopup = false;
+        _showClearPopup = false;
+      });
+    }
+  }
+
   void _handleFieldTap(Offset localPosition, Size fieldSize) {
     if (_isAnimatingShot) {
       return;
@@ -604,264 +617,284 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         failurePopupOpen ||
         clearPopupOpen;
     final inputBlocked = popupOpen || _isAnimatingShot;
-    return Scaffold(
-      backgroundColor: const Color(0xFFE3E8DF),
-      appBar: AppBar(
-        title: const Text('속성 한방'),
-        backgroundColor: const Color(0xFF24352D),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            key: const Key('pause_button'),
-            tooltip: _state.phase == GamePhase.paused ? '계속' : '멈춤',
-            onPressed: _togglePause,
-            icon: Icon(
-              _state.phase == GamePhase.paused ? Icons.play_arrow : Icons.pause,
+    return PopScope<void>(
+      canPop: !popupOpen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && popupOpen) {
+          _handleSystemBack();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFE3E8DF),
+        appBar: AppBar(
+          title: const Text('속성 한방'),
+          backgroundColor: const Color(0xFF24352D),
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              key: const Key('pause_button'),
+              tooltip: _state.phase == GamePhase.paused ? '계속' : '멈춤',
+              onPressed: _togglePause,
+              icon: Icon(
+                _state.phase == GamePhase.paused
+                    ? Icons.play_arrow
+                    : Icons.pause,
+              ),
             ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            AbsorbPointer(
-              absorbing: inputBlocked,
-              child: ExcludeSemantics(
-                excluding: inputBlocked,
-                child: Center(
-                  child: SizedBox(
-                    width: contentWidth,
-                    height: math.max(0, screenSize.height - kToolbarHeight),
-                    child: Column(
-                      children: [
-                        if (!compactLayout)
-                          _Hud(
-                            state: _state,
-                            unlockedLevel: _unlockedLevel,
-                            onSelectLevel: _selectLevel,
-                          ),
-                        if (compactLayout)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-                            child: _Hud(
-                              compact: true,
+          ],
+        ),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              AbsorbPointer(
+                absorbing: inputBlocked,
+                child: ExcludeSemantics(
+                  excluding: inputBlocked,
+                  child: Center(
+                    child: SizedBox(
+                      width: contentWidth,
+                      height: math.max(0, screenSize.height - kToolbarHeight),
+                      child: Column(
+                        children: [
+                          if (!compactLayout)
+                            _Hud(
                               state: _state,
                               unlockedLevel: _unlockedLevel,
                               onSelectLevel: _selectLevel,
                             ),
-                          ),
-                        Expanded(
-                          child: AbsorbPointer(
-                            absorbing: inputBlocked,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: compactLayout ? 4 : 12,
+                          if (compactLayout)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                              child: _Hud(
+                                compact: true,
+                                state: _state,
+                                unlockedLevel: _unlockedLevel,
+                                onSelectLevel: _selectLevel,
                               ),
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final semanticLaunch = CustomSemanticsAction(
-                                    label: '공 발사',
-                                  );
-                                  final semanticAimRight =
-                                      CustomSemanticsAction(label: '오른쪽으로 조준');
-                                  final semanticAimLeft = CustomSemanticsAction(
-                                    label: '왼쪽으로 조준',
-                                  );
-                                  final semanticAimUp = CustomSemanticsAction(
-                                    label: '위쪽으로 조준',
-                                  );
-                                  final semanticAimDown = CustomSemanticsAction(
-                                    label: '아래쪽으로 조준',
-                                  );
-                                  final fieldSize = constraints.biggest;
-                                  final scale = math.min(
-                                    fieldSize.width / logicalSize.x,
-                                    fieldSize.height / logicalSize.y,
-                                  );
-                                  final boardSize = Size(
-                                    logicalSize.x * scale,
-                                    logicalSize.y * scale,
-                                  );
-                                  return Align(
-                                    alignment: Alignment.topCenter,
-                                    child: SizedBox(
-                                      width: boardSize.width,
-                                      height: boardSize.height,
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          Positioned(
-                                            left: 0,
-                                            top: 0,
-                                            width: boardSize.width,
-                                            height: boardSize.height,
-                                            child: Listener(
-                                              key: const Key('aim_area'),
-                                              behavior: HitTestBehavior.opaque,
-                                              onPointerDown: (event) =>
-                                                  _handlePointerDown(
-                                                    event.pointer,
-                                                    event.localPosition,
-                                                    boardSize,
-                                                  ),
-                                              onPointerMove: (event) =>
-                                                  _handlePointerMove(
-                                                    event.pointer,
-                                                    event.localPosition,
-                                                    boardSize,
-                                                  ),
-                                              onPointerUp: (event) =>
-                                                  _handlePointerUp(
-                                                    event.pointer,
-                                                    event.localPosition,
-                                                    boardSize,
-                                                  ),
-                                              onPointerCancel: (event) =>
-                                                  _handlePointerCancel(
-                                                    pointer: event.pointer,
-                                                  ),
-                                              child: Semantics(
-                                                container: true,
-                                                label: '공을 조준하는 게임 화면',
-                                                value:
-                                                    '힘 ${(_state.aimPower * 100).round()}퍼센트',
-                                                increasedValue:
-                                                    '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                                decreasedValue:
-                                                    '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                                hint:
-                                                    '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
-                                                onIncrease: () =>
-                                                    _adjustPower(0.055),
-                                                onDecrease: () =>
-                                                    _adjustPower(-0.055),
-                                                customSemanticsActions: {
-                                                  semanticLaunch: _launch,
-                                                  semanticAimRight: () =>
-                                                      _nudgeAim(math.pi / 18),
-                                                  semanticAimLeft: () =>
-                                                      _nudgeAim(-math.pi / 18),
-                                                  semanticAimUp: () =>
-                                                      _nudgeAim(-math.pi / 18),
-                                                  semanticAimDown: () =>
-                                                      _nudgeAim(math.pi / 18),
-                                                },
-                                                child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  child: GameWidget(
-                                                    game: _game,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          for (final entity in _state.entities)
-                                            if (entity.active)
-                                              Positioned(
-                                                left:
-                                                    (entity.position.x -
-                                                        entity.size.x / 2) *
-                                                    scale,
-                                                top:
-                                                    (entity.position.y -
-                                                        entity.size.y / 2) *
-                                                    scale,
-                                                width: math.max(
-                                                  32,
-                                                  entity.size.x * scale,
-                                                ),
-                                                height: math.max(
-                                                  32,
-                                                  entity.size.y * scale,
-                                                ),
+                            ),
+                          Expanded(
+                            child: AbsorbPointer(
+                              absorbing: inputBlocked,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: compactLayout ? 4 : 12,
+                                ),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final semanticLaunch =
+                                        CustomSemanticsAction(label: '공 발사');
+                                    final semanticAimRight =
+                                        CustomSemanticsAction(
+                                          label: '오른쪽으로 조준',
+                                        );
+                                    final semanticAimLeft =
+                                        CustomSemanticsAction(label: '왼쪽으로 조준');
+                                    final semanticAimUp = CustomSemanticsAction(
+                                      label: '위쪽으로 조준',
+                                    );
+                                    final semanticAimDown =
+                                        CustomSemanticsAction(
+                                          label: '아래쪽으로 조준',
+                                        );
+                                    final fieldSize = constraints.biggest;
+                                    final scale = math.min(
+                                      fieldSize.width / logicalSize.x,
+                                      fieldSize.height / logicalSize.y,
+                                    );
+                                    final boardSize = Size(
+                                      logicalSize.x * scale,
+                                      logicalSize.y * scale,
+                                    );
+                                    return Align(
+                                      alignment: Alignment.topCenter,
+                                      child: SizedBox(
+                                        width: boardSize.width,
+                                        height: boardSize.height,
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            Positioned(
+                                              left: 0,
+                                              top: 0,
+                                              width: boardSize.width,
+                                              height: boardSize.height,
+                                              child: Listener(
+                                                key: const Key('aim_area'),
+                                                behavior:
+                                                    HitTestBehavior.opaque,
+                                                onPointerDown: (event) =>
+                                                    _handlePointerDown(
+                                                      event.pointer,
+                                                      event.localPosition,
+                                                      boardSize,
+                                                    ),
+                                                onPointerMove: (event) =>
+                                                    _handlePointerMove(
+                                                      event.pointer,
+                                                      event.localPosition,
+                                                      boardSize,
+                                                    ),
+                                                onPointerUp: (event) =>
+                                                    _handlePointerUp(
+                                                      event.pointer,
+                                                      event.localPosition,
+                                                      boardSize,
+                                                    ),
+                                                onPointerCancel: (event) =>
+                                                    _handlePointerCancel(
+                                                      pointer: event.pointer,
+                                                    ),
                                                 child: Semantics(
                                                   container: true,
-                                                  button: true,
-                                                  label: _semanticEntityLabel(
-                                                    entity,
+                                                  label: '공을 조준하는 게임 화면',
+                                                  value:
+                                                      '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                                  increasedValue:
+                                                      '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                  decreasedValue:
+                                                      '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                  hint:
+                                                      '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
+                                                  onIncrease: () =>
+                                                      _adjustPower(0.055),
+                                                  onDecrease: () =>
+                                                      _adjustPower(-0.055),
+                                                  customSemanticsActions: {
+                                                    semanticLaunch: _launch,
+                                                    semanticAimRight: () =>
+                                                        _nudgeAim(math.pi / 18),
+                                                    semanticAimLeft: () =>
+                                                        _nudgeAim(
+                                                          -math.pi / 18,
+                                                        ),
+                                                    semanticAimUp: () =>
+                                                        _nudgeAim(
+                                                          -math.pi / 18,
+                                                        ),
+                                                    semanticAimDown: () =>
+                                                        _nudgeAim(math.pi / 18),
+                                                  },
+                                                  child: ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    child: GameWidget(
+                                                      game: _game,
+                                                    ),
                                                   ),
-                                                  hint: entity.traits.isNotEmpty
-                                                      ? '선택하면 속성 정보를 확인할 수 있습니다'
-                                                      : '선택하면 물체 정보를 확인할 수 있습니다',
-                                                  onTap: () =>
-                                                      _handleSemanticEntity(
-                                                        entity.id,
-                                                      ),
-                                                  child:
-                                                      const SizedBox.expand(),
-                                                ),
-                                              ),
-                                          if (compactLayout)
-                                            Positioned(
-                                              left: 6,
-                                              right: 6,
-                                              bottom: 6,
-                                              child: _ControlPanel(
-                                                compact: true,
-                                                state: _state,
-                                                onRewind: _rewind,
-                                                onReset: () => _selectLevel(
-                                                  _state.levelIndex,
                                                 ),
                                               ),
                                             ),
-                                        ],
+                                            for (final entity
+                                                in _state.entities)
+                                              if (entity.active)
+                                                Positioned(
+                                                  left:
+                                                      (entity.position.x -
+                                                          entity.size.x / 2) *
+                                                      scale,
+                                                  top:
+                                                      (entity.position.y -
+                                                          entity.size.y / 2) *
+                                                      scale,
+                                                  width: math.max(
+                                                    32,
+                                                    entity.size.x * scale,
+                                                  ),
+                                                  height: math.max(
+                                                    32,
+                                                    entity.size.y * scale,
+                                                  ),
+                                                  child: Semantics(
+                                                    container: true,
+                                                    button: true,
+                                                    label: _semanticEntityLabel(
+                                                      entity,
+                                                    ),
+                                                    hint:
+                                                        entity.traits.isNotEmpty
+                                                        ? '선택하면 속성 정보를 확인할 수 있습니다'
+                                                        : '선택하면 물체 정보를 확인할 수 있습니다',
+                                                    onTap: () =>
+                                                        _handleSemanticEntity(
+                                                          entity.id,
+                                                        ),
+                                                    child:
+                                                        const SizedBox.expand(),
+                                                  ),
+                                                ),
+                                            if (compactLayout)
+                                              Positioned(
+                                                left: 6,
+                                                right: 6,
+                                                bottom: 6,
+                                                child: _ControlPanel(
+                                                  compact: true,
+                                                  state: _state,
+                                                  onRewind: _rewind,
+                                                  onReset: () => _selectLevel(
+                                                    _state.levelIndex,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        if (!compactLayout)
-                          _ControlPanel(
-                            state: _state,
-                            onRewind: _rewind,
-                            onReset: () => _selectLevel(_state.levelIndex),
-                          ),
-                      ],
+                          if (!compactLayout)
+                            _ControlPanel(
+                              state: _state,
+                              onRewind: _rewind,
+                              onReset: () => _selectLevel(_state.levelIndex),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            if (_showBallInfo)
-              _InfoPopup(
-                onClose: _dismissInfo,
-                child: _BallInfoPanel(state: _state),
-              ),
-            if (!_showBallInfo && inspectedEntity != null)
-              _InfoPopup(
-                onClose: _dismissInfo,
-                child: _EntityInfoPanel(
-                  entity: inspectedEntity,
-                  onTransfer: inspectedEntity.traits.isEmpty
-                      ? null
-                      : _transferTrait,
-                  onCopy: inspectedEntity.traits.isEmpty ? null : _copyTrait,
+              if (_showBallInfo)
+                _InfoPopup(
+                  onClose: _dismissInfo,
+                  child: _BallInfoPanel(state: _state),
                 ),
-              ),
-            if (failurePopupOpen)
-              _FailurePopup(
-                state: _state,
-                advice: _failureAdvice,
-                onRetry: () => setState(() => _showFailurePopup = false),
-                onRewind: _rewind,
-                onReset: () {
-                  _showFailurePopup = false;
-                  _selectLevel(_state.levelIndex);
-                },
-              ),
-            if (clearPopupOpen)
-              _ClearPopup(
-                state: _state,
-                bestShot: _bestShots[_state.levelIndex],
-                onNext: _goNextLevel,
-                isFinal: _state.levelIndex >= levels.length - 1,
-              ),
-          ],
+              if (!_showBallInfo && inspectedEntity != null)
+                _InfoPopup(
+                  onClose: _dismissInfo,
+                  child: _EntityInfoPanel(
+                    entity: inspectedEntity,
+                    onTransfer: inspectedEntity.traits.isEmpty
+                        ? null
+                        : _transferTrait,
+                    onCopy: inspectedEntity.traits.isEmpty ? null : _copyTrait,
+                  ),
+                ),
+              if (failurePopupOpen)
+                _FailurePopup(
+                  state: _state,
+                  advice: _failureAdvice,
+                  onRetry: () => setState(() => _showFailurePopup = false),
+                  onRewind: _rewind,
+                  onReset: () {
+                    _showFailurePopup = false;
+                    _selectLevel(_state.levelIndex);
+                  },
+                ),
+              if (clearPopupOpen)
+                _ClearPopup(
+                  state: _state,
+                  bestShot: _bestShots[_state.levelIndex],
+                  onNext: _goNextLevel,
+                  isFinal: _state.levelIndex >= levels.length - 1,
+                ),
+            ],
+          ),
         ),
       ),
     );
