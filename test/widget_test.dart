@@ -76,6 +76,25 @@ void main() {
     expect(find.textContaining('샷 2'), findsNothing);
   });
 
+  testWidgets('실패한 샷은 재조준과 복구 행동을 보여준다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 760));
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 6500));
+
+    expect(find.byKey(const Key('failure_popup')), findsOneWidget);
+    expect(find.text('다시 조준'), findsOneWidget);
+    expect(find.text('되감기'), findsOneWidget);
+    expect(find.text('단계 처음부터'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('failure_retry_button')));
+    await tester.pump();
+    expect(find.byKey(const Key('failure_popup')), findsNothing);
+  });
+
   testWidgets('일시정지 중에는 힘 조준으로 발사되지 않는다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();

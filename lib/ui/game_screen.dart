@@ -39,6 +39,8 @@ class _GameScreenState extends State<GameScreen> {
   bool _isCharging = false;
   bool _isAnimatingShot = false;
   bool _showClearPopup = false;
+  bool _showFailurePopup = false;
+  String _failureAdvice = '';
   bool _bestShotsLoaded = false;
   Future<void>? _bestShotsLoadFuture;
   final Map<int, int> _bestShots = {};
@@ -140,6 +142,7 @@ class _GameScreenState extends State<GameScreen> {
     _inspectedEntityId = null;
     _clearPopupTimer?.cancel();
     _showClearPopup = false;
+    _showFailurePopup = false;
     _setState(
       levels[index]
           .createState(index)
@@ -201,6 +204,8 @@ class _GameScreenState extends State<GameScreen> {
     _feedbackForShot(result);
     _showBallInfo = false;
     _inspectedEntityId = null;
+    _showFailurePopup = false;
+    _failureAdvice = _failureAdviceFor(result.events);
     _clearPopupTimer?.cancel();
     _animationUnlockTimer?.cancel();
     _isAnimatingShot = true;
@@ -243,7 +248,10 @@ class _GameScreenState extends State<GameScreen> {
         if (!mounted) {
           return;
         }
-        setState(() => _isAnimatingShot = false);
+        setState(() {
+          _isAnimatingShot = false;
+          _showFailurePopup = true;
+        });
       });
     }
   }
@@ -270,6 +278,7 @@ class _GameScreenState extends State<GameScreen> {
     if (_isAnimatingShot) {
       return;
     }
+    _showFailurePopup = false;
     _setState(_shotResolver.rewind(_state));
   }
 
@@ -307,6 +316,19 @@ class _GameScreenState extends State<GameScreen> {
       _state.copyWith(
         aimDirection: Vec2(math.cos(next), math.sin(next)),
         message: '접근성 조준 방향 조정',
+      ),
+    );
+  }
+
+  void _adjustPower(double delta) {
+    if (_state.phase != GamePhase.planning || _isAnimatingShot) {
+      return;
+    }
+    final nextPower = (_state.aimPower + delta).clamp(0.12, 1.0);
+    _setState(
+      _state.copyWith(
+        aimPower: nextPower,
+        message: '힘 ${(nextPower * 100).round()}%',
       ),
     );
   }
@@ -505,6 +527,12 @@ class _GameScreenState extends State<GameScreen> {
                               final semanticLaunch = CustomSemanticsAction(
                                 label: '공 발사',
                               );
+                              final semanticAimRight = CustomSemanticsAction(
+                                label: '오른쪽으로 조준',
+                              );
+                              final semanticAimLeft = CustomSemanticsAction(
+                                label: '왼쪽으로 조준',
+                              );
                               final fieldSize = constraints.biggest;
                               final scale = math.min(
                                 fieldSize.width / logicalSize.x,
@@ -555,12 +583,16 @@ class _GameScreenState extends State<GameScreen> {
                                           '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
                                       decreasedValue:
                                           '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                      hint: '손가락으로 방향과 힘을 정하거나 접근성 동작을 사용하세요',
-                                      onIncrease: () => _nudgeAim(math.pi / 18),
-                                      onDecrease: () =>
-                                          _nudgeAim(-math.pi / 18),
+                                      hint:
+                                          '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
+                                      onIncrease: () => _adjustPower(0.055),
+                                      onDecrease: () => _adjustPower(-0.055),
                                       customSemanticsActions: {
                                         semanticLaunch: _launch,
+                                        semanticAimRight: () =>
+                                            _nudgeAim(math.pi / 18),
+                                        semanticAimLeft: () =>
+                                            _nudgeAim(-math.pi / 18),
                                       },
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
@@ -640,6 +672,17 @@ class _GameScreenState extends State<GameScreen> {
                       : _transferTrait,
                   onCopy: inspectedEntity.traits.isEmpty ? null : _copyTrait,
                 ),
+              ),
+            if (_showFailurePopup && !_showBallInfo && inspectedEntity == null)
+              _FailurePopup(
+                state: _state,
+                advice: _failureAdvice,
+                onRetry: () => setState(() => _showFailurePopup = false),
+                onRewind: _rewind,
+                onReset: () {
+                  _showFailurePopup = false;
+                  _selectLevel(_state.levelIndex);
+                },
               ),
             if (_state.phase == GamePhase.success && _showClearPopup)
               _ClearPopup(
@@ -783,6 +826,104 @@ class _ClearPopup extends StatelessWidget {
   }
 }
 
+class _FailurePopup extends StatelessWidget {
+  const _FailurePopup({
+    required this.state,
+    required this.advice,
+    required this.onRetry,
+    required this.onRewind,
+    required this.onReset,
+  });
+
+  final GameState state;
+  final String advice;
+  final VoidCallback onRetry;
+  final VoidCallback onRewind;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      namesRoute: true,
+      label: '샷 결과 팝업',
+      child: Container(
+        key: const Key('failure_popup'),
+        color: const Color(0x55000000),
+        alignment: Alignment.bottomCenter,
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 132),
+        child: SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Material(
+              color: const Color(0xFFF7FAF3),
+              borderRadius: BorderRadius.circular(14),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.sports_golf, color: Color(0xFFB34B36)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '이번 샷 결과',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        Text('${state.shotCount}회'),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(state.message),
+                    const SizedBox(height: 2),
+                    Text(
+                      advice,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF46584E),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        FilledButton.icon(
+                          key: const Key('failure_retry_button'),
+                          onPressed: onRetry,
+                          icon: const Icon(Icons.ads_click, size: 16),
+                          label: const Text('다시 조준'),
+                        ),
+                        OutlinedButton.icon(
+                          key: const Key('failure_rewind_button'),
+                          onPressed: onRewind,
+                          icon: const Icon(Icons.undo, size: 16),
+                          label: const Text('되감기'),
+                        ),
+                        TextButton.icon(
+                          key: const Key('failure_reset_button'),
+                          onPressed: onReset,
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('단계 처음부터'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LeaderboardRow {
   const _LeaderboardRow(this.name, this.shots);
 
@@ -808,6 +949,27 @@ String _levelIntroMessage(int levelIndex) {
     1 => '초록 젤리를 누르고, 탄성을 공에 담아보세요.',
     _ => '무거운 돌을 누르고, 옮기기로 스위치를 준비하세요.',
   };
+}
+
+String _failureAdviceFor(List<String> events) {
+  if (events.contains('switch_rejected')) {
+    return '스위치에는 무거움이 필요합니다. 속성을 다시 확인하세요.';
+  }
+  if (events.contains('sticky_attached')) {
+    return '붙은 공을 다음 충돌의 발판으로 활용해 보세요.';
+  }
+  if (events.contains('crate_pushed')) {
+    return '상자의 이동 방향을 보고 다음 각도를 조금 바꿔 보세요.';
+  }
+  if (events.any(
+    (event) => event == 'bounced' || event.startsWith('chain_collision_'),
+  )) {
+    return '맞은 면이 달라지면 반사 방향도 달라집니다. 조준점을 조금 옮겨 보세요.';
+  }
+  if (events.contains('momentum_transfer')) {
+    return '남은 공도 다음 샷의 충돌 재료로 활용할 수 있습니다.';
+  }
+  return '남은 공의 위치를 살펴보고 힘과 방향을 다시 정해 보세요.';
 }
 
 List<_LeaderboardRow> _leaderboardRows(GameState state) {

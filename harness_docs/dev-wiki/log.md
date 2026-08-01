@@ -517,6 +517,30 @@ Use consistent headings so entries are easy to grep.
 
 - 연쇄로 밀려난 이동 물체가 벽에 닿을 때 정지로만 끝나던 분기를 벽 법선 반사·분리·감속으로 통합하고, 벽 자체는 계속 고정한다.
 
+## [2026-08-01] physics | power affects impulse distance
+
+- 힘 게이지가 실제 물체 이동량으로 이어지는지 회귀 테스트를 추가하고, 충돌 시점 속도를 추진 거리 계산에 반영한다.
+
+## [2026-08-01] accessibility | separate power and aim actions
+
+- 게임판 접근성의 기본 증감 동작을 실제 힘 조절에 연결하고, 좌우 조준은 별도 한국어 사용자 지정 동작으로 분리한다.
+
+## [2026-08-01] ux | failure recovery panel
+
+- 실패 애니메이션이 끝난 뒤 충돌 결과와 다음 시도 제안을 짧은 패널로 표시하고, 재조준·되감기·단계 처음 시작을 명확히 분리한다.
+
+## [2026-08-01] physics | equal mass ball exchange
+
+- 동일 질량 공의 정면 충돌에서 발사 공이 완전 반사되는 오류를 막고, 대상 공으로 운동량이 넘어가는 회귀 규칙을 추가한다.
+
+## [2026-08-01] physics | persistent sticky ball state
+
+- 점착 충돌로 멈춘 발사 공을 고정 상태로 저장해 후속 샷이 다시 밀어내지 못하도록 한다.
+
+## [2026-08-01] physics | chained switch requirement
+
+- 연쇄 이동 중 스위치가 무거운 충격 없이 열리던 우회 경로를 차단하고, 무거운 충격 전달 여부를 연쇄 계산에 명시한다.
+
 ## [2026-08-01] test | progression contract coverage
 
 - 기본 상태의 잠긴 단계 선택 거부와 마지막 단계 완료 후 재도전 문구를 위젯 테스트로 고정한다.
