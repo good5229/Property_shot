@@ -15,12 +15,12 @@ void main() {
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
-    expect(find.textContaining('2/3'), findsOneWidget);
+    expect(find.textContaining('추천 경로 설명'), findsOneWidget);
     await tester.tap(find.byKey(const Key('transfer_button')));
     await tester.pump();
 
     expect(find.textContaining('공: 무거움'), findsOneWidget);
-    expect(find.textContaining('3/3'), findsOneWidget);
+    expect(find.textContaining('추천 경로를 준비했습니다'), findsOneWidget);
   });
 
   testWidgets('속성을 선택해 공으로 복사할 수 있다', (tester) async {
@@ -456,17 +456,17 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    expect(find.text('무거움을 옮겨 상자를 밀고 홀에 넣으세요.'), findsOneWidget);
+    expect(find.textContaining('추천: 무거움을 옮겨 상자를 밀어 보세요.'), findsOneWidget);
   });
 
-  testWidgets('3단계는 점착 선행 순서를 첫 화면에 표시한다', (tester) async {
+  testWidgets('3단계는 점착 추천 경로와 대체 경로를 첫 화면에 표시한다', (tester) async {
     await tester.pumpWidget(
       PropertyShotApp(initialState: levels[2].createState(2)),
     );
     await tester.pump();
 
     expect(find.byKey(const Key('level_progress')), findsOneWidget);
-    expect(find.text('순서 1/3  점착 속성 옮기기 → 점착판에 붙이기'), findsOneWidget);
+    expect(find.textContaining('추천 1  점착 속성을 옮겨 점착판에 붙여 보세요.'), findsOneWidget);
   });
 }
 

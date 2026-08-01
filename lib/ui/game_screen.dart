@@ -179,7 +179,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final next = _traitResolver.selectSource(_state, sourceId);
     _setState(
       _state.levelIndex == 0
-          ? next.copyWith(message: '2/3 설명을 읽고 속성 옮기기를 누르세요.')
+          ? next.copyWith(message: '추천 경로 설명을 읽고 속성 옮기기를 시도해 보세요.')
           : next,
     );
   }
@@ -193,7 +193,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           .transferSelectedTrait(_state)
           .copyWith(
             message: _state.levelIndex == 0
-                ? '2/3 완료 · 3/3 자동 발사: 공을 길게 눌렀다 손을 떼세요.'
+                ? '추천 경로를 준비했습니다. 공을 길게 눌렀다 손을 떼면 자동 발사됩니다.'
                 : '속성을 공에 담았습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
           ),
     );
@@ -1166,9 +1166,9 @@ const _unlockedLevelKey = 'unlocked_level';
 
 String _levelObjective(int levelIndex) {
   return switch (levelIndex) {
-    0 => '무거움을 옮겨 상자를 밀고 홀에 넣으세요.',
-    1 => '탄성을 옮긴 공으로 벽에 반사시키고 홀을 노리세요.',
-    _ => '점착을 활용해 공을 붙인 뒤, 무거운 공으로 스위치를 눌러 문을 여세요.',
+    0 => '추천: 무거움을 옮겨 상자를 밀어 보세요. 다른 충돌 경로도 홀에 닿으면 성공합니다.',
+    1 => '추천: 탄성을 옮겨 벽에 반사시켜 보세요. 다른 각도와 경로도 시도할 수 있습니다.',
+    _ => '추천: 점착과 무거움을 조합해 보세요. 스위치·문을 거치지 않는 경로도 성공할 수 있습니다.',
   };
 }
 
@@ -1183,29 +1183,31 @@ String? _levelProgressHint(GameState state) {
         !entity.movable,
   );
   if (!hasAnchor) {
-    return '순서 1/3  점착 속성 옮기기 → 점착판에 붙이기';
+    return '추천 1  점착 속성을 옮겨 점착판에 붙여 보세요. 다른 경로도 가능합니다.';
   }
   final hasHeavy = state.activeBall.traits.contains(TraitType.heavy);
   if (!hasHeavy) {
-    return '순서 2/3 완료  무거움을 공에 옮기세요';
+    return '추천 2  무거움을 공에 옮겨 스위치를 눌러 보세요. 직접 가는 길도 찾아보세요.';
   }
-  return '순서 3/3  무거운 공으로 스위치를 누르세요';
+  return '추천 3  무거운 공으로 스위치를 눌러 보세요. 목표에 먼저 닿으면 성공입니다.';
 }
 
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 => '1/3 무거운 돌을 눌러 속성을 확인하세요. 속성을 공으로 옮긴 뒤 발사합니다.',
-    1 => '젤리를 눌러 탄성을 확인하세요. 방향을 정한 뒤 공을 길게 눌러 발사합니다.',
-    _ => '점착을 먼저 공에 옮겨 붙이세요. 이후 무거운 공으로 스위치를 누릅니다.',
+    0 => '1/3 무거운 돌을 눌러 속성을 확인하세요. 추천 경로는 속성을 공으로 옮긴 뒤 발사하는 것입니다.',
+    1 =>
+      '2/3 젤리를 눌러 탄성을 확인하세요. 속성을 쓰지 않는 경로도 시도할 수 있습니다. 공을 길게 눌렀다 손을 떼면 발사됩니다.',
+    _ =>
+      '3/3 점착·무거움 조합은 추천 경로입니다. 다른 충돌 경로로 홀에 닿아도 성공하며, 공을 길게 눌렀다 손을 떼면 발사됩니다.',
   };
 }
 
 String _failureAdviceFor(List<String> events) {
   if (events.contains('hole_rejected_trait')) {
-    return '이 홀에는 필요한 속성이 있습니다. 홀 안내를 확인하고 알맞은 속성을 공에 옮기세요.';
+    return '홀에 닿지 못했어요. 속성을 활용하거나 다른 각도와 충돌 경로를 시도해 보세요.';
   }
   if (events.contains('hole_rejected_crate')) {
-    return '상자를 먼저 밀어야 이 홀을 열 수 있습니다. 상자의 이동 경로를 확인하세요.';
+    return '홀에 닿지 못했어요. 상자와의 충돌을 활용하거나 다른 경로를 시도해 보세요.';
   }
   if (events.contains('crate_blocked')) {
     return '상자가 움직이지 않았습니다. 더 강한 힘이나 다른 면을 노려 보세요.';
@@ -1217,7 +1219,7 @@ String _failureAdviceFor(List<String> events) {
     return '힘이 너무 셌어요. 게이지를 한 칸 낮추고 충돌 면을 바꿔 보세요.';
   }
   if (events.contains('switch_rejected_sticky')) {
-    return '점착 속성을 옮겨 공을 점착판에 붙인 다음 무거운 공을 준비하세요.';
+    return '점착판 없이도 다른 경로를 시도할 수 있어요. 스위치는 무거운 공에 반응합니다.';
   }
   if (events.contains('switch_rejected')) {
     return '스위치에는 무거움이 필요합니다. 속성을 다시 확인하세요.';

@@ -122,7 +122,6 @@ class ShotResolver {
     final impacts = <ShotImpact>[];
     var success = false;
     var stopped = false;
-    var holeContractRejected = false;
     var previousPosition = position;
 
     for (
@@ -164,39 +163,24 @@ class ShotResolver {
           holeProgress.isFinite &&
           _segmentDistance(previousPosition, position, hole.position) <=
               holeCaptureRadius &&
-          holeProgress <= collisionProgress + 0.001 &&
-          _gateOpen(entities)) {
-        final traitAllowed =
-            state.requiredHoleTrait == null ||
-            ball.traits.contains(state.requiredHoleTrait);
-        final crateAllowed =
-            !state.requiresCratePush || events.contains('crate_pushed');
-        if (traitAllowed && crateAllowed) {
-          position = hole.position;
-          path[path.length - 1] = position;
-          impacts.add(
-            ShotImpact(
-              entityId: hole.id,
-              entityType: EntityType.hole,
-              position: position,
-              normal: direction * -1,
-              pathIndex: path.length - 1,
-              strength: 1,
-            ),
-          );
-          events.add('hole_entered');
-          success = true;
-          break;
-        }
-        if (!holeContractRejected) {
-          events.add(
-            !traitAllowed ? 'hole_rejected_trait' : 'hole_rejected_crate',
-          );
-          holeContractRejected = true;
-        }
+          holeProgress <= collisionProgress + 0.001) {
+        position = hole.position;
+        path[path.length - 1] = position;
+        impacts.add(
+          ShotImpact(
+            entityId: hole.id,
+            entityType: EntityType.hole,
+            position: position,
+            normal: direction * -1,
+            pathIndex: path.length - 1,
+            strength: 1,
+          ),
+        );
+        events.add('hole_entered');
+        success = true;
+        break;
       }
-      if (_anyBallInHole(entities) &&
-          _existingHoleContractSatisfied(state, entities)) {
+      if (_anyBallInHole(entities)) {
         events.add('existing_ball_hole_entered');
         success = true;
         break;
@@ -248,19 +232,6 @@ class ShotResolver {
           );
           path[path.length - 1] = position;
           events.add('switch_rejected');
-          direction = _reflect(direction, collision.normal);
-          speed *= 0.42;
-          continue;
-        }
-        if (state.requiresStickyAnchor && !_hasStickyAnchor(entities)) {
-          position = _separateFromCollision(
-            hit,
-            ball,
-            position,
-            collision.normal,
-          );
-          path[path.length - 1] = position;
-          events.add('switch_rejected_sticky');
           direction = _reflect(direction, collision.normal);
           speed *= 0.42;
           continue;
@@ -361,7 +332,6 @@ class ShotResolver {
             collision.normal,
             0,
             heavy,
-            state.requiresStickyAnchor,
             const {},
             impacts,
           );
@@ -377,15 +347,8 @@ class ShotResolver {
             events.add('crate_blocked');
           }
           speed *= (heavy ? 0.78 : 0.56) * _restitutionMultiplier(ball, hit);
-          if ((_anyBallInHole(entities) &&
-                  _holeContractSatisfiedForShot(
-                    state,
-                    ball,
-                    entities,
-                    events,
-                  )) ||
-              (_holeContractSatisfiedForShot(state, ball, entities, events) &&
-                  _anyBallMoveEnteredHole(entities, moves))) {
+          if (_anyBallInHole(entities) ||
+              _anyBallMoveEnteredHole(entities, moves)) {
             events.add('existing_ball_hole_entered');
             success = true;
             break;
@@ -434,14 +397,11 @@ class ShotResolver {
           collision.normal,
           0,
           ball.traits.contains(TraitType.heavy),
-          state.requiresStickyAnchor,
           const {},
           impacts,
         );
-        if ((_anyBallInHole(entities) &&
-                _holeContractSatisfiedForShot(state, ball, entities, events)) ||
-            (_holeContractSatisfiedForShot(state, ball, entities, events) &&
-                _anyBallMoveEnteredHole(entities, moves))) {
+        if (_anyBallInHole(entities) ||
+            _anyBallMoveEnteredHole(entities, moves)) {
           events.add('existing_ball_hole_entered');
           success = true;
           break;
@@ -519,14 +479,11 @@ class ShotResolver {
           collision.normal,
           0,
           ball.traits.contains(TraitType.heavy),
-          state.requiresStickyAnchor,
           const {},
           impacts,
         );
-        if ((_anyBallInHole(entities) &&
-                _holeContractSatisfiedForShot(state, ball, entities, events)) ||
-            (_holeContractSatisfiedForShot(state, ball, entities, events) &&
-                _anyBallMoveEnteredHole(entities, moves))) {
+        if (_anyBallInHole(entities) ||
+            _anyBallMoveEnteredHole(entities, moves)) {
           events.add('existing_ball_hole_entered');
           success = true;
           break;
@@ -744,9 +701,6 @@ class ShotResolver {
   }
 
   bool _anyBallInHole(List<EntityState> entities) {
-    if (!_gateOpen(entities)) {
-      return false;
-    }
     final hole = _findHole(entities);
     if (hole == null) {
       return false;
@@ -763,53 +717,10 @@ class ShotResolver {
     });
   }
 
-  bool _existingHoleContractSatisfied(
-    GameState state,
-    List<EntityState> entities,
-  ) {
-    final traitSatisfied =
-        state.requiredHoleTrait == null ||
-        entities.any(
-          (entity) =>
-              entity.type == EntityType.ball &&
-              entity.id != 'active_ball' &&
-              entity.traits.contains(state.requiredHoleTrait),
-        );
-    final crateSatisfied =
-        !state.requiresCratePush ||
-        entities.any(
-          (entity) =>
-              entity.type == EntityType.crate && entity.visualState == 'pushed',
-        );
-    return traitSatisfied && crateSatisfied;
-  }
-
-  bool _holeContractSatisfiedForShot(
-    GameState state,
-    EntityState ball,
-    List<EntityState> entities,
-    List<String> events,
-  ) {
-    final traitSatisfied =
-        state.requiredHoleTrait == null ||
-        ball.traits.contains(state.requiredHoleTrait);
-    final crateSatisfied =
-        !state.requiresCratePush ||
-        events.contains('crate_pushed') ||
-        entities.any(
-          (entity) =>
-              entity.type == EntityType.crate && entity.visualState == 'pushed',
-        );
-    return traitSatisfied && crateSatisfied;
-  }
-
   bool _anyBallMoveEnteredHole(
     List<EntityState> entities,
     List<ShotAnimationMove> moves,
   ) {
-    if (!_gateOpen(entities)) {
-      return false;
-    }
     final hole = _findHole(entities);
     if (hole == null) {
       return false;
@@ -837,21 +748,6 @@ class ShotResolver {
       }
     }
     return false;
-  }
-
-  bool _gateOpen(List<EntityState> entities) {
-    return entities
-        .where((entity) => entity.type == EntityType.gate)
-        .every((entity) => entity.open);
-  }
-
-  bool _hasStickyAnchor(List<EntityState> entities) {
-    return entities.any(
-      (entity) =>
-          entity.type == EntityType.ball &&
-          entity.visualState == 'stuck' &&
-          !entity.movable,
-    );
   }
 
   CollisionHit? _firstCollision(
@@ -1289,7 +1185,6 @@ class ShotResolver {
     Vec2 contactNormal = Vec2.zero,
     int depth = 0,
     bool carriesHeavy = false,
-    bool requiresStickyAnchor = false,
     Set<String> chainIds = const {},
     List<ShotImpact>? impacts,
   ]) {
@@ -1341,8 +1236,7 @@ class ShotResolver {
       final holeCaptureRadius = hole == null
           ? 0.0
           : hole.radius + current.hitRadius;
-      final holeProgress =
-          current.type == EntityType.ball && hole != null && _gateOpen(entities)
+      final holeProgress = current.type == EntityType.ball && hole != null
           ? _segmentCircleEntryProgress(
               current.position,
               candidate.position,
@@ -1449,11 +1343,6 @@ class ShotResolver {
           current = current.copyWith(visualState: 'blocked');
           break;
         }
-        if (requiresStickyAnchor && !_hasStickyAnchor(entities)) {
-          events.add('switch_rejected_sticky');
-          current = current.copyWith(visualState: 'blocked');
-          break;
-        }
         entities = _replace(
           entities,
           hit.copyWith(pressed: true, solid: false, visualState: 'pressed'),
@@ -1542,7 +1431,6 @@ class ShotResolver {
           normal,
           depth + 1,
           carriesHeavy || current.traits.contains(TraitType.heavy),
-          requiresStickyAnchor,
           chainCollisionIds,
           impacts,
         );

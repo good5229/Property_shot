@@ -11,30 +11,26 @@ import 'package:property_shot/game/simulation/trait_resolver.dart';
 void main() {
   const shots = ShotResolver();
 
-  test('1단계는 무거움 풀이가 있고 무속성 격자 우회가 없다', () {
+  test('1단계는 무거움 풀이와 다른 물리 풀이를 모두 허용한다', () {
     final heavy = _transfer(levels[0].createState(0), 'anvil');
     final heavySuccesses = _successfulResults(shots, heavy);
     final normalSuccesses = _successfulResults(shots, levels[0].createState(0));
 
     expect(heavySuccesses, isNotEmpty);
-    expect(normalSuccesses, isEmpty);
+    expect(normalSuccesses, isNotEmpty);
     expect(
-      heavySuccesses.every(
-        (result) =>
-            result.events.contains('crate_pushed') &&
-            result.events.contains('hole_entered'),
-      ),
+      heavySuccesses.any((result) => result.events.contains('crate_pushed')),
       isTrue,
     );
   });
 
-  test('2단계는 탄성 풀이가 있고 무속성 격자 우회가 없다', () {
+  test('2단계는 탄성 풀이와 다른 물리 풀이를 모두 허용한다', () {
     final bouncy = _transfer(levels[1].createState(1), 'jelly');
     final bouncySuccesses = _successfulResults(shots, bouncy);
     final normalSuccesses = _successfulResults(shots, levels[1].createState(1));
 
     expect(bouncySuccesses, isNotEmpty);
-    expect(normalSuccesses, isEmpty);
+    expect(normalSuccesses, isNotEmpty);
     expect(
       bouncySuccesses.every(
         (result) =>
@@ -45,7 +41,7 @@ void main() {
     );
   });
 
-  test('3단계는 점착 발판을 먼저 만든 뒤 무거움을 허용한다', () {
+  test('3단계는 점착 발판과 직접 스위치 풀이를 모두 허용한다', () {
     final initial = levels[2].createState(2);
     final sticky = _transfer(initial, 'glue');
     final attached = shots.resolve(
@@ -60,7 +56,6 @@ void main() {
       ),
       isTrue,
     );
-    expect(attached.state.requiresStickyAnchor, isTrue);
     expect(attached.state.shotCount, 1);
   });
 

@@ -474,8 +474,8 @@ void main() {
     expect(normal.events, contains('switch_rejected'));
     expect(normal.state.entityById('gate')!.open, isFalse);
     expect(normal.state.phase, isNot(GamePhase.success));
-    expect(heavyWithoutAnchor.events, contains('switch_rejected_sticky'));
-    expect(heavyWithoutAnchor.state.entityById('gate')!.open, isFalse);
+    expect(heavyWithoutAnchor.events, contains('switch_pressed'));
+    expect(heavyWithoutAnchor.state.entityById('gate')!.open, isTrue);
     expect(sticky.events, contains('sticky_attached'));
   });
 
@@ -758,9 +758,9 @@ void main() {
     expect(result.state.entityById('gate')!.open, isTrue);
   });
 
-  test('점착 선행 조건은 무거운 상자 연쇄에서도 우회할 수 없다', () {
+  test('무거운 상자 연쇄는 점착 없이도 스위치를 누를 수 있다', () {
     final result = shots.resolve(
-      _chainedSwitchState(heavy: true, requiresStickyAnchor: true),
+      _chainedSwitchState(heavy: true),
       const ShotInput(
         direction: Vec2(1, 0),
         power: 1,
@@ -768,9 +768,9 @@ void main() {
       ),
     );
 
-    expect(result.events, contains('switch_rejected_sticky'));
-    expect(result.events, isNot(contains('switch_pressed')));
-    expect(result.state.entityById('gate')!.open, isFalse);
+    expect(result.events, contains('switch_pressed'));
+    expect(result.events, isNot(contains('switch_rejected_sticky')));
+    expect(result.state.entityById('gate')!.open, isTrue);
   });
 
   test('밀려난 공도 벽 충돌 판정을 받아 필드 밖으로 나가지 않는다', () {
@@ -1020,15 +1020,14 @@ void main() {
     expect(result.events, contains('existing_ball_hole_entered'));
   });
 
-  test('필수 속성 없는 과거 공은 홀 계약을 우회하지 못한다', () {
+  test('속성 없는 과거 공도 홀에 닿으면 클리어된다', () {
     final result = shots.resolve(
       _spentBallHoleWithContractState(),
       const ShotInput(direction: Vec2(1, 0), power: 0.8),
     );
 
-    expect(result.state.phase, isNot(GamePhase.success));
-    expect(result.events, isNot(contains('existing_ball_hole_entered')));
-    expect(result.events, isNot(contains('hole_entered')));
+    expect(result.state.phase, GamePhase.success);
+    expect(result.events, contains('existing_ball_hole_entered'));
   });
 
   test('움직이지 않는 상자는 crate_pushed로 기록되지 않는다', () {
@@ -1365,16 +1364,12 @@ GameState _exactCornerOverlapState() {
   );
 }
 
-GameState _chainedSwitchState({
-  bool heavy = false,
-  bool requiresStickyAnchor = false,
-}) {
+GameState _chainedSwitchState({bool heavy = false}) {
   final ballTraits = heavy ? {TraitType.heavy} : <TraitType>{};
   return GameState(
     levelIndex: 100,
     levelName: '연쇄 스위치 조건 테스트',
     ballSpawn: const Vec2(40, 80),
-    requiresStickyAnchor: requiresStickyAnchor,
     entities: [
       EntityState(
         id: 'active_ball',
@@ -2273,7 +2268,6 @@ GameState _spentBallHoleWithContractState() {
     levelIndex: 205,
     levelName: '과거 공 계약 감사',
     ballSpawn: Vec2(40, 80),
-    requiredHoleTrait: TraitType.bouncy,
     entities: [
       EntityState(
         id: 'active_ball',
@@ -2306,7 +2300,6 @@ GameState _fixedCrateContractState() {
     levelIndex: 206,
     levelName: '고정 상자 계약 감사',
     ballSpawn: Vec2(40, 80),
-    requiresCratePush: true,
     entities: [
       EntityState(
         id: 'active_ball',
