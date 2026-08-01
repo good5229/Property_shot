@@ -63,6 +63,57 @@ void main() {
     expect(attached.state.requiresStickyAnchor, isTrue);
     expect(attached.state.shotCount, 1);
   });
+
+  test('첫 2단계 성공 영역은 연속 입력 폭으로 측정된다', () {
+    final widths = <String, _SuccessWidth>{};
+    for (var index = 0; index < 2; index++) {
+      final state = _transfer(
+        levels[index].createState(index),
+        index == 0 ? 'anvil' : 'jelly',
+      );
+      final successes = <({double angle, double power})>[];
+      for (var degree = 0; degree < 360; degree += 2) {
+        final radians = degree * math.pi / 180;
+        for (var step = 6; step <= 50; step++) {
+          final power = step / 50;
+          final result = shots.resolve(
+            state,
+            ShotInput(
+              direction: Vec2(math.cos(radians), math.sin(radians)),
+              power: power,
+              equippedTrait: state.equippedTrait,
+            ),
+          );
+          if (result.state.phase == GamePhase.success) {
+            successes.add((angle: degree.toDouble(), power: power));
+          }
+        }
+      }
+      expect(successes, isNotEmpty, reason: '${levels[index].name} 성공 입력 없음');
+      final angles = successes.map((input) => input.angle).toSet().toList()
+        ..sort();
+      final powers = successes.map((input) => input.power).toList()..sort();
+      final width = _SuccessWidth(
+        angle: angles.length * 2,
+        power: powers.last - powers.first,
+      );
+      widths['${index + 1}단계'] = width;
+      print(
+        '${levels[index].name}: 각도 샘플 폭 ${width.angle}도, 파워 폭 ${width.power.toStringAsFixed(2)}',
+      );
+    }
+    expect(widths['1단계']!.angle, greaterThanOrEqualTo(16));
+    expect(widths['1단계']!.power, greaterThanOrEqualTo(0.20));
+    expect(widths['2단계']!.angle, greaterThanOrEqualTo(16));
+    expect(widths['2단계']!.power, greaterThanOrEqualTo(0.20));
+  });
+}
+
+class _SuccessWidth {
+  const _SuccessWidth({required this.angle, required this.power});
+
+  final int angle;
+  final double power;
 }
 
 GameState _transfer(GameState state, String sourceId) {
