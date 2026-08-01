@@ -4,6 +4,38 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-01] tutorial | make elasticity teachable
+
+- 일반 공도 벽에 반사되지만 탄성 공이 충돌 에너지를 더 보존하도록 조정하고, 2단계 목표와 회귀 기준을 속성 학습에 맞춘다.
+
+## [2026-08-01] tutorial | expose sticky strategy
+
+- 3단계 목표와 스위치 설명에 점착판 활용과 무거움 조건을 사전에 드러내 실패 후 추측에 의존하지 않게 한다.
+
+## [2026-08-01] qa | hole edge boundary coverage
+
+- 홀 가장자리의 허용 성공과 충분히 떨어진 근접 실패를 함께 검증해 관대한 판정의 경계를 고정한다.
+
+## [2026-08-01] qa | tutorial and boundary count refresh
+
+- 탄성 학습 물리와 홀 경계 회귀가 추가되어 최신 전체 테스트 수를 다시 기록한다.
+
+## [2026-08-01] docs | tutorial contract update
+
+- 2단계의 탄성 필수성과 벽 충돌 반발력 차이를 퍼즐 의도·물리 규칙 문서에 반영한다.
+
+## [2026-08-01] physics | material restitution
+
+- 전역 벽 감쇠로 기존 물리를 훼손하지 않도록 엔티티별 반발력을 도입하고, 탄성 튜토리얼 장애물만 낮은 반발력으로 설정한다.
+
+## [2026-08-01] qa | restitution regression recovery
+
+- 엔티티별 반발력 적용 뒤 무거움·일반 벽 반사 회귀를 다시 통과시킨 최신 테스트 수를 기록한다.
+
+## [2026-08-01] qa | final count correction
+
+- 전체 실행 결과의 실제 카운터가 67개임을 확인해 검증 문서 수치를 교정한다.
+
 ## [2026-08-01] release | submission evidence preflight depth
 
 - 제출 스크린샷의 실제 픽셀 규격과 정책 URL의 확정 상태를 사전검사에서 확인해 파일 존재만으로 통과하는 허점을 줄인다.

@@ -27,6 +27,7 @@ class EntityState {
     this.pressed = false,
     this.visualState = '',
     this.hitboxScale = 0.88,
+    this.restitution = 0.72,
   });
 
   final String id;
@@ -41,6 +42,7 @@ class EntityState {
   final bool pressed;
   final String visualState;
   final double hitboxScale;
+  final double restitution;
 
   bool get isCircle => type == EntityType.ball || type == EntityType.hole;
   double get radius => size.x / 2;
@@ -66,6 +68,7 @@ class EntityState {
     bool? pressed,
     String? visualState,
     double? hitboxScale,
+    double? restitution,
   }) {
     return EntityState(
       id: id ?? this.id,
@@ -80,6 +83,7 @@ class EntityState {
       pressed: pressed ?? this.pressed,
       visualState: visualState ?? this.visualState,
       hitboxScale: hitboxScale ?? this.hitboxScale,
+      restitution: restitution ?? this.restitution,
     );
   }
 }

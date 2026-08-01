@@ -410,7 +410,10 @@ class ShotResolver {
           ),
         );
         direction = _reflect(direction, collision.normal);
-        speed *= 0.72;
+        final wallRestitution = ball.traits.contains(TraitType.bouncy)
+            ? math.max(hit.restitution, 0.88)
+            : hit.restitution;
+        speed *= wallRestitution;
         events.add('bounced');
         continue;
       }

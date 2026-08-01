@@ -87,6 +87,7 @@ final levels = <LevelDefinition>[
         type: EntityType.wall,
         position: Vec2(220, 270),
         size: Vec2(24, 300),
+        restitution: 0.08,
       ),
       EntityState(
         id: 'jelly',

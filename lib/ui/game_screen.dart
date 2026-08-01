@@ -1002,8 +1002,8 @@ const _unlockedLevelKey = 'unlocked_level';
 String _levelObjective(int levelIndex) {
   return switch (levelIndex) {
     0 => '무거움을 옮겨 상자를 밀고 홀에 넣으세요.',
-    1 => '탄성을 활용해 벽에 반사시키고 홀을 노리세요.',
-    _ => '무거운 공으로 스위치를 눌러 문을 연 뒤 홀에 넣으세요.',
+    1 => '탄성을 옮긴 공으로 벽에 반사시키고 홀을 노리세요.',
+    _ => '점착을 활용해 공을 붙인 뒤, 무거운 공으로 스위치를 눌러 문을 여세요.',
   };
 }
 
@@ -1011,7 +1011,7 @@ String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
     0 => '반짝이는 무거운 돌을 누르고, 옮기기를 선택하세요.',
     1 => '초록 젤리를 누르고, 탄성을 공에 담아보세요.',
-    _ => '무거운 돌을 누르고, 옮기기로 스위치를 준비하세요.',
+    _ => '점착판에 공을 붙여 보고, 무거운 공으로 스위치를 준비하세요.',
   };
 }
 
@@ -1864,7 +1864,7 @@ String _entityDescription(EntityState entity) {
     case EntityType.weight:
       return '무거움 속성을 가진 돌입니다.';
     case EntityType.switchPad:
-      return '공이 누르면 반짝이며 문을 여는 장치입니다.';
+      return '무거운 공만 누를 수 있습니다. 누르면 반짝이며 문이 열립니다.';
     case EntityType.gate:
       return entity.open ? '열려 있는 문입니다.' : '닫힌 문입니다. 공은 맞고 튕깁니다.';
   }

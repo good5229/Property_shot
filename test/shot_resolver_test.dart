@@ -179,14 +179,30 @@ void main() {
     expect(preview.reflection, isNotNull);
   });
 
-  test('2라운드의 현재 물리 규칙은 일반 공의 벽 반사 대체 풀이도 허용한다', () {
+  test('2라운드는 일반 공의 반사 에너지가 부족해 탄성을 가르친다', () {
     final result = shots.resolve(
       levels[1].createState(1),
       const ShotInput(direction: Vec2(1, -1.5), power: 1),
     );
 
-    expect(result.state.phase, GamePhase.success);
     expect(result.events, contains('bounced'));
+    expect(result.state.phase, isNot(GamePhase.success));
+  });
+
+  test('홀 가장자리에 걸친 공은 성공하고 충분히 떨어진 공은 실패한다', () {
+    final edge = shots.resolve(
+      _edgeHoleState(const Vec2(100, 80)),
+      const ShotInput(direction: Vec2(1, 0), power: 0.45),
+    );
+    final miss = shots.resolve(
+      _edgeHoleState(const Vec2(100, 30)),
+      const ShotInput(direction: Vec2(1, 0), power: 0.45),
+    );
+
+    expect(edge.events, contains('hole_entered'));
+    expect(edge.state.phase, GamePhase.success);
+    expect(miss.events, isNot(contains('hole_entered')));
+    expect(miss.state.phase, isNot(GamePhase.success));
   });
 
   test('3라운드는 무거움으로 스위치를 누르고 일반 공은 거절된다', () {
@@ -1060,6 +1076,30 @@ GameState _openFieldState() {
         type: EntityType.hole,
         position: Vec2(340, 320),
         size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _edgeHoleState(Vec2 holePosition) {
+  return GameState(
+    levelIndex: 91,
+    levelName: '홀 경계 테스트',
+    ballSpawn: const Vec2(40, 80),
+    entities: [
+      const EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: holePosition,
+        size: const Vec2(34, 34),
         solid: false,
       ),
     ],
