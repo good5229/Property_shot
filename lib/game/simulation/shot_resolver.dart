@@ -155,7 +155,8 @@ class ShotResolver {
           holeContractRejected = true;
         }
       }
-      if (_anyBallInHole(entities)) {
+      if (_anyBallInHole(entities) &&
+          _existingHoleContractSatisfied(state, entities)) {
         events.add('existing_ball_hole_entered');
         success = true;
         break;
@@ -170,6 +171,21 @@ class ShotResolver {
 
       if (hit.type == EntityType.gate && hit.open) {
         continue;
+      }
+
+      if (ball.traits.contains(TraitType.sticky) &&
+          hit.type != EntityType.stickySurface &&
+          hit.type != EntityType.hole) {
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
+        events.add('sticky_attached');
+        stopped = true;
+        break;
       }
 
       if (hit.type == EntityType.switchPad) {
@@ -283,6 +299,7 @@ class ShotResolver {
           );
           final impulseScale = ((0.35 + input.power * 0.65) * impactSpeedRatio)
               .clamp(0.25, 1.0);
+          final beforePush = hit.position;
           entities = _pushWithMomentum(
             entities,
             hit,
@@ -296,10 +313,27 @@ class ShotResolver {
             heavy,
             state.requiresStickyAnchor,
           );
-          events.add('crate_pushed');
+          final pushedCrate =
+              entities
+                  .firstWhere((entity) => entity.id == hit.id)
+                  .position
+                  .distanceTo(beforePush) >
+              0.01;
+          if (pushedCrate) {
+            events.add('crate_pushed');
+          } else {
+            events.add('crate_blocked');
+          }
           speed *= (heavy ? 0.78 : 0.56) * _restitutionMultiplier(ball, hit);
-          if (_anyBallInHole(entities) ||
-              _anyBallMoveEnteredHole(entities, moves)) {
+          if ((_anyBallInHole(entities) &&
+                  _holeContractSatisfiedForShot(
+                    state,
+                    ball,
+                    entities,
+                    events,
+                  )) ||
+              (_holeContractSatisfiedForShot(state, ball, entities, events) &&
+                  _anyBallMoveEnteredHole(entities, moves))) {
             events.add('existing_ball_hole_entered');
             success = true;
             break;
@@ -350,8 +384,10 @@ class ShotResolver {
           ball.traits.contains(TraitType.heavy),
           state.requiresStickyAnchor,
         );
-        if (_anyBallInHole(entities) ||
-            _anyBallMoveEnteredHole(entities, moves)) {
+        if ((_anyBallInHole(entities) &&
+                _holeContractSatisfiedForShot(state, ball, entities, events)) ||
+            (_holeContractSatisfiedForShot(state, ball, entities, events) &&
+                _anyBallMoveEnteredHole(entities, moves))) {
           events.add('existing_ball_hole_entered');
           success = true;
           break;
@@ -431,8 +467,10 @@ class ShotResolver {
           ball.traits.contains(TraitType.heavy),
           state.requiresStickyAnchor,
         );
-        if (_anyBallInHole(entities) ||
-            _anyBallMoveEnteredHole(entities, moves)) {
+        if ((_anyBallInHole(entities) &&
+                _holeContractSatisfiedForShot(state, ball, entities, events)) ||
+            (_holeContractSatisfiedForShot(state, ball, entities, events) &&
+                _anyBallMoveEnteredHole(entities, moves))) {
           events.add('existing_ball_hole_entered');
           success = true;
           break;
@@ -647,9 +685,52 @@ class ShotResolver {
       if (entity.type != EntityType.ball || !entity.active) {
         return false;
       }
+      if (entity.id == 'active_ball') {
+        return false;
+      }
       return entity.position.distanceTo(hole.position) <=
           hole.radius + entity.hitRadius * 0.85;
     });
+  }
+
+  bool _existingHoleContractSatisfied(
+    GameState state,
+    List<EntityState> entities,
+  ) {
+    final traitSatisfied =
+        state.requiredHoleTrait == null ||
+        entities.any(
+          (entity) =>
+              entity.type == EntityType.ball &&
+              entity.id != 'active_ball' &&
+              entity.traits.contains(state.requiredHoleTrait),
+        );
+    final crateSatisfied =
+        !state.requiresCratePush ||
+        entities.any(
+          (entity) =>
+              entity.type == EntityType.crate && entity.visualState == 'pushed',
+        );
+    return traitSatisfied && crateSatisfied;
+  }
+
+  bool _holeContractSatisfiedForShot(
+    GameState state,
+    EntityState ball,
+    List<EntityState> entities,
+    List<String> events,
+  ) {
+    final traitSatisfied =
+        state.requiredHoleTrait == null ||
+        ball.traits.contains(state.requiredHoleTrait);
+    final crateSatisfied =
+        !state.requiresCratePush ||
+        events.contains('crate_pushed') ||
+        entities.any(
+          (entity) =>
+              entity.type == EntityType.crate && entity.visualState == 'pushed',
+        );
+    return traitSatisfied && crateSatisfied;
   }
 
   bool _anyBallMoveEnteredHole(
@@ -1371,6 +1452,9 @@ class ShotResolver {
     }
 
     if (current.position != target.position) {
+      if (target.type == EntityType.crate && !events.contains('crate_pushed')) {
+        events.add('crate_pushed');
+      }
       moves?.add(
         ShotAnimationMove(
           entityId: target.id,

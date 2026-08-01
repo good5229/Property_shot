@@ -853,6 +853,51 @@ void main() {
     expect(result.events, contains('existing_ball_hole_entered'));
   });
 
+  test('필수 속성 없는 과거 공은 홀 계약을 우회하지 못한다', () {
+    final result = shots.resolve(
+      _spentBallHoleWithContractState(),
+      const ShotInput(direction: Vec2(1, 0), power: 0.8),
+    );
+
+    expect(result.state.phase, isNot(GamePhase.success));
+    expect(result.events, isNot(contains('existing_ball_hole_entered')));
+    expect(result.events, isNot(contains('hole_entered')));
+  });
+
+  test('움직이지 않는 상자는 crate_pushed로 기록되지 않는다', () {
+    final result = shots.resolve(
+      _fixedCrateContractState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+
+    expect(result.events, isNot(contains('crate_pushed')));
+    expect(result.events, contains('crate_blocked'));
+    expect(result.state.phase, isNot(GamePhase.success));
+  });
+
+  test('점착 공은 젤리와 돌에도 첫 충돌 후 붙는다', () {
+    for (final targetId in ['jelly', 'weight']) {
+      final result = shots.resolve(
+        _stickyMaterialState(targetId),
+        const ShotInput(
+          direction: Vec2(1, 0),
+          power: 0.8,
+          equippedTrait: TraitType.sticky,
+        ),
+      );
+
+      expect(result.events, contains('sticky_attached'));
+      expect(result.state.activeBall.visualState, 'ready');
+      expect(
+        result.state.entities.any(
+          (entity) =>
+              entity.id == 'spent_ball_1' && entity.visualState == 'stuck',
+        ),
+        isTrue,
+      );
+    }
+  });
+
   test('상용 감사: 엔티티 배열 순서를 바꿔도 최초 연쇄 충돌 결과가 같다', () {
     final original = _orderedChainAuditState();
     final reversed = original.copyWith(
@@ -1959,6 +2004,108 @@ GameState _pushedBallWallAuditState() {
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(360, 260),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _spentBallHoleWithContractState() {
+  return const GameState(
+    levelIndex: 205,
+    levelName: '과거 공 계약 감사',
+    ballSpawn: Vec2(40, 80),
+    requiredHoleTrait: TraitType.bouncy,
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'spent_ball_1',
+        type: EntityType.ball,
+        position: Vec2(100, 80),
+        size: Vec2(24, 24),
+        movable: true,
+        visualState: 'spent',
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(100, 80),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _fixedCrateContractState() {
+  return const GameState(
+    levelIndex: 206,
+    levelName: '고정 상자 계약 감사',
+    ballSpawn: Vec2(40, 80),
+    requiresCratePush: true,
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(92, 80),
+        size: Vec2(28, 28),
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(260, 80),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _stickyMaterialState(String targetId) {
+  final target = targetId == 'jelly'
+      ? const EntityState(
+          id: 'jelly',
+          type: EntityType.bumper,
+          position: Vec2(92, 80),
+          size: Vec2(34, 34),
+        )
+      : const EntityState(
+          id: 'weight',
+          type: EntityType.weight,
+          position: Vec2(92, 80),
+          size: Vec2(34, 34),
+        );
+  return GameState(
+    levelIndex: 207,
+    levelName: '점착 재질 감사',
+    ballSpawn: const Vec2(40, 80),
+    entities: [
+      const EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      target,
+      const EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(260, 260),
         size: Vec2(34, 34),
         solid: false,
       ),
