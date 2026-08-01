@@ -34,6 +34,10 @@ class _GameScreenState extends State<GameScreen> {
   bool _showBallInfo = false;
   String? _inspectedEntityId;
   Timer? _chargeTimer;
+  Timer? _pressActivationTimer;
+  Offset? _pointerDownPosition;
+  bool _pointerOnBall = false;
+  bool _pointerMoved = false;
   bool _isCharging = false;
   bool _isAnimatingShot = false;
   bool _showClearPopup = false;
@@ -416,6 +420,67 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  void _handlePointerDown(Offset localPosition, Size fieldSize) {
+    if (_state.phase != GamePhase.planning || _isAnimatingShot) {
+      return;
+    }
+    _pressActivationTimer?.cancel();
+    _pointerDownPosition = localPosition;
+    _pointerMoved = false;
+    final logical = _toLogicalPosition(localPosition, fieldSize);
+    _pointerOnBall = logical.distanceTo(_state.activeBall.position) <= 42;
+    if (_pointerOnBall) {
+      _pressActivationTimer = Timer(const Duration(milliseconds: 450), () {
+        if (!mounted || _pointerDownPosition == null || !_pointerOnBall) {
+          return;
+        }
+        _startPowerCharge(_pointerDownPosition!, fieldSize);
+      });
+    }
+  }
+
+  void _handlePointerMove(Offset localPosition, Size fieldSize) {
+    final down = _pointerDownPosition;
+    if (down == null || _isAnimatingShot) {
+      return;
+    }
+    if ((down - localPosition).distance >= 8) {
+      _pointerMoved = true;
+      _updateAim(localPosition, fieldSize);
+    }
+  }
+
+  void _handlePointerUp(Offset localPosition, Size fieldSize) {
+    final down = _pointerDownPosition;
+    final wasCharging = _isCharging;
+    _pressActivationTimer?.cancel();
+    _pressActivationTimer = null;
+    _pointerDownPosition = null;
+    _pointerOnBall = false;
+    if (wasCharging) {
+      _stopPowerCharge();
+      _pointerMoved = false;
+      return;
+    }
+    if (down != null && !_pointerMoved) {
+      _handleFieldTap(localPosition, fieldSize);
+    } else if (_state.phase == GamePhase.planning && !_isAnimatingShot) {
+      _setState(_state.copyWith(message: '조준 고정'));
+    }
+    _pointerMoved = false;
+  }
+
+  void _handlePointerCancel() {
+    _pressActivationTimer?.cancel();
+    _pressActivationTimer = null;
+    _pointerDownPosition = null;
+    _pointerOnBall = false;
+    _pointerMoved = false;
+    if (_isCharging) {
+      _cancelPowerCharge();
+    }
+  }
+
   void _startPowerCharge(Offset localPosition, Size fieldSize) {
     if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
@@ -455,6 +520,8 @@ class _GameScreenState extends State<GameScreen> {
     _isCharging = false;
     _chargeTimer?.cancel();
     _chargeTimer = null;
+    _pressActivationTimer?.cancel();
+    _pressActivationTimer = null;
     if (mounted && _state.phase == GamePhase.planning) {
       _setState(_state.copyWith(message: '발사를 취소했습니다'));
     }
@@ -463,6 +530,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     _chargeTimer?.cancel();
+    _pressActivationTimer?.cancel();
     super.dispose();
   }
 
@@ -567,39 +635,26 @@ class _GameScreenState extends State<GameScreen> {
                                         top: origin.dy,
                                         width: boardSize.width,
                                         height: boardSize.height,
-                                        child: GestureDetector(
+                                        child: Listener(
                                           key: const Key('aim_area'),
-                                          onTapUp: (details) => _handleFieldTap(
-                                            details.localPosition,
-                                            boardSize,
-                                          ),
-                                          onLongPressStart: (details) =>
-                                              _startPowerCharge(
-                                                details.localPosition,
+                                          behavior: HitTestBehavior.opaque,
+                                          onPointerDown: (event) =>
+                                              _handlePointerDown(
+                                                event.localPosition,
                                                 boardSize,
                                               ),
-                                          onLongPressMoveUpdate: (details) =>
-                                              _updateAim(
-                                                details.localPosition,
+                                          onPointerMove: (event) =>
+                                              _handlePointerMove(
+                                                event.localPosition,
                                                 boardSize,
                                               ),
-                                          onLongPressEnd: (_) =>
-                                              _stopPowerCharge(),
-                                          onLongPressCancel: _cancelPowerCharge,
-                                          onPanUpdate: (details) => _updateAim(
-                                            details.localPosition,
-                                            boardSize,
-                                          ),
-                                          onPanEnd: (_) {
-                                            if (_state.phase ==
-                                                GamePhase.planning) {
-                                              _setState(
-                                                _state.copyWith(
-                                                  message: '조준 고정',
-                                                ),
-                                              );
-                                            }
-                                          },
+                                          onPointerUp: (event) =>
+                                              _handlePointerUp(
+                                                event.localPosition,
+                                                boardSize,
+                                              ),
+                                          onPointerCancel: (_) =>
+                                              _handlePointerCancel(),
                                           child: Semantics(
                                             container: true,
                                             label: '공을 조준하는 게임 화면',
