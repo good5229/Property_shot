@@ -39,7 +39,7 @@ class PropertyShotGame extends FlameGame {
       'assets/generated/crate-v2.png',
     );
     _objectImages[EntityType.weight] = await _loadUiImage(
-      'assets/icons/stone_boulder.png',
+      'assets/generated/stone-v2.png',
     );
   }
 

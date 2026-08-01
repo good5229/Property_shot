@@ -27,6 +27,7 @@
 - `lib/game/property_shot_game.dart`의 Canvas 렌더링: 프로젝트 자체 코드, 별도 외부 라이선스 없음.
 - `assets/icons/property_shot_app_icon_source.png`: 프로젝트 전용 생성 이미지. 생성 프롬프트와 사용 목적은 `harness_docs/release/store_assets.md`에 기록한다.
 - `assets/generated/crate-v2.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 상자 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
+- `assets/generated/stone-v2.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 무거운 돌 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
 
 ## 출품 전 확인 항목
 
