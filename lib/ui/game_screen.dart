@@ -484,9 +484,9 @@ class _GameScreenState extends State<GameScreen> {
     final inspectedEntity = _inspectedEntityId == null
         ? null
         : _state.entityById(_inspectedEntityId!);
-    final contentWidth = MediaQuery.sizeOf(context).width < 520
-        ? MediaQuery.sizeOf(context).width
-        : 520.0;
+    final screenSize = MediaQuery.sizeOf(context);
+    final compactLayout = screenSize.width <= 800;
+    final contentWidth = screenSize.width < 520 ? screenSize.width : 520.0;
     return Scaffold(
       backgroundColor: const Color(0xFFE3E8DF),
       appBar: AppBar(
@@ -510,18 +510,22 @@ class _GameScreenState extends State<GameScreen> {
             Center(
               child: SizedBox(
                 width: contentWidth,
+                height: math.max(0, screenSize.height - kToolbarHeight),
                 child: Column(
                   children: [
-                    _Hud(
-                      state: _state,
-                      unlockedLevel: _unlockedLevel,
-                      onSelectLevel: _selectLevel,
-                    ),
+                    if (!compactLayout)
+                      _Hud(
+                        state: _state,
+                        unlockedLevel: _unlockedLevel,
+                        onSelectLevel: _selectLevel,
+                      ),
                     Expanded(
                       child: AbsorbPointer(
                         absorbing: _showBallInfo || inspectedEntity != null,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: compactLayout ? 4 : 12,
+                          ),
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               final semanticLaunch = CustomSemanticsAction(
@@ -648,6 +652,31 @@ class _GameScreenState extends State<GameScreen> {
                                           child: const SizedBox.expand(),
                                         ),
                                       ),
+                                  if (compactLayout)
+                                    Positioned(
+                                      top: 6,
+                                      left: 6,
+                                      right: 6,
+                                      child: _Hud(
+                                        compact: true,
+                                        state: _state,
+                                        unlockedLevel: _unlockedLevel,
+                                        onSelectLevel: _selectLevel,
+                                      ),
+                                    ),
+                                  if (compactLayout)
+                                    Positioned(
+                                      left: 6,
+                                      right: 6,
+                                      bottom: 6,
+                                      child: _ControlPanel(
+                                        compact: true,
+                                        state: _state,
+                                        onRewind: _rewind,
+                                        onReset: () =>
+                                            _selectLevel(_state.levelIndex),
+                                      ),
+                                    ),
                                 ],
                               );
                             },
@@ -655,11 +684,12 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                       ),
                     ),
-                    _ControlPanel(
-                      state: _state,
-                      onRewind: _rewind,
-                      onReset: () => _selectLevel(_state.levelIndex),
-                    ),
+                    if (!compactLayout)
+                      _ControlPanel(
+                        state: _state,
+                        onRewind: _rewind,
+                        onReset: () => _selectLevel(_state.levelIndex),
+                      ),
                   ],
                 ),
               ),
@@ -1004,17 +1034,110 @@ List<_LeaderboardRow> _leaderboardRows(GameState state) {
 
 class _Hud extends StatelessWidget {
   const _Hud({
+    this.compact = false,
     required this.state,
     required this.unlockedLevel,
     required this.onSelectLevel,
   });
 
+  final bool compact;
   final GameState state;
   final int unlockedLevel;
   final ValueChanged<int> onSelectLevel;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Container(
+        key: const Key('compact_hud'),
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        decoration: BoxDecoration(
+          color: const Color(0xE6F7FAF3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xAA708278)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 5,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    state.levelName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text('샷 ${state.shotCount}'),
+                const SizedBox(width: 6),
+                Text('점수 ${state.score}'),
+              ],
+            ),
+            const SizedBox(height: 2),
+            SizedBox(
+              height: 30,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (var i = 0; i < levels.length; i++)
+                    Semantics(
+                      label: i <= unlockedLevel
+                          ? '${i + 1}단계 선택'
+                          : '${i + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
+                      button: i <= unlockedLevel,
+                      selected: state.levelIndex == i,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: ChoiceChip(
+                          key: Key('level_$i'),
+                          label: Text('${i + 1}'),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          selected: state.levelIndex == i,
+                          onSelected: i <= unlockedLevel
+                              ? (_) => onSelectLevel(i)
+                              : null,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Text(
+              _levelObjective(state.levelIndex),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF46584E),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Semantics(
+              liveRegion: true,
+              label: '게임 안내: ${state.message}',
+              child: Text(
+                state.message,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       child: Column(
@@ -1095,17 +1218,73 @@ class _Hud extends StatelessWidget {
 
 class _ControlPanel extends StatelessWidget {
   const _ControlPanel({
+    this.compact = false,
     required this.state,
     required this.onRewind,
     required this.onReset,
   });
 
+  final bool compact;
   final GameState state;
   final VoidCallback onRewind;
   final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Container(
+        key: const Key('compact_control_panel'),
+        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+        decoration: BoxDecoration(
+          color: const Color(0xE6F7FAF3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xAA708278)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 5,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                state.selectedTrait == null
+                    ? '물체를 눌러 속성을 고르세요'
+                    : '선택: ${state.selectedTrait!.label}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            Text(
+              '공: ${state.equippedTrait?.label ?? '없음'}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            IconButton(
+              key: const Key('rewind_button'),
+              tooltip: '되감기',
+              visualDensity: VisualDensity.compact,
+              onPressed: onRewind,
+              icon: const Icon(Icons.undo, size: 20),
+            ),
+            IconButton(
+              key: const Key('reset_button'),
+              tooltip: '다시',
+              visualDensity: VisualDensity.compact,
+              onPressed: onReset,
+              icon: const Icon(Icons.refresh, size: 20),
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
       child: Column(

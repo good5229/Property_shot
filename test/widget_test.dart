@@ -221,6 +221,19 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('좁은 화면은 보드 우선 축약 레이아웃을 사용한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final board = tester.getRect(find.byKey(const Key('aim_area')));
+    expect(board.width, greaterThanOrEqualTo(280));
+    expect(find.byKey(const Key('compact_hud')), findsOneWidget);
+    expect(find.byKey(const Key('compact_control_panel')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('좁은 화면의 정보 팝업과 닫기 버튼이 화면 안에 있다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     await tester.pumpWidget(const PropertyShotApp());
