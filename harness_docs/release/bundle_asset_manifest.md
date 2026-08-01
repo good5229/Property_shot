@@ -8,6 +8,7 @@
 |---|---|---|
 | `assets/icons/ball.png` | 공 썸네일·게임 공 | CC0 원본, 권리대장 확인 |
 | `assets/icons/crate.png` | 상자 썸네일·게임 오브젝트 | CC0 원본, 권리대장 확인 |
+| `assets/generated/crate-v2.png` | 상자 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
 | `assets/icons/stone_boulder.png` | 돌 썸네일·게임 오브젝트 | CC0 원본, 권리대장 확인 |
 | `assets/icons/property_shot_app_icon_source.png` | 앱 아이콘 원본 | 프로젝트 전용 생성 이미지 |
 | `ios/Runner/Assets.xcassets/AppIcon.appiconset/` | iOS 아이콘 파생 파일 | 원본에서 규격별 생성 |
