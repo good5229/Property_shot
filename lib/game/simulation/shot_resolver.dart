@@ -31,6 +31,7 @@ class ShotImpact {
     required this.normal,
     required this.pathIndex,
     required this.strength,
+    this.sourceEntityId = 'active_ball',
   });
 
   final String entityId;
@@ -39,6 +40,7 @@ class ShotImpact {
   final Vec2 normal;
   final int pathIndex;
   final double strength;
+  final String sourceEntityId;
 }
 
 class ShotAnimationMove {
@@ -1378,6 +1380,7 @@ class ShotResolver {
             normal: stepDirection * -1,
             pathIndex: triggerPathIndex + iterations,
             strength: (velocity.length / 24).clamp(0.18, 1.0),
+            sourceEntityId: target.id,
           ),
         );
         entities = _replace(entities, current);
@@ -1408,6 +1411,7 @@ class ShotResolver {
           normal: normal,
           pathIndex: collisionTrigger,
           strength: (velocity.length / 24).clamp(0.18, 1.0),
+          sourceEntityId: target.id,
         ),
       );
       current = candidate.copyWith(
@@ -1627,6 +1631,7 @@ class ShotResolver {
           from: target.position,
           to: current.position,
           triggerPathIndex: triggerPathIndex,
+          visualState: current.visualState,
           path: path,
           impactPosition: path.length >= 2 ? path[path.length - 2] : null,
           impactNormal: contactNormal == Vec2.zero ? null : contactNormal,

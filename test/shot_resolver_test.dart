@@ -1168,6 +1168,7 @@ void main() {
       (impact) => impact.entityType == EntityType.hole,
     );
     expect(holeImpact.entityId, 'hole');
+    expect(holeImpact.sourceEntityId, 'spent_ball_1');
     expect(
       result.impacts.any(
         (impact) =>
@@ -1180,6 +1181,12 @@ void main() {
       result.state.entityById('spent_ball_1')!.position,
       const Vec2(164, 80),
     );
+    final capturedMove = result.moves.firstWhere(
+      (move) =>
+          move.entityId == 'spent_ball_1' &&
+          move.visualState == 'hole_captured',
+    );
+    expect(capturedMove.to, const Vec2(164, 80));
   });
 
   test('상용 감사: 밀려난 공은 벽의 충돌 경계를 통과하지 않는다', () {

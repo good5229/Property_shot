@@ -30,6 +30,7 @@ class PropertyShotGame extends FlameGame {
   List<ShotImpact> _animationImpacts = const [];
   GameState? _animationStartState;
   double _animationCursor = 0;
+  int _animationUpdateCount = 0;
   TraitType? _animationTrait;
   double _pulseClock = 0;
   Timer? _animationCompletionTimer;
@@ -74,6 +75,7 @@ class PropertyShotGame extends FlameGame {
       _animationImpacts = impacts;
       _animationStartState = transitionStart;
       _animationCursor = 0;
+      _animationUpdateCount = 0;
       _reportedImpactKeys.clear();
       final spentBalls = next.entities.where(
         (entity) => entity.id.startsWith('spent_ball_'),
@@ -92,6 +94,7 @@ class PropertyShotGame extends FlameGame {
   void update(double dt) {
     super.update(dt);
     if (_animationPath.isNotEmpty) {
+      _animationUpdateCount += 1;
       // A background-resume frame must not skip an entire collision beat.
       final boundedDt = dt > 0.5
           ? (_animationEndCursor - _animationCursor) / 34
@@ -122,7 +125,7 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _finishAnimation() {
-    if (_animationPath.isEmpty) {
+    if (_animationPath.isEmpty || _animationCursor < _animationEndCursor) {
       return;
     }
     _animationCompletionTimer?.cancel();
@@ -143,7 +146,33 @@ class PropertyShotGame extends FlameGame {
     );
     _animationCompletionTimer = Timer(
       Duration(milliseconds: milliseconds),
-      _finishAnimation,
+      _pollAnimationCompletion,
+    );
+  }
+
+  void _pollAnimationCompletion() {
+    if (_animationPath.isEmpty) {
+      return;
+    }
+    if (_animationCursor >= _animationEndCursor) {
+      _finishAnimation();
+      return;
+    }
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    if (_animationUpdateCount == 0 &&
+        (lifecycleState == null ||
+            lifecycleState == AppLifecycleState.resumed)) {
+      // Flame이 아직 첫 프레임도 전달하지 않은 테스트 호스트에서는
+      // 기존 위젯 계약을 유지하기 위해 최후 보조 완료를 허용한다.
+      _animationCursor = _animationEndCursor;
+      _finishAnimation();
+      return;
+    }
+    // 벽시계는 화면 시간축을 진행할 수 없으므로 Flame update가 남은 경로를
+    // 그려 커서를 끝까지 옮길 때까지 확인만 반복한다.
+    _animationCompletionTimer = Timer(
+      const Duration(milliseconds: 80),
+      _pollAnimationCompletion,
     );
   }
 
@@ -657,6 +686,11 @@ class PropertyShotGame extends FlameGame {
       ..strokeWidth = highlighted ? 5 : 2;
 
     if (entity.isCircle) {
+      if (entity.type == EntityType.ball &&
+          entity.visualState == 'hole_captured') {
+        _drawCapturedBall(canvas, entity, _capturedMoveProgress(entity));
+        return;
+      }
       final center = _project(entity.position);
       if (entity.type == EntityType.ball &&
           state.phase == GamePhase.planning &&
@@ -1512,6 +1546,59 @@ class PropertyShotGame extends FlameGame {
     canvas.drawCircle(center, radius, stroke);
   }
 
+  double _capturedMoveProgress(EntityState entity) {
+    ShotAnimationMove? captureMove;
+    for (final move in _animationMoves) {
+      if (move.entityId != entity.id || move.visualState != 'hole_captured') {
+        continue;
+      }
+      if (captureMove == null ||
+          move.triggerPathIndex > captureMove.triggerPathIndex) {
+        captureMove = move;
+      }
+    }
+    if (captureMove == null) {
+      return 1;
+    }
+    return ((_animationCursor - captureMove.triggerPathIndex) /
+            _moveDuration(captureMove))
+        .clamp(0.0, 1.0)
+        .toDouble();
+  }
+
+  void _drawCapturedBall(Canvas canvas, EntityState entity, double progress) {
+    final center = _project(entity.position);
+    final eased = Curves.easeInCubic.transform(progress);
+    final scale = 1 - eased * 0.78;
+    final opacity = 1 - eased * 0.62;
+    final bounds = Rect.fromCircle(center: center, radius: entity.radius + 20);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(scale);
+    canvas.translate(-center.dx, -center.dy);
+    canvas.saveLayer(
+      bounds,
+      Paint()..color = Colors.white.withValues(alpha: opacity),
+    );
+    _drawCircularContactShadow(canvas, entity);
+    final paint = Paint()..color = _colorFor(entity);
+    final stroke = Paint()
+      ..color = const Color(0xFF24352D)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    _drawBallSphere(canvas, entity, paint, stroke);
+    _drawBallTraitTexture(canvas, entity);
+    _drawBallFace(canvas, entity);
+    canvas.restore();
+    canvas.restore();
+
+    final suction = Paint()
+      ..color = const Color(0xFFFFD76A).withValues(alpha: 0.58 * (1 - progress))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    canvas.drawCircle(center, entity.radius + 7 + progress * 8, suction);
+  }
+
   void _drawBallTraitTexture(Canvas canvas, EntityState entity) {
     if (entity.traits.isEmpty) {
       return;
@@ -1893,7 +1980,27 @@ class PropertyShotGame extends FlameGame {
       movable: true,
       visualState: 'moving',
     );
-    _drawEntity(canvas, entity, false);
+    final holeImpact = _animationImpacts
+        .where(
+          (impact) =>
+              impact.entityType == EntityType.hole &&
+              impact.sourceEntityId == 'active_ball',
+        )
+        .fold<ShotImpact?>(
+          null,
+          (latest, impact) =>
+              latest == null || impact.pathIndex > latest.pathIndex
+              ? impact
+              : latest,
+        );
+    if (holeImpact == null || _animationCursor < holeImpact.pathIndex) {
+      _drawEntity(canvas, entity, false);
+      return;
+    }
+    final progress = ((_animationCursor - holeImpact.pathIndex) / 8)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    _drawCapturedBall(canvas, entity, progress);
   }
 
   void _drawCueStrike(Canvas canvas, int index, Vec2 position) {
