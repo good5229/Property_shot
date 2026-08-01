@@ -99,6 +99,7 @@ class ShotResolver {
     final moves = <ShotAnimationMove>[];
     var success = false;
     var stopped = false;
+    var holeContractRejected = false;
     var previousPosition = position;
 
     for (
@@ -137,9 +138,22 @@ class ShotResolver {
               holeTolerance &&
           holeProgress <= collisionProgress + 0.001 &&
           _gateOpen(entities)) {
-        events.add('hole_entered');
-        success = true;
-        break;
+        final traitAllowed =
+            state.requiredHoleTrait == null ||
+            ball.traits.contains(state.requiredHoleTrait);
+        final crateAllowed =
+            !state.requiresCratePush || events.contains('crate_pushed');
+        if (traitAllowed && crateAllowed) {
+          events.add('hole_entered');
+          success = true;
+          break;
+        }
+        if (!holeContractRejected) {
+          events.add(
+            !traitAllowed ? 'hole_rejected_trait' : 'hole_rejected_crate',
+          );
+          holeContractRejected = true;
+        }
       }
       if (_anyBallInHole(entities)) {
         events.add('existing_ball_hole_entered');
@@ -1046,6 +1060,12 @@ class ShotResolver {
   }
 
   String _messageFor(List<String> events) {
+    if (events.contains('hole_rejected_crate')) {
+      return '상자를 먼저 밀어야 홀에 들어갈 수 있습니다.';
+    }
+    if (events.contains('hole_rejected_trait')) {
+      return '이 단계의 홀에는 탄성 속성이 필요합니다.';
+    }
     if (events.contains('switch_rejected_sticky')) {
       return '점착판에 공을 먼저 붙여 발판을 만들어야 합니다.';
     }

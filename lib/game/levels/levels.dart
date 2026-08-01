@@ -9,6 +9,8 @@ final levels = <LevelDefinition>[
   LevelDefinition(
     name: '1. 무거움 익히기',
     ballSpawn: const Vec2(56, 456),
+    requiredHoleTrait: TraitType.heavy,
+    requiresCratePush: true,
     entities: const [
       EntityState(
         id: 'hole',
@@ -56,6 +58,7 @@ final levels = <LevelDefinition>[
   LevelDefinition(
     name: '2. 탄성 익히기',
     ballSpawn: const Vec2(58, 462),
+    requiredHoleTrait: TraitType.bouncy,
     entities: const [
       EntityState(
         id: 'hole',
@@ -92,7 +95,7 @@ final levels = <LevelDefinition>[
       EntityState(
         id: 'approach_guard',
         type: EntityType.wall,
-        position: Vec2(95, 320),
+        position: Vec2(95, 230),
         size: Vec2(70, 24),
         restitution: 0.08,
       ),
