@@ -165,6 +165,18 @@ class ShotResolver {
           speed *= 0.42;
           continue;
         }
+        if (state.requiresStickyAnchor &&
+            !entities.any(
+              (entity) =>
+                  entity.type == EntityType.ball &&
+                  entity.visualState == 'stuck' &&
+                  !entity.movable,
+            )) {
+          events.add('switch_rejected_sticky');
+          direction = _reflect(direction, collision.normal);
+          speed *= 0.42;
+          continue;
+        }
         moves.add(
           ShotAnimationMove(
             entityId: hit.id,
@@ -934,6 +946,9 @@ class ShotResolver {
   }
 
   String _messageFor(List<String> events) {
+    if (events.contains('switch_rejected_sticky')) {
+      return '점착판에 공을 먼저 붙여 발판을 만들어야 합니다.';
+    }
     if (events.contains('switch_pressed')) {
       return '무거운 공이 스위치를 눌렀습니다. 문이 열렸습니다.';
     }

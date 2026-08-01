@@ -189,6 +189,16 @@ void main() {
     expect(result.state.phase, isNot(GamePhase.success));
   });
 
+  test('2라운드는 홀 직선 조준 우회를 막고 탄성 반사 풀이를 남긴다', () {
+    final result = shots.resolve(
+      levels[1].createState(1),
+      const ShotInput(direction: Vec2(42, -352), power: 1),
+    );
+
+    expect(result.state.phase, isNot(GamePhase.success));
+    expect(result.events, contains('bounced'));
+  });
+
   test('홀 가장자리에 걸친 공은 성공하고 충분히 떨어진 공은 실패한다', () {
     final edge = shots.resolve(
       _edgeHoleState(const Vec2(100, 80)),
@@ -210,8 +220,29 @@ void main() {
       levels[2].createState(2),
       const ShotInput(direction: Vec2(1, -1.3), power: 1),
     );
+    final heavyWithoutAnchor = shots.resolve(
+      traits.transferSelectedTrait(
+        traits.selectSource(levels[2].createState(2), 'steel'),
+      ),
+      const ShotInput(
+        direction: Vec2(1, -1.3),
+        power: 1,
+        equippedTrait: TraitType.heavy,
+      ),
+    );
+    final stickyState = traits.transferSelectedTrait(
+      traits.selectSource(levels[2].createState(2), 'glue'),
+    );
+    final sticky = shots.resolve(
+      stickyState,
+      const ShotInput(
+        direction: Vec2(1, -0.54),
+        power: 1,
+        equippedTrait: TraitType.sticky,
+      ),
+    );
     final heavyState = traits.transferSelectedTrait(
-      traits.selectSource(levels[2].createState(2), 'steel'),
+      traits.selectSource(sticky.state, 'steel'),
     );
     final heavy = shots.resolve(
       heavyState,
@@ -228,6 +259,9 @@ void main() {
     expect(normal.events, contains('switch_rejected'));
     expect(normal.state.entityById('gate')!.open, isFalse);
     expect(normal.state.phase, isNot(GamePhase.success));
+    expect(heavyWithoutAnchor.events, contains('switch_rejected_sticky'));
+    expect(heavyWithoutAnchor.state.entityById('gate')!.open, isFalse);
+    expect(sticky.events, contains('sticky_attached'));
   });
 
   test('공 이동은 초반이 빠르고 후반으로 갈수록 느려진다', () {

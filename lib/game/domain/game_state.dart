@@ -10,6 +10,7 @@ class GameState {
     required this.levelName,
     required this.entities,
     required this.ballSpawn,
+    this.requiresStickyAnchor = false,
     this.phase = GamePhase.planning,
     this.shotCount = 0,
     this.score = 1000,
@@ -26,6 +27,7 @@ class GameState {
   final String levelName;
   final List<EntityState> entities;
   final Vec2 ballSpawn;
+  final bool requiresStickyAnchor;
   final GamePhase phase;
   final int shotCount;
   final int score;
@@ -75,6 +77,7 @@ class GameState {
       levelName: levelName,
       entities: entities ?? this.entities,
       ballSpawn: ballSpawn,
+      requiresStickyAnchor: requiresStickyAnchor,
       phase: phase ?? this.phase,
       shotCount: shotCount ?? this.shotCount,
       score: score ?? this.score,

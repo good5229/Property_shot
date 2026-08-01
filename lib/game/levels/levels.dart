@@ -90,6 +90,13 @@ final levels = <LevelDefinition>[
         restitution: 0.08,
       ),
       EntityState(
+        id: 'approach_guard',
+        type: EntityType.wall,
+        position: Vec2(95, 320),
+        size: Vec2(70, 24),
+        restitution: 0.08,
+      ),
+      EntityState(
         id: 'jelly',
         type: EntityType.bumper,
         position: Vec2(300, 450),
@@ -101,6 +108,7 @@ final levels = <LevelDefinition>[
   LevelDefinition(
     name: '3. 연쇄 문 열기',
     ballSpawn: const Vec2(56, 466),
+    requiresStickyAnchor: true,
     entities: const [
       EntityState(
         id: 'hole',

@@ -7,17 +7,20 @@ class LevelDefinition {
     required this.name,
     required this.ballSpawn,
     required this.entities,
+    this.requiresStickyAnchor = false,
   });
 
   final String name;
   final Vec2 ballSpawn;
   final List<EntityState> entities;
+  final bool requiresStickyAnchor;
 
   GameState createState(int index) {
     return GameState(
       levelIndex: index,
       levelName: name,
       ballSpawn: ballSpawn,
+      requiresStickyAnchor: requiresStickyAnchor,
       entities: [
         EntityState(
           id: 'active_ball',
