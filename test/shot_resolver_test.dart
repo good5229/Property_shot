@@ -82,6 +82,54 @@ void main() {
     expect(result.moves.any((move) => move.entityId == 'crate_a'), isTrue);
   });
 
+  test('힘 게이지가 높을수록 상자 이동량이 커진다', () {
+    final low = shots.resolve(
+      _singleCrateMomentumState(),
+      const ShotInput(direction: Vec2(1, 0), power: 0.55),
+    );
+    final high = shots.resolve(
+      _singleCrateMomentumState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final start = _singleCrateMomentumState().entityById('crate_a')!.position;
+    final lowDistance = low.state
+        .entityById('crate_a')!
+        .position
+        .distanceTo(start);
+    final highDistance = high.state
+        .entityById('crate_a')!
+        .position
+        .distanceTo(start);
+
+    expect(low.events, contains('crate_pushed'));
+    expect(high.events, contains('crate_pushed'));
+    expect(highDistance, greaterThan(lowDistance));
+  });
+
+  test('힘 게이지가 높을수록 움직이는 돌 이동량도 커진다', () {
+    final low = shots.resolve(
+      _movableWeightPowerState(),
+      const ShotInput(direction: Vec2(1, 0), power: 0.55),
+    );
+    final high = shots.resolve(
+      _movableWeightPowerState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final start = _movableWeightPowerState().entityById('weight')!.position;
+    final lowDistance = low.state
+        .entityById('weight')!
+        .position
+        .distanceTo(start);
+    final highDistance = high.state
+        .entityById('weight')!
+        .position
+        .distanceTo(start);
+
+    expect(low.events, contains('momentum_transfer'));
+    expect(high.events, contains('momentum_transfer'));
+    expect(highDistance, greaterThan(lowDistance));
+  });
+
   test('1라운드는 같은 대표 조준에서 무거움 없이는 홀에 도달하지 못한다', () {
     const input = ShotInput(direction: Vec2(1, -1.3), power: 1);
     final normal = shots.resolve(levels[0].createState(0), input);
@@ -320,6 +368,45 @@ void main() {
     expect(result.events, contains('momentum_transfer'));
   });
 
+  test('동일 질량 공의 정면 충돌은 발사 공을 뒤로 튕기지 않는다', () {
+    final result = shots.resolve(
+      _equalMassBallState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final pushed = result.state.entityById('spent_ball_1')!;
+    final launched = result.state.entityById('spent_ball_2')!;
+
+    expect(result.events, contains('equal_mass_exchange'));
+    expect(pushed.position.x, greaterThan(104));
+    expect(launched.position.x, greaterThan(70));
+    expect(launched.position.x, lessThan(104));
+  });
+
+  test('일반 공의 상자 연쇄는 무게 스위치를 우회하지 못한다', () {
+    final result = shots.resolve(
+      _chainedSwitchState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+
+    expect(result.events, contains('switch_rejected'));
+    expect(result.events, isNot(contains('switch_pressed')));
+    expect(result.state.entityById('gate')!.open, isFalse);
+  });
+
+  test('무거운 충격이 전달된 상자 연쇄는 스위치를 누를 수 있다', () {
+    final result = shots.resolve(
+      _chainedSwitchState(heavy: true),
+      const ShotInput(
+        direction: Vec2(1, 0),
+        power: 1,
+        equippedTrait: TraitType.heavy,
+      ),
+    );
+
+    expect(result.events, contains('switch_pressed'));
+    expect(result.state.entityById('gate')!.open, isTrue);
+  });
+
   test('밀려난 공도 벽 충돌 판정을 받아 필드 밖으로 나가지 않는다', () {
     final result = shots.resolve(
       _pushedBallWallState(),
@@ -459,6 +546,8 @@ void main() {
     expect(result.events, isNot(contains('bounced')));
     expect(result.path.last.x, lessThan(150));
     expect(result.state.entityById('glue')!.visualState, 'stuck');
+    expect(result.state.entityById('spent_ball_1')!.movable, isFalse);
+    expect(result.state.entityById('spent_ball_1')!.visualState, 'stuck');
   });
 
   test('속성을 옮기면 원래 물체에서 제거된다', () {
@@ -626,7 +715,10 @@ void main() {
       var sawContact = false;
       var passedContact = false;
       for (final point in move.path) {
-        final intersects = wall.hitBounds.intersectsCircle(point, 12 * 0.88 + 2);
+        final intersects = wall.hitBounds.intersectsCircle(
+          point,
+          12 * 0.88 + 2,
+        );
         if (intersects) {
           expect(passedContact, isFalse, reason: '벽 안에서 접촉점이 반복됨: $point');
           sawContact = true;
@@ -753,6 +845,51 @@ GameState _wallState({required TraitType? equippedTrait}) {
   );
 }
 
+GameState _chainedSwitchState({bool heavy = false}) {
+  final ballTraits = heavy ? {TraitType.heavy} : <TraitType>{};
+  return GameState(
+    levelIndex: 100,
+    levelName: '연쇄 스위치 조건 테스트',
+    ballSpawn: const Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: const Vec2(40, 80),
+        size: const Vec2(24, 24),
+        traits: ballTraits,
+        movable: true,
+      ),
+      const EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(92, 80),
+        size: Vec2(28, 28),
+        movable: true,
+      ),
+      const EntityState(
+        id: 'switch',
+        type: EntityType.switchPad,
+        position: Vec2(154, 80),
+        size: Vec2(48, 24),
+      ),
+      const EntityState(
+        id: 'gate',
+        type: EntityType.gate,
+        position: Vec2(224, 80),
+        size: Vec2(24, 72),
+      ),
+      const EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(320, 300),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
 GameState _initialOverlapWallState() {
   return const GameState(
     levelIndex: 87,
@@ -854,6 +991,37 @@ GameState _singleCrateMomentumState() {
   );
 }
 
+GameState _movableWeightPowerState() {
+  return const GameState(
+    levelIndex: 91,
+    levelName: '돌 힘 테스트',
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'weight',
+        type: EntityType.weight,
+        position: Vec2(92, 80),
+        size: Vec2(32, 32),
+        movable: true,
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(320, 300),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
 GameState _openFieldState() {
   return const GameState(
     levelIndex: 92,
@@ -938,6 +1106,39 @@ GameState _heavyBallVsNormalBallState() {
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(330, 80),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _equalMassBallState() {
+  return const GameState(
+    levelIndex: 93,
+    levelName: '동일 질량 공 충돌 테스트',
+    shotCount: 1,
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'spent_ball_1',
+        type: EntityType.ball,
+        position: Vec2(104, 80),
+        size: Vec2(24, 24),
+        movable: true,
+        visualState: 'spent',
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(330, 300),
         size: Vec2(34, 34),
         solid: false,
       ),

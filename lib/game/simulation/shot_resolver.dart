@@ -239,15 +239,23 @@ class ShotResolver {
       if (hit.type == EntityType.crate) {
         final heavy = ball.traits.contains(TraitType.heavy);
         if (heavy || input.power >= 0.55) {
+          final impactSpeedRatio = (speed / (8.0 + input.power * 16.0)).clamp(
+            0.25,
+            1.0,
+          );
+          final impulseScale = ((0.35 + input.power * 0.65) * impactSpeedRatio)
+              .clamp(0.25, 1.0);
           entities = _pushWithMomentum(
             entities,
             hit,
             direction,
-            heavy ? 126 : 54,
+            (heavy ? 42 : 24) + (heavy ? 100 : 60) * impulseScale,
             events,
             moves,
             path.length - 1,
             collision.normal,
+            0,
+            heavy,
           );
           events.add('crate_pushed');
           speed *= heavy ? 0.78 : 0.56;
@@ -292,11 +300,23 @@ class ShotResolver {
           moves,
           path.length - 1,
           collision.normal,
+          0,
+          ball.traits.contains(TraitType.heavy),
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
           events.add('existing_ball_hole_entered');
           success = true;
+          break;
+        }
+        final equalMassHeadOn =
+            (movingMass - targetMass).abs() < 0.05 &&
+            collision.normal.dot(direction) < -0.9;
+        if (equalMassHeadOn) {
+          speed = 0;
+          stopped = true;
+          events.add('equal_mass_exchange');
+          events.add('momentum_transfer');
           break;
         }
         direction = _postImpactDirection(
@@ -335,15 +355,23 @@ class ShotResolver {
       }
 
       if (hit.movable && hit.type != EntityType.wall) {
+        final impactSpeedRatio = (speed / (8.0 + input.power * 16.0)).clamp(
+          0.25,
+          1.0,
+        );
+        final impulseScale = ((0.35 + input.power * 0.65) * impactSpeedRatio)
+            .clamp(0.25, 1.0);
         entities = _pushWithMomentum(
           entities,
           hit,
           direction,
-          52,
+          24 + 52 * impulseScale,
           events,
           moves,
           path.length - 1,
           collision.normal,
+          0,
+          ball.traits.contains(TraitType.heavy),
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -417,8 +445,12 @@ class ShotResolver {
       id: 'spent_ball_${state.shotCount + 1}',
       position: position,
       traits: ball.traits,
-      movable: true,
-      visualState: success ? 'scored' : 'spent',
+      movable: !events.contains('sticky_attached'),
+      visualState: success
+          ? 'scored'
+          : events.contains('sticky_attached')
+          ? 'stuck'
+          : 'spent',
     );
     final activeBall = EntityState(
       id: 'active_ball',
@@ -910,6 +942,7 @@ class ShotResolver {
     int triggerPathIndex = 0,
     Vec2 contactNormal = Vec2.zero,
     int depth = 0,
+    bool carriesHeavy = false,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -986,6 +1019,11 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.switchPad) {
+        if (!carriesHeavy && !current.traits.contains(TraitType.heavy)) {
+          events.add('switch_rejected');
+          current = current.copyWith(visualState: 'blocked');
+          break;
+        }
         entities = _replace(
           entities,
           hit.copyWith(pressed: true, solid: false, visualState: 'pressed'),
@@ -1053,6 +1091,7 @@ class ShotResolver {
           collisionTrigger,
           normal,
           depth + 1,
+          carriesHeavy || current.traits.contains(TraitType.heavy),
         );
         events.add('chain_push');
         if (target.type != EntityType.ball) {
