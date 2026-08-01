@@ -129,4 +129,4 @@ flutter build ios --no-codesign
 - 사용자가 검토하거나 수정해야 할 내용: 실제 손맛, 맵 난이도, 그래픽·사운드·햅틱 품질, 공모전 제출용 AI 활용 문서 최종 형식
 - 검증 방법: `flutter analyze`, `flutter test`, 가능한 경우 iOS/Web 빌드
 - 생성·수정된 파일: `lib/`, `test/`, `pubspec.yaml`, `README.md`, `web/`, `ios/Runner/Info.plist`, `harness_docs/dev-wiki/log.md`
-- 남은 위험: 물리 연출은 아직 단순하며, 실제 기기에서 조작감과 화면 밀도 검증이 필요합니다.
+- 남은 위험: 감속·재질별 충돌·연쇄 이동·홀 포획 연출은 구현했지만, 실제 기기에서 조작감과 프레임 안정성 및 화면 밀도 검증이 필요합니다.
