@@ -141,6 +141,36 @@ void main() {
     expect(find.textContaining('발사를 취소했습니다'), findsOneWidget);
   });
 
+  testWidgets('롱프레스가 활성화되기 전에 취소되면 발사하지 않는다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 120));
+    await gesture.cancel();
+    await tester.pump();
+
+    expect(find.textContaining('샷 0'), findsOneWidget);
+  });
+
+  testWidgets('앱 생명주기 전환 중 충전은 취소되고 복귀 후 발사되지 않는다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 760));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    expect(find.textContaining('샷 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('공을 누르면 현재 속성 설명이 표시된다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
@@ -299,6 +329,79 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('휴대폰 화면 크기별 팝업과 안전영역 경계를 지킨다', (tester) async {
+    addTearDown(() {
+      tester.binding.setSurfaceSize(null);
+      tester.view.reset();
+    });
+    tester.view.padding = const FakeViewPadding(top: 24, bottom: 34);
+
+    for (final size in [const Size(320, 568), const Size(390, 844)]) {
+      await tester.binding.setSurfaceSize(size);
+      final clearState = levels[1]
+          .createState(1)
+          .copyWith(
+            phase: GamePhase.success,
+            shotCount: 3,
+            message: '홀 진입 성공!',
+          );
+      await tester.pumpWidget(
+        PropertyShotApp(key: ValueKey('clear_$size'), initialState: clearState),
+      );
+      await tester.pump();
+
+      final popup = tester.getRect(find.byKey(const Key('clear_popup')));
+      final next = tester.getRect(find.byKey(const Key('next_stage_button')));
+      _expectInsideViewport(popup, size);
+      _expectInsideViewport(next, size);
+      expect(find.text('클리어!'), findsOneWidget);
+
+      await tester.pumpWidget(
+        PropertyShotApp(key: ValueKey('normal_$size')),
+      );
+      await tester.pump();
+      await tester.tapAt(_logicalOffset(tester, 78, 154));
+      await tester.pump();
+
+      final info = tester.getRect(find.byKey(const Key('entity_info_panel')));
+      final close = tester.getRect(find.byKey(const Key('info_close_button')));
+      _expectInsideViewport(info, size);
+      _expectInsideViewport(close, size);
+      expect(close.bottom, lessThanOrEqualTo(info.bottom));
+      expect(find.textContaining('무거움'), findsWidgets);
+    }
+  });
+
+  testWidgets('휴대폰 화면 크기별 HUD와 컨트롤이 잘리지 않고 겹치지 않는다', (tester) async {
+    addTearDown(() {
+      tester.binding.setSurfaceSize(null);
+      tester.view.reset();
+    });
+    tester.view.padding = const FakeViewPadding(top: 24, bottom: 34);
+
+    for (final size in [const Size(320, 568), const Size(390, 844)]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(const PropertyShotApp());
+      await tester.pump();
+
+      final hud = tester.getRect(find.byKey(const Key('compact_hud')));
+      final board = tester.getRect(find.byKey(const Key('aim_area')));
+      final controls = tester.getRect(
+        find.byKey(const Key('compact_control_panel')),
+      );
+      final rewind = tester.getRect(find.byKey(const Key('rewind_button')));
+      final reset = tester.getRect(find.byKey(const Key('reset_button')));
+      _expectInsideViewport(hud, size);
+      _expectInsideViewport(board, size);
+      _expectInsideViewport(controls, size);
+      _expectInsideViewport(rewind, size);
+      _expectInsideViewport(reset, size);
+      expect(hud.overlaps(controls), isFalse);
+      expect(rewind.overlaps(reset), isFalse);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('게임 화면에 한글 접근성 안내가 노출된다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
@@ -315,6 +418,30 @@ void main() {
     expect(find.bySemanticsLabel('무거운 돌, 무거움 속성 보유'), findsOneWidget);
     expect(find.bySemanticsLabel('홀, 목표 홀'), findsOneWidget);
     expect(find.bySemanticsLabel('벽, 움직이지 않는 장애물'), findsWidgets);
+  });
+
+  testWidgets('휴대폰 크기별 핵심 요소의 접근성 의미가 유지된다', (tester) async {
+    addTearDown(() {
+      tester.binding.setSurfaceSize(null);
+      tester.view.reset();
+    });
+    tester.view.padding = const FakeViewPadding(top: 24, bottom: 34);
+
+    for (final size in [const Size(320, 568), const Size(390, 844)]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        PropertyShotApp(key: ValueKey('a11y_$size')),
+      );
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsOneWidget);
+      expect(find.bySemanticsLabel('공, 현재 속성 없음'), findsOneWidget);
+      expect(find.bySemanticsLabel('무거운 돌, 무거움 속성 보유'), findsOneWidget);
+      expect(find.bySemanticsLabel('홀, 목표 홀'), findsOneWidget);
+      expect(find.bySemanticsLabel('벽, 움직이지 않는 장애물'), findsWidgets);
+      expect(find.bySemanticsLabel('1단계 선택'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    }
   });
 
   testWidgets('현재 단계의 퍼즐 목표가 첫 화면에 표시된다', (tester) async {
@@ -369,4 +496,11 @@ Offset _logicalOffset(WidgetTester tester, double x, double y) {
     rect.top + (rect.height - 560 * scale) / 2,
   );
   return origin + Offset(x * scale, y * scale);
+}
+
+void _expectInsideViewport(Rect rect, Size viewport) {
+  expect(rect.left, greaterThanOrEqualTo(0));
+  expect(rect.top, greaterThanOrEqualTo(0));
+  expect(rect.right, lessThanOrEqualTo(viewport.width));
+  expect(rect.bottom, lessThanOrEqualTo(viewport.height));
 }
