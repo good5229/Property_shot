@@ -623,6 +623,8 @@ class PropertyShotGame extends FlameGame {
     final start = ball.position;
     final length = 46 + state.aimPower * 80;
     final end = start + direction * length;
+    final shaftStart = start + direction * 9;
+    final shaftEnd = end - direction * 13;
     final accent = Color.lerp(
       const Color(0xFF2E9D76),
       const Color(0xFFE06C4E),
@@ -630,16 +632,29 @@ class PropertyShotGame extends FlameGame {
     )!;
     final arrowShadow = Paint()
       ..color = const Color(0x553B2B24)
-      ..strokeWidth = 9
+      ..strokeWidth = 11
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(_project(start), _project(end), arrowShadow);
+    canvas.drawLine(_project(shaftStart), _project(shaftEnd), arrowShadow);
     final arrowPaint = Paint()
       ..color = accent
-      ..strokeWidth = 5
+      ..strokeWidth = 6
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(_project(start), _project(end), arrowPaint);
+    canvas.drawLine(_project(shaftStart), _project(shaftEnd), arrowPaint);
+
+    final highlight = Paint()
+      ..color = const Color(0xB8FFF4D6)
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
+    for (var index = 0; index < 5; index++) {
+      final segmentStart = shaftStart + direction * (index * 16 + 5);
+      final segmentEnd = segmentStart + direction * 7;
+      if ((segmentEnd - start).length > (shaftEnd - start).length) {
+        break;
+      }
+      canvas.drawLine(_project(segmentStart), _project(segmentEnd), highlight);
+    }
 
     final left = Vec2(
       -direction.x * 0.72 - direction.y * 0.38,
@@ -649,8 +664,20 @@ class PropertyShotGame extends FlameGame {
       -direction.x * 0.72 + direction.y * 0.38,
       -direction.y * 0.72 - direction.x * 0.38,
     );
-    canvas.drawLine(_project(end), _project(end + left * 24), arrowPaint);
-    canvas.drawLine(_project(end), _project(end + right * 24), arrowPaint);
+    final arrowHead = Path()
+      ..moveTo(_project(end).dx, _project(end).dy)
+      ..lineTo(_project(end + left * 22).dx, _project(end + left * 22).dy)
+      ..lineTo(_project(end + direction * 2).dx, _project(end + direction * 2).dy)
+      ..lineTo(_project(end + right * 22).dx, _project(end + right * 22).dy)
+      ..close();
+    canvas.drawPath(arrowHead, Paint()..color = accent);
+    canvas.drawPath(
+      arrowHead,
+      Paint()
+        ..color = const Color(0xFF3B2B24)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6,
+    );
 
     final gaugeTrack = Paint()
       ..color = const Color(0x553B2B24)
@@ -674,9 +701,15 @@ class PropertyShotGame extends FlameGame {
       false,
       gaugePaint,
     );
+    for (final fraction in const [0.33, 0.66]) {
+      final angle = -math.pi / 2 + fraction * math.pi * 2;
+      final marker = _project(start) +
+          Offset(math.cos(angle), math.sin(angle)) * (ball.radius + 12);
+      canvas.drawCircle(marker, 2.2, Paint()..color = const Color(0xCCFFF4D6));
+    }
     canvas.drawCircle(
       _project(end),
-      4 + state.aimPower * 3,
+      4.5 + state.aimPower * 3,
       Paint()..color = accent.withValues(alpha: 0.92),
     );
   }
