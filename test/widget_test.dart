@@ -274,9 +274,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
-
     final board = tester.getRect(find.byKey(const Key('aim_area')));
-    expect(board.width, greaterThanOrEqualTo(280));
+    expect(board.width, greaterThanOrEqualTo(240));
     expect(find.byKey(const Key('compact_hud')), findsOneWidget);
     expect(find.byKey(const Key('compact_control_panel')), findsOneWidget);
     expect(find.byKey(const Key('compact_objective')), findsOneWidget);
@@ -356,9 +355,7 @@ void main() {
       _expectInsideViewport(next, size);
       expect(find.text('클리어!'), findsOneWidget);
 
-      await tester.pumpWidget(
-        PropertyShotApp(key: ValueKey('normal_$size')),
-      );
+      await tester.pumpWidget(PropertyShotApp(key: ValueKey('normal_$size')));
       await tester.pump();
       await tester.tapAt(_logicalOffset(tester, 78, 154));
       await tester.pump();
@@ -429,9 +426,7 @@ void main() {
 
     for (final size in [const Size(320, 568), const Size(390, 844)]) {
       await tester.binding.setSurfaceSize(size);
-      await tester.pumpWidget(
-        PropertyShotApp(key: ValueKey('a11y_$size')),
-      );
+      await tester.pumpWidget(PropertyShotApp(key: ValueKey('a11y_$size')));
       await tester.pump();
 
       expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsOneWidget);

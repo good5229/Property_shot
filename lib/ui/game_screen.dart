@@ -185,8 +185,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           .transferSelectedTrait(_state)
           .copyWith(
             message: _state.levelIndex == 0
-                ? '3/3 공을 길게 누르고 방향을 정한 뒤 손을 떼세요.'
-                : '속성을 공에 담았습니다. 공을 길게 누르고 방향을 정하세요.',
+                ? '2/3 완료 · 3/3 자동 발사: 공을 길게 눌렀다 손을 떼세요.'
+                : '속성을 공에 담았습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
           ),
     );
   }
@@ -198,7 +198,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _setState(
       _traitResolver
           .copySelectedTrait(_state)
-          .copyWith(message: '속성을 공에 복사했습니다. 공을 길게 누르고 방향을 정하세요.'),
+          .copyWith(message: '속성을 공에 복사했습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.'),
     );
   }
 
@@ -615,6 +615,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             unlockedLevel: _unlockedLevel,
                             onSelectLevel: _selectLevel,
                           ),
+                        if (compactLayout)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                            child: _Hud(
+                              compact: true,
+                              state: _state,
+                              unlockedLevel: _unlockedLevel,
+                              onSelectLevel: _selectLevel,
+                            ),
+                          ),
                         Expanded(
                           child: AbsorbPointer(
                             absorbing: inputBlocked,
@@ -755,18 +765,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                               child: const SizedBox.expand(),
                                             ),
                                           ),
-                                      if (compactLayout)
-                                        Positioned(
-                                          top: 6,
-                                          left: 6,
-                                          right: 6,
-                                          child: _Hud(
-                                            compact: true,
-                                            state: _state,
-                                            unlockedLevel: _unlockedLevel,
-                                            onSelectLevel: _selectLevel,
-                                          ),
-                                        ),
                                       if (compactLayout)
                                         Positioned(
                                           left: 6,
@@ -1110,9 +1108,9 @@ String? _levelProgressHint(GameState state) {
 
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 => '1/3 반짝이는 무거운 돌을 눌러 속성을 확인하세요.',
-    1 => '초록 젤리를 누르고, 탄성을 공에 담아보세요.',
-    _ => '점착판에 공을 붙여 보고, 무거운 공으로 스위치를 준비하세요.',
+    0 => '1/3 무거운 돌에서 무거움을 옮기세요. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
+    1 => '2/3 젤리에서 탄성을 옮기세요. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
+    _ => '3/3 점착을 먼저 옮겨 붙이세요. 무거움을 옮긴 뒤 손을 떼면 자동 발사됩니다.',
   };
 }
 
@@ -1250,6 +1248,8 @@ class _Hud extends StatelessWidget {
             Text(
               _levelObjective(state.levelIndex),
               key: const Key('compact_objective'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               softWrap: true,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
@@ -1260,6 +1260,8 @@ class _Hud extends StatelessWidget {
               Text(
                 progressHint,
                 key: const Key('level_progress'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 softWrap: true,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: const Color(0xFF2F8A62),
@@ -1272,6 +1274,7 @@ class _Hud extends StatelessWidget {
               child: Text(
                 state.message,
                 key: const Key('compact_message'),
+                maxLines: 2,
                 softWrap: true,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
