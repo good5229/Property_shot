@@ -239,16 +239,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!mounted || !_isAnimatingShot) {
       return;
     }
+    final cleared = _state.phase == GamePhase.success;
     setState(() {
       _isAnimatingShot = false;
-      _showClearPopup = _state.phase == GamePhase.success;
-      _showFailurePopup = _state.phase != GamePhase.success;
-      if (_state.phase == GamePhase.success) {
-        _feedback.shotCleared();
-      } else {
-        _feedback.shotFailed();
-      }
+      _showClearPopup = cleared;
+      _showFailurePopup = !cleared;
     });
+    if (cleared) {
+      _feedback.shotCleared();
+    } else {
+      _feedback.shotFailed();
+    }
   }
 
   void _feedbackForShot(ShotResult result) {
