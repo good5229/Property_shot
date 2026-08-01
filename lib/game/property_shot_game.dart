@@ -639,10 +639,16 @@ class PropertyShotGame extends FlameGame {
     EntityState entity,
     List<Offset> topPoints,
   ) {
-    if (entity.type != EntityType.wall && entity.type != EntityType.gate) {
-      return;
-    }
-    final depth = entity.type == EntityType.wall ? 9.0 : 7.0;
+    final depth = switch (entity.type) {
+      EntityType.wall => 9.0,
+      EntityType.gate => 8.0,
+      EntityType.crate => 6.0,
+      EntityType.weight => 6.0,
+      EntityType.bumper => 4.0,
+      EntityType.stickySurface => 3.0,
+      EntityType.switchPad => 3.0,
+      _ => 2.0,
+    };
     final down = Offset(0, depth);
     final base = _colorFor(entity);
     final side = Paint()
@@ -669,6 +675,13 @@ class PropertyShotGame extends FlameGame {
       Paint()
         ..color = const Color(0x6624352D)
         ..strokeWidth = 2,
+    );
+    canvas.drawLine(
+      topPoints[0] + down,
+      topPoints[1] + down,
+      Paint()
+        ..color = const Color(0x4424352D)
+        ..strokeWidth = 1.2,
     );
     if (entity.type == EntityType.wall) {
       final mortar = Paint()
@@ -1049,7 +1062,12 @@ class PropertyShotGame extends FlameGame {
     final angle = math.atan2(direction.y, direction.x);
     final roll =
         distance / math.max(entity.size.x, 1) * (direction.x < 0 ? -1 : 1);
-    final impact = math.sin(progress * math.pi);
+    final elapsed = _animationCursor - move.triggerPathIndex;
+    final previous = _samplePathAtTime(move.path, elapsed - 0.8);
+    final current = _samplePathAtTime(move.path, elapsed);
+    final speedRatio = ((current - previous).length / 4.0).clamp(0.0, 1.0);
+    final impact = (math.sin(progress * math.pi) * 0.72 + speedRatio * 0.28)
+        .clamp(0.0, 1.0);
     return _materialMotion(entity, impact, roll, angle);
   }
 
@@ -1631,15 +1649,28 @@ class PropertyShotGame extends FlameGame {
     final index = _animationCursor.floor().clamp(0, _animationPath.length - 1);
     final position = _samplePathAtTime(_animationPath, _animationCursor);
     final trait = _animationTrait;
+    final previous = _samplePathAtTime(_animationPath, _animationCursor - 1);
+    final speedRatio = ((position - previous).length / 8.0).clamp(0.0, 1.0);
+    final trailCount = 3 + (speedRatio * 4).round();
     final trailPaint = Paint()
       ..color = const Color(0x55FFFFFF)
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
-    for (var i = 1; i <= 4; i++) {
+    for (var i = 1; i <= trailCount; i++) {
       final trail = _project(
-        _samplePathAtTime(_animationPath, _animationCursor - i * 2),
+        _samplePathAtTime(
+          _animationPath,
+          _animationCursor - i * (1.5 + speedRatio),
+        ),
       );
-      canvas.drawCircle(trail, (6 - i).toDouble(), trailPaint);
+      canvas.drawCircle(
+        trail,
+        math.max(1.3, 6 - i * 0.72),
+        trailPaint
+          ..color = const Color(
+            0x55FFFFFF,
+          ).withValues(alpha: (0.44 - i * 0.045).clamp(0.08, 0.44)),
+      );
     }
     _drawCueStrike(canvas, index, position);
     for (final move in _animationMoves) {
