@@ -1715,6 +1715,7 @@ class PropertyShotGame extends FlameGame {
 
   void _drawHoleFlag(Canvas canvas, EntityState entity) {
     final center = _project(entity.position);
+    final flutter = math.sin(_pulseClock * math.pi * 1.8) * 1.4;
     final pole = Paint()
       ..color = const Color(0xFF6B4B35)
       ..strokeWidth = 2.5
@@ -1722,7 +1723,7 @@ class PropertyShotGame extends FlameGame {
     canvas.drawLine(center.translate(5, -4), center.translate(5, -34), pole);
     final flag = Path()
       ..moveTo(center.dx + 6, center.dy - 34)
-      ..lineTo(center.dx + 25, center.dy - 27)
+      ..lineTo(center.dx + 25 + flutter, center.dy - 27)
       ..lineTo(center.dx + 6, center.dy - 20)
       ..close();
     canvas.drawPath(flag, Paint()..color = const Color(0xFFFF6B6B));
@@ -1732,6 +1733,14 @@ class PropertyShotGame extends FlameGame {
         ..color = const Color(0xFF7A3E33)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
+    );
+    canvas.drawLine(
+      center.translate(8, -31),
+      center.translate(20 + flutter * 0.55, -28),
+      Paint()
+        ..color = const Color(0x88FFFFFF)
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round,
     );
   }
 
@@ -1863,7 +1872,20 @@ class PropertyShotGame extends FlameGame {
         Rect.fromLTWH(rect.left - 8, rect.top, rect.width + 16, 7),
         Paint()..color = const Color(0xFF72C978),
       );
+      final railSeam = Paint()
+        ..color = const Color(0x55304742)
+        ..strokeWidth = 1.4;
+      for (var x = rect.left + 10; x < rect.right; x += 18) {
+        canvas.drawLine(
+          Offset(x, rect.top + 8),
+          Offset(x, rect.bottom - 2),
+          railSeam,
+        );
+      }
       canvas.restore();
+      final rivet = Paint()..color = const Color(0xB8D4E0D2);
+      canvas.drawCircle(rect.topLeft.translate(8, 8), 2.1, rivet);
+      canvas.drawCircle(rect.topRight.translate(-8, 8), 2.1, rivet);
     }
     if (entity.type == EntityType.crate) {
       final line = Paint()
