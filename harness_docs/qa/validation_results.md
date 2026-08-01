@@ -6,7 +6,7 @@
 |---|---|
 | `dart format --output=none --set-exit-if-changed .` | 통과, 변경 없음 |
 | `flutter analyze` | 통과, 이슈 없음 |
-| `flutter test` | 통과, 93개 |
+| `flutter test` | 통과, 94개 |
 | `flutter build web --release` | 통과 |
 | `curl http://127.0.0.1:8080` | HTTP 200, 새 빌드 서버 |
 | `flutter build ios --no-codesign` | Xcode 빌드 완료 후 Development Team/프로비저닝 프로파일 부족으로 배포 빌드 실패 |
@@ -20,7 +20,8 @@
 - 저파워·고파워 실패 원인 이벤트를 추가했다.
 - 활성 공의 직접 충돌과 홀 포획을 `ShotImpact`로 기록했다.
 - 충돌 위치·법선·대상·경로 시점 단위 테스트를 추가했다.
-- 전체 테스트 93개 통과와 `flutter analyze` 통과를 확인했다.
+- 활성 공·연쇄 물체의 충돌을 `ShotImpact`로 통합하고, 연쇄 이동 경로를 누적 거리로 재생하도록 보정했다.
+- 전체 테스트 94개 통과와 `flutter analyze` 통과를 확인했다.
 - 실제 렌더링 골든 테스트, iOS 실기기, iPhone/iPad 프레임 측정은 아직 미검증이다.
 
 `flutter build ios --no-codesign`은 Xcode 빌드 후 Development Team과 프로비저닝 프로파일 부족으로 실패했다. 서명 없는 시뮬레이터 빌드와 실제 기기 테스트는 별도 환경이 필요하다.
