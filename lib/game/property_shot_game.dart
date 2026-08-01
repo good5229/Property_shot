@@ -943,6 +943,18 @@ class PropertyShotGame extends FlameGame {
       width: sprite.width,
       height: sprite.height,
     );
+    final extrusion = entity.type == EntityType.weight ? 8.0 : 6.0;
+    final extrusionPaint = Paint()
+      ..colorFilter = const ColorFilter.mode(Color(0xFF17231E), BlendMode.srcIn)
+      ..filterQuality = FilterQuality.high;
+    for (var depth = extrusion; depth >= 2; depth -= 2) {
+      canvas.drawImageRect(
+        image,
+        source,
+        target.shift(Offset(0, depth)),
+        extrusionPaint,
+      );
+    }
     final outlinePaint = Paint()
       ..colorFilter = const ColorFilter.mode(Color(0xFF24352D), BlendMode.srcIn)
       ..filterQuality = FilterQuality.high;
