@@ -51,6 +51,9 @@ class PropertyShotGame extends FlameGame {
     _objectImages[EntityType.weight] = await _loadUiImage(
       'assets/generated/stone-v2.png',
     );
+    _objectImages[EntityType.bumper] = await _loadUiImage(
+      'assets/generated/jelly-bumper-v1.png',
+    );
   }
 
   Future<ui.Image> _loadUiImage(String assetPath) async {
@@ -1136,7 +1139,11 @@ class PropertyShotGame extends FlameGame {
       width: sprite.width,
       height: sprite.height,
     );
-    final extrusion = entity.type == EntityType.weight ? 8.0 : 6.0;
+    final extrusion = switch (entity.type) {
+      EntityType.weight => 8.0,
+      EntityType.bumper => 4.0,
+      _ => 6.0,
+    };
     final extrusionPaint = Paint()
       ..colorFilter = const ColorFilter.mode(Color(0xFF17231E), BlendMode.srcIn)
       ..filterQuality = FilterQuality.high;
@@ -1732,6 +1739,9 @@ class PropertyShotGame extends FlameGame {
           Paint()..color = const Color(0xFF5F7582),
         );
       case EntityType.bumper:
+        if (_objectImages.containsKey(EntityType.bumper)) {
+          return;
+        }
         canvas.drawCircle(
           center,
           12,

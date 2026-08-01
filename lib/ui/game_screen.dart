@@ -2063,6 +2063,7 @@ String? _assetPath(EntityState entity) {
   return switch (entity.type) {
     EntityType.crate => 'assets/generated/crate-v2.png',
     EntityType.weight => 'assets/generated/stone-v2.png',
+    EntityType.bumper => 'assets/generated/jelly-bumper-v1.png',
     _ => null,
   };
 }
