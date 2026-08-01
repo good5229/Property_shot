@@ -1061,6 +1061,15 @@ class ShotResolver {
     return (pair / 0.72).clamp(0.2, 1.35).toDouble();
   }
 
+  // 속도 감쇠에 쓰는 정규화 배율과 충돌 방정식의 실제 반발계수는
+  // 서로 다른 값이다. 기본 재질의 0.72를 1.0으로 올려 쓰면
+  // 벽·공·물체 연쇄가 탄성 충돌처럼 에너지를 과도하게 보존한다.
+  double _collisionRestitution(EntityState moving, EntityState hit) {
+    return ((_effectiveRestitution(moving) + _effectiveRestitution(hit)) / 2)
+        .clamp(0.12, 0.98)
+        .toDouble();
+  }
+
   double _massOf(EntityState entity) {
     if (entity.traits.contains(TraitType.heavy)) {
       return 4.4;
@@ -1340,7 +1349,7 @@ class ShotResolver {
           normal,
           _massOf(current),
           _massOf(hit),
-          _restitutionMultiplier(current, hit),
+          _collisionRestitution(current, hit),
         );
         final jellyScale = target.type == EntityType.ball ? 0.7 : 0.28;
         velocity *= jellyScale;
@@ -1385,7 +1394,7 @@ class ShotResolver {
           normal,
           targetMass,
           hitMass,
-          _restitutionMultiplier(current, hit),
+          _collisionRestitution(current, hit),
         );
         velocity = postVelocity * 0.76;
         remaining = velocity.length;
@@ -1411,7 +1420,7 @@ class ShotResolver {
           normal,
           _massOf(current),
           _massOf(hit),
-          _restitutionMultiplier(current, hit),
+          _collisionRestitution(current, hit),
         );
         final wallScale = target.type == EntityType.ball ? 0.58 : 0.34;
         velocity *= wallScale;
