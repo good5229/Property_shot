@@ -5,6 +5,7 @@ import '../domain/game_state.dart';
 import '../domain/geometry.dart';
 import '../domain/shot_input.dart';
 import '../domain/trait.dart';
+import '../levels/levels.dart';
 
 class ShotResult {
   const ShotResult({
@@ -26,12 +27,18 @@ class ShotAnimationMove {
     required this.from,
     required this.to,
     required this.triggerPathIndex,
+    this.visualState = 'pushed',
+    this.path = const [],
+    this.impactPosition,
   });
 
   final String entityId;
   final Vec2 from;
   final Vec2 to;
   final int triggerPathIndex;
+  final String visualState;
+  final List<Vec2> path;
+  final Vec2? impactPosition;
 }
 
 class TrajectoryPreview {
@@ -53,13 +60,27 @@ class CollisionHit {
   final Vec2 normal;
 }
 
+class CollisionSample {
+  const CollisionSample({required this.hit, required this.position});
+
+  final CollisionHit hit;
+  final Vec2 position;
+}
+
+class _MovingEntityCollision {
+  const _MovingEntityCollision({required this.entity, required this.position});
+
+  final EntityState entity;
+  final Vec2 position;
+}
+
 class ShotResolver {
   const ShotResolver();
 
   ShotResult resolve(GameState state, ShotInput rawInput) {
     final input = rawInput.normalized();
     final beforeShot = state.copyWith(history: const []);
-    var entities = state.entities.map((entity) => entity).toList();
+    var entities = [...state.entities, ..._fieldBoundaryEntities()];
     var ball = state.activeBall.copyWith(
       traits: input.equippedTrait == null ? const {} : {input.equippedTrait!},
     );
@@ -88,10 +109,31 @@ class ShotResolver {
       path.add(position);
       speed *= 0.982;
 
+      final collisionSample = _firstCollisionAlongSegment(
+        entities,
+        ball,
+        previousPosition,
+        position,
+      );
       final hole = _findHole(entities);
+      final holeTolerance = hole == null
+          ? 0.0
+          : hole.radius + ball.hitRadius * 0.75;
+      final holeProgress = hole == null
+          ? double.infinity
+          : _segmentProgress(previousPosition, position, hole.position);
+      final collisionProgress = collisionSample == null
+          ? double.infinity
+          : _segmentProgress(
+              previousPosition,
+              position,
+              collisionSample.position,
+            );
       if (hole != null &&
+          holeProgress.isFinite &&
           _segmentDistance(previousPosition, position, hole.position) <=
-              hole.radius + ball.hitRadius * 0.75 &&
+              holeTolerance &&
+          holeProgress <= collisionProgress + 0.001 &&
           _gateOpen(entities)) {
         events.add('hole_entered');
         success = true;
@@ -102,11 +144,12 @@ class ShotResolver {
         success = true;
         break;
       }
-
-      final collision = _firstCollision(entities, ball, position);
-      if (collision == null) {
+      if (collisionSample == null) {
         continue;
       }
+      position = collisionSample.position;
+      path[path.length - 1] = position;
+      final collision = collisionSample.hit;
       final hit = collision.entity;
 
       if (hit.type == EntityType.gate && hit.open) {
@@ -114,30 +157,80 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.switchPad) {
-        final heavy = ball.traits.contains(TraitType.heavy);
-        entities = _replace(
-          entities,
-          hit.copyWith(
-            pressed: heavy,
-            visualState: heavy ? 'pressed' : 'needs-heavy',
-          ),
-        );
-        if (heavy) {
-          entities = _openGates(entities);
-          events.add('switch_pressed');
-          direction = Vec2(direction.x, -direction.y).normalized();
+        if (!ball.traits.contains(TraitType.heavy)) {
+          events.add('switch_rejected');
+          direction = _reflect(direction, collision.normal);
+          speed *= 0.42;
           continue;
         }
-        events.add('switch_rejected');
+        moves.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: path.length - 1,
+            visualState: 'pressed',
+            impactPosition: position,
+          ),
+        );
+        for (final gate in entities.where(
+          (entity) => entity.type == EntityType.gate,
+        )) {
+          moves.add(
+            ShotAnimationMove(
+              entityId: gate.id,
+              from: gate.position,
+              to: gate.position,
+              triggerPathIndex: path.length + 2,
+              visualState: 'opening',
+            ),
+          );
+        }
+        entities = _replace(
+          entities,
+          hit.copyWith(pressed: true, solid: false, visualState: 'pressed'),
+        );
+        entities = _openGates(entities);
+        events.add('switch_pressed');
+        speed *= 0.82;
+        continue;
+      }
+
+      if (hit.type == EntityType.stickySurface) {
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
+        entities = _replace(entities, hit.copyWith(visualState: 'stuck'));
+        moves.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: path.length - 1,
+            visualState: 'stuck',
+            impactPosition: position,
+          ),
+        );
+        events.add('sticky_attached');
         stopped = true;
         break;
       }
 
       if (ball.traits.contains(TraitType.sticky) &&
           (hit.type == EntityType.wall ||
-              hit.type == EntityType.stickySurface ||
               hit.type == EntityType.crate ||
               hit.type == EntityType.ball)) {
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         events.add('sticky_attached');
         stopped = true;
         break;
@@ -173,6 +266,13 @@ class ShotResolver {
           continue;
         }
         events.add('crate_blocked');
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         direction = _reflect(direction, collision.normal);
         speed *= 0.62;
         events.add('bounced');
@@ -217,8 +317,17 @@ class ShotResolver {
             from: hit.position,
             to: hit.position,
             triggerPathIndex: path.length - 1,
+            visualState: 'pushed',
+            impactPosition: position,
           ),
         );
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         direction = _reflect(direction, collision.normal);
         speed *= 0.72;
         events.add('jelly_bounced');
@@ -249,6 +358,13 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.wall || hit.type == EntityType.gate) {
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         direction = _reflect(direction, collision.normal);
         speed *= 0.72;
         events.add('bounced');
@@ -256,6 +372,13 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.weight) {
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         direction = _postImpactDirection(
           direction,
           collision.normal,
@@ -267,19 +390,19 @@ class ShotResolver {
         continue;
       }
 
-      if (hit.type == EntityType.stickySurface) {
-        direction = _reflect(direction, collision.normal);
-        speed *= 0.48;
-        events.add('bounced');
-        continue;
-      }
-
       if (hit.type == EntityType.hole) {
         stopped = true;
         break;
       }
 
       if (ball.traits.contains(TraitType.bouncy)) {
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         direction = _reflect(direction, collision.normal);
         speed *= 0.88;
         events.add('bounced');
@@ -309,7 +432,9 @@ class ShotResolver {
 
     entities = [
       for (final entity in entities)
-        if (entity.id != state.activeBall.id) entity,
+        if (entity.id != state.activeBall.id &&
+            !entity.id.startsWith('field_boundary_'))
+          entity,
       landedBall,
       if (!success) activeBall,
     ];
@@ -341,7 +466,11 @@ class ShotResolver {
     for (var traveled = 0.0; traveled < 130 + power * 260; traveled += 12) {
       position = position + direction * 12;
       points.add(position);
-      final collision = _firstCollision(state.entities, ball, position);
+      final collision = _firstCollision(
+        [...state.entities, ..._fieldBoundaryEntities()],
+        ball,
+        position,
+      );
       hit = collision?.entity;
       if (hit != null) {
         break;
@@ -433,9 +562,13 @@ class ShotResolver {
       if (entity.type != EntityType.ball) {
         continue;
       }
-      if (_segmentDistance(move.from, move.to, hole.position) <=
-          hole.radius + entity.hitRadius * 0.85) {
-        return true;
+      final points = move.path.length >= 2 ? move.path : [move.from, move.to];
+      final tolerance = hole.radius + entity.hitRadius * 0.85;
+      for (var index = 1; index < points.length; index++) {
+        if (_segmentDistance(points[index - 1], points[index], hole.position) <=
+            tolerance) {
+          return true;
+        }
       }
     }
     return false;
@@ -452,6 +585,8 @@ class ShotResolver {
     EntityState ball,
     Vec2 position,
   ) {
+    CollisionHit? best;
+    var bestMetric = double.infinity;
     for (final entity in entities) {
       if (entity.id == ball.id || !entity.active || !entity.solid) {
         continue;
@@ -462,23 +597,167 @@ class ShotResolver {
       if (entity.isCircle) {
         if (position.distanceTo(entity.position) <=
             ball.hitRadius + entity.hitRadius) {
-          return CollisionHit(
+          final candidate = CollisionHit(
             entity: entity,
             normal: (position - entity.position).normalized(),
           );
+          final metric = position.distanceTo(entity.position);
+          if (_isEarlierCollision(candidate, metric, best, bestMetric)) {
+            best = candidate;
+            bestMetric = metric;
+          }
         }
       } else if (entity.hitBounds.intersectsCircle(position, ball.hitRadius)) {
-        return CollisionHit(
+        final candidate = CollisionHit(
           entity: entity,
           normal: _rectNormal(entity.hitBounds, position),
         );
+        final metric = position.distanceTo(
+          entity.hitBounds.nearestPoint(position),
+        );
+        if (_isEarlierCollision(candidate, metric, best, bestMetric)) {
+          best = candidate;
+          bestMetric = metric;
+        }
       }
+    }
+    return best;
+  }
+
+  List<EntityState> _fieldBoundaryEntities() {
+    return [
+      EntityState(
+        id: 'field_boundary_bottom',
+        type: EntityType.wall,
+        position: Vec2(logicalSize.x / 2, logicalSize.y + 12),
+        size: Vec2(logicalSize.x, 24),
+        movable: false,
+      ),
+    ];
+  }
+
+  CollisionSample? _firstCollisionAlongSegment(
+    List<EntityState> entities,
+    EntityState ball,
+    Vec2 from,
+    Vec2 to,
+  ) {
+    final distance = from.distanceTo(to);
+    final steps = math.max(1, (distance / 1.25).ceil());
+    var previous = from;
+    for (var step = 1; step <= steps; step++) {
+      final progress = step / steps;
+      final position = Vec2(
+        from.x + (to.x - from.x) * progress,
+        from.y + (to.y - from.y) * progress,
+      );
+      CollisionHit? bestHit;
+      Vec2? bestPosition;
+      var bestProgress = double.infinity;
+      for (final entity in entities) {
+        if (!_isCollisionCandidate(entity, ball.id)) {
+          continue;
+        }
+        if (!_collidesAt(ball, entity, position)) {
+          continue;
+        }
+        var low = previous;
+        var high = position;
+        if (_collidesAt(ball, entity, low)) {
+          high = low;
+        } else {
+          for (var iteration = 0; iteration < 8; iteration++) {
+            final middle = Vec2((low.x + high.x) / 2, (low.y + high.y) / 2);
+            if (_collidesAt(ball, entity, middle)) {
+              high = middle;
+            } else {
+              low = middle;
+            }
+          }
+        }
+        final candidateProgress = _segmentProgress(from, to, high);
+        final candidate = CollisionHit(
+          entity: entity,
+          normal: _collisionNormal(ball, entity, high),
+        );
+        if (bestHit == null ||
+            candidateProgress < bestProgress - 0.0001 ||
+            (candidateProgress - bestProgress).abs() <= 0.0001 &&
+                entity.id.compareTo(bestHit.entity.id) < 0) {
+          bestHit = candidate;
+          bestPosition = high;
+          bestProgress = candidateProgress;
+        }
+      }
+      if (bestHit != null && bestPosition != null) {
+        return CollisionSample(hit: bestHit, position: bestPosition);
+      }
+      previous = position;
     }
     return null;
   }
 
+  bool _isCollisionCandidate(EntityState entity, String movingId) {
+    if (entity.id == movingId || !entity.active || !entity.solid) {
+      return false;
+    }
+    return !(entity.type == EntityType.gate && entity.open);
+  }
+
+  bool _collidesAt(EntityState moving, EntityState target, Vec2 position) {
+    return _collides(moving.copyWith(position: position), target);
+  }
+
+  double _segmentProgress(Vec2 from, Vec2 to, Vec2 point) {
+    final delta = to - from;
+    final lengthSquared = delta.dot(delta);
+    if (lengthSquared <= 0.0001) {
+      return 0;
+    }
+    return ((point - from).dot(delta) / lengthSquared).clamp(0.0, 1.0);
+  }
+
+  bool _isEarlierCollision(
+    CollisionHit candidate,
+    double metric,
+    CollisionHit? best,
+    double bestMetric,
+  ) {
+    if (best == null || metric < bestMetric - 0.001) {
+      return true;
+    }
+    if ((metric - bestMetric).abs() <= 0.001) {
+      return candidate.entity.id.compareTo(best.entity.id) < 0;
+    }
+    return false;
+  }
+
   Vec2 _reflect(Vec2 direction, Vec2 normal) {
     return direction.reflectedBy(normal);
+  }
+
+  Vec2 _separateFromCollision(
+    EntityState hit,
+    EntityState ball,
+    Vec2 position,
+    Vec2 normal,
+  ) {
+    if (hit.isCircle) {
+      return hit.position +
+          normal.normalized() * (hit.hitRadius + ball.hitRadius + 0.8);
+    }
+    final bounds = hit.hitBounds;
+    final n = normal.normalized();
+    if (n.x.abs() >= n.y.abs()) {
+      final x = n.x < 0
+          ? bounds.left - ball.hitRadius - 1.8
+          : bounds.right + ball.hitRadius + 1.8;
+      return Vec2(x, position.y);
+    }
+    final y = n.y < 0
+        ? bounds.top - ball.hitRadius - 1.8
+        : bounds.bottom + ball.hitRadius + 1.8;
+    return Vec2(position.x, y);
   }
 
   Vec2 _postImpactDirection(
@@ -530,7 +809,8 @@ class ShotResolver {
 
   Vec2 _collisionNormal(EntityState ball, EntityState hit, Vec2 position) {
     if (hit.isCircle) {
-      return (position - hit.position).normalized();
+      final delta = position - hit.position;
+      return delta.length <= 0.001 ? const Vec2(1, 0) : delta.normalized();
     }
     return _rectNormal(hit.hitBounds, position);
   }
@@ -571,6 +851,12 @@ class ShotResolver {
   }
 
   String _messageFor(List<String> events) {
+    if (events.contains('switch_pressed')) {
+      return '무거운 공이 스위치를 눌렀습니다. 문이 열렸습니다.';
+    }
+    if (events.contains('switch_rejected')) {
+      return '스위치에는 무거움이 필요합니다.';
+    }
     if (events.contains('crate_pushed')) {
       return '상자를 밀고 튕겼습니다.';
     }
@@ -586,9 +872,6 @@ class ShotResolver {
     if (events.contains('sticky_attached')) {
       return '접착 속성으로 표면에 붙었습니다.';
     }
-    if (events.contains('switch_rejected')) {
-      return '스위치에는 무거움이 필요합니다.';
-    }
     return '공이 멈췄습니다. 남은 공을 다음 전략에 활용하세요.';
   }
 
@@ -603,7 +886,13 @@ class ShotResolver {
     Vec2 contactNormal = Vec2.zero,
     int depth = 0,
   ]) {
-    if (!target.movable || target.type == EntityType.wall || depth > 3) {
+    // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
+    // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
+    // 재귀 처리하는 것은 별도 물리 계산 없이도 진행을 끝낼 수 없으므로,
+    // 현재 스테이지의 엔티티 수를 상한으로 사용한다.
+    if (!target.movable ||
+        target.type == EntityType.wall ||
+        depth >= entities.length) {
       return entities;
     }
 
@@ -612,51 +901,327 @@ class ShotResolver {
     final normalImpulse = contactNormal == Vec2.zero
         ? travelDirection
         : (-contactNormal).normalized();
-    final impulseDirection = travelDirection.dot(normalImpulse) < 0
+    var impulseDirection = travelDirection.dot(normalImpulse) < 0
         ? travelDirection
         : normalImpulse;
-    var candidate = target.copyWith(
-      position: target.position + impulseDirection * (distance * strength),
-      visualState: 'pushed',
-    );
+    var current = target;
+    var remaining = distance * strength;
+    var iterations = 0;
+    final path = <Vec2>[target.position];
 
-    for (final other in entities) {
-      if (other.id == target.id || !other.active || !other.solid) {
+    while (remaining > 0.8 && iterations < 96) {
+      iterations += 1;
+      final step = math.min(remaining, 4.0);
+      final candidate = current.copyWith(
+        position: current.position + impulseDirection * step,
+        visualState: 'pushed',
+      );
+      final collision = _firstEntityCollisionAlongSegment(
+        entities,
+        current,
+        candidate,
+        target.id,
+      );
+      if (collision == null) {
+        current = candidate;
+        _appendMovePoint(path, current.position);
+        remaining -= step;
         continue;
       }
-      if (!_collides(candidate, other)) {
+
+      final hit = collision.entity;
+      final collisionEntity = candidate.copyWith(position: collision.position);
+      final normal = _collisionNormalForMovingEntity(collisionEntity, hit);
+      final collisionTrigger = triggerPathIndex + iterations;
+      current = candidate.copyWith(
+        position: _separateMovingEntityFromCollision(
+          hit,
+          collisionEntity,
+          normal,
+        ),
+        visualState: hit.type == EntityType.stickySurface ? 'stuck' : 'pushed',
+      );
+      _appendMovePoint(path, collision.position);
+      _appendMovePoint(path, current.position);
+      events.add('chain_collision_${hit.type.name}');
+
+      if (hit.type == EntityType.stickySurface) {
+        entities = _replace(entities, hit.copyWith(visualState: 'stuck'));
+        moves?.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: collisionTrigger,
+            visualState: 'stuck',
+            impactPosition: collision.position,
+          ),
+        );
+        break;
+      }
+
+      if (hit.type == EntityType.switchPad) {
+        entities = _replace(
+          entities,
+          hit.copyWith(pressed: true, solid: false, visualState: 'pressed'),
+        );
+        moves?.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: collisionTrigger,
+            visualState: 'pressed',
+            impactPosition: collision.position,
+          ),
+        );
+        for (final gate in entities.where(
+          (entity) => entity.type == EntityType.gate,
+        )) {
+          moves?.add(
+            ShotAnimationMove(
+              entityId: gate.id,
+              from: gate.position,
+              to: gate.position,
+              triggerPathIndex: collisionTrigger + 2,
+              visualState: 'opening',
+            ),
+          );
+        }
+        entities = _openGates(entities);
+        events.add('switch_pressed');
+        remaining *= 0.72;
         continue;
       }
-      if (other.movable && other.type != EntityType.wall) {
+
+      if (hit.type == EntityType.bumper) {
+        moves?.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: collisionTrigger,
+            visualState: 'pushed',
+            impactPosition: collision.position,
+          ),
+        );
+        impulseDirection = _reflect(impulseDirection, normal);
+        remaining *= target.type == EntityType.ball ? 0.7 : 0.28;
+        events.add('jelly_bounced');
+        continue;
+      }
+
+      if (hit.movable && hit.type != EntityType.wall) {
+        final targetMass = _massOf(current);
+        final hitMass = _massOf(hit);
+        final transferRatio = (targetMass * 2 / (targetMass + hitMass)).clamp(
+          0.25,
+          2.2,
+        );
         entities = _pushWithMomentum(
           entities,
-          other,
-          direction,
-          distance * 0.62,
+          hit,
+          impulseDirection,
+          remaining * 0.68 * transferRatio,
           events,
           moves,
-          triggerPathIndex + 5,
-          contactNormal,
+          collisionTrigger,
+          normal,
           depth + 1,
         );
         events.add('chain_push');
-      } else {
-        candidate = target.copyWith(visualState: 'blocked');
+        if (target.type != EntityType.ball) {
+          break;
+        }
+        impulseDirection = _postImpactDirection(
+          impulseDirection,
+          normal,
+          targetMass,
+          hitMass,
+        );
+        remaining *= _postImpactSpeedFactor(targetMass, hitMass) * 0.76;
+        continue;
+      }
+
+      if (hit.type == EntityType.wall || hit.type == EntityType.gate) {
+        events.add('bounced');
+        if (target.type == EntityType.ball) {
+          current = current.copyWith(
+            position: _separateMovingEntityFromCollision(
+              hit,
+              collisionEntity,
+              normal,
+            ),
+          );
+          _appendMovePoint(path, current.position);
+          impulseDirection = _reflect(impulseDirection, normal);
+          remaining *= 0.58;
+          continue;
+        }
+        current = current.copyWith(
+          position: _separateMovingEntityFromCollision(
+            hit,
+            collisionEntity,
+            normal,
+          ),
+          visualState: 'blocked',
+        );
+        _appendMovePoint(path, current.position);
         break;
       }
+
+      if (hit.type == EntityType.weight || hit.type == EntityType.crate) {
+        final targetMass = _massOf(current);
+        final hitMass = _massOf(hit);
+        events.add('bounced');
+        if (target.type == EntityType.ball && targetMass > hitMass * 0.8) {
+          impulseDirection = _postImpactDirection(
+            impulseDirection,
+            normal,
+            targetMass,
+            hitMass,
+          );
+          remaining *= _postImpactSpeedFactor(targetMass, hitMass) * 0.72;
+          continue;
+        }
+        current = current.copyWith(visualState: 'blocked');
+        break;
+      }
+
+      current = current.copyWith(visualState: 'blocked');
+      break;
     }
 
-    if (candidate.position != target.position) {
+    if (current.position != target.position) {
       moves?.add(
         ShotAnimationMove(
           entityId: target.id,
           from: target.position,
-          to: candidate.position,
-          triggerPathIndex: triggerPathIndex + depth * 5,
+          to: current.position,
+          triggerPathIndex: triggerPathIndex,
+          path: path,
+          impactPosition: path.length >= 2 ? path[path.length - 2] : null,
         ),
       );
     }
-    return _replace(entities, candidate);
+    return _replace(entities, current);
+  }
+
+  void _appendMovePoint(List<Vec2> path, Vec2 point) {
+    if (path.isEmpty || path.last.distanceTo(point) >= 1.2) {
+      path.add(point);
+    }
+  }
+
+  _MovingEntityCollision? _firstEntityCollisionAlongSegment(
+    List<EntityState> entities,
+    EntityState from,
+    EntityState to,
+    String ignoreId,
+  ) {
+    final distance = from.position.distanceTo(to.position);
+    final steps = math.max(1, (distance / 1.25).ceil());
+    var previous = from.position;
+    for (var step = 1; step <= steps; step++) {
+      final progress = step / steps;
+      final position = Vec2(
+        from.position.x + (to.position.x - from.position.x) * progress,
+        from.position.y + (to.position.y - from.position.y) * progress,
+      );
+      final candidate = from.copyWith(position: position);
+      EntityState? bestHit;
+      Vec2? bestPosition;
+      var bestProgress = double.infinity;
+      for (final entity in entities) {
+        if (!_isMovingEntityCollisionCandidate(entity, from.id, ignoreId) ||
+            !_collides(candidate, entity)) {
+          continue;
+        }
+        var low = previous;
+        var high = position;
+        final previousCandidate = from.copyWith(position: previous);
+        if (_collides(previousCandidate, entity)) {
+          high = previous;
+        } else {
+          for (var iteration = 0; iteration < 8; iteration++) {
+            final middle = Vec2((low.x + high.x) / 2, (low.y + high.y) / 2);
+            if (_collides(from.copyWith(position: middle), entity)) {
+              high = middle;
+            } else {
+              low = middle;
+            }
+          }
+        }
+        final candidateProgress = _segmentProgress(
+          from.position,
+          to.position,
+          high,
+        );
+        if (bestHit == null ||
+            candidateProgress < bestProgress - 0.0001 ||
+            (candidateProgress - bestProgress).abs() <= 0.0001 &&
+                entity.id.compareTo(bestHit.id) < 0) {
+          bestHit = entity;
+          bestPosition = high;
+          bestProgress = candidateProgress;
+        }
+      }
+      if (bestHit != null && bestPosition != null) {
+        return _MovingEntityCollision(entity: bestHit, position: bestPosition);
+      }
+      previous = position;
+    }
+    return null;
+  }
+
+  bool _isMovingEntityCollisionCandidate(
+    EntityState entity,
+    String movingId,
+    String ignoreId,
+  ) {
+    if (entity.id == movingId ||
+        entity.id == ignoreId ||
+        entity.id == 'active_ball' ||
+        !entity.active ||
+        !entity.solid) {
+      return false;
+    }
+    return !(entity.type == EntityType.gate && entity.open);
+  }
+
+  Vec2 _collisionNormalForMovingEntity(EntityState moving, EntityState hit) {
+    if (moving.isCircle && hit.isCircle) {
+      final delta = moving.position - hit.position;
+      return delta.length <= 0.001 ? const Vec2(1, 0) : delta.normalized();
+    }
+    if (hit.isCircle) {
+      final delta = moving.position - hit.position;
+      return delta.length <= 0.001 ? const Vec2(1, 0) : delta.normalized();
+    }
+    return _rectNormal(hit.hitBounds, moving.position);
+  }
+
+  Vec2 _separateMovingEntityFromCollision(
+    EntityState hit,
+    EntityState moving,
+    Vec2 normal,
+  ) {
+    if (moving.isCircle) {
+      return _separateFromCollision(hit, moving, moving.position, normal);
+    }
+    final n = normal.normalized();
+    final movingBounds = moving.hitBounds;
+    final hitBounds = hit.hitBounds;
+    if (n.x.abs() >= n.y.abs()) {
+      final x = n.x < 0
+          ? hitBounds.left - movingBounds.width / 2 - 1.8
+          : hitBounds.right + movingBounds.width / 2 + 1.8;
+      return Vec2(x, moving.position.y);
+    }
+    final y = n.y < 0
+        ? hitBounds.top - movingBounds.height / 2 - 1.8
+        : hitBounds.bottom + movingBounds.height / 2 + 1.8;
+    return Vec2(moving.position.x, y);
   }
 
   bool _collides(EntityState a, EntityState b) {

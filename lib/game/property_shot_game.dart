@@ -12,13 +12,10 @@ import 'domain/trait.dart';
 import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 
-enum GameViewMode { top, quarter }
-
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(this.state);
 
   GameState state;
-  GameViewMode viewMode = GameViewMode.top;
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   GameState? _animationStartState;
@@ -43,10 +40,6 @@ class PropertyShotGame extends FlameGame {
     final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
     final frame = await codec.getNextFrame();
     return frame.image;
-  }
-
-  void setViewMode(GameViewMode mode) {
-    viewMode = mode;
   }
 
   void setStateSnapshot(
@@ -75,8 +68,10 @@ class PropertyShotGame extends FlameGame {
   void update(double dt) {
     super.update(dt);
     if (_animationPath.isNotEmpty) {
-      _animationCursor += dt * 34;
-      if (_animationCursor >= _animationPath.length - 1) {
+      // A background-resume frame must not skip an entire collision beat.
+      final boundedDt = dt.clamp(0.0, 1 / 30).toDouble();
+      _animationCursor += boundedDt * 34;
+      if (_animationCursor >= _animationEndCursor) {
         _animationPath = const [];
         _animationMoves = const [];
         _animationStartState = null;
@@ -111,8 +106,75 @@ class PropertyShotGame extends FlameGame {
     }
     if (animated) {
       _drawAnimatedBall(canvas);
+      _drawImpactFeedback(canvas);
     }
     canvas.restore();
+  }
+
+  void _drawImpactFeedback(Canvas canvas) {
+    for (final move in _animationMoves) {
+      final elapsed = _animationCursor - move.triggerPathIndex;
+      if (elapsed < 0 || elapsed > 16) {
+        continue;
+      }
+      final progress = (elapsed / 16).clamp(0.0, 1.0);
+      final center = _project(move.impactPosition ?? move.from);
+      final target = _animationStartState?.entities.where(
+        (entity) => entity.id == move.entityId,
+      );
+      final targetType = target == null || target.isEmpty
+          ? EntityType.ball
+          : target.first.type;
+      final accent = switch (targetType) {
+        EntityType.bumper => const Color(0xFF4EAF7C),
+        EntityType.stickySurface => const Color(0xFF8E5AA9),
+        EntityType.crate => const Color(0xFFC4864E),
+        EntityType.weight => const Color(0xFF6E8794),
+        EntityType.switchPad => const Color(0xFFE2C044),
+        EntityType.gate => const Color(0xFFE36B5D),
+        _ => const Color(0xFFFFF2A8),
+      };
+      final ring = Paint()
+        ..color = Color.lerp(
+          accent.withValues(alpha: 0.88),
+          accent.withValues(alpha: 0),
+          progress,
+        )!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth =
+            (targetType == EntityType.stickySurface ? 5 : 3.5) *
+                (1 - progress) +
+            1;
+      canvas.drawCircle(center, 8 + progress * 24, ring);
+      final spark = Paint()
+        ..color = accent.withValues(alpha: 0.7)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round;
+      final sparkCount = targetType == EntityType.stickySurface ? 6 : 4;
+      for (var index = 0; index < sparkCount; index++) {
+        final angle = index * math.pi / 2 + 0.35;
+        final inner = center + Offset(math.cos(angle), math.sin(angle)) * 9;
+        final outer =
+            center +
+            Offset(math.cos(angle), math.sin(angle)) * (14 + progress * 12);
+        canvas.drawLine(inner, outer, spark);
+      }
+      if (targetType == EntityType.crate || targetType == EntityType.weight) {
+        final shard = Paint()
+          ..color = accent.withValues(alpha: 0.72 * (1 - progress))
+          ..style = PaintingStyle.fill;
+        for (var index = 0; index < 3; index++) {
+          final angle = index * math.pi * 0.7 - 0.8;
+          final shardCenter =
+              center +
+              Offset(math.cos(angle), math.sin(angle)) * (16 + progress * 10);
+          canvas.drawRect(
+            Rect.fromCenter(center: shardCenter, width: 3, height: 3),
+            shard,
+          );
+        }
+      }
+    }
   }
 
   List<EntityState> _animatedEntities() {
@@ -130,64 +192,90 @@ class PropertyShotGame extends FlameGame {
     for (final move in _animationMoves.where(
       (move) => move.entityId == entity.id,
     )) {
-      final local = ((_animationCursor - move.triggerPathIndex) / 12).clamp(
-        0.0,
-        1.0,
-      );
+      final duration = _moveDuration(move);
+      final local = ((_animationCursor - move.triggerPathIndex) / duration)
+          .clamp(0.0, 1.0);
       final eased = Curves.easeOut.transform(local);
+      final position = _movePositionAt(move, eased);
       animated = animated.copyWith(
-        position: Vec2(
-          move.from.x + (move.to.x - move.from.x) * eased,
-          move.from.y + (move.to.y - move.from.y) * eased,
-        ),
-        visualState: local > 0 ? 'pushed' : entity.visualState,
+        position: position,
+        visualState: local > 0 ? move.visualState : entity.visualState,
       );
     }
     return animated;
+  }
+
+  double _moveDuration(ShotAnimationMove move) {
+    if (move.path.length < 2) {
+      return 12;
+    }
+    final distance = _pathDistance(move.path);
+    // One animation unit represents roughly one simulation step. Keeping the
+    // duration tied to distance prevents long chain reactions from skipping.
+    return (distance / 7).clamp(8.0, 96.0);
+  }
+
+  double get _animationEndCursor {
+    var end = math.max(0, _animationPath.length - 1).toDouble();
+    for (final move in _animationMoves) {
+      end = math.max(end, move.triggerPathIndex + _moveDuration(move));
+    }
+    return end;
+  }
+
+  Vec2 _movePositionAt(ShotAnimationMove move, double progress) {
+    final points = move.path.length >= 2 ? move.path : [move.from, move.to];
+    if (points.length == 2) {
+      final from = points.first;
+      final to = points.last;
+      return Vec2(
+        from.x + (to.x - from.x) * progress,
+        from.y + (to.y - from.y) * progress,
+      );
+    }
+    final lengths = <double>[0];
+    for (var index = 1; index < points.length; index++) {
+      lengths.add(lengths.last + points[index - 1].distanceTo(points[index]));
+    }
+    final targetDistance = progress * lengths.last;
+    var index = 0;
+    while (index < lengths.length - 2 && lengths[index + 1] < targetDistance) {
+      index++;
+    }
+    final segmentLength = lengths[index + 1] - lengths[index];
+    final local = segmentLength <= 0
+        ? 0.0
+        : (targetDistance - lengths[index]) / segmentLength;
+    final from = points[index];
+    final to = points[index + 1];
+    return Vec2(
+      from.x + (to.x - from.x) * local,
+      from.y + (to.y - from.y) * local,
+    );
+  }
+
+  double _pathDistance(List<Vec2> points) {
+    var distance = 0.0;
+    for (var index = 1; index < points.length; index++) {
+      distance += points[index - 1].distanceTo(points[index]);
+    }
+    return distance;
   }
 
   double _scaleFor(Vector2 size) {
     return mathMin(size.x / logicalSize.x, size.y / logicalSize.y);
   }
 
-  double get _viewAngleRadians => 45 * math.pi / 180;
-  double get _viewXScale => viewMode == GameViewMode.quarter ? 0.88 : 1.0;
-  double get _viewYScale =>
-      viewMode == GameViewMode.quarter ? math.sin(_viewAngleRadians) : 1.0;
-  double get _viewYOffset => viewMode == GameViewMode.quarter
-      ? (logicalSize.y - logicalSize.y * _viewYScale) / 2
-      : 0;
-  double get _viewShear {
-    if (viewMode != GameViewMode.quarter) {
-      return 0;
-    }
-    final strength = math.cos(_viewAngleRadians) * 0.2;
-    return strength * 0.7;
-  }
-
-  Offset get _blockDepth {
-    if (viewMode != GameViewMode.quarter) {
-      return Offset.zero;
-    }
-    final height = 10 + math.cos(_viewAngleRadians) * 28;
-    final width = 6 + math.cos(_viewAngleRadians) * 12;
-    return Offset(-width * 0.8, height);
-  }
-
   Offset _project(Vec2 point) {
-    final yOffset = (point.y - logicalSize.y / 2) * _viewShear;
-    return Offset(
-      logicalSize.x / 2 + (point.x - logicalSize.x / 2) * _viewXScale + yOffset,
-      point.y * _viewYScale + _viewYOffset,
-    );
+    return Offset(point.x, point.y);
   }
 
   Rect _projectedRect(EntityState entity) {
     final center = _project(entity.position);
     return Rect.fromCenter(
       center: center,
-      width: entity.size.x * _viewXScale,
-      height: entity.size.y * _viewYScale,
+      width: entity.size.x,
+      height: entity.size.y,
     );
   }
 
@@ -211,7 +299,8 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawBoard(Canvas canvas) {
-    final field = Paint()..color = const Color(0xFFBFEEC9);
+    final field = Paint()..color = const Color(0xFFC8F0D0);
+    final fieldShadow = Paint()..color = const Color(0x25503C2E);
     final border = Paint()
       ..color = const Color(0xFF5D8B62)
       ..style = PaintingStyle.stroke
@@ -222,7 +311,28 @@ class PropertyShotGame extends FlameGame {
       _project(Vec2(logicalSize.x, logicalSize.y)),
       _project(Vec2(0, logicalSize.y)),
     ]);
+    canvas.drawPath(boardPath.shift(const Offset(0, 5)), fieldShadow);
     canvas.drawPath(boardPath, field);
+    canvas.save();
+    canvas.clipPath(boardPath);
+    final lawnStripe = Paint()..color = const Color(0x120F8A54);
+    for (var y = 10.0; y < logicalSize.y; y += 28) {
+      canvas.drawRect(Rect.fromLTWH(0, y, logicalSize.x, 12), lawnStripe);
+    }
+    final pebble = Paint()..color = const Color(0x22658E70);
+    for (final dot in const [
+      Vec2(28, 42),
+      Vec2(338, 64),
+      Vec2(42, 286),
+      Vec2(330, 360),
+      Vec2(154, 520),
+    ]) {
+      canvas.drawOval(
+        Rect.fromCenter(center: _project(dot), width: 10, height: 5),
+        pebble,
+      );
+    }
+    canvas.restore();
     final tileLine = Paint()
       ..color = const Color(0x38FFFFFF)
       ..strokeWidth = 1;
@@ -249,6 +359,18 @@ class PropertyShotGame extends FlameGame {
       Vec2(184, 512),
     ]) {
       canvas.drawCircle(_project(dot), 2.6, flower);
+    }
+    final cornerLeaf = Paint()..color = const Color(0x6656A66A);
+    for (final center in const [
+      Vec2(18, 18),
+      Vec2(342, 18),
+      Vec2(18, 542),
+      Vec2(342, 542),
+    ]) {
+      canvas.drawOval(
+        Rect.fromCenter(center: _project(center), width: 16, height: 7),
+        cornerLeaf,
+      );
     }
     canvas.drawPath(boardPath, border);
   }
@@ -300,16 +422,6 @@ class PropertyShotGame extends FlameGame {
 
     if (entity.isCircle) {
       final center = _project(entity.position);
-      if (viewMode == GameViewMode.quarter && entity.type == EntityType.ball) {
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: center.translate(5, entity.radius * 0.82),
-            width: entity.radius * 1.8,
-            height: entity.radius * 0.55,
-          ),
-          Paint()..color = const Color(0x33000000),
-        );
-      }
       if (entity.type == EntityType.ball &&
           state.phase == GamePhase.planning &&
           entity.id == 'active_ball' &&
@@ -327,7 +439,7 @@ class PropertyShotGame extends FlameGame {
           Rect.fromCenter(
             center: center,
             width: (entity.radius + 6) * 2,
-            height: (entity.radius + 6) * 2 * _viewYScale,
+            height: (entity.radius + 6) * 2,
           ),
           Paint()
             ..color = const Color(0x5572C978)
@@ -348,12 +460,13 @@ class PropertyShotGame extends FlameGame {
         final oval = Rect.fromCenter(
           center: center,
           width: entity.radius * 2,
-          height: entity.radius * 2 * _viewYScale,
+          height: entity.radius * 2,
         );
         canvas.drawOval(oval, paint);
         canvas.drawOval(oval, stroke);
       } else {
         _drawBallSphere(canvas, entity, paint, stroke);
+        _drawBallTraitTexture(canvas, entity);
       }
       if (entity.type == EntityType.ball) {
         _drawBallFace(canvas, entity);
@@ -362,25 +475,31 @@ class PropertyShotGame extends FlameGame {
       final rect = _projectedRect(entity);
       final topPoints = _projectedEntityCorners(entity);
       final topPath = _pathFromPoints(topPoints);
-      canvas.drawPath(
-        topPath.shift(const Offset(5, 7)),
-        Paint()..color = const Color(0x3F503C2E),
-      );
-      if (viewMode == GameViewMode.quarter) {
-        _drawBlockSide(canvas, entity, topPoints);
-      }
-      if (entity.traits.isNotEmpty &&
-          state.phase == GamePhase.planning &&
-          _animationPath.isEmpty) {
-        _drawSelectablePulse(canvas, entity);
-      }
-      if (entity.type == EntityType.bumper && entity.visualState == 'pushed') {
-        _drawJellyBounce(canvas, entity, topPath, paint, stroke);
+      final image = _objectImages[entity.type];
+      if (image != null) {
+        _drawMovingObjectSprite(canvas, entity, rect, image);
       } else {
-        canvas.drawPath(topPath, paint);
-        canvas.drawPath(topPath, stroke);
-      }
-      if (!_drawObjectImage(canvas, entity, rect, topPath)) {
+        canvas.drawPath(
+          topPath.shift(const Offset(5, 7)),
+          Paint()..color = const Color(0x3F503C2E),
+        );
+        if (entity.traits.isNotEmpty &&
+            state.phase == GamePhase.planning &&
+            _animationPath.isEmpty) {
+          _drawSelectablePulse(canvas, entity);
+        }
+        if (entity.type == EntityType.bumper) {
+          _drawJellyBody(canvas, entity, paint, stroke);
+        } else if (entity.type == EntityType.switchPad &&
+            entity.visualState == 'pressed') {
+          _drawSwitchPress(canvas, entity, topPath, stroke);
+        } else if (entity.type == EntityType.gate &&
+            entity.visualState == 'opening') {
+          _drawGateOpening(canvas, entity, topPoints);
+        } else {
+          canvas.drawPath(topPath, paint);
+          canvas.drawPath(topPath, stroke);
+        }
         _drawCuteBlockDetails(canvas, entity, rect, topPath);
       }
       _drawTraitTexture(canvas, entity, rect);
@@ -412,21 +531,32 @@ class PropertyShotGame extends FlameGame {
     );
   }
 
-  void _drawJellyBounce(
+  void _drawJellyBody(
     Canvas canvas,
     EntityState entity,
-    Path topPath,
     Paint paint,
     Paint stroke,
   ) {
     final center = _project(entity.position);
-    final wobble = math.sin(_pulseClock * math.pi * 8).abs();
+    final motion = _motionVisual(entity);
+    final wobble = entity.visualState == 'pushed'
+        ? math.sin(_pulseClock * math.pi * 8).abs()
+        : 0.0;
+    final width = entity.size.x * (1.0 + motion.impact * 0.1);
+    final height = entity.size.y * (1.0 - motion.impact * 0.12);
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.scale(1.16 + wobble * 0.12, 0.78 - wobble * 0.08);
-    canvas.translate(-center.dx, -center.dy);
-    canvas.drawPath(topPath, paint);
-    canvas.drawPath(topPath, stroke);
+    canvas.rotate(motion.rotation * 0.25);
+    final blob = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(0, motion.bob),
+        width: width,
+        height: height,
+      ),
+      Radius.circular(math.min(width, height) * 0.38),
+    );
+    canvas.drawRRect(blob, paint);
+    canvas.drawRRect(blob, stroke);
     canvas.restore();
 
     final splash = Paint()
@@ -442,7 +572,7 @@ class PropertyShotGame extends FlameGame {
     ]) {
       canvas.drawArc(
         Rect.fromCenter(
-          center: center + offset,
+          center: center + offset + Offset(0, motion.bob),
           width: 14 + wobble * 8,
           height: 8 + wobble * 4,
         ),
@@ -452,6 +582,172 @@ class PropertyShotGame extends FlameGame {
         splash,
       );
     }
+  }
+
+  void _drawMovingObjectSprite(
+    Canvas canvas,
+    EntityState entity,
+    Rect rect,
+    ui.Image image,
+  ) {
+    final center = _project(entity.position);
+    final motion = _motionVisual(entity);
+    final shadow = Paint()..color = const Color(0x3F503C2E);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(0, entity.size.y * 0.44),
+        width: entity.size.x * 0.86,
+        height: entity.size.y * 0.22,
+      ),
+      shadow,
+    );
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    final sprite = rect.inflate(entity.type == EntityType.weight ? 2 : 1);
+    canvas.save();
+    canvas.translate(center.dx, center.dy + motion.bob);
+    canvas.rotate(motion.rotation);
+    canvas.scale(motion.scaleX, motion.scaleY);
+    canvas.drawImageRect(
+      image,
+      source,
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: sprite.width,
+        height: sprite.height,
+      ),
+      Paint()..filterQuality = FilterQuality.high,
+    );
+    canvas.restore();
+  }
+
+  _MotionVisual _motionVisual(EntityState entity) {
+    if (_animationPath.isEmpty || !entity.movable) {
+      return const _MotionVisual();
+    }
+    ShotAnimationMove? move;
+    for (final candidate in _animationMoves) {
+      if (candidate.entityId == entity.id) {
+        move = candidate;
+        break;
+      }
+    }
+    if (move == null || move.path.length < 2) {
+      return const _MotionVisual();
+    }
+    final duration = _moveDuration(move);
+    final local = ((_animationCursor - move.triggerPathIndex) / duration).clamp(
+      0.0,
+      1.0,
+    );
+    if (local <= 0 || local >= 1) {
+      return const _MotionVisual();
+    }
+    final progress = Curves.easeOut.transform(local);
+    final delta = move.to - move.from;
+    final distance = _pathDistance(move.path);
+    final direction = delta.normalized();
+    final angle = math.atan2(direction.y, direction.x);
+    final roll =
+        distance / math.max(entity.size.x, 1) * (direction.x < 0 ? -1 : 1);
+    final impact = math.sin(progress * math.pi);
+    return _MotionVisual(
+      rotation: entity.type == EntityType.weight
+          ? roll * progress
+          : angle * 0.08,
+      scaleX: 1 + impact * 0.06,
+      scaleY: 1 - impact * 0.045,
+      bob: -impact * 2.5,
+      impact: impact,
+    );
+  }
+
+  void _drawSwitchPress(
+    Canvas canvas,
+    EntityState entity,
+    Path topPath,
+    Paint stroke,
+  ) {
+    final center = _project(entity.position);
+    final pulse = (math.sin(_pulseClock * math.pi * 8).abs());
+    canvas.drawPath(
+      topPath,
+      Paint()
+        ..color = Color.lerp(
+          const Color(0xFFE2C044),
+          const Color(0xFF4EAF7C),
+          0.55 + pulse * 0.45,
+        )!,
+    );
+    canvas.drawPath(topPath, stroke);
+    canvas.drawCircle(
+      center,
+      12 + pulse * 5,
+      Paint()
+        ..color = const Color(0x884EAF7C)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+  }
+
+  void _drawGateOpening(
+    Canvas canvas,
+    EntityState entity,
+    List<Offset> topPoints,
+  ) {
+    final center = _project(entity.position);
+    final pulse = (math.sin(_pulseClock * math.pi * 5).abs());
+    final width = entity.size.x;
+    final height = entity.size.y;
+    final gap = 6 + pulse * 12;
+    final rail = Paint()
+      ..color = const Color(0x66596B60)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(topPoints[0], topPoints[1], rail);
+    canvas.drawLine(topPoints[3], topPoints[2], rail);
+    final doorPaint = Paint()
+      ..color = Color.lerp(
+        const Color(0xFFC24E3A),
+        const Color(0x774EAF7C),
+        0.62 + pulse * 0.38,
+      )!;
+    final leftDoor = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: center.translate(-gap, 0),
+        width: width * 0.34,
+        height: height,
+      ),
+      const Radius.circular(5),
+    );
+    final rightDoor = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: center.translate(gap, 0),
+        width: width * 0.34,
+        height: height,
+      ),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(leftDoor, doorPaint);
+    canvas.drawRRect(rightDoor, doorPaint);
+    canvas.drawRRect(
+      leftDoor,
+      Paint()
+        ..color = const Color(0x663B302A)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
+    canvas.drawRRect(
+      rightDoor,
+      Paint()
+        ..color = const Color(0x663B302A)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
   }
 
   void _drawBallPulse(Canvas canvas, EntityState entity) {
@@ -501,6 +797,47 @@ class PropertyShotGame extends FlameGame {
     canvas.drawCircle(center, radius, stroke);
   }
 
+  void _drawBallTraitTexture(Canvas canvas, EntityState entity) {
+    if (entity.traits.isEmpty) {
+      return;
+    }
+    final center = _project(entity.position);
+    final radius = entity.radius - 1.5;
+    canvas.save();
+    canvas.clipPath(
+      Path()..addOval(Rect.fromCircle(center: center, radius: radius)),
+    );
+    final pattern = Paint()
+      ..color = const Color(0xBFFFFFFF)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    switch (entity.traits.first) {
+      case TraitType.heavy:
+        for (var offset = -radius * 1.8; offset < radius * 1.8; offset += 9) {
+          canvas.drawLine(
+            center + Offset(offset - radius, -radius),
+            center + Offset(offset + radius, radius),
+            pattern,
+          );
+        }
+      case TraitType.bouncy:
+        for (var inset = 5.0; inset < radius; inset += 7) {
+          canvas.drawCircle(center, radius - inset, pattern);
+        }
+      case TraitType.sticky:
+        final drops = Paint()..color = const Color(0xBFFFFFFF);
+        for (var index = 0; index < 5; index++) {
+          final angle = index * math.pi * 0.48;
+          canvas.drawCircle(
+            center + Offset(math.cos(angle), math.sin(angle)) * (radius * 0.55),
+            2.3,
+            drops,
+          );
+        }
+    }
+    canvas.restore();
+  }
+
   void _drawBallFace(Canvas canvas, EntityState entity) {
     final eye = Paint()..color = const Color(0xFF3B302A);
     final blush = Paint()..color = const Color(0x44FF8EA1);
@@ -548,73 +885,6 @@ class PropertyShotGame extends FlameGame {
     );
   }
 
-  void _drawBlockSide(Canvas canvas, EntityState entity, List<Offset> top) {
-    if (entity.type == EntityType.switchPad) {
-      return;
-    }
-    final depth = _blockDepth;
-    final baseColor = _colorFor(entity);
-    final faces = [
-      _blockFace(top[0], top[1], depth, baseColor.withValues(alpha: 0.28)),
-      _blockFace(top[1], top[2], depth, baseColor.withValues(alpha: 0.46)),
-      _blockFace(top[2], top[3], depth, baseColor.withValues(alpha: 0.64)),
-      _blockFace(top[3], top[0], depth, baseColor.withValues(alpha: 0.38)),
-    ];
-    for (final face in faces) {
-      canvas.drawPath(face.path, Paint()..color = face.color);
-      canvas.drawPath(
-        face.path,
-        Paint()
-          ..color = const Color(0x553B302A)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.1,
-      );
-    }
-  }
-
-  _BlockFace _blockFace(Offset a, Offset b, Offset depth, Color color) {
-    return _BlockFace(
-      Path()
-        ..moveTo(a.dx, a.dy)
-        ..lineTo(b.dx, b.dy)
-        ..lineTo(b.dx + depth.dx, b.dy + depth.dy)
-        ..lineTo(a.dx + depth.dx, a.dy + depth.dy)
-        ..close(),
-      color,
-    );
-  }
-
-  bool _drawObjectImage(
-    Canvas canvas,
-    EntityState entity,
-    Rect rect,
-    Path topPath,
-  ) {
-    final image = _objectImages[entity.type];
-    if (image == null) {
-      return false;
-    }
-    final inset = entity.type == EntityType.weight ? 2.0 : 4.0;
-    final destination = rect.deflate(inset);
-    canvas.save();
-    canvas.clipPath(topPath);
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      destination,
-      Paint()..filterQuality = FilterQuality.high,
-    );
-    canvas.restore();
-    canvas.drawPath(
-      topPath,
-      Paint()
-        ..color = const Color(0x5524352D)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4,
-    );
-    return true;
-  }
-
   void _drawEntityIcon(Canvas canvas, EntityState entity) {
     final center = _project(entity.position);
     switch (entity.type) {
@@ -635,8 +905,8 @@ class PropertyShotGame extends FlameGame {
           ribbon,
         );
         canvas.drawLine(
-          center.translate(0, -11 * _viewYScale),
-          center.translate(0, 11 * _viewYScale),
+          center.translate(0, -11),
+          center.translate(0, 11),
           ribbon,
         );
       case EntityType.weight:
@@ -653,7 +923,7 @@ class PropertyShotGame extends FlameGame {
             Rect.fromCenter(
               center: center.translate(0, 4),
               width: 30,
-              height: 18 * _viewYScale,
+              height: 18,
             ),
             const Radius.circular(8),
           ),
@@ -672,16 +942,32 @@ class PropertyShotGame extends FlameGame {
         final dot = Paint()..color = const Color(0x99FFFFFF);
         canvas.drawCircle(center.translate(-8, -4), 4, dot);
         canvas.drawCircle(center.translate(7, 5), 5, dot);
+        if (entity.visualState == 'stuck') {
+          canvas.drawCircle(
+            center,
+            16,
+            Paint()
+              ..color = const Color(0x88FFFFFF)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 3,
+          );
+        }
       case EntityType.switchPad:
+        final pulse = entity.pressed || entity.visualState == 'pressed'
+            ? (math.sin(_pulseClock * math.pi * 7).abs())
+            : 0.0;
         canvas.drawCircle(
           center,
-          8,
+          8 + pulse * 4,
           Paint()
-            ..color = entity.pressed
+            ..color = entity.pressed || entity.visualState == 'pressed'
                 ? const Color(0xFF2F9F68)
                 : const Color(0xFFFFF2A8),
         );
       case EntityType.gate:
+        if (entity.visualState == 'opening') {
+          return;
+        }
         final gatePaint = Paint()
           ..color = entity.open
               ? const Color(0x664EAF7C)
@@ -905,11 +1191,20 @@ class PropertyShotGame extends FlameGame {
   }
 }
 
-class _BlockFace {
-  const _BlockFace(this.path, this.color);
+class _MotionVisual {
+  const _MotionVisual({
+    this.rotation = 0,
+    this.scaleX = 1,
+    this.scaleY = 1,
+    this.bob = 0,
+    this.impact = 0,
+  });
 
-  final Path path;
-  final Color color;
+  final double rotation;
+  final double scaleX;
+  final double scaleY;
+  final double bob;
+  final double impact;
 }
 
 double mathMin(double a, double b) => math.min(a, b);

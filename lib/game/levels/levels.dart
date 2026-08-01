@@ -13,7 +13,7 @@ final levels = <LevelDefinition>[
       EntityState(
         id: 'hole',
         type: EntityType.hole,
-        position: Vec2(302, 102),
+        position: Vec2(302, 132),
         size: Vec2(34, 34),
         solid: false,
       ),
@@ -60,7 +60,7 @@ final levels = <LevelDefinition>[
       EntityState(
         id: 'hole',
         type: EntityType.hole,
-        position: Vec2(294, 118),
+        position: Vec2(100, 110),
         size: Vec2(34, 34),
         solid: false,
       ),
@@ -85,13 +85,13 @@ final levels = <LevelDefinition>[
       EntityState(
         id: 'blocker',
         type: EntityType.wall,
-        position: Vec2(180, 255),
-        size: Vec2(220, 24),
+        position: Vec2(220, 270),
+        size: Vec2(24, 300),
       ),
       EntityState(
         id: 'jelly',
         type: EntityType.bumper,
-        position: Vec2(82, 132),
+        position: Vec2(300, 450),
         size: Vec2(58, 42),
         traits: {TraitType.bouncy},
       ),

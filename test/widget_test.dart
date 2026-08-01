@@ -17,7 +17,7 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('공: 무거움'), findsOneWidget);
-    expect(find.textContaining('속성을 공으로 옮겼습니다'), findsOneWidget);
+    expect(find.textContaining('속성을 공에 담았습니다'), findsOneWidget);
   });
 
   testWidgets('속성을 선택해 공으로 복사할 수 있다', (tester) async {
@@ -58,6 +58,24 @@ void main() {
     expect(find.textContaining('샷 1'), findsOneWidget);
   });
 
+  testWidgets('발사 애니메이션 중에는 두 번째 샷을 만들지 않는다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final first = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 760));
+    await first.up();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    final second = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 760));
+    await second.up();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(find.textContaining('샷 1'), findsOneWidget);
+    expect(find.textContaining('샷 2'), findsNothing);
+  });
+
   testWidgets('일시정지 중에는 힘 조준으로 발사되지 않는다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
@@ -71,6 +89,19 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('샷 0'), findsOneWidget);
+  });
+
+  testWidgets('롱프레스가 취소되면 발사하지 않는다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 760));
+    await gesture.cancel();
+    await tester.pump();
+
+    expect(find.textContaining('샷 0'), findsOneWidget);
+    expect(find.textContaining('발사를 취소했습니다'), findsOneWidget);
   });
 
   testWidgets('공을 누르면 현재 속성 설명이 표시된다', (tester) async {
@@ -103,7 +134,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
-    expect(find.textContaining('다른 플레이어 기록'), findsOneWidget);
+    expect(find.textContaining('예시 기록'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('next_stage_button')));
     await tester.pump();
@@ -124,31 +155,94 @@ void main() {
     expect(find.text('클리어!'), findsOneWidget);
   });
 
-  testWidgets('보기 모드를 위와 입체로 바꿀 수 있다', (tester) async {
+  testWidgets('게임은 위에서 내려다보는 보기로 표시된다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    expect(find.byKey(const Key('view_mode_control')), findsOneWidget);
-    await tester.tap(find.text('입체'));
-    await tester.pump();
-
-    expect(find.text('입체'), findsOneWidget);
-    expect(find.byKey(const Key('view_angle_slider')), findsNothing);
-    expect(find.byKey(const Key('view_azimuth_slider')), findsNothing);
-    expect(find.byKey(const Key('view_rotate_right')), findsNothing);
+    expect(find.byKey(const Key('aim_area')), findsOneWidget);
   });
 
   testWidgets('주요 UI가 휴대폰과 태블릿 크기에서 표시된다', (tester) async {
-    for (final size in [const Size(390, 844), const Size(768, 1024)]) {
+    for (final size in [
+      const Size(320, 568),
+      const Size(390, 844),
+      const Size(768, 1024),
+    ]) {
       await tester.binding.setSurfaceSize(size);
       await tester.pumpWidget(const PropertyShotApp());
       await tester.pump();
 
       expect(find.text('속성 한방'), findsOneWidget);
       expect(find.byKey(const Key('aim_area')), findsOneWidget);
-      expect(find.byKey(const Key('view_mode_control')), findsOneWidget);
+      expect(find.byKey(const Key('aim_area')), findsOneWidget);
+      expect(tester.takeException(), isNull);
     }
     await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('좁은 화면의 정보 팝업과 닫기 버튼이 화면 안에 있다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+
+    final popup = tester.getRect(find.byKey(const Key('entity_info_panel')));
+    final close = tester.getRect(find.byKey(const Key('info_close_button')));
+    expect(popup.left, greaterThanOrEqualTo(0));
+    expect(popup.right, lessThanOrEqualTo(320));
+    expect(close.left, greaterThanOrEqualTo(0));
+    expect(close.right, lessThanOrEqualTo(320));
+    expect(close.bottom, lessThanOrEqualTo(568));
+    expect(tester.takeException(), isNull);
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('좁은 화면의 클리어 팝업과 다음 버튼이 화면 안에 있다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    final clearState = levels[1]
+        .createState(1)
+        .copyWith(phase: GamePhase.success, shotCount: 3, message: '홀 진입 성공!');
+    await tester.pumpWidget(PropertyShotApp(initialState: clearState));
+    await tester.pump();
+
+    final popup = tester.getRect(find.byKey(const Key('clear_popup')));
+    final next = tester.getRect(find.byKey(const Key('next_stage_button')));
+    expect(popup.left, greaterThanOrEqualTo(0));
+    expect(popup.right, lessThanOrEqualTo(320));
+    expect(next.left, greaterThanOrEqualTo(0));
+    expect(next.right, lessThanOrEqualTo(320));
+    expect(next.bottom, lessThanOrEqualTo(568));
+    expect(tester.takeException(), isNull);
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('게임 화면에 한글 접근성 안내가 노출된다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsOneWidget);
+    expect(find.bySemanticsLabel('1단계 선택'), findsWidgets);
+  });
+
+  testWidgets('게임판의 핵심 요소가 한국어 접근성 대상으로 노출된다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    expect(find.bySemanticsLabel('공, 현재 속성 없음'), findsOneWidget);
+    expect(find.bySemanticsLabel('무거운 돌, 무거움 속성 보유'), findsOneWidget);
+    expect(find.bySemanticsLabel('홀, 목표 홀'), findsOneWidget);
+    expect(find.bySemanticsLabel('벽, 상호작용 가능한 물체'), findsWidgets);
+  });
+
+  testWidgets('현재 단계의 퍼즐 목표가 첫 화면에 표시된다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    expect(find.text('무거움을 옮겨 상자를 밀고 홀에 넣으세요.'), findsOneWidget);
   });
 }
 
