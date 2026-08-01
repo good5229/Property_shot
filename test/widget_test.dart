@@ -12,6 +12,7 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('1/3'), findsOneWidget);
+    expect(find.textContaining('길게 눌렀다 손을 떼'), findsOneWidget);
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();

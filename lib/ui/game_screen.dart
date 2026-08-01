@@ -1200,7 +1200,8 @@ String? _levelProgressHint(GameState state) {
 
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 => '1/3 무거운 돌을 눌러 속성을 확인하세요. 추천 경로는 속성을 공으로 옮긴 뒤 발사하는 것입니다.',
+    0 =>
+      '1/3 무거운 돌을 눌러 속성을 확인하세요. 추천 경로는 속성을 공으로 옮긴 뒤, 공을 길게 눌렀다 손을 떼 발사하는 것입니다.',
     1 =>
       '2/3 젤리를 눌러 탄성을 확인하세요. 속성을 쓰지 않는 경로도 시도할 수 있습니다. 공을 길게 눌렀다 손을 떼면 발사됩니다.',
     _ =>
@@ -1483,36 +1484,25 @@ class _Hud extends StatelessWidget {
 }
 
 class _AimInstruction extends StatelessWidget {
-  const _AimInstruction({this.compact = false});
-
-  final bool compact;
+  const _AimInstruction();
 
   @override
   Widget build(BuildContext context) {
-    final style =
-        (compact
-                ? Theme.of(context).textTheme.labelSmall
-                : Theme.of(context).textTheme.bodySmall)
-            ?.copyWith(
-              color: const Color(0xFF2F6F57),
-              fontWeight: FontWeight.w700,
-            );
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
+      color: const Color(0xFF2F6F57),
+      fontWeight: FontWeight.w700,
+    );
     return Padding(
-      padding: EdgeInsets.only(top: compact ? 2 : 4),
+      padding: const EdgeInsets.only(top: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.touch_app,
-            size: compact ? 14 : 16,
-            color: const Color(0xFF2F6F57),
-          ),
+          Icon(Icons.touch_app, size: 16, color: const Color(0xFF2F6F57)),
           const SizedBox(width: 4),
           Expanded(
             child: Text(
               '화면을 움직여 조준하고, 공을 0.45초 이상 누른 뒤 손을 떼세요.',
               key: const Key('aim_instruction'),
-              maxLines: compact ? 2 : null,
               softWrap: true,
               style: style,
             ),
