@@ -37,6 +37,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Timer? _chargeTimer;
   Timer? _pressActivationTimer;
   Offset? _pointerDownPosition;
+  int? _activePointer;
   bool _pointerOnBall = false;
   bool _pointerMoved = false;
   bool _isCharging = false;
@@ -431,10 +432,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _handlePointerDown(Offset localPosition, Size fieldSize) {
+  void _handlePointerDown(int pointer, Offset localPosition, Size fieldSize) {
     if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
     }
+    if (_activePointer != null) {
+      return;
+    }
+    _activePointer = pointer;
     _pressActivationTimer?.cancel();
     _pointerDownPosition = localPosition;
     _pointerMoved = false;
@@ -451,23 +456,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _handlePointerMove(Offset localPosition, Size fieldSize) {
+  void _handlePointerMove(int pointer, Offset localPosition, Size fieldSize) {
+    if (pointer != _activePointer) {
+      return;
+    }
     final down = _pointerDownPosition;
     if (down == null || _isAnimatingShot) {
       return;
     }
     if ((down - localPosition).distance >= 8) {
       _pointerMoved = true;
+      if (_pointerOnBall) {
+        _pointerOnBall = false;
+        _pressActivationTimer?.cancel();
+        _pressActivationTimer = null;
+      }
       _updateAim(localPosition, fieldSize);
     }
   }
 
-  void _handlePointerUp(Offset localPosition, Size fieldSize) {
+  void _handlePointerUp(int pointer, Offset localPosition, Size fieldSize) {
+    if (pointer != _activePointer) {
+      return;
+    }
     final down = _pointerDownPosition;
     final wasCharging = _isCharging;
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
     _pointerDownPosition = null;
+    _activePointer = null;
     _pointerOnBall = false;
     if (wasCharging) {
       _stopPowerCharge();
@@ -482,11 +499,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _pointerMoved = false;
   }
 
-  void _handlePointerCancel({bool showCancellation = true}) {
+  void _handlePointerCancel({bool showCancellation = true, int? pointer}) {
+    if (pointer != null && pointer != _activePointer) {
+      return;
+    }
     final hadPointer = _pointerDownPosition != null;
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
     _pointerDownPosition = null;
+    _activePointer = null;
     _pointerOnBall = false;
     _pointerMoved = false;
     if (_isCharging) {
@@ -509,10 +530,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _chargeTimer?.cancel();
     _isCharging = true;
     _setState(
-      _state.copyWith(
-        aimPower: 0.12,
-        message: '힘 모으는 중 · 손을 떼면 발사됩니다',
-      ),
+      _state.copyWith(aimPower: 0.12, message: '힘 모으는 중 · 손을 떼면 발사됩니다'),
     );
     _chargeTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
       if (!mounted) {
@@ -684,21 +702,26 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                               behavior: HitTestBehavior.opaque,
                                               onPointerDown: (event) =>
                                                   _handlePointerDown(
+                                                    event.pointer,
                                                     event.localPosition,
                                                     boardSize,
                                                   ),
                                               onPointerMove: (event) =>
                                                   _handlePointerMove(
+                                                    event.pointer,
                                                     event.localPosition,
                                                     boardSize,
                                                   ),
                                               onPointerUp: (event) =>
                                                   _handlePointerUp(
+                                                    event.pointer,
                                                     event.localPosition,
                                                     boardSize,
                                                   ),
-                                              onPointerCancel: (_) =>
-                                                  _handlePointerCancel(),
+                                              onPointerCancel: (event) =>
+                                                  _handlePointerCancel(
+                                                    pointer: event.pointer,
+                                                  ),
                                               child: Semantics(
                                                 container: true,
                                                 label: '공을 조준하는 게임 화면',
