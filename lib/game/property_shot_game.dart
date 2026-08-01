@@ -36,7 +36,7 @@ class PropertyShotGame extends FlameGame {
   Future<void> onLoad() async {
     await super.onLoad();
     _objectImages[EntityType.crate] = await _loadUiImage(
-      'assets/icons/crate.png',
+      'assets/generated/crate-v2.png',
     );
     _objectImages[EntityType.weight] = await _loadUiImage(
       'assets/icons/stone_boulder.png',
