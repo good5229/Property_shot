@@ -746,16 +746,16 @@ class PropertyShotGame extends FlameGame {
       final topPath = _pathFromPoints(topPoints);
       final litPaint = _materialPaint(entity, rect);
       final image = _objectImages[entity.type];
+      if (entity.traits.isNotEmpty &&
+          state.phase == GamePhase.planning &&
+          _animationPath.isEmpty) {
+        _drawSelectablePulse(canvas, entity);
+      }
       if (image != null) {
         _drawMovingObjectSprite(canvas, entity, rect, image);
       } else {
         _drawContactShadow(canvas, entity, rect);
         _drawDepthFaces(canvas, entity, topPoints);
-        if (entity.traits.isNotEmpty &&
-            state.phase == GamePhase.planning &&
-            _animationPath.isEmpty) {
-          _drawSelectablePulse(canvas, entity);
-        }
         if (entity.type == EntityType.bumper) {
           _drawJellyBody(canvas, entity, litPaint, stroke);
         } else if (entity.type == EntityType.stickySurface) {
@@ -1134,11 +1134,17 @@ class PropertyShotGame extends FlameGame {
     canvas.translate(center.dx, center.dy + motion.bob);
     canvas.rotate(motion.rotation);
     canvas.scale(motion.scaleX, motion.scaleY);
-    final target = Rect.fromCenter(
-      center: Offset.zero,
-      width: sprite.width,
-      height: sprite.height,
-    );
+    final target = entity.type == EntityType.bumper
+        ? Rect.fromCenter(
+            center: Offset.zero,
+            width: sprite.height,
+            height: sprite.height,
+          )
+        : Rect.fromCenter(
+            center: Offset.zero,
+            width: sprite.width,
+            height: sprite.height,
+          );
     final extrusion = switch (entity.type) {
       EntityType.weight => 8.0,
       EntityType.bumper => 4.0,
