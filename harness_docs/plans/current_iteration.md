@@ -21,7 +21,7 @@
 
 ## 이번 반복의 QA 판정
 
-기능 QA는 통과했다. `flutter analyze`, `flutter test` 98개, 320x568 위젯 검사, `flutter build web`, 데모 HTTP 200을 확인했다.
+기능 QA는 통과했다. `flutter analyze`, `flutter test` 99개, 320x568 위젯 검사, `flutter build web`, 데모 HTTP 200을 확인했다.
 
 ## 2026-08-01 P0 반복 결과
 
@@ -29,12 +29,12 @@
 - `ShotImpact.entityId`로 실제 충돌 대상을 식별한다.
 - Flame 논리 커서 종료와 예상시간 보조 Timer의 중복 방지 구조를 유지한다.
 - 재질별 햅틱 강도와 스위치 이후 문 개방 진행률을 연결했다.
-- 새 회귀를 포함해 전체 테스트 98개와 `flutter analyze`가 통과했다.
+- 새 회귀를 포함해 전체 테스트 99개와 `flutter analyze`가 통과했다.
 - 젤리 범퍼 스프라이트 연결 후에도 전체 테스트 98개, `flutter analyze`, Web release 빌드, 젤리 자산 HTTP 200을 다시 확인했다.
 - 젤리 하드 키 자산과 충돌 물결·방울 연출을 반영한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·자산 HTTP 200을 통과했다.
 - 벽 레일 질감과 홀 깃발 흔들림을 반영한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·JavaScript HTTP 200을 통과했다.
 - 장난감 조준 UI를 반영한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·JavaScript HTTP 200을 통과했다.
-- 복사 모델 결정 전 이전·복사 UI 문구를 명확히 한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·JavaScript HTTP 200을 통과했다. 소모·복원 규칙은 보류했다.
+- 복사 모델 결정 전 이전·복사 UI 문구를 명확히 하고 원본 결과 안내 회귀를 추가했다. 최신 기준은 전체 테스트 99개, `flutter analyze`, Web release, 서버 루트·JavaScript HTTP 200이며 소모·복원 규칙은 보류했다.
 - 1·2단계 성공 입력은 연결된 영역 기준으로 각각 각도 16도·16도, 파워 0.86·0.72, 최대 격자 성분 248셀·223셀을 확보했다.
 
 다음 반복에서는 연쇄 재충돌 루프, 30·60·120FPS 프레임 재생, 홀 흡입 VFX의 실제 프레임 검증, 첫 3단계 사용자 이해도 검증을 우선한다.
