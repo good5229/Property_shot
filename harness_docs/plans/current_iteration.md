@@ -34,6 +34,7 @@
 - 젤리 하드 키 자산과 충돌 물결·방울 연출을 반영한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·자산 HTTP 200을 통과했다.
 - 벽 레일 질감과 홀 깃발 흔들림을 반영한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·JavaScript HTTP 200을 통과했다.
 - 장난감 조준 UI를 반영한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·JavaScript HTTP 200을 통과했다.
+- 복사 모델 결정 전 이전·복사 UI 문구를 명확히 한 최신 빌드도 전체 테스트 98개, `flutter analyze`, Web release, 서버 루트·JavaScript HTTP 200을 통과했다. 소모·복원 규칙은 보류했다.
 - 1·2단계 성공 입력은 연결된 영역 기준으로 각각 각도 16도·16도, 파워 0.86·0.72, 최대 격자 성분 248셀·223셀을 확보했다.
 
 다음 반복에서는 연쇄 재충돌 루프, 30·60·120FPS 프레임 재생, 홀 흡입 VFX의 실제 프레임 검증, 첫 3단계 사용자 이해도 검증을 우선한다.
