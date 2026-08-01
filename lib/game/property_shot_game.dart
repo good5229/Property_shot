@@ -1001,6 +1001,9 @@ class PropertyShotGame extends FlameGame {
     Rect target,
     _MotionVisual motion,
   ) {
+    if (entity.type == EntityType.weight) {
+      return;
+    }
     final center = _project(entity.position).translate(0, motion.bob);
     final gleam = Paint()
       ..color = const Color(0x66FFFFFF)
@@ -1613,7 +1616,9 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawTraitTexture(Canvas canvas, EntityState entity, Rect rect) {
-    if (entity.traits.isEmpty || entity.visualState == 'drained') {
+    if (entity.type == EntityType.weight ||
+        entity.traits.isEmpty ||
+        entity.visualState == 'drained') {
       return;
     }
     final trait = entity.traits.first;
