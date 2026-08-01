@@ -123,16 +123,19 @@ class ShotResolver {
     var success = false;
     var stopped = false;
     var previousPosition = position;
+    var consumedDistance = 0.0;
 
     for (
       var traveled = 0.0;
       traveled < distanceBudget && speed > 1.8 && !stopped && !success;
-      traveled += speed
+      traveled += consumedDistance
     ) {
       previousPosition = position;
-      position = position + direction * speed;
+      final attemptedSpeed = speed;
+      position = position + direction * attemptedSpeed;
       path.add(position);
       speed *= 0.982;
+      consumedDistance = speed;
 
       final collisionSample = _firstCollisionAlongSegment(
         entities,
@@ -159,6 +162,12 @@ class ShotResolver {
               position,
               collisionSample.position,
             );
+      if (collisionProgress.isFinite) {
+        consumedDistance = attemptedSpeed * collisionProgress;
+      }
+      if (holeProgress.isFinite && holeProgress <= collisionProgress + 0.001) {
+        consumedDistance = attemptedSpeed * holeProgress;
+      }
       if (hole != null &&
           holeProgress.isFinite &&
           _segmentDistance(previousPosition, position, hole.position) <=
