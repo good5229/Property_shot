@@ -323,6 +323,16 @@ void main() {
 
     expect(find.text('무거움을 옮겨 상자를 밀고 홀에 넣으세요.'), findsOneWidget);
   });
+
+  testWidgets('3단계는 점착 선행 순서를 첫 화면에 표시한다', (tester) async {
+    await tester.pumpWidget(
+      PropertyShotApp(initialState: levels[2].createState(2)),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('level_progress')), findsOneWidget);
+    expect(find.text('순서 1/3  점착 속성 옮기기 → 점착판에 붙이기'), findsOneWidget);
+  });
 }
 
 GameState _directClearState() {

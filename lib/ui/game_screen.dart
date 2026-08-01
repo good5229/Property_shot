@@ -1062,6 +1062,26 @@ String _levelObjective(int levelIndex) {
   };
 }
 
+String? _levelProgressHint(GameState state) {
+  if (state.levelIndex != 2) {
+    return null;
+  }
+  final hasAnchor = state.entities.any(
+    (entity) =>
+        entity.type == EntityType.ball &&
+        entity.visualState == 'stuck' &&
+        !entity.movable,
+  );
+  if (!hasAnchor) {
+    return '순서 1/3  점착 속성 옮기기 → 점착판에 붙이기';
+  }
+  final hasHeavy = state.activeBall.traits.contains(TraitType.heavy);
+  if (!hasHeavy) {
+    return '순서 2/3 완료  무거움을 공에 옮기세요';
+  }
+  return '순서 3/3  무거운 공으로 스위치를 누르세요';
+}
+
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
     0 => '1/3 반짝이는 무거운 돌을 눌러 속성을 확인하세요.',
@@ -1132,6 +1152,7 @@ class _Hud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final progressHint = _levelProgressHint(state);
     if (compact) {
       return Container(
         key: const Key('compact_hud'),
@@ -1209,6 +1230,16 @@ class _Hud extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+            if (progressHint != null)
+              Text(
+                progressHint,
+                key: const Key('level_progress'),
+                softWrap: true,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFF2F8A62),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             Semantics(
               liveRegion: true,
               label: '게임 안내: ${state.message}',
@@ -1251,6 +1282,19 @@ class _Hud extends StatelessWidget {
               ),
             ),
           ),
+          if (progressHint != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                progressHint,
+                key: const Key('level_progress'),
+                softWrap: true,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: const Color(0xFF2F8A62),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           Row(
             children: [
