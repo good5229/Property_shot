@@ -42,6 +42,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _bestShotsLoaded = false;
   Future<void>? _bestShotsLoadFuture;
   final Map<int, int> _bestShots = {};
+  int _unlockedLevel = 0;
 
   @override
   void initState() {
@@ -49,6 +50,9 @@ class _GameScreenState extends State<GameScreen> {
     _state =
         widget.initialState ??
         levels.first.createState(0).copyWith(message: _levelIntroMessage(0));
+    if (widget.initialState != null) {
+      _unlockedLevel = levels.length - 1;
+    }
     _game = PropertyShotGame(_state);
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
@@ -66,6 +70,10 @@ class _GameScreenState extends State<GameScreen> {
         loaded[index] = best;
       }
     }
+    final storedUnlocked = preferences.getInt(_unlockedLevelKey) ?? 0;
+    _unlockedLevel = math
+        .max(_unlockedLevel, storedUnlocked.clamp(0, levels.length - 1).toInt())
+        .toInt();
     setState(
       () => _bestShots
         ..clear()
@@ -91,6 +99,19 @@ class _GameScreenState extends State<GameScreen> {
     await preferences.setInt(_bestShotKey(levelIndex), shotCount);
   }
 
+  void _unlockNextLevel(int levelIndex) {
+    final next = math.min(levels.length - 1, levelIndex + 1);
+    if (next <= _unlockedLevel) {
+      return;
+    }
+    setState(() => _unlockedLevel = next);
+    unawaited(
+      SharedPreferences.getInstance().then(
+        (preferences) => preferences.setInt(_unlockedLevelKey, next),
+      ),
+    );
+  }
+
   void _setState(
     GameState next, {
     List<Vec2> path = const [],
@@ -112,7 +133,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _selectLevel(int index) {
-    if (_isAnimatingShot) {
+    if (_isAnimatingShot || index > _unlockedLevel) {
       return;
     }
     _showBallInfo = false;
@@ -127,8 +148,13 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _goNextLevel() {
-    final nextIndex = (_state.levelIndex + 1) % levels.length;
-    _selectLevel(nextIndex);
+    if (_state.levelIndex >= levels.length - 1) {
+      _selectLevel(0);
+      _setState(_state.copyWith(message: '모든 단계를 완료했습니다. 기록을 다시 도전하세요.'));
+      return;
+    }
+    _unlockNextLevel(_state.levelIndex);
+    _selectLevel(_state.levelIndex + 1);
   }
 
   void _selectTraitSource(String sourceId) {
@@ -199,6 +225,7 @@ class _GameScreenState extends State<GameScreen> {
       6000,
     );
     if (result.state.phase == GamePhase.success) {
+      _unlockNextLevel(result.state.levelIndex);
       unawaited(
         _recordBestShot(result.state.levelIndex, result.state.shotCount),
       );
@@ -462,7 +489,11 @@ class _GameScreenState extends State<GameScreen> {
                 width: contentWidth,
                 child: Column(
                   children: [
-                    _Hud(state: _state, onSelectLevel: _selectLevel),
+                    _Hud(
+                      state: _state,
+                      unlockedLevel: _unlockedLevel,
+                      onSelectLevel: _selectLevel,
+                    ),
                     Expanded(
                       child: AbsorbPointer(
                         absorbing: _showBallInfo || inspectedEntity != null,
@@ -614,6 +645,7 @@ class _GameScreenState extends State<GameScreen> {
                 state: _state,
                 bestShot: _bestShots[_state.levelIndex],
                 onNext: _goNextLevel,
+                isFinal: _state.levelIndex >= levels.length - 1,
               ),
           ],
         ),
@@ -623,10 +655,16 @@ class _GameScreenState extends State<GameScreen> {
 }
 
 class _ClearPopup extends StatelessWidget {
-  const _ClearPopup({required this.state, required this.onNext, this.bestShot});
+  const _ClearPopup({
+    required this.state,
+    required this.onNext,
+    required this.isFinal,
+    this.bestShot,
+  });
 
   final GameState state;
   final VoidCallback onNext;
+  final bool isFinal;
   final int? bestShot;
 
   @override
@@ -688,7 +726,12 @@ class _ClearPopup extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('예시 기록'),
+                            const Text('예시 기록 · 온라인 순위 아님'),
+                            const SizedBox(height: 2),
+                            Text(
+                              '현재는 데모용 기록만 표시합니다.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                             const SizedBox(height: 8),
                             for (var i = 0; i < rows.length; i++)
                               Padding(
@@ -714,7 +757,7 @@ class _ClearPopup extends StatelessWidget {
                         key: const Key('next_stage_button'),
                         onPressed: onNext,
                         icon: const Icon(Icons.arrow_forward),
-                        label: const Text('다음'),
+                        label: Text(isFinal ? '처음부터 다시' : '다음'),
                       ),
                     ],
                   ),
@@ -736,6 +779,8 @@ class _LeaderboardRow {
 }
 
 String _bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
+
+const _unlockedLevelKey = 'unlocked_level';
 
 String _levelObjective(int levelIndex) {
   return switch (levelIndex) {
@@ -777,9 +822,14 @@ List<_LeaderboardRow> _leaderboardRows(GameState state) {
 }
 
 class _Hud extends StatelessWidget {
-  const _Hud({required this.state, required this.onSelectLevel});
+  const _Hud({
+    required this.state,
+    required this.unlockedLevel,
+    required this.onSelectLevel,
+  });
 
   final GameState state;
+  final int unlockedLevel;
   final ValueChanged<int> onSelectLevel;
 
   @override
@@ -822,14 +872,18 @@ class _Hud extends StatelessWidget {
                   children: [
                     for (var i = 0; i < levels.length; i++)
                       Semantics(
-                        label: '${i + 1}단계 선택',
-                        button: true,
+                        label: i <= unlockedLevel
+                            ? '${i + 1}단계 선택'
+                            : '${i + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
+                        button: i <= unlockedLevel,
                         selected: state.levelIndex == i,
                         child: ChoiceChip(
                           key: Key('level_$i'),
                           label: Text('${i + 1}'),
                           selected: state.levelIndex == i,
-                          onSelected: (_) => onSelectLevel(i),
+                          onSelected: i <= unlockedLevel
+                              ? (_) => onSelectLevel(i)
+                              : null,
                         ),
                       ),
                   ],

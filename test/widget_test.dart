@@ -142,6 +142,28 @@ void main() {
     expect(find.textContaining('3. 연쇄 문 열기'), findsOneWidget);
   });
 
+  testWidgets('기본 상태에서는 다음 단계가 잠겨 있다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    expect(find.bySemanticsLabel('2단계 잠김. 1단계 클리어 후 열림'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('level_1')));
+    await tester.pump();
+
+    expect(find.textContaining('1. 무거움 익히기'), findsOneWidget);
+  });
+
+  testWidgets('마지막 단계 클리어는 처음부터 다시 행동을 표시한다', (tester) async {
+    final clearState = levels[2]
+        .createState(2)
+        .copyWith(phase: GamePhase.success, shotCount: 4, message: '홀 진입 성공!');
+    await tester.pumpWidget(PropertyShotApp(initialState: clearState));
+    await tester.pump();
+
+    expect(find.text('처음부터 다시'), findsOneWidget);
+    expect(find.text('다음'), findsNothing);
+  });
+
   testWidgets('실제 발사로 홀에 들어가면 클리어 팝업이 표시된다', (tester) async {
     await tester.pumpWidget(PropertyShotApp(initialState: _directClearState()));
     await tester.pump();
