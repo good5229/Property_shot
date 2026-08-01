@@ -263,6 +263,88 @@ void main() {
     expect(miss.state.phase, isNot(GamePhase.success));
   });
 
+  test('홀 포획은 홀 뒤의 벽 충돌보다 먼저 처리된다', () {
+    const state = GameState(
+      levelIndex: 208,
+      levelName: '홀 포획 우선순위 감사',
+      ballSpawn: Vec2(40, 80),
+      entities: [
+        EntityState(
+          id: 'active_ball',
+          type: EntityType.ball,
+          position: Vec2(40, 80),
+          size: Vec2(24, 24),
+          movable: true,
+        ),
+        EntityState(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(132, 80),
+          size: Vec2(34, 34),
+          solid: false,
+        ),
+        EntityState(
+          id: 'wall_behind_hole',
+          type: EntityType.wall,
+          position: Vec2(220, 80),
+          size: Vec2(24, 120),
+        ),
+      ],
+    );
+
+    final result = shots.resolve(
+      state,
+      const ShotInput(direction: Vec2(1, 0), power: 0.8),
+    );
+
+    expect(result.state.phase, GamePhase.success);
+    expect(result.events, contains('hole_entered'));
+    expect(
+      result.state.entityById('spent_ball_1')!.position,
+      const Vec2(132, 80),
+    );
+    expect(result.events, isNot(contains('bounced')));
+  });
+
+  test('공이 홀 가장자리에 닿아도 뒤 벽으로 진행하지 않고 포획된다', () {
+    const state = GameState(
+      levelIndex: 209,
+      levelName: '홀 가장자리 포획 감사',
+      ballSpawn: Vec2(40, 80),
+      entities: [
+        EntityState(
+          id: 'active_ball',
+          type: EntityType.ball,
+          position: Vec2(40, 80),
+          size: Vec2(24, 24),
+          movable: true,
+        ),
+        EntityState(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(132, 91),
+          size: Vec2(34, 34),
+          solid: false,
+        ),
+        EntityState(
+          id: 'wall_behind_hole',
+          type: EntityType.wall,
+          position: Vec2(220, 80),
+          size: Vec2(24, 120),
+        ),
+      ],
+    );
+
+    final result = shots.resolve(
+      state,
+      const ShotInput(direction: Vec2(1, 0), power: 0.8),
+    );
+
+    expect(result.state.phase, GamePhase.success);
+    expect(result.events, contains('hole_entered'));
+    expect(result.events, isNot(contains('bounced')));
+  });
+
   test('3라운드는 무거움으로 스위치를 누르고 일반 공은 거절된다', () {
     final normal = shots.resolve(
       levels[2].createState(2),

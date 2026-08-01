@@ -119,12 +119,17 @@ class ShotResolver {
         position,
       );
       final hole = _findHole(entities);
-      final holeTolerance = hole == null
+      final holeCaptureRadius = hole == null
           ? 0.0
-          : hole.radius + ball.hitRadius * 0.75;
+          : hole.radius + ball.hitRadius;
       final holeProgress = hole == null
           ? double.infinity
-          : _segmentProgress(previousPosition, position, hole.position);
+          : _segmentCircleEntryProgress(
+              previousPosition,
+              position,
+              hole.position,
+              holeCaptureRadius,
+            );
       final collisionProgress = collisionSample == null
           ? double.infinity
           : _segmentProgress(
@@ -135,7 +140,7 @@ class ShotResolver {
       if (hole != null &&
           holeProgress.isFinite &&
           _segmentDistance(previousPosition, position, hole.position) <=
-              holeTolerance &&
+              holeCaptureRadius &&
           holeProgress <= collisionProgress + 0.001 &&
           _gateOpen(entities)) {
         final traitAllowed =
@@ -144,6 +149,8 @@ class ShotResolver {
         final crateAllowed =
             !state.requiresCratePush || events.contains('crate_pushed');
         if (traitAllowed && crateAllowed) {
+          position = hole.position;
+          path[path.length - 1] = position;
           events.add('hole_entered');
           success = true;
           break;
@@ -953,6 +960,31 @@ class ShotResolver {
       return 0;
     }
     return ((point - from).dot(delta) / lengthSquared).clamp(0.0, 1.0);
+  }
+
+  double _segmentCircleEntryProgress(
+    Vec2 from,
+    Vec2 to,
+    Vec2 center,
+    double radius,
+  ) {
+    final delta = to - from;
+    final offset = from - center;
+    final a = delta.dot(delta);
+    if (a <= 0.0001) {
+      return offset.length <= radius ? 0.0 : double.infinity;
+    }
+    final c = offset.dot(offset) - radius * radius;
+    if (c <= 0) {
+      return 0.0;
+    }
+    final b = 2 * offset.dot(delta);
+    final discriminant = b * b - 4 * a * c;
+    if (discriminant < 0) {
+      return double.infinity;
+    }
+    final root = (-b - math.sqrt(discriminant)) / (2 * a);
+    return root >= 0 && root <= 1 ? root : double.infinity;
   }
 
   bool _isEarlierCollision(
