@@ -900,6 +900,26 @@ class ShotResolver {
     return (direction * (0.78 + keep * 0.5) + deflection).normalized();
   }
 
+  Vec2 _collisionVelocity(
+    Vec2 incoming,
+    Vec2 normal,
+    double movingMass,
+    double targetMass,
+    double restitution,
+  ) {
+    final n = normal.normalized();
+    final normalSpeed = incoming.dot(n);
+    if (normalSpeed >= 0 || incoming.length <= 0.001) {
+      return incoming;
+    }
+    final tangent = incoming - n * normalSpeed;
+    final stationaryTargetMass = math.min(targetMass, 999.0);
+    final normalCoefficient =
+        (movingMass - restitution * stationaryTargetMass) /
+        (movingMass + stationaryTargetMass);
+    return tangent + n * (normalSpeed * normalCoefficient);
+  }
+
   double _postImpactSpeedFactor(double movingMass, double targetMass) {
     if (movingMass > targetMass) {
       return (0.64 +
@@ -1046,14 +1066,19 @@ class ShotResolver {
         : normalImpulse;
     var current = target;
     var remaining = distance * strength;
+    var velocity = impulseDirection * remaining;
     var iterations = 0;
     final path = <Vec2>[target.position];
 
-    while (remaining > 0.8 && iterations < 96) {
+    while (velocity.length > 0.8 && iterations < 96) {
       iterations += 1;
-      final step = math.min(remaining, 4.0);
+      final availableSpeed = velocity.length;
+      final step = math.min(availableSpeed, 4.0);
+      final stepDirection = availableSpeed <= 0.001
+          ? impulseDirection
+          : velocity.normalized();
       final candidate = current.copyWith(
-        position: current.position + impulseDirection * step,
+        position: current.position + stepDirection * step,
         visualState: 'pushed',
       );
       final collision = _firstEntityCollisionAlongSegment(
@@ -1064,8 +1089,10 @@ class ShotResolver {
       );
       if (collision == null) {
         current = candidate;
+        velocity = stepDirection * math.max(0.0, availableSpeed - step);
+        impulseDirection = stepDirection;
+        remaining = velocity.length;
         _appendMovePoint(path, current.position);
-        remaining -= step;
         continue;
       }
 
@@ -1143,7 +1170,8 @@ class ShotResolver {
         }
         entities = _openGates(entities);
         events.add('switch_pressed');
-        remaining *= 0.72;
+        velocity *= 0.72;
+        remaining = velocity.length;
         continue;
       }
 
@@ -1159,10 +1187,19 @@ class ShotResolver {
             impactNormal: normal,
           ),
         );
-        impulseDirection = _reflect(impulseDirection, normal);
-        remaining *=
-            (target.type == EntityType.ball ? 0.7 : 0.28) *
-            _restitutionMultiplier(current, hit);
+        velocity = _collisionVelocity(
+          velocity,
+          normal,
+          _massOf(current),
+          _massOf(hit),
+          _restitutionMultiplier(current, hit),
+        );
+        final jellyScale = target.type == EntityType.ball ? 0.7 : 0.28;
+        velocity *= jellyScale;
+        remaining = velocity.length;
+        if (remaining > 0.001) {
+          impulseDirection = velocity.normalized();
+        }
         events.add('jelly_bounced');
         continue;
       }
@@ -1178,7 +1215,7 @@ class ShotResolver {
           entities,
           hit,
           impulseDirection,
-          remaining *
+          velocity.length *
               0.68 *
               transferRatio *
               _restitutionMultiplier(current, hit),
@@ -1194,16 +1231,20 @@ class ShotResolver {
         if (target.type != EntityType.ball) {
           break;
         }
-        impulseDirection = _postImpactDirection(
+        final postDirection = _postImpactDirection(
           impulseDirection,
           normal,
           targetMass,
           hitMass,
         );
-        remaining *=
+        final postSpeed =
+            velocity.length *
             _postImpactSpeedFactor(targetMass, hitMass) *
             0.76 *
             _restitutionMultiplier(current, hit);
+        velocity = postDirection * postSpeed;
+        remaining = velocity.length;
+        impulseDirection = postDirection;
         continue;
       }
 
@@ -1218,10 +1259,19 @@ class ShotResolver {
           visualState: 'wall_bounced',
         );
         _appendMovePoint(path, current.position);
-        impulseDirection = _reflect(impulseDirection, normal);
-        remaining *=
-            (target.type == EntityType.ball ? 0.58 : 0.34) *
-            _restitutionMultiplier(current, hit);
+        velocity = _collisionVelocity(
+          velocity,
+          normal,
+          _massOf(current),
+          _massOf(hit),
+          _restitutionMultiplier(current, hit),
+        );
+        final wallScale = target.type == EntityType.ball ? 0.58 : 0.34;
+        velocity *= wallScale;
+        remaining = velocity.length;
+        if (remaining > 0.001) {
+          impulseDirection = velocity.normalized();
+        }
         continue;
       }
 
@@ -1230,16 +1280,20 @@ class ShotResolver {
         final hitMass = _massOf(hit);
         events.add('bounced');
         if (target.type == EntityType.ball && targetMass > hitMass * 0.8) {
-          impulseDirection = _postImpactDirection(
+          final postDirection = _postImpactDirection(
             impulseDirection,
             normal,
             targetMass,
             hitMass,
           );
-          remaining *=
+          final postSpeed =
+              velocity.length *
               _postImpactSpeedFactor(targetMass, hitMass) *
               0.72 *
               _restitutionMultiplier(current, hit);
+          velocity = postDirection * postSpeed;
+          remaining = velocity.length;
+          impulseDirection = postDirection;
           continue;
         }
         current = current.copyWith(visualState: 'blocked');
