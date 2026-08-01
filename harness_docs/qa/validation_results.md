@@ -11,6 +11,7 @@
 | `curl http://127.0.0.1:8080` | HTTP 200, 새 빌드 서버 |
 | `curl http://127.0.0.1:8080/assets/assets/generated/jelly-bumper-v1.png` | HTTP 200, RGBA 젤리 스프라이트 |
 | `flutter build ios --no-codesign` | Xcode 빌드 완료 후 Development Team/프로비저닝 프로파일 부족으로 배포 빌드 실패 |
+| `flutter build ios --simulator` | Xcode 16.2 프로젝트 컴파일 완료, 설치된 iOS Simulator Runtime 없음으로 목적지 선택 실패 |
 
 기존 8080 프로세스를 종료한 뒤 새 빌드 서버를 시작했고 HTTP 200 응답을 확인했다.
 
