@@ -77,6 +77,33 @@ void main() {
     expect(exactDirect.events, contains('hole_entered'));
   });
 
+  test('3단계는 기믹을 거치지 않는 물리 경로도 홀에 도달할 수 있다', () {
+    final initial = levels[2].createState(2);
+    ShotResult? bypass;
+    for (var degree = 0; degree < 360 && bypass == null; degree += 2) {
+      final radians = degree * math.pi / 180;
+      for (var step = 20; step <= 50 && bypass == null; step++) {
+        final result = shots.resolve(
+          initial,
+          ShotInput(
+            direction: Vec2(math.cos(radians), math.sin(radians)),
+            power: step / 50,
+          ),
+        );
+        if (result.state.phase == GamePhase.success &&
+            !result.events.contains('switch_pressed') &&
+            !result.events.contains('sticky_attached')) {
+          bypass = result;
+        }
+      }
+    }
+    expect(
+      bypass,
+      isNotNull,
+      reason: '특정 기믹을 수행하지 않아도 물리 경로로 홀에 도달할 수 있어야 한다',
+    );
+  });
+
   test('첫 2단계 성공 영역은 연결된 입력 영역으로 측정된다', () {
     final widths = <String, _SuccessWidth>{};
     for (var index = 0; index < 2; index++) {

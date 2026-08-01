@@ -649,9 +649,13 @@ class PropertyShotGame extends FlameGame {
     final segmentGap = shaftLength / 6;
     for (var index = 0; index < 6; index++) {
       final segmentStart = shaftStart + direction * (index * segmentGap + 2);
-      final segmentEnd = shaftStart +
-          direction * (index * segmentGap + segmentGap * 0.72 - 2);
-      canvas.drawLine(_project(segmentStart), _project(segmentEnd), arrowShadow);
+      final segmentEnd =
+          shaftStart + direction * (index * segmentGap + segmentGap * 0.72 - 2);
+      canvas.drawLine(
+        _project(segmentStart),
+        _project(segmentEnd),
+        arrowShadow,
+      );
       canvas.drawLine(_project(segmentStart), _project(segmentEnd), arrowPaint);
       final highlightStart = segmentStart + direction * 2;
       final highlightEnd = segmentStart + direction * segmentGap * 0.48;
@@ -675,7 +679,10 @@ class PropertyShotGame extends FlameGame {
     final arrowHead = Path()
       ..moveTo(_project(end).dx, _project(end).dy)
       ..lineTo(_project(end + left * 22).dx, _project(end + left * 22).dy)
-      ..lineTo(_project(end + direction * 2).dx, _project(end + direction * 2).dy)
+      ..lineTo(
+        _project(end + direction * 2).dx,
+        _project(end + direction * 2).dy,
+      )
       ..lineTo(_project(end + right * 22).dx, _project(end + right * 22).dy)
       ..close();
     canvas.drawPath(arrowHead, Paint()..color = accent);
@@ -711,7 +718,8 @@ class PropertyShotGame extends FlameGame {
     );
     for (final fraction in const [0.33, 0.66]) {
       final angle = -math.pi / 2 + fraction * math.pi * 2;
-      final marker = _project(start) +
+      final marker =
+          _project(start) +
           Offset(math.cos(angle), math.sin(angle)) * (ball.radius + 12);
       canvas.drawCircle(marker, 2.2, Paint()..color = const Color(0xCCFFF4D6));
     }
@@ -1173,7 +1181,7 @@ class PropertyShotGame extends FlameGame {
     final target = entity.type == EntityType.bumper
         ? Rect.fromCenter(
             center: Offset.zero,
-            width: sprite.height,
+            width: sprite.width,
             height: sprite.height,
           )
         : Rect.fromCenter(

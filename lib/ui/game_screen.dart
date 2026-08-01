@@ -1418,6 +1418,7 @@ class _Hud extends StatelessWidget {
               ),
             ),
           ),
+          const _AimInstruction(),
           if (progressHint != null)
             Align(
               alignment: Alignment.centerLeft,
@@ -1473,6 +1474,47 @@ class _Hud extends StatelessWidget {
               liveRegion: true,
               label: '게임 안내: ${state.message}',
               child: Text(state.message, softWrap: true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AimInstruction extends StatelessWidget {
+  const _AimInstruction({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final style =
+        (compact
+                ? Theme.of(context).textTheme.labelSmall
+                : Theme.of(context).textTheme.bodySmall)
+            ?.copyWith(
+              color: const Color(0xFF2F6F57),
+              fontWeight: FontWeight.w700,
+            );
+    return Padding(
+      padding: EdgeInsets.only(top: compact ? 2 : 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.touch_app,
+            size: compact ? 14 : 16,
+            color: const Color(0xFF2F6F57),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              '화면을 움직여 조준하고, 공을 0.45초 이상 누른 뒤 손을 떼세요.',
+              key: const Key('aim_instruction'),
+              maxLines: compact ? 2 : null,
+              softWrap: true,
+              style: style,
             ),
           ),
         ],
