@@ -98,9 +98,6 @@ void main() {
         power: powers.last - powers.first,
       );
       widths['${index + 1}단계'] = width;
-      print(
-        '${levels[index].name}: 각도 샘플 폭 ${width.angle}도, 파워 폭 ${width.power.toStringAsFixed(2)}',
-      );
     }
     expect(widths['1단계']!.angle, greaterThanOrEqualTo(16));
     expect(widths['1단계']!.power, greaterThanOrEqualTo(0.20));
