@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
@@ -16,6 +15,7 @@ import '../game/levels/levels.dart';
 import '../game/property_shot_game.dart';
 import '../game/simulation/shot_resolver.dart';
 import '../game/simulation/trait_resolver.dart';
+import 'game_feedback.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key, this.initialState});
@@ -29,6 +29,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _shotResolver = const ShotResolver();
   final _traitResolver = const TraitResolver();
+  final _feedback = GameFeedback();
   late GameState _state;
   late PropertyShotGame _game;
   bool _showBallInfo = false;
@@ -164,7 +165,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _selectTraitSource(String sourceId) {
-    unawaited(HapticFeedback.selectionClick());
+    _feedback.traitSelected();
     _showBallInfo = false;
     _inspectedEntityId = sourceId;
     final next = _traitResolver.selectSource(_state, sourceId);
@@ -176,7 +177,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _transferTrait() {
-    unawaited(HapticFeedback.mediumImpact());
+    _feedback.traitTransferred();
     _showBallInfo = false;
     _inspectedEntityId = null;
     _setState(
@@ -191,7 +192,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _copyTrait() {
-    unawaited(HapticFeedback.selectionClick());
+    _feedback.traitCopied();
     _showBallInfo = false;
     _inspectedEntityId = null;
     _setState(
@@ -213,6 +214,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         equippedTrait: _state.equippedTrait,
       ),
     );
+    _feedback.shotLaunched();
     _feedbackForShot(result);
     _showBallInfo = false;
     _inspectedEntityId = null;
@@ -241,14 +243,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _isAnimatingShot = false;
       _showClearPopup = _state.phase == GamePhase.success;
       _showFailurePopup = _state.phase != GamePhase.success;
+      if (_state.phase == GamePhase.success) {
+        _feedback.shotCleared();
+      } else {
+        _feedback.shotFailed();
+      }
     });
   }
 
   void _feedbackForShot(ShotResult result) {
-    if (result.state.phase == GamePhase.success) {
-      unawaited(HapticFeedback.heavyImpact());
-      return;
-    }
     if (result.events.any(
       (event) =>
           event == 'bounced' ||
@@ -256,10 +259,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           event == 'momentum_transfer' ||
           event.startsWith('chain_collision_'),
     )) {
-      unawaited(HapticFeedback.mediumImpact());
-      return;
+      _feedback.collision();
     }
-    unawaited(HapticFeedback.lightImpact());
+    if (result.events.contains('switch_pressed')) {
+      _feedback.switchOpened();
+    }
   }
 
   void _rewind() {
@@ -275,10 +279,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     if (_state.phase == GamePhase.paused) {
+      _feedback.paused(false);
       _setState(
         _state.copyWith(phase: GamePhase.planning, message: '계획을 계속하세요.'),
       );
     } else if (_state.phase == GamePhase.planning) {
+      _feedback.paused(true);
       _setState(_state.copyWith(phase: GamePhase.paused, message: '일시정지'));
     }
   }
@@ -471,14 +477,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _pointerMoved = false;
   }
 
-  void _handlePointerCancel() {
+  void _handlePointerCancel({bool showCancellation = true}) {
+    final hadPointer = _pointerDownPosition != null;
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
     _pointerDownPosition = null;
     _pointerOnBall = false;
     _pointerMoved = false;
     if (_isCharging) {
-      _cancelPowerCharge();
+      _cancelPowerCharge(showMessage: showCancellation);
+    } else if (hadPointer &&
+        showCancellation &&
+        _state.phase == GamePhase.planning) {
+      _setState(_state.copyWith(message: '발사를 취소했습니다'));
     }
   }
 
@@ -517,13 +528,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _cancelPowerCharge() {
+  void _cancelPowerCharge({bool showMessage = true}) {
     _isCharging = false;
     _chargeTimer?.cancel();
     _chargeTimer = null;
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
-    if (mounted && _state.phase == GamePhase.planning) {
+    if (showMessage) {
+      _feedback.cancelled();
+    }
+    if (mounted && showMessage && _state.phase == GamePhase.planning) {
       _setState(_state.copyWith(message: '발사를 취소했습니다'));
     }
   }
@@ -533,7 +547,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      _handlePointerCancel();
+      _handlePointerCancel(showCancellation: false);
     }
   }
 
