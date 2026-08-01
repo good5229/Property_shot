@@ -1242,7 +1242,7 @@ String _failureAdviceFor(List<String> events) {
     return '맞은 면이 달라지면 반사 방향도 달라집니다. 조준점을 조금 옮겨 보세요.';
   }
   if (events.contains('momentum_transfer')) {
-    return '남은 공도 다음 샷의 충돌 재료로 활용할 수 있습니다.';
+    return '남은 공도 다음 발사의 충돌 재료로 활용할 수 있습니다.';
   }
   return '남은 공의 위치를 살펴보고 힘과 방향을 다시 정해 보세요.';
 }
@@ -1262,7 +1262,7 @@ List<_LeaderboardRow> _leaderboardRows(GameState state) {
     _ => const [
       _LeaderboardRow('문지기', 3),
       _LeaderboardRow('찰싹이', 5),
-      _LeaderboardRow('돌돌샷', 6),
+      _LeaderboardRow('돌돌이', 6),
     ],
   };
   final rows = [...base, _LeaderboardRow('나', state.shotCount)]
@@ -2104,7 +2104,7 @@ String _entityName(EntityState entity) {
 String _entityDescription(EntityState entity) {
   switch (entity.type) {
     case EntityType.ball:
-      return '다음 샷과 충돌할 수 있는 공입니다.';
+      return '다음 발사와 충돌할 수 있는 공입니다.';
     case EntityType.hole:
       return '공이 들어가야 하는 목표 지점입니다.';
     case EntityType.wall:

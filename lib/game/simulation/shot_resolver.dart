@@ -693,7 +693,7 @@ class ShotResolver {
 
   GameState rewind(GameState state) {
     if (state.history.isEmpty) {
-      return state.copyWith(message: '되감기할 샷이 없습니다.');
+      return state.copyWith(message: '되감기할 발사가 없습니다.');
     }
     return state.history.first.copyWith(
       message: '직전 발사 전 상태로 되감았습니다.',
