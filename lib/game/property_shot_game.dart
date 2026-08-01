@@ -1198,7 +1198,42 @@ class PropertyShotGame extends FlameGame {
     );
     canvas.restore();
     canvas.restore();
+    if (entity.type == EntityType.bumper && motion.impact > 0.04) {
+      _drawJellySpriteImpact(canvas, center, target, motion.impact);
+    }
     _drawSpriteGleam(canvas, entity, target, motion);
+  }
+
+  void _drawJellySpriteImpact(
+    Canvas canvas,
+    Offset center,
+    Rect target,
+    double impact,
+  ) {
+    final alpha = (impact * 0.42).clamp(0.0, 0.42);
+    final pulse = math.sin(_pulseClock * math.pi * 8).abs();
+    final splash = Paint()
+      ..color = const Color(0xFF7BE7CC).withValues(alpha: alpha)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2 + impact * 1.6
+      ..strokeCap = StrokeCap.round;
+    final splashRect = Rect.fromCenter(
+      center: center.translate(0, target.height * 0.34),
+      width: target.width * (0.62 + impact * 0.22),
+      height: target.height * (0.14 + pulse * 0.04),
+    );
+    canvas.drawArc(splashRect, math.pi * 0.08, math.pi * 0.84, false, splash);
+    final droplet = Paint()
+      ..color = const Color(0xFFB6F5E5).withValues(alpha: alpha * 0.9)
+      ..style = PaintingStyle.fill;
+    for (var index = 0; index < 3; index++) {
+      final direction = index - 1;
+      final dropCenter = center.translate(
+        direction * target.width * 0.27,
+        target.height * (0.34 - impact * (0.06 + index * 0.015)),
+      );
+      canvas.drawCircle(dropCenter, 1.7 + impact * 1.2, droplet);
+    }
   }
 
   void _drawSpriteGleam(
