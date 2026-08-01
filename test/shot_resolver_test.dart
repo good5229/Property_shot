@@ -473,6 +473,32 @@ void main() {
     expect(second.triggerPathIndex, greaterThan(first.triggerPathIndex));
   });
 
+  test('상자에서 젤리로 이어지는 혼합 재질 연쇄가 순서대로 재생된다', () {
+    final result = shots.resolve(
+      _mixedMaterialChainState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final crateMove = result.moves.firstWhere(
+      (move) => move.entityId == 'crate_a',
+    );
+    final jellyImpact = result.moves.firstWhere(
+      (move) => move.entityId == 'jelly',
+    );
+
+    expect(result.events, contains('chain_collision_bumper'));
+    expect(result.events, contains('jelly_bounced'));
+    expect(
+      jellyImpact.triggerPathIndex,
+      greaterThan(crateMove.triggerPathIndex),
+    );
+    expect(crateMove.path.length, greaterThan(2));
+    for (final move in result.moves.where((move) => move.path.length > 1)) {
+      for (var index = 1; index < move.path.length; index++) {
+        expect(move.path[index - 1].distanceTo(move.path[index]), lessThan(16));
+      }
+    }
+  });
+
   test('무거운 공은 일반 공을 크게 밀고 자신의 진행을 크게 잃지 않는다', () {
     final result = shots.resolve(
       _heavyBallVsNormalBallState(),
@@ -1140,6 +1166,50 @@ GameState _singleCrateMomentumState() {
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(260, 80),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _mixedMaterialChainState() {
+  return const GameState(
+    levelIndex: 204,
+    levelName: '혼합 재질 연쇄 테스트',
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(92, 80),
+        size: Vec2(28, 28),
+        movable: true,
+      ),
+      EntityState(
+        id: 'jelly',
+        type: EntityType.bumper,
+        position: Vec2(142, 80),
+        size: Vec2(36, 36),
+        restitution: 0.9,
+      ),
+      EntityState(
+        id: 'wall',
+        type: EntityType.wall,
+        position: Vec2(220, 80),
+        size: Vec2(24, 140),
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(330, 280),
         size: Vec2(34, 34),
         solid: false,
       ),
