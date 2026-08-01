@@ -37,6 +37,19 @@ void main() {
     expect(find.textContaining('선택:'), findsNothing);
   });
 
+  testWidgets('이전과 복사의 원본 결과를 구분해 안내한다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+
+    expect(find.text('떼어 공에 옮기기'), findsOneWidget);
+    expect(find.text('원본에 남기고 공에 복사하기'), findsOneWidget);
+    expect(find.textContaining('원본에서 사라짐'), findsOneWidget);
+    expect(find.textContaining('원본에 유지됨'), findsOneWidget);
+  });
+
   testWidgets('드래그 조준만으로는 발사되지 않는다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
