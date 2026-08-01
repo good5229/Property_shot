@@ -334,9 +334,13 @@ class PropertyShotGame extends FlameGame {
     if (move.path.length < 2) {
       return 12;
     }
-    // Each path sample represents one simulation step. This keeps
-    // triggerPathIndex as the shared physical clock for every moving entity.
-    return math.max(1, move.path.length - 1).toDouble();
+    final distance = _pathDistance(move.path);
+    if (distance <= 0.001) {
+      return 12;
+    }
+    // 연쇄 경로는 충돌 직전·분리 직후에 짧은 점이 추가될 수 있다.
+    // 포인트 개수가 아니라 실제 이동 거리로 재생 시간을 정해 시각 속도를 안정화한다.
+    return math.max(1, distance / 4.0);
   }
 
   double get _animationEndCursor {
@@ -349,8 +353,33 @@ class PropertyShotGame extends FlameGame {
 
   Vec2 _sampleMovePath(ShotAnimationMove move, double elapsed) {
     final points = move.path.length >= 2 ? move.path : [move.from, move.to];
-    final clock = points.length == 2 ? elapsed / _moveDuration(move) : elapsed;
-    return _samplePathAtTime(points, clock);
+    final duration = _moveDuration(move);
+    final progress = (elapsed / duration).clamp(0.0, 1.0);
+    return _samplePathByDistance(points, _pathDistance(points) * progress);
+  }
+
+  Vec2 _samplePathByDistance(List<Vec2> points, double distance) {
+    if (points.length < 2) {
+      return points.isEmpty ? Vec2.zero : points.first;
+    }
+    var remaining = distance.clamp(0.0, _pathDistance(points));
+    for (var index = 1; index < points.length; index++) {
+      final from = points[index - 1];
+      final to = points[index];
+      final segment = from.distanceTo(to);
+      if (segment <= 0.001) {
+        continue;
+      }
+      if (remaining <= segment) {
+        final local = remaining / segment;
+        return Vec2(
+          from.x + (to.x - from.x) * local,
+          from.y + (to.y - from.y) * local,
+        );
+      }
+      remaining -= segment;
+    }
+    return points.last;
   }
 
   Vec2 _samplePathAtTime(List<Vec2> points, double elapsed) {

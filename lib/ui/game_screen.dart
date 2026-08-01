@@ -264,7 +264,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!mounted || !_isAnimatingShot || move.visualState == 'opening') {
       return;
     }
-    _feedback.collision();
     if (move.visualState == 'pressed') {
       _feedback.switchOpened();
     }

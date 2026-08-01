@@ -350,12 +350,14 @@ class ShotResolver {
             direction,
             (heavy ? 42 : 24) + (heavy ? 100 : 60) * impulseScale,
             events,
-            moves,
-            path.length - 1,
-            collision.normal,
-            0,
-            heavy,
-            state.requiresStickyAnchor,
+          moves,
+          path.length - 1,
+          collision.normal,
+          0,
+          heavy,
+          state.requiresStickyAnchor,
+          const {},
+          impacts,
           );
           final pushedCrate =
               entities
@@ -427,6 +429,8 @@ class ShotResolver {
           0,
           ball.traits.contains(TraitType.heavy),
           state.requiresStickyAnchor,
+          const {},
+          impacts,
         );
         if ((_anyBallInHole(entities) &&
                 _holeContractSatisfiedForShot(state, ball, entities, events)) ||
@@ -510,6 +514,8 @@ class ShotResolver {
           0,
           ball.traits.contains(TraitType.heavy),
           state.requiresStickyAnchor,
+          const {},
+          impacts,
         );
         if ((_anyBallInHole(entities) &&
                 _holeContractSatisfiedForShot(state, ball, entities, events)) ||
@@ -1279,6 +1285,7 @@ class ShotResolver {
     bool carriesHeavy = false,
     bool requiresStickyAnchor = false,
     Set<String> chainIds = const {},
+    List<ShotImpact>? impacts,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -1340,6 +1347,15 @@ class ShotResolver {
       final collisionEntity = candidate.copyWith(position: collision.position);
       final normal = _collisionNormalForMovingEntity(collisionEntity, hit);
       final collisionTrigger = triggerPathIndex + iterations;
+      impacts?.add(
+        ShotImpact(
+          entityType: hit.type,
+          position: collision.position,
+          normal: normal,
+          pathIndex: collisionTrigger,
+          strength: (velocity.length / 24).clamp(0.18, 1.0),
+        ),
+      );
       current = candidate.copyWith(
         position: _separateMovingEntityFromCollision(
           hit,
@@ -1470,6 +1486,7 @@ class ShotResolver {
           carriesHeavy || current.traits.contains(TraitType.heavy),
           requiresStickyAnchor,
           chainCollisionIds,
+          impacts,
         );
         events.add('chain_push');
         final postVelocity = _collisionVelocity(

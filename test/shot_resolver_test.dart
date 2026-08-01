@@ -1124,6 +1124,23 @@ void main() {
     }
   });
 
+  test('상용 감사: 연쇄 충돌도 이전 공과 벽의 접촉 이벤트를 기록한다', () {
+    final result = shots.resolve(
+      _pushedBallWallAuditState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+
+    expect(
+      result.impacts.map((impact) => impact.entityType),
+      contains(EntityType.ball),
+    );
+    expect(
+      result.impacts.map((impact) => impact.entityType),
+      contains(EntityType.wall),
+    );
+    expect(result.impacts.every((impact) => impact.pathIndex >= 0), isTrue);
+  });
+
   test('상용 감사: 동일 샷의 물리 경로가 실행 프레임에 따라 달라지지 않는다', () {
     final state = _longChainAuditState();
     const input = ShotInput(direction: Vec2(1, 0), power: 1);
