@@ -101,6 +101,13 @@ flutter build ios --no-codesign
 
 일반 작업의 기본 검증은 `flutter analyze`와 `flutter test`입니다.
 
+최신 Web 데모를 교체해서 띄울 때는 다음 명령을 사용합니다. 8080 포트의 기존 프로세스가 HTTP 서버인지 확인한 뒤 종료하고, 최신 Web release 빌드와 새 서버의 루트·번들을 자동 검증합니다.
+명령이 실행 중인 동안 서버가 유지되며 `Ctrl+C`로 서버와 자식 프로세스를 함께 종료합니다.
+
+```bash
+./scripts/run_web_demo.sh
+```
+
 ## 프롬프트 및 결과물 요약
 
 ### 원문 프롬프트 요약

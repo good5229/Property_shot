@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.runtime/
 assets/downloads/
 !assets/downloads/
 !assets/downloads/smooth_physics_props.zip
