@@ -290,6 +290,13 @@ class ShotResolver {
             success = true;
             break;
           }
+          position = _separateFromCollision(
+            hit,
+            ball,
+            position,
+            collision.normal,
+          );
+          path[path.length - 1] = position;
           direction = _postImpactDirection(
             direction,
             collision.normal,
@@ -335,6 +342,13 @@ class ShotResolver {
           success = true;
           break;
         }
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         final equalMassHeadOn =
             (movingMass - targetMass).abs() < 0.05 &&
             collision.normal.dot(direction) < -0.9;
@@ -409,6 +423,13 @@ class ShotResolver {
           success = true;
           break;
         }
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
         direction = _reflect(direction, collision.normal);
         speed *= 0.68 * _restitutionMultiplier(ball, hit);
         events.add('momentum_transfer');
@@ -976,6 +997,25 @@ class ShotResolver {
     if (normal.length > 0.001) {
       return normal.normalized();
     }
+    final center = Vec2(
+      (bounds.left + bounds.right) / 2,
+      (bounds.top + bounds.bottom) / 2,
+    );
+    final horizontal = math.min(
+      (impact.x - bounds.left).abs(),
+      (impact.x - bounds.right).abs(),
+    );
+    final vertical = math.min(
+      (impact.y - bounds.top).abs(),
+      (impact.y - bounds.bottom).abs(),
+    );
+    if ((horizontal - vertical).abs() <= 0.001) {
+      final diagonal = Vec2(
+        impact.x < center.x ? -1 : 1,
+        impact.y < center.y ? -1 : 1,
+      );
+      return diagonal.normalized();
+    }
     final distances = <Vec2, double>{
       const Vec2(-1, 0): (impact.x - bounds.left).abs(),
       const Vec2(1, 0): (impact.x - bounds.right).abs(),
@@ -1045,6 +1085,7 @@ class ShotResolver {
     int depth = 0,
     bool carriesHeavy = false,
     bool requiresStickyAnchor = false,
+    Set<String> chainIds = const {},
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -1065,6 +1106,8 @@ class ShotResolver {
         ? travelDirection
         : normalImpulse;
     var current = target;
+    final chainCollisionIds = chainIds.isEmpty ? <String>{target.id} : chainIds;
+    chainCollisionIds.add(target.id);
     var remaining = distance * strength;
     var velocity = impulseDirection * remaining;
     var iterations = 0;
@@ -1086,6 +1129,7 @@ class ShotResolver {
         current,
         candidate,
         target.id,
+        chainCollisionIds,
       );
       if (collision == null) {
         current = candidate;
@@ -1097,6 +1141,9 @@ class ShotResolver {
       }
 
       final hit = collision.entity;
+      if (hit.type != EntityType.wall && hit.type != EntityType.gate) {
+        chainCollisionIds.add(hit.id);
+      }
       final collisionEntity = candidate.copyWith(position: collision.position);
       final normal = _collisionNormalForMovingEntity(collisionEntity, hit);
       final collisionTrigger = triggerPathIndex + iterations;
@@ -1207,6 +1254,9 @@ class ShotResolver {
       if (hit.movable && hit.type != EntityType.wall) {
         final targetMass = _massOf(current);
         final hitMass = _massOf(hit);
+        // 재귀 연쇄가 시작되기 전에 현재 물체를 공유 상태에 반영한다.
+        // 그렇지 않으면 다음 물체가 이전 위치의 조상 물체를 후보로 보게 된다.
+        entities = _replace(entities, current);
         final transferRatio = (targetMass * 2 / (targetMass + hitMass)).clamp(
           0.25,
           2.2,
@@ -1226,25 +1276,21 @@ class ShotResolver {
           depth + 1,
           carriesHeavy || current.traits.contains(TraitType.heavy),
           requiresStickyAnchor,
+          chainCollisionIds,
         );
         events.add('chain_push');
-        if (target.type != EntityType.ball) {
-          break;
-        }
-        final postDirection = _postImpactDirection(
-          impulseDirection,
+        final postVelocity = _collisionVelocity(
+          velocity,
           normal,
           targetMass,
           hitMass,
+          _restitutionMultiplier(current, hit),
         );
-        final postSpeed =
-            velocity.length *
-            _postImpactSpeedFactor(targetMass, hitMass) *
-            0.76 *
-            _restitutionMultiplier(current, hit);
-        velocity = postDirection * postSpeed;
+        velocity = postVelocity * 0.76;
         remaining = velocity.length;
-        impulseDirection = postDirection;
+        if (remaining > 0.001) {
+          impulseDirection = velocity.normalized();
+        }
         continue;
       }
 
@@ -1331,6 +1377,7 @@ class ShotResolver {
     EntityState from,
     EntityState to,
     String ignoreId,
+    Set<String> ignoredIds,
   ) {
     final distance = from.position.distanceTo(to.position);
     final steps = math.max(1, (distance / 1.25).ceil());
@@ -1346,7 +1393,12 @@ class ShotResolver {
       Vec2? bestPosition;
       var bestProgress = double.infinity;
       for (final entity in entities) {
-        if (!_isMovingEntityCollisionCandidate(entity, from.id, ignoreId) ||
+        if (!_isMovingEntityCollisionCandidate(
+              entity,
+              from.id,
+              ignoreId,
+              ignoredIds,
+            ) ||
             !_collides(candidate, entity)) {
           continue;
         }
@@ -1391,9 +1443,11 @@ class ShotResolver {
     EntityState entity,
     String movingId,
     String ignoreId,
+    Set<String> ignoredIds,
   ) {
     if (entity.id == movingId ||
         entity.id == ignoreId ||
+        ignoredIds.contains(entity.id) ||
         entity.id == 'active_ball' ||
         !entity.active ||
         !_isSolidForPhysics(entity)) {

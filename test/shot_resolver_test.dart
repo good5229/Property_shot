@@ -499,6 +499,41 @@ void main() {
     }
   });
 
+  test('돌에서 상자를 거쳐 벽까지 충돌 이벤트가 순서대로 계산된다', () {
+    final result = shots.resolve(
+      _weightCrateWallChainState(),
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+
+    final weightMove = result.moves.firstWhere(
+      (move) => move.entityId == 'weight',
+    );
+    final crateMove = result.moves.firstWhere(
+      (move) => move.entityId == 'crate_a',
+    );
+    expect(result.events, contains('chain_collision_crate'));
+    expect(result.events, contains('chain_collision_wall'));
+    expect(
+      result.events.indexOf('chain_collision_wall'),
+      greaterThan(result.events.indexOf('chain_collision_crate')),
+    );
+    expect(
+      crateMove.triggerPathIndex,
+      greaterThan(weightMove.triggerPathIndex),
+    );
+    expect(weightMove.to.x, greaterThan(110));
+    expect(
+      result.moves
+          .where((move) => move.path.length > 1)
+          .every(
+            (move) => move.path.every(
+              (point) => point.x >= 0 && point.x <= logicalSize.x,
+            ),
+          ),
+      isTrue,
+    );
+  });
+
   test('무거운 공은 일반 공을 크게 밀고 자신의 진행을 크게 잃지 않는다', () {
     final result = shots.resolve(
       _heavyBallVsNormalBallState(),
@@ -662,6 +697,20 @@ void main() {
         );
       }
     }
+  });
+
+  test('정확히 겹친 벽 모서리는 한쪽 면이 아닌 대각선 법선을 사용한다', () {
+    final result = shots.resolve(
+      _exactCornerOverlapState(),
+      const ShotInput(direction: Vec2(1, 1), power: 0.7),
+    );
+    final wallHit = result.moves.firstWhere(
+      (move) => move.visualState == 'wall_hit',
+    );
+    final normal = wallHit.impactNormal!;
+
+    expect(normal.x, closeTo(-0.707, 0.03));
+    expect(normal.y, closeTo(-0.707, 0.03));
   });
 
   test('빗겨 맞은 물체는 정면 충돌보다 약하게 움직인다', () {
@@ -1023,6 +1072,36 @@ GameState _wallState({required TraitType? equippedTrait}) {
   );
 }
 
+GameState _exactCornerOverlapState() {
+  return const GameState(
+    levelIndex: 207,
+    levelName: '정확한 벽 모서리 테스트',
+    ballSpawn: Vec2(40, 40),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 40),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'wall',
+        type: EntityType.wall,
+        position: Vec2(52, 52),
+        size: Vec2(24, 24),
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(320, 280),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
 GameState _chainedSwitchState({
   bool heavy = false,
   bool requiresStickyAnchor = false,
@@ -1210,6 +1289,50 @@ GameState _mixedMaterialChainState() {
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(330, 280),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _weightCrateWallChainState() {
+  return const GameState(
+    levelIndex: 205,
+    levelName: '돌 상자 벽 연쇄 감사',
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'weight',
+        type: EntityType.weight,
+        position: Vec2(86, 80),
+        size: Vec2(32, 32),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(124, 80),
+        size: Vec2(28, 28),
+        movable: true,
+      ),
+      EntityState(
+        id: 'wall',
+        type: EntityType.wall,
+        position: Vec2(180, 80),
+        size: Vec2(24, 140),
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(350, 280),
         size: Vec2(34, 34),
         solid: false,
       ),
