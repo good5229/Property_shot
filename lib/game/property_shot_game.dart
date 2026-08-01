@@ -120,9 +120,8 @@ class PropertyShotGame extends FlameGame {
           }
         }
       }
-      if (_animationCursor >= _animationEndCursor) {
-        _finishAnimation();
-      }
+      // 종료 콜백은 예약된 애니메이션 타이머만 소유한다. 프레임 지연으로
+      // 커서가 끝을 넘어도 팝업 전환이 중복 호출되지 않게 한다.
     }
     _pulseClock += dt;
   }
