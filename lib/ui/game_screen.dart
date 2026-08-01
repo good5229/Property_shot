@@ -26,7 +26,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _shotResolver = const ShotResolver();
   final _traitResolver = const TraitResolver();
   late GameState _state;
@@ -51,6 +51,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _state =
         widget.initialState ??
         levels.first.createState(0).copyWith(message: _levelIntroMessage(0));
@@ -528,7 +529,17 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _handlePointerCancel();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _chargeTimer?.cancel();
     _pressActivationTimer?.cancel();
     super.dispose();
