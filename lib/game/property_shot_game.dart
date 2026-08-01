@@ -621,7 +621,7 @@ class PropertyShotGame extends FlameGame {
     final ball = state.activeBall;
     final direction = state.aimDirection.normalized();
     final start = ball.position;
-    final length = 46 + state.aimPower * 80;
+    const length = 88.0;
     final end = start + direction * length;
     final shaftStart = start + direction * 9;
     final shaftEnd = end - direction * 13;
@@ -635,25 +635,33 @@ class PropertyShotGame extends FlameGame {
       ..strokeWidth = 11
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(_project(shaftStart), _project(shaftEnd), arrowShadow);
     final arrowPaint = Paint()
       ..color = accent
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(_project(shaftStart), _project(shaftEnd), arrowPaint);
 
     final highlight = Paint()
       ..color = const Color(0xB8FFF4D6)
       ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round;
-    for (var index = 0; index < 5; index++) {
-      final segmentStart = shaftStart + direction * (index * 16 + 5);
-      final segmentEnd = segmentStart + direction * 7;
-      if ((segmentEnd - start).length > (shaftEnd - start).length) {
-        break;
+    final shaftLength = (shaftEnd - shaftStart).length;
+    final segmentGap = shaftLength / 6;
+    for (var index = 0; index < 6; index++) {
+      final segmentStart = shaftStart + direction * (index * segmentGap + 2);
+      final segmentEnd = shaftStart +
+          direction * (index * segmentGap + segmentGap * 0.72 - 2);
+      canvas.drawLine(_project(segmentStart), _project(segmentEnd), arrowShadow);
+      canvas.drawLine(_project(segmentStart), _project(segmentEnd), arrowPaint);
+      final highlightStart = segmentStart + direction * 2;
+      final highlightEnd = segmentStart + direction * segmentGap * 0.48;
+      if ((highlightEnd - start).length < (shaftEnd - start).length) {
+        canvas.drawLine(
+          _project(highlightStart),
+          _project(highlightEnd),
+          highlight,
+        );
       }
-      canvas.drawLine(_project(segmentStart), _project(segmentEnd), highlight);
     }
 
     final left = Vec2(
@@ -707,11 +715,6 @@ class PropertyShotGame extends FlameGame {
           Offset(math.cos(angle), math.sin(angle)) * (ball.radius + 12);
       canvas.drawCircle(marker, 2.2, Paint()..color = const Color(0xCCFFF4D6));
     }
-    canvas.drawCircle(
-      _project(end),
-      4.5 + state.aimPower * 3,
-      Paint()..color = accent.withValues(alpha: 0.92),
-    );
   }
 
   void _drawEntity(Canvas canvas, EntityState entity, bool highlighted) {
