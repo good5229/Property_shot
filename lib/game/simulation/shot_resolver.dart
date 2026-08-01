@@ -30,6 +30,7 @@ class ShotAnimationMove {
     this.visualState = 'pushed',
     this.path = const [],
     this.impactPosition,
+    this.impactNormal,
   });
 
   final String entityId;
@@ -39,6 +40,7 @@ class ShotAnimationMove {
   final String visualState;
   final List<Vec2> path;
   final Vec2? impactPosition;
+  final Vec2? impactNormal;
 }
 
 class TrajectoryPreview {
@@ -171,6 +173,7 @@ class ShotResolver {
             triggerPathIndex: path.length - 1,
             visualState: 'pressed',
             impactPosition: position,
+            impactNormal: collision.normal,
           ),
         );
         for (final gate in entities.where(
@@ -213,6 +216,7 @@ class ShotResolver {
             triggerPathIndex: path.length - 1,
             visualState: 'stuck',
             impactPosition: position,
+            impactNormal: collision.normal,
           ),
         );
         events.add('sticky_attached');
@@ -339,6 +343,7 @@ class ShotResolver {
             triggerPathIndex: path.length - 1,
             visualState: 'pushed',
             impactPosition: position,
+            impactNormal: collision.normal,
           ),
         );
         position = _separateFromCollision(
@@ -393,6 +398,17 @@ class ShotResolver {
           collision.normal,
         );
         path[path.length - 1] = position;
+        moves.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: path.length - 1,
+            visualState: 'wall_hit',
+            impactPosition: position,
+            impactNormal: collision.normal,
+          ),
+        );
         direction = _reflect(direction, collision.normal);
         speed *= 0.72;
         events.add('bounced');
@@ -1014,6 +1030,7 @@ class ShotResolver {
             triggerPathIndex: collisionTrigger,
             visualState: 'stuck',
             impactPosition: collision.position,
+            impactNormal: normal,
           ),
         );
         break;
@@ -1037,6 +1054,7 @@ class ShotResolver {
             triggerPathIndex: collisionTrigger,
             visualState: 'pressed',
             impactPosition: collision.position,
+            impactNormal: normal,
           ),
         );
         for (final gate in entities.where(
@@ -1067,6 +1085,7 @@ class ShotResolver {
             triggerPathIndex: collisionTrigger,
             visualState: 'pushed',
             impactPosition: collision.position,
+            impactNormal: normal,
           ),
         );
         impulseDirection = _reflect(impulseDirection, normal);
@@ -1155,6 +1174,7 @@ class ShotResolver {
           triggerPathIndex: triggerPathIndex,
           path: path,
           impactPosition: path.length >= 2 ? path[path.length - 2] : null,
+          impactNormal: contactNormal == Vec2.zero ? null : contactNormal,
         ),
       );
     }

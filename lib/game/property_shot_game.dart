@@ -132,6 +132,7 @@ class PropertyShotGame extends FlameGame {
         EntityType.weight => const Color(0xFF6E8794),
         EntityType.switchPad => const Color(0xFFE2C044),
         EntityType.gate => const Color(0xFFE36B5D),
+        EntityType.wall => const Color(0xFF7A9693),
         _ => const Color(0xFFFFF2A8),
       };
       final ring = Paint()
@@ -151,13 +152,29 @@ class PropertyShotGame extends FlameGame {
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round;
       final sparkCount = targetType == EntityType.stickySurface ? 6 : 4;
+      final impactNormal = move.impactNormal?.normalized();
+      final baseAngle = impactNormal == null
+          ? -math.pi / 2
+          : math.atan2(impactNormal.y, impactNormal.x);
       for (var index = 0; index < sparkCount; index++) {
-        final angle = index * math.pi / 2 + 0.35;
+        final angle = baseAngle + (index - (sparkCount - 1) / 2) * 0.42;
         final inner = center + Offset(math.cos(angle), math.sin(angle)) * 9;
         final outer =
             center +
             Offset(math.cos(angle), math.sin(angle)) * (14 + progress * 12);
         canvas.drawLine(inner, outer, spark);
+      }
+      if (move.visualState == 'wall_hit' && impactNormal != null) {
+        final tangent = Offset(-impactNormal.y, impactNormal.x);
+        final flash = Paint()
+          ..color = accent.withValues(alpha: 0.82 * (1 - progress))
+          ..strokeWidth = 4 * (1 - progress) + 1
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(
+          center - tangent * (18 + progress * 8),
+          center + tangent * (18 + progress * 8),
+          flash,
+        );
       }
       if (targetType == EntityType.crate || targetType == EntityType.weight) {
         final shard = Paint()

@@ -314,6 +314,11 @@ void main() {
     expect(result.events, contains('bounced'));
     expect(result.state.entityById('wall')!.position, beforeWall);
     expect(result.state.entityById('spent_ball_1')!.position.x, lessThan(106));
+    final wallHit = result.moves.firstWhere(
+      (move) => move.visualState == 'wall_hit',
+    );
+    expect(wallHit.impactNormal, isNotNull);
+    expect(wallHit.impactPosition, isNotNull);
   });
 
   test('물체의 아래 면을 맞으면 아래쪽으로 반사된다', () {
@@ -426,6 +431,8 @@ void main() {
       _pushedBallWallState().entityById('spent_ball_1')!.position,
     );
     expect(pushedMove.path.last, pushedMove.to);
+    expect(pushedMove.impactNormal, isNotNull);
+    expect(pushedMove.impactNormal!.x, lessThan(0));
     for (var index = 1; index < pushedMove.path.length; index++) {
       expect(
         pushedMove.path[index - 1].distanceTo(pushedMove.path[index]),

@@ -4,6 +4,18 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-01] visual | collision direction feedback
+
+- 충돌 법선을 애니메이션 이벤트에 전달해 벽·젤리·물체의 타격 효과가 실제 충돌면 방향을 따르도록 개선한다.
+
+## [2026-08-01] ux | board input bounds
+
+- 실제로 렌더링되는 게임판 사각형만 조준 입력과 접근성 포인터 영역으로 사용해 좁은 화면의 레터박스 오입력을 막는다.
+
+## [2026-08-01] qa | validation count refresh
+
+- 충돌 법선 회귀와 보드 입력 영역 회귀를 포함한 최신 전체 테스트 수를 검증 문서에 반영한다.
+
 ## [2026-08-01] commercial | parallel review synthesis and vertical-slice iteration
 
 - Ran parallel puzzle design, game design, physics, QA, evaluation, and expert-player reviews against the current repository.
