@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -13,15 +14,17 @@ import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 
 class PropertyShotGame extends FlameGame {
-  PropertyShotGame(this.state);
+  PropertyShotGame(this.state, {this.onAnimationFinished});
 
   GameState state;
+  final VoidCallback? onAnimationFinished;
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   GameState? _animationStartState;
   double _animationCursor = 0;
   TraitType? _animationTrait;
   double _pulseClock = 0;
+  Timer? _animationCompletionTimer;
   final Map<EntityType, ui.Image> _objectImages = {};
 
   @override
@@ -47,9 +50,11 @@ class PropertyShotGame extends FlameGame {
     List<Vec2> path = const [],
     GameState? transitionStart,
     List<ShotAnimationMove> moves = const [],
+    bool animationTransaction = false,
   }) {
     state = next;
     if (path.length > 1) {
+      _animationCompletionTimer?.cancel();
       _animationPath = path;
       _animationMoves = moves;
       _animationStartState = transitionStart;
@@ -61,6 +66,14 @@ class PropertyShotGame extends FlameGame {
           ? const <TraitType>{}
           : spentBalls.last.traits;
       _animationTrait = traits.isEmpty ? next.equippedTrait : traits.first;
+      _animationCompletionTimer = Timer(
+        Duration(
+          milliseconds: ((_animationEndCursor / 34) * 1000 + 120).ceil(),
+        ),
+        _finishAnimation,
+      );
+    } else if (animationTransaction) {
+      Future<void>.microtask(() => onAnimationFinished?.call());
     }
   }
 
@@ -69,16 +82,34 @@ class PropertyShotGame extends FlameGame {
     super.update(dt);
     if (_animationPath.isNotEmpty) {
       // A background-resume frame must not skip an entire collision beat.
-      final boundedDt = dt.clamp(0.0, 1 / 30).toDouble();
+      final boundedDt = dt > 0.5
+          ? (_animationEndCursor - _animationCursor) / 34
+          : dt.clamp(0.0, 1 / 30).toDouble();
       _animationCursor += boundedDt * 34;
       if (_animationCursor >= _animationEndCursor) {
-        _animationPath = const [];
-        _animationMoves = const [];
-        _animationStartState = null;
-        _animationTrait = null;
+        _finishAnimation();
       }
     }
     _pulseClock += dt;
+  }
+
+  void _finishAnimation() {
+    if (_animationPath.isEmpty) {
+      return;
+    }
+    _animationCompletionTimer?.cancel();
+    _animationCompletionTimer = null;
+    _animationPath = const [];
+    _animationMoves = const [];
+    _animationStartState = null;
+    _animationTrait = null;
+    onAnimationFinished?.call();
+  }
+
+  @override
+  void onRemove() {
+    _animationCompletionTimer?.cancel();
+    super.onRemove();
   }
 
   @override

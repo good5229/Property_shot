@@ -34,8 +34,6 @@ class _GameScreenState extends State<GameScreen> {
   bool _showBallInfo = false;
   String? _inspectedEntityId;
   Timer? _chargeTimer;
-  Timer? _clearPopupTimer;
-  Timer? _animationUnlockTimer;
   bool _isCharging = false;
   bool _isAnimatingShot = false;
   bool _showClearPopup = false;
@@ -55,7 +53,7 @@ class _GameScreenState extends State<GameScreen> {
     if (widget.initialState != null) {
       _unlockedLevel = levels.length - 1;
     }
-    _game = PropertyShotGame(_state);
+    _game = PropertyShotGame(_state, onAnimationFinished: _onAnimationFinished);
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
   }
@@ -130,6 +128,7 @@ class _GameScreenState extends State<GameScreen> {
         path: path,
         transitionStart: transitionStart,
         moves: moves,
+        animationTransaction: path.isNotEmpty,
       );
     });
   }
@@ -140,7 +139,6 @@ class _GameScreenState extends State<GameScreen> {
     }
     _showBallInfo = false;
     _inspectedEntityId = null;
-    _clearPopupTimer?.cancel();
     _showClearPopup = false;
     _showFailurePopup = false;
     _setState(
@@ -215,8 +213,6 @@ class _GameScreenState extends State<GameScreen> {
     _inspectedEntityId = null;
     _showFailurePopup = false;
     _failureAdvice = _failureAdviceFor(result.events);
-    _clearPopupTimer?.cancel();
-    _animationUnlockTimer?.cancel();
     _isAnimatingShot = true;
     _setState(
       result.state,
@@ -224,45 +220,23 @@ class _GameScreenState extends State<GameScreen> {
       transitionStart: _state,
       moves: result.moves,
     );
-    var animationFrames = result.path.length;
-    for (final move in result.moves) {
-      final moveFrames = move.path.length < 2
-          ? 12
-          : (move.path.length * 2).clamp(12, 96);
-      animationFrames = math.max(
-        animationFrames,
-        move.triggerPathIndex + moveFrames,
-      );
-    }
-    final delayMs = (animationFrames * 38 + result.moves.length * 140).clamp(
-      900,
-      6000,
-    );
     if (result.state.phase == GamePhase.success) {
       _unlockNextLevel(result.state.levelIndex);
       unawaited(
         _recordBestShot(result.state.levelIndex, result.state.shotCount),
       );
-      _animationUnlockTimer = Timer(Duration(milliseconds: delayMs), () {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _isAnimatingShot = false;
-          _showClearPopup = true;
-        });
-      });
-    } else {
-      _animationUnlockTimer = Timer(Duration(milliseconds: delayMs), () {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _isAnimatingShot = false;
-          _showFailurePopup = true;
-        });
-      });
     }
+  }
+
+  void _onAnimationFinished() {
+    if (!mounted || !_isAnimatingShot) {
+      return;
+    }
+    setState(() {
+      _isAnimatingShot = false;
+      _showClearPopup = _state.phase == GamePhase.success;
+      _showFailurePopup = _state.phase != GamePhase.success;
+    });
   }
 
   void _feedbackForShot(ShotResult result) {
@@ -305,7 +279,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateAim(Offset localPosition, Size fieldSize) {
-    if (_state.phase != GamePhase.planning) {
+    if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
     }
     final logical = _toLogicalPosition(localPosition, fieldSize);
@@ -316,7 +290,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _nudgeAim(double radians) {
-    if (_state.phase != GamePhase.planning) {
+    if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
     }
     final current = math.atan2(_state.aimDirection.y, _state.aimDirection.x);
@@ -343,6 +317,9 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _handleSemanticEntity(String entityId) {
+    if (_isAnimatingShot) {
+      return;
+    }
     if (entityId == _state.activeBall.id) {
       setState(() {
         _showBallInfo = true;
@@ -404,6 +381,9 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _handleFieldTap(Offset localPosition, Size fieldSize) {
+    if (_isAnimatingShot) {
+      return;
+    }
     final logical = _toLogicalPosition(localPosition, fieldSize);
     if (logical.distanceTo(_state.activeBall.position) <= 34) {
       setState(() {
@@ -483,8 +463,6 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     _chargeTimer?.cancel();
-    _clearPopupTimer?.cancel();
-    _animationUnlockTimer?.cancel();
     super.dispose();
   }
 
@@ -504,6 +482,7 @@ class _GameScreenState extends State<GameScreen> {
         inspectedEntity != null ||
         failurePopupOpen ||
         clearPopupOpen;
+    final inputBlocked = popupOpen || _isAnimatingShot;
     return Scaffold(
       backgroundColor: const Color(0xFFE3E8DF),
       appBar: AppBar(
@@ -525,9 +504,9 @@ class _GameScreenState extends State<GameScreen> {
         child: Stack(
           children: [
             AbsorbPointer(
-              absorbing: popupOpen,
+              absorbing: inputBlocked,
               child: ExcludeSemantics(
-                excluding: popupOpen,
+                excluding: inputBlocked,
                 child: Center(
                   child: SizedBox(
                     width: contentWidth,
@@ -542,7 +521,7 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                         Expanded(
                           child: AbsorbPointer(
-                            absorbing: popupOpen,
+                            absorbing: inputBlocked,
                             child: Padding(
                               padding: EdgeInsets.symmetric(
                                 horizontal: compactLayout ? 4 : 12,

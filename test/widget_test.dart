@@ -79,6 +79,21 @@ void main() {
     expect(find.textContaining('샷 2'), findsNothing);
   });
 
+  testWidgets('발사 애니메이션 중에는 물체 정보 팝업이 열리지 않는다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 760));
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+
+    expect(find.byKey(const Key('entity_info_panel')), findsNothing);
+  });
+
   testWidgets('실패한 샷은 재조준과 복구 행동을 보여준다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
