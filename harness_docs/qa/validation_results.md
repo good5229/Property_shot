@@ -6,7 +6,7 @@
 |---|---|
 | `dart format --output=none --set-exit-if-changed .` | 통과, 변경 없음 |
 | `flutter analyze` | 통과, 이슈 없음 |
-| `flutter test` | 통과, 95개 |
+| `flutter test` | 통과, 96개 |
 | `flutter build web --release` | 통과 |
 | `curl http://127.0.0.1:8080` | HTTP 200, 새 빌드 서버 |
 | `flutter build ios --no-codesign` | Xcode 빌드 완료 후 Development Team/프로비저닝 프로파일 부족으로 배포 빌드 실패 |
@@ -23,8 +23,9 @@
 - 활성 공·연쇄 물체의 충돌을 `ShotImpact`로 통합하고, 연쇄 이동 경로를 누적 거리로 재생하도록 보정했다.
 - `ShotImpact`에 실제 대상 ID를 추가하고 연쇄 공의 홀 선행 포획·벽 충돌 차단 회귀를 추가했다.
 - 충돌 재질별 햅틱 강도와 진행률 기반 문 개방 연출을 연결했다.
-- 전체 테스트 95개 통과와 `flutter analyze` 통과를 확인했다.
-- 실제 렌더링 골든 테스트, 30·60·120FPS 프레임 측정, iOS 실기기, iPhone/iPad 햅틱은 아직 미검증이다.
+- 첫 2단계 성공 입력을 2도·0.02 파워 간격으로 스캔하는 난이도 회귀를 추가했다. 샘플 폭은 1단계 각도 28도·파워 0.84, 2단계 각도 46도·파워 0.72였다.
+- 전체 테스트 96개 통과와 `flutter analyze` 통과를 확인했다.
+- 위 성공 폭은 총 샘플 폭이며, 연결된 조준 영역·실제 사용자 이해도는 증명하지 않는다. 실제 렌더링 골든 테스트, 30·60·120FPS 프레임 측정, iOS 실기기, iPhone/iPad 햅틱도 아직 미검증이다.
 
 `flutter build ios --no-codesign`은 Xcode 빌드 후 Development Team과 프로비저닝 프로파일 부족으로 실패했다. 서명 없는 시뮬레이터 빌드와 실제 기기 테스트는 별도 환경이 필요하다.
 
