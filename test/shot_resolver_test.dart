@@ -345,6 +345,91 @@ void main() {
     expect(result.events, isNot(contains('bounced')));
   });
 
+  test('실패한 저파워 발사는 힘 부족 원인을 기록한다', () {
+    const state = GameState(
+      levelIndex: 210,
+      levelName: '저파워 피드백 감사',
+      ballSpawn: Vec2(40, 80),
+      entities: [
+        EntityState(
+          id: 'active_ball',
+          type: EntityType.ball,
+          position: Vec2(40, 80),
+          size: Vec2(24, 24),
+          movable: true,
+        ),
+      ],
+    );
+
+    final result = shots.resolve(
+      state,
+      const ShotInput(direction: Vec2(1, 0), power: 0.2),
+    );
+
+    expect(result.state.phase, GamePhase.planning);
+    expect(result.events, contains('power_low'));
+  });
+
+  test('실패한 고파워 발사는 힘 과다 원인을 기록한다', () {
+    const state = GameState(
+      levelIndex: 211,
+      levelName: '고파워 피드백 감사',
+      ballSpawn: Vec2(40, 80),
+      entities: [
+        EntityState(
+          id: 'active_ball',
+          type: EntityType.ball,
+          position: Vec2(40, 80),
+          size: Vec2(24, 24),
+          movable: true,
+        ),
+      ],
+    );
+
+    final result = shots.resolve(
+      state,
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+
+    expect(result.state.phase, GamePhase.planning);
+    expect(result.events, contains('power_high'));
+  });
+
+  test('직접 충돌은 위치·법선·대상·경로 시점을 기록한다', () {
+    const state = GameState(
+      levelIndex: 212,
+      levelName: '충돌 이벤트 감사',
+      ballSpawn: Vec2(40, 80),
+      entities: [
+        EntityState(
+          id: 'active_ball',
+          type: EntityType.ball,
+          position: Vec2(40, 80),
+          size: Vec2(24, 24),
+          movable: true,
+        ),
+        EntityState(
+          id: 'wall',
+          type: EntityType.wall,
+          position: Vec2(120, 80),
+          size: Vec2(24, 120),
+        ),
+      ],
+    );
+
+    final result = shots.resolve(
+      state,
+      const ShotInput(direction: Vec2(1, 0), power: 0.8),
+    );
+
+    expect(result.impacts, isNotEmpty);
+    final impact = result.impacts.first;
+    expect(impact.entityType, EntityType.wall);
+    expect(impact.position.x, lessThan(120));
+    expect(impact.normal.x, lessThan(0));
+    expect(impact.pathIndex, greaterThan(0));
+  });
+
   test('3라운드는 무거움으로 스위치를 누르고 일반 공은 거절된다', () {
     final normal = shots.resolve(
       levels[2].createState(2),

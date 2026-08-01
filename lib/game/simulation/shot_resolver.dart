@@ -13,12 +13,30 @@ class ShotResult {
     required this.path,
     required this.events,
     this.moves = const [],
+    this.impacts = const [],
   });
 
   final GameState state;
   final List<Vec2> path;
   final List<String> events;
   final List<ShotAnimationMove> moves;
+  final List<ShotImpact> impacts;
+}
+
+class ShotImpact {
+  const ShotImpact({
+    required this.entityType,
+    required this.position,
+    required this.normal,
+    required this.pathIndex,
+    required this.strength,
+  });
+
+  final EntityType entityType;
+  final Vec2 position;
+  final Vec2 normal;
+  final int pathIndex;
+  final double strength;
 }
 
 class ShotAnimationMove {
@@ -97,6 +115,7 @@ class ShotResolver {
     final path = <Vec2>[position];
     final events = <String>[];
     final moves = <ShotAnimationMove>[];
+    final impacts = <ShotImpact>[];
     var success = false;
     var stopped = false;
     var holeContractRejected = false;
@@ -151,6 +170,15 @@ class ShotResolver {
         if (traitAllowed && crateAllowed) {
           position = hole.position;
           path[path.length - 1] = position;
+          impacts.add(
+            ShotImpact(
+              entityType: EntityType.hole,
+              position: position,
+              normal: direction * -1,
+              pathIndex: path.length - 1,
+              strength: 1,
+            ),
+          );
           events.add('hole_entered');
           success = true;
           break;
@@ -175,6 +203,15 @@ class ShotResolver {
       path[path.length - 1] = position;
       final collision = collisionSample.hit;
       final hit = collision.entity;
+      impacts.add(
+        ShotImpact(
+          entityType: hit.type,
+          position: position,
+          normal: collision.normal,
+          pathIndex: path.length - 1,
+          strength: (speed / 24).clamp(0.18, 1.0),
+        ),
+      );
 
       if (hit.type == EntityType.gate && hit.open) {
         continue;
@@ -598,6 +635,14 @@ class ShotResolver {
       if (!success) activeBall,
     ];
 
+    if (!success) {
+      if (input.power < 0.4) {
+        events.add('power_low');
+      } else if (input.power > 0.88) {
+        events.add('power_high');
+      }
+    }
+
     final next = state.copyWith(
       entities: entities,
       phase: success ? GamePhase.success : GamePhase.planning,
@@ -609,7 +654,13 @@ class ShotResolver {
       history: [beforeShot, ...state.history],
     );
 
-    return ShotResult(state: next, path: path, events: events, moves: moves);
+    return ShotResult(
+      state: next,
+      path: path,
+      events: events,
+      moves: moves,
+      impacts: impacts,
+    );
   }
 
   TrajectoryPreview preview(GameState state) {

@@ -64,6 +64,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _state,
       onAnimationFinished: _onAnimationFinished,
       onAnimationImpact: _onAnimationImpact,
+      onShotImpact: _onShotImpact,
     );
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
@@ -128,6 +129,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     List<Vec2> path = const [],
     GameState? transitionStart,
     List<ShotAnimationMove> moves = const [],
+    List<ShotImpact> impacts = const [],
   }) {
     setState(() {
       _state = next;
@@ -139,6 +141,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         path: path,
         transitionStart: transitionStart,
         moves: moves,
+        impacts: impacts,
         animationTransaction: path.isNotEmpty,
       );
     });
@@ -230,6 +233,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       path: result.path,
       transitionStart: _state,
       moves: result.moves,
+      impacts: result.impacts,
     );
     if (result.state.phase == GamePhase.success) {
       _unlockNextLevel(result.state.levelIndex);
@@ -264,6 +268,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (move.visualState == 'pressed') {
       _feedback.switchOpened();
     }
+  }
+
+  void _onShotImpact(ShotImpact impact) {
+    if (!mounted || !_isAnimatingShot) {
+      return;
+    }
+    _feedback.collision();
   }
 
   void _rewind() {
@@ -1197,6 +1208,12 @@ String _failureAdviceFor(List<String> events) {
   }
   if (events.contains('crate_blocked')) {
     return '상자가 움직이지 않았습니다. 더 강한 힘이나 다른 면을 노려 보세요.';
+  }
+  if (events.contains('power_low')) {
+    return '힘이 부족했어요. 공 주변 게이지를 조금 더 채워 다시 시도해 보세요.';
+  }
+  if (events.contains('power_high')) {
+    return '힘이 너무 셌어요. 게이지를 한 칸 낮추고 충돌 면을 바꿔 보세요.';
   }
   if (events.contains('switch_rejected_sticky')) {
     return '점착 속성을 옮겨 공을 점착판에 붙인 다음 무거운 공을 준비하세요.';
