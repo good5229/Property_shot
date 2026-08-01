@@ -353,7 +353,6 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawBoard(Canvas canvas) {
-    final field = Paint()..color = const Color(0xFFC8F0D0);
     final fieldShadow = Paint()..color = const Color(0x25503C2E);
     final border = Paint()
       ..color = const Color(0xFF5D8B62)
@@ -366,7 +365,14 @@ class PropertyShotGame extends FlameGame {
       _project(Vec2(0, logicalSize.y)),
     ]);
     canvas.drawPath(boardPath.shift(const Offset(0, 5)), fieldShadow);
-    canvas.drawPath(boardPath, field);
+    final fieldGradient = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFD8F5D8), Color(0xFFB8E8C8), Color(0xFFA9DEC0)],
+        stops: [0.0, 0.56, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, logicalSize.x, logicalSize.y));
+    canvas.drawPath(boardPath, fieldGradient);
     canvas.save();
     canvas.clipPath(boardPath);
     final lawnStripe = Paint()..color = const Color(0x120F8A54);
@@ -427,6 +433,13 @@ class PropertyShotGame extends FlameGame {
       );
     }
     canvas.drawPath(boardPath, border);
+    canvas.drawRect(
+      Rect.fromLTWH(5, 5, logicalSize.x - 10, logicalSize.y - 10),
+      Paint()
+        ..color = const Color(0x5572B77D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
   }
 
   void _drawAimArrow(Canvas canvas) {
@@ -488,6 +501,7 @@ class PropertyShotGame extends FlameGame {
         _drawSelectablePulse(canvas, entity);
       }
       if (entity.type == EntityType.hole) {
+        _drawGoalBeacon(canvas, entity);
         _drawHoleFlag(canvas, entity);
         canvas.drawOval(
           Rect.fromCenter(
@@ -640,6 +654,21 @@ class PropertyShotGame extends FlameGame {
         ..color = const Color(0x6624352D)
         ..strokeWidth = 2,
     );
+    if (entity.type == EntityType.wall) {
+      final mortar = Paint()
+        ..color = const Color(0x44505F5C)
+        ..strokeWidth = 1.2;
+      canvas.save();
+      canvas.clipPath(_pathFromPoints(topPoints));
+      for (var y = topPoints[0].dy + 10; y < topPoints[3].dy; y += 12) {
+        canvas.drawLine(
+          Offset(topPoints[0].dx, y),
+          Offset(topPoints[1].dx, y),
+          mortar,
+        );
+      }
+      canvas.restore();
+    }
   }
 
   void _drawDirectionalLight(
@@ -713,6 +742,34 @@ class PropertyShotGame extends FlameGame {
         ..strokeWidth = 2,
     );
     canvas.drawOval(outer, stroke);
+  }
+
+  void _drawGoalBeacon(Canvas canvas, EntityState entity) {
+    final center = _project(entity.position);
+    final pulse = (math.sin(_pulseClock * math.pi * 1.4) + 1) / 2;
+    canvas.drawCircle(
+      center,
+      entity.radius + 13 + pulse * 4,
+      Paint()
+        ..color = const Color(0x2257B96B)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    );
+    final target = Paint()
+      ..color = const Color(0x6657B96B).withValues(alpha: 0.4 - pulse * 0.16)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    canvas.drawCircle(center, entity.radius + 9 + pulse * 5, target);
+    for (var index = 0; index < 4; index++) {
+      final angle = index * math.pi / 2 + math.pi / 4;
+      final from =
+          center +
+          Offset(math.cos(angle), math.sin(angle)) * (entity.radius + 14);
+      final to =
+          center +
+          Offset(math.cos(angle), math.sin(angle)) *
+              (entity.radius + 19 + pulse * 3);
+      canvas.drawLine(from, to, target);
+    }
   }
 
   void _drawSelectablePulse(Canvas canvas, EntityState entity) {
@@ -886,6 +943,40 @@ class PropertyShotGame extends FlameGame {
         ).createShader(target),
     );
     canvas.restore();
+    canvas.restore();
+    _drawSpriteGleam(canvas, entity, target, motion);
+  }
+
+  void _drawSpriteGleam(
+    Canvas canvas,
+    EntityState entity,
+    Rect target,
+    _MotionVisual motion,
+  ) {
+    final center = _project(entity.position).translate(0, motion.bob);
+    final gleam = Paint()
+      ..color = const Color(0x66FFFFFF)
+      ..strokeWidth = entity.type == EntityType.weight ? 2.4 : 1.8
+      ..strokeCap = StrokeCap.round;
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(motion.rotation);
+    canvas.scale(motion.scaleX, motion.scaleY);
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: target.width,
+          height: target.height,
+        ),
+        Radius.circular(entity.type == EntityType.weight ? 12 : 6),
+      ),
+    );
+    canvas.drawLine(
+      Offset(-target.width * 0.34, -target.height * 0.34),
+      Offset(target.width * 0.18, -target.height * 0.34),
+      gleam,
+    );
     canvas.restore();
   }
 
@@ -1387,6 +1478,13 @@ class PropertyShotGame extends FlameGame {
       ..color = const Color(0xBFFFFFFF)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(
+        rect,
+        Radius.circular(entity.type == EntityType.weight ? 12 : 6),
+      ),
+    );
     switch (trait) {
       case TraitType.heavy:
         for (var x = rect.left + 6; x < rect.right; x += 10) {
@@ -1413,6 +1511,7 @@ class PropertyShotGame extends FlameGame {
           canvas.drawCircle(Offset(rect.right - 14, y + 5), 4, fill);
         }
     }
+    canvas.restore();
   }
 
   void _drawAnimatedBall(Canvas canvas) {

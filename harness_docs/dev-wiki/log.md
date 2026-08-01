@@ -217,6 +217,8 @@ Use consistent headings so entries are easy to grep.
 
 ## [2026-07-23] prototype | Cue-like shot feel and discovery pass
 
+- 물리 QA에서 연쇄 이동 중 최신 물체 위치가 재귀 충돌 계산에 공유되지 않는 결함을 확인했다. 반사 후 과거 위치의 물체를 재접촉 후보로 삼지 않도록 재현 테스트와 상태 동기화를 추가한다.
+
 - Started work on cue-like launch feedback, slow ball pulsing after aiming, hiding preview/last-shot path hints, stronger sphere/cuboid rendering in angled view, and evaluating a simple rotation-view control.
 - Added a slow pulsing ring around the active ball during planning so users are naturally guided to press the ball after aiming.
 - Removed rendered collision preview paths and previous-shot black path lines from the field; only the aim arrow and circular power gauge remain visible before launch.
@@ -705,3 +707,5 @@ Use consistent headings so entries are easy to grep.
 - 상자에서 젤리로 이어지는 혼합 재질 연쇄 픽스처를 추가해 충돌 이벤트 순서와 이동 경로 연속성을 검증한다.
 - 혼합 재질 연쇄 회귀가 통과해 전체 테스트 수를 76개로 갱신한다.
 - 동일 물체의 다중 애니메이션 이동을 충돌 시간순으로 적용하고, 아직 시작하지 않은 미래 이동이 현재 위치를 덮어쓰지 않도록 렌더러를 보정한다.
+- QA 감사에서 자동 발사 구현과 충돌하는 구형 발사 버튼 요구를 확인해 하네스 조작·테스트 계약을 자동 발사 기준으로 통일한다.
+2026-08-01 | 시각 품질 감사 및 보드·목표·재질 렌더링 고도화 작업을 시작한다. 지정 범위는 property_shot_game.dart 중심이며 물리 로직과 테스트 파일은 수정하지 않는다.
