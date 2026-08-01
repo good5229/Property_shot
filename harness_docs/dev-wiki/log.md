@@ -505,6 +505,18 @@ Use consistent headings so entries are easy to grep.
 
 - 로컬 `unlocked_level` 값을 저장하고 단계 칩을 잠그며, 마지막 단계에는 `처음부터 다시` 행동을 표시하도록 구현한다.
 
+## [2026-08-01] docs | align interaction contract
+
+- 하네스 원문의 이전 발사 버튼·예상 경로 규칙이 현재 사용자 확정 조작과 달라 자동 발사·숨겨진 궤적 규칙으로 정리한다.
+
+## [2026-08-01] ux | unlock feedback and accessibility semantics
+
+- 클리어 팝업에서 새로 열린 단계를 명시하고, 벽·문 같은 비선택 장애물을 접근성에서 상호작용 물체와 구분한다.
+
+## [2026-08-01] physics | static wall response for chained bodies
+
+- 연쇄로 밀려난 이동 물체가 벽에 닿을 때 정지로만 끝나던 분기를 벽 법선 반사·분리·감속으로 통합하고, 벽 자체는 계속 고정한다.
+
 ## [2026-08-01] test | progression contract coverage
 
 - 기본 상태의 잠긴 단계 선택 거부와 마지막 단계 완료 후 재도전 문구를 위젯 테스트로 고정한다.

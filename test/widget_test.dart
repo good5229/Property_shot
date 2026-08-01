@@ -257,7 +257,7 @@ void main() {
     expect(find.bySemanticsLabel('공, 현재 속성 없음'), findsOneWidget);
     expect(find.bySemanticsLabel('무거운 돌, 무거움 속성 보유'), findsOneWidget);
     expect(find.bySemanticsLabel('홀, 목표 홀'), findsOneWidget);
-    expect(find.bySemanticsLabel('벽, 상호작용 가능한 물체'), findsWidgets);
+    expect(find.bySemanticsLabel('벽, 움직이지 않는 장애물'), findsWidgets);
   });
 
   testWidgets('현재 단계의 퍼즐 목표가 첫 화면에 표시된다', (tester) async {

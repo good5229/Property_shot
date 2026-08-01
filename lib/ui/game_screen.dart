@@ -342,6 +342,7 @@ class _GameScreenState extends State<GameScreen> {
       EntityType.hole => '목표 홀',
       EntityType.switchPad => entity.pressed ? '눌림' : '누르기 전',
       EntityType.gate => entity.open ? '열림' : '닫힘',
+      EntityType.wall => '움직이지 않는 장애물',
       _ =>
         entity.traits.isEmpty
             ? '상호작용 가능한 물체'
@@ -710,6 +711,17 @@ class _ClearPopup extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text('${state.shotCount}번 만에 성공'),
+                      if (!isFinal) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${state.levelIndex + 2}단계가 열렸습니다.',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: const Color(0xFF236B4A),
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
                       if (bestShot != null) ...[
                         const SizedBox(height: 4),
                         Text('내 최고 기록 $bestShot회'),
