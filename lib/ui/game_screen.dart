@@ -1160,6 +1160,111 @@ class _GameplayBackdropPainter extends CustomPainter {
         );
       }
     }
+
+    _drawTidePool(canvas, size);
+    _drawBeachLeaves(canvas, size);
+    _drawStarfish(canvas, size);
+  }
+
+  void _drawTidePool(Canvas canvas, Size size) {
+    final pool = Rect.fromLTWH(
+      size.width * 0.68,
+      size.height * 0.865,
+      size.width * 0.22,
+      size.height * 0.058,
+    );
+    canvas.drawOval(pool, Paint()..color = const Color(0x6685CEC7));
+    canvas.drawArc(
+      pool.deflate(4),
+      math.pi * 1.05,
+      math.pi * 0.9,
+      false,
+      Paint()
+        ..color = const Color(0x779EE3D9)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
+    );
+    final glint = Paint()..color = const Color(0x88FFFFFF);
+    canvas.drawOval(
+      Rect.fromLTWH(
+        pool.left + pool.width * 0.2,
+        pool.top + pool.height * 0.28,
+        pool.width * 0.18,
+        2.5,
+      ),
+      glint,
+    );
+    canvas.drawOval(
+      Rect.fromLTWH(
+        pool.left + pool.width * 0.58,
+        pool.top + pool.height * 0.58,
+        pool.width * 0.12,
+        2,
+      ),
+      glint,
+    );
+  }
+
+  void _drawBeachLeaves(Canvas canvas, Size size) {
+    final base = Offset(size.width * 0.15, size.height * 0.91);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: base.translate(0, 5),
+        width: size.width * 0.15,
+        height: 7,
+      ),
+      Paint()..color = const Color(0x223B5F48),
+    );
+    final leaf = Paint()..color = const Color(0xAA62A86B);
+    final vein = Paint()
+      ..color = const Color(0x66507F5B)
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.round;
+    for (final entry in const [
+      (angle: -2.15, width: 18.0, height: 7.0),
+      (angle: -1.42, width: 21.0, height: 8.0),
+      (angle: -0.78, width: 16.0, height: 7.0),
+    ]) {
+      canvas.save();
+      canvas.translate(base.dx, base.dy);
+      canvas.rotate(entry.angle);
+      final leafRect = Rect.fromCenter(
+        center: Offset(entry.width * 0.34, 0),
+        width: entry.width,
+        height: entry.height,
+      );
+      canvas.drawOval(leafRect, leaf);
+      canvas.drawLine(Offset.zero, Offset(entry.width * 0.66, 0), vein);
+      canvas.restore();
+    }
+  }
+
+  void _drawStarfish(Canvas canvas, Size size) {
+    final center = Offset(size.width * 0.48, size.height * 0.935);
+    final path = Path();
+    for (var index = 0; index < 10; index++) {
+      final radius = index.isEven ? 9.0 : 3.8;
+      final angle = -math.pi / 2 + index * math.pi / 5;
+      final point = center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      if (index == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, Paint()..color = const Color(0xB5EF765E));
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0x558C5544)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
+    final dot = Paint()..color = const Color(0x99FFE4A5);
+    canvas.drawCircle(center.translate(0, -1), 1.4, dot);
+    canvas.drawCircle(center.translate(-3, 3), 1, dot);
+    canvas.drawCircle(center.translate(3, 3), 1, dot);
   }
 
   @override
