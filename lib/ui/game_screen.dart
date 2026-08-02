@@ -24,12 +24,14 @@ class GameScreen extends StatefulWidget {
     this.showStageSelector = true,
     this.onExit,
     this.onCopyCoreEarned,
+    this.onLevelUnlocked,
   });
 
   final GameState? initialState;
   final bool showStageSelector;
   final VoidCallback? onExit;
   final ValueChanged<int>? onCopyCoreEarned;
+  final ValueChanged<int>? onLevelUnlocked;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -126,6 +128,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     setState(() => _unlockedLevel = next);
+    widget.onLevelUnlocked?.call(next);
     unawaited(
       SharedPreferences.getInstance().then(
         (preferences) => preferences.setInt(_unlockedLevelKey, next),

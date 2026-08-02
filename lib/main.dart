@@ -11,6 +11,7 @@ import 'ui/game_screen.dart';
 
 const _copyCoreCountKey = 'property_shot_copy_core_count';
 const _copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
+const _unlockedLevelKey = 'property_shot_unlocked_level';
 
 void main() {
   runApp(const PropertyShotApp(showHome: true));
@@ -61,6 +62,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showStageSelect = false;
   int _copyCoreCount = 0;
   bool _copyCoreRewarded = false;
+  int _unlockedLevel = 0;
 
   @override
   void initState() {
@@ -76,6 +78,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     setState(() {
       _copyCoreCount = preferences.getInt(_copyCoreCountKey) ?? 0;
       _copyCoreRewarded = preferences.getBool(_copyCoreRewardedKey) ?? false;
+      _unlockedLevel = (preferences.getInt(_unlockedLevelKey) ?? 0).clamp(
+        0,
+        levels.length - 1,
+      );
     });
   }
 
@@ -89,6 +95,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   void _startStage(int index) {
+    if (index > _unlockedLevel) {
+      return;
+    }
     setState(() => _activeStage = index);
   }
 
@@ -107,6 +116,18 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _saveCopyCore();
   }
 
+  void _unlockLevel(int index) {
+    if (index <= _unlockedLevel) {
+      return;
+    }
+    setState(() => _unlockedLevel = index);
+    unawaited(
+      SharedPreferences.getInstance().then(
+        (preferences) => preferences.setInt(_unlockedLevelKey, index),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeStage = _activeStage;
@@ -122,12 +143,14 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         showStageSelector: false,
         onExit: _returnHome,
         onCopyCoreEarned: _earnCopyCore,
+        onLevelUnlocked: _unlockLevel,
       );
     }
     if (_showStageSelect) {
       return _StageSelectScreen(
         onBack: () => setState(() => _showStageSelect = false),
         onSelectStage: _startStage,
+        unlockedLevel: _unlockedLevel,
       );
     }
     return _HomeScreen(
@@ -296,10 +319,15 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
 }
 
 class _StageSelectScreen extends StatelessWidget {
-  const _StageSelectScreen({required this.onBack, required this.onSelectStage});
+  const _StageSelectScreen({
+    required this.onBack,
+    required this.onSelectStage,
+    required this.unlockedLevel,
+  });
 
   final VoidCallback onBack;
   final ValueChanged<int> onSelectStage;
+  final int unlockedLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -345,7 +373,11 @@ class _StageSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 for (var index = 0; index < levels.length; index++)
-                  _StageTile(index: index, onTap: () => onSelectStage(index)),
+                  _StageTile(
+                    index: index,
+                    locked: index > unlockedLevel,
+                    onTap: () => onSelectStage(index),
+                  ),
               ],
             ),
           ),
@@ -356,10 +388,15 @@ class _StageSelectScreen extends StatelessWidget {
 }
 
 class _StageTile extends StatelessWidget {
-  const _StageTile({required this.index, required this.onTap});
+  const _StageTile({
+    required this.index,
+    required this.onTap,
+    this.locked = false,
+  });
 
   final int index;
   final VoidCallback onTap;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -381,11 +418,11 @@ class _StageTile extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: Key('stage_tile_$index'),
-          onTap: onTap,
+          onTap: locked ? null : onTap,
           child: Semantics(
-            button: true,
+            button: !locked,
             label: '${index + 1}번 ${levels[index].name} 섬',
-            hint: '두 번 누르면 스테이지를 시작합니다',
+            hint: locked ? '앞 섬을 클리어하면 열립니다' : '두 번 누르면 스테이지를 시작합니다',
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -407,9 +444,20 @@ class _StageTile extends StatelessWidget {
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(5),
-                              child: Image.asset(
-                                assets[index],
-                                fit: BoxFit.contain,
+                              child: ColorFiltered(
+                                colorFilter: locked
+                                    ? const ColorFilter.mode(
+                                        Color(0x88909B94),
+                                        BlendMode.saturation,
+                                      )
+                                    : const ColorFilter.mode(
+                                        Colors.transparent,
+                                        BlendMode.dst,
+                                      ),
+                                child: Image.asset(
+                                  assets[index],
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
@@ -424,13 +472,12 @@ class _StageTile extends StatelessWidget {
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(5),
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                              child: Icon(
+                                locked
+                                    ? Icons.lock_rounded
+                                    : Icons.flag_rounded,
+                                size: 13,
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -447,7 +494,9 @@ class _StageTile extends StatelessWidget {
                           levels[index].name,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
-                                color: const Color(0xFF244A45),
+                                color: locked
+                                    ? const Color(0xFF718078)
+                                    : const Color(0xFF244A45),
                                 fontWeight: FontWeight.w900,
                               ),
                         ),
@@ -456,7 +505,9 @@ class _StageTile extends StatelessWidget {
                           descriptions[index],
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: const Color(0xFF52706A),
+                                color: locked
+                                    ? const Color(0xFF81918A)
+                                    : const Color(0xFF52706A),
                                 height: 1.25,
                               ),
                         ),
@@ -472,9 +523,13 @@ class _StageTile extends StatelessWidget {
                               vertical: 3,
                             ),
                             child: Text(
-                              '추천 파 ${levels[index].parShots}회',
-                              style: const TextStyle(
-                                color: Color(0xFF397372),
+                              locked
+                                  ? '앞 섬을 먼저 클리어하세요'
+                                  : '추천 파 ${levels[index].parShots}회',
+                              style: TextStyle(
+                                color: locked
+                                    ? const Color(0xFF718078)
+                                    : const Color(0xFF397372),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -484,7 +539,10 @@ class _StageTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Color(0xFF5B8177)),
+                  Icon(
+                    locked ? Icons.lock_outline_rounded : Icons.chevron_right,
+                    color: const Color(0xFF5B8177),
+                  ),
                 ],
               ),
             ),

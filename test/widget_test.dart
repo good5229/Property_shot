@@ -20,6 +20,7 @@ void main() {
     await tester.pump();
     expect(find.text('섬 지도'), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_0')), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(2));
 
     await tester.tap(find.byKey(const Key('stage_tile_0')));
     await tester.pump();
