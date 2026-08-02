@@ -244,34 +244,52 @@ class _StageSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEAF4E9),
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: '처음 화면',
-          onPressed: onBack,
-          icon: const Icon(Icons.arrow_back),
-        ),
-        title: const Text('섬 지도'),
-        backgroundColor: const Color(0xFFEAF4E9),
-        foregroundColor: const Color(0xFF173F43),
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-          children: [
-            Text(
-              '원하는 실험 섬을 골라 바로 도전하세요.',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: const Color(0xFF285C5D),
-                fontWeight: FontWeight.w700,
-              ),
+      backgroundColor: const Color(0xFFBFE8E3),
+      body: Stack(
+        children: [
+          const Positioned.fill(child: _IslandBackdrop()),
+          SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: '처음 화면',
+                      onPressed: onBack,
+                      icon: const Icon(Icons.arrow_back),
+                      color: const Color(0xFF173F43),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        '섬 지도',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF173F43),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '실험 섬을 골라 속성의 반응을 직접 확인해 보세요.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: const Color(0xFF285C5D),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                for (var index = 0; index < levels.length; index++)
+                  _StageTile(index: index, onTap: () => onSelectStage(index)),
+              ],
             ),
-            const SizedBox(height: 14),
-            for (var index = 0; index < levels.length; index++)
-              _StageTile(index: index, onTap: () => onSelectStage(index)),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -298,42 +316,117 @@ class _StageTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: const Color(0xFFFFFCF0),
+        color: const Color(0xF7FFFDF3),
         borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: Key('stage_tile_$index'),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Image.asset(assets[index], width: 58, height: 58),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        levels[index].name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: const Color(0xFF244A45),
-                              fontWeight: FontWeight.w800,
+          child: Semantics(
+            button: true,
+            label: '${index + 1}번 ${levels[index].name} 섬',
+            hint: '두 번 누르면 스테이지를 시작합니다',
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 70,
+                    height: 70,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE8AC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFDEA96B),
+                                width: 2,
+                              ),
                             ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        descriptions[index],
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF52706A),
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: Image.asset(
+                                assets[index],
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                        Positioned(
+                          top: 4,
+                          left: 4,
+                          child: DecoratedBox(
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEF765E),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Icon(Icons.chevron_right, color: Color(0xFF5B8177)),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          levels[index].name,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: const Color(0xFF244A45),
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          descriptions[index],
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: const Color(0xFF52706A),
+                                height: 1.25,
+                              ),
+                        ),
+                        const SizedBox(height: 7),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: const Color(0x1F4EAAA5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            child: Text(
+                              '추천 파 ${levels[index].parShots}회',
+                              style: const TextStyle(
+                                color: Color(0xFF397372),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Color(0xFF5B8177)),
+                ],
+              ),
             ),
           ),
         ),
