@@ -156,3 +156,29 @@
 | 브라우저 콘솔 | 오류 0건 |
 
 이번 확인은 변경된 물리 판정이 아니라 최신 빌드의 실행 가능성과 핵심 첫 사용자 흐름을 재검증한 것이다. 실제 기기 프레임·GPU·메모리와 사용자 이해도는 여전히 별도 검증이 필요하다.
+
+## 2026-08-02 최신 아트·축약 HUD 반복
+
+| 항목 | 결과 |
+|---|---|
+| `dart format --output=none --set-exit-if-changed .` | 통과, 26개 파일 검사 |
+| `flutter analyze` | 통과, 이슈 없음 |
+| `flutter test` | 통과, 124개 |
+| `flutter test test/widget_test.dart` | 통과, 41개 |
+| `dart run tool/difficulty_report.dart` | 통과, 1단계 28도·86%, 2단계 20도·76%, 3단계 무속성·무거움 대체 풀이 확인 |
+| `dart run tool/physics_benchmark.dart` | 통과, 1단계 343.7µs·2단계 287.8µs·3단계 331.7µs |
+| `flutter build web --release` | 통과 |
+| 데모 서버 교체 | 기존 PID 43723 종료 후 PID 55418으로 교체 |
+| 서버 응답 | 루트 HTTP 200, `main.dart.js` HTTP 200 |
+| 실브라우저 캡처 | 390×844·430×932·768×1024 실행, 콘솔 오류 0건 |
+| `flutter build ios --no-codesign` | Xcode 컴파일 완료, Development Team·프로비저닝 프로파일 부족으로 배포 단계 실패 |
+
+이번 반복의 코드 변경은 물리 좌표·충돌 계산을 건드리지 않고, 벽을 해변 장난감 경계처럼 보이게 하는 재질 디테일, 공과 연결된 산호색 조준 리본, 제품 축약 HUD의 한 줄 목표, 보드 밖 해안선·모래결·조개 장식에 한정했다. 최신 캡처에서 390px HUD 압박과 단색 하단 여백은 완화됐지만, Canvas와 래스터 에셋의 질감 완전 통일과 실제 기기 검증은 남아 있다.
+
+실제 iPhone·iPad 터치, 60fps·GPU·메모리, 햅틱·사운드 체감, 실제 사용자 30초·5분 이해도는 여전히 검증하지 않았다.
+
+최신 390×844 Web 흐름에서 보드의 돌을 실제 탭해 속성 상세 팝업을 열고, `떼어 공에 옮기기`를 탭해 공의 `무거움` 상태와 축약 안내 문구가 갱신되는 것을 확인했다. 이 흐름의 캡처는 `390x844-material-source-popup.png`와 `390x844-material-transfer-after.png`다.
+
+최종 재실행에서는 축약 3단계 진행 힌트도 줄임표 없이 `무거움은 스위치 · 점착은 공 고정`처럼 상태별 핵심 문장으로 표시되도록 확인했고, 전체 `flutter test`는 다시 124개 통과했다. 최신 데모 PID는 61743이며 루트와 `main.dart.js`는 HTTP 200이다.
+
+`flutter build ios --simulator`도 최신 코드에서 재실행했다. Xcode 컴파일 단계까지 진행됐으나 iOS 18.2 Simulator Runtime이 설치되지 않아 `generic:1, platform:iOS Simulator` 대상 선택 단계에서 실패했다. 따라서 현재 iOS 상태는 디바이스 배포 서명 부족과 시뮬레이터 런타임 부족이 서로 다른 환경 문제로 남아 있다.

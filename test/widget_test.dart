@@ -469,6 +469,11 @@ void main() {
     expect(find.byKey(const Key('compact_hud')), findsOneWidget);
     expect(find.byKey(const Key('compact_control_panel')), findsOneWidget);
     expect(find.byKey(const Key('compact_objective')), findsOneWidget);
+    final compactObjective = tester.widget<Text>(
+      find.byKey(const Key('compact_objective')),
+    );
+    expect(compactObjective.data, '무거움으로 상자를 밀어 홀로 보내기');
+    expect(compactObjective.maxLines, 1);
     expect(find.byKey(const Key('compact_message')), findsOneWidget);
     expect(
       tester.widget<Text>(find.byKey(const Key('compact_message'))).data,
@@ -675,7 +680,7 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    expect(find.textContaining('추천: 무거움을 옮겨 상자를 밀어 보세요.'), findsOneWidget);
+    expect(find.text('무거움으로 상자를 밀어 홀로 보내기'), findsOneWidget);
   });
 
   testWidgets('3단계는 스위치 경로와 점착의 고정 역할을 첫 화면에 표시한다', (tester) async {
@@ -685,8 +690,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('level_progress')), findsOneWidget);
-    expect(find.textContaining('무거움으로 스위치를 누르는 길'), findsOneWidget);
-    expect(find.textContaining('점착은 공을 고정합니다'), findsOneWidget);
+    expect(find.text('무거움은 스위치 · 점착은 공 고정'), findsOneWidget);
   });
 }
 

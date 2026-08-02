@@ -629,77 +629,95 @@ class PropertyShotGame extends FlameGame {
     final ball = state.activeBall;
     final direction = state.aimDirection.normalized();
     final start = ball.position;
-    const length = 88.0;
+    final length = 68.0 + state.aimPower * 28.0;
     final end = start + direction * length;
     final shaftStart = start + direction * 9;
     final shaftEnd = end - direction * 13;
-    final accent = Color.lerp(
-      const Color(0xFF2E9D76),
-      const Color(0xFFE06C4E),
-      state.aimPower,
-    )!;
-    final arrowShadow = Paint()
-      ..color = const Color(0x553B2B24)
-      ..strokeWidth = 11
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final arrowPaint = Paint()
-      ..color = accent
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    final normal = Vec2(-direction.y, direction.x);
+    final accent = const Color(0xFFEF765E);
+    final shaftWidth = 4.0 + state.aimPower * 2.0;
+    final shaftTipWidth = 2.5 + state.aimPower * 1.2;
+    final ribbon = Path()
+      ..moveTo(
+        _project(shaftStart + normal * shaftWidth).dx,
+        _project(shaftStart + normal * shaftWidth).dy,
+      )
+      ..lineTo(
+        _project(shaftEnd + normal * shaftTipWidth).dx,
+        _project(shaftEnd + normal * shaftTipWidth).dy,
+      )
+      ..lineTo(
+        _project(shaftEnd - normal * shaftTipWidth).dx,
+        _project(shaftEnd - normal * shaftTipWidth).dy,
+      )
+      ..lineTo(
+        _project(shaftStart - normal * shaftWidth).dx,
+        _project(shaftStart - normal * shaftWidth).dy,
+      )
+      ..close();
+    final shadow = ribbon.shift(const Offset(0, 3));
+    canvas.drawPath(
+      shadow,
+      Paint()
+        ..color = const Color(0x553B2B24)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(ribbon, Paint()..color = accent);
+    canvas.drawLine(
+      _project(shaftStart + normal * (shaftWidth * 0.36)),
+      _project(shaftEnd + normal * (shaftTipWidth * 0.18)),
+      Paint()
+        ..color = _lightColor.withValues(alpha: 0.82)
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round,
+    );
 
-    final highlight = Paint()
-      ..color = const Color(0xB8FFF4D6)
-      ..strokeWidth = 1.8
+    final anchor = start - direction * 2;
+    final anchorLeft = anchor + normal * (ball.radius * 0.6);
+    final anchorRight = anchor - normal * (ball.radius * 0.6);
+    final elastic = Paint()
+      ..color = const Color(0xB83B302A)
+      ..strokeWidth = 2.4
       ..strokeCap = StrokeCap.round;
-    final shaftLength = (shaftEnd - shaftStart).length;
-    final segmentGap = shaftLength / 6;
-    for (var index = 0; index < 6; index++) {
-      final segmentStart = shaftStart + direction * (index * segmentGap + 2);
-      final segmentEnd =
-          shaftStart + direction * (index * segmentGap + segmentGap * 0.72 - 2);
-      canvas.drawLine(
-        _project(segmentStart),
-        _project(segmentEnd),
-        arrowShadow,
-      );
-      canvas.drawLine(_project(segmentStart), _project(segmentEnd), arrowPaint);
-      final highlightStart = segmentStart + direction * 2;
-      final highlightEnd = segmentStart + direction * segmentGap * 0.48;
-      if ((highlightEnd - start).length < (shaftEnd - start).length) {
-        canvas.drawLine(
-          _project(highlightStart),
-          _project(highlightEnd),
-          highlight,
-        );
-      }
-    }
+    canvas.drawLine(
+      _project(anchorLeft),
+      _project(shaftStart + normal * shaftWidth),
+      elastic,
+    );
+    canvas.drawLine(
+      _project(anchorRight),
+      _project(shaftStart - normal * shaftWidth),
+      elastic,
+    );
 
-    final left = Vec2(
-      -direction.x * 0.72 - direction.y * 0.38,
-      -direction.y * 0.72 + direction.x * 0.38,
-    );
-    final right = Vec2(
-      -direction.x * 0.72 + direction.y * 0.38,
-      -direction.y * 0.72 - direction.x * 0.38,
-    );
+    final headWidth = 14.0 + state.aimPower * 5.0;
+    final headBack = end - direction * 15;
     final arrowHead = Path()
       ..moveTo(_project(end).dx, _project(end).dy)
-      ..lineTo(_project(end + left * 22).dx, _project(end + left * 22).dy)
       ..lineTo(
-        _project(end + direction * 2).dx,
-        _project(end + direction * 2).dy,
+        _project(headBack + normal * headWidth).dx,
+        _project(headBack + normal * headWidth).dy,
       )
-      ..lineTo(_project(end + right * 22).dx, _project(end + right * 22).dy)
+      ..lineTo(
+        _project(headBack + normal * 2).dx,
+        _project(headBack + normal * 2).dy,
+      )
+      ..lineTo(
+        _project(headBack - normal * headWidth).dx,
+        _project(headBack - normal * headWidth).dy,
+      )
       ..close();
+    canvas.drawPath(
+      arrowHead.shift(const Offset(0, 3)),
+      Paint()..color = const Color(0x553B2B24),
+    );
     canvas.drawPath(arrowHead, Paint()..color = accent);
     canvas.drawPath(
       arrowHead,
       Paint()
-        ..color = const Color(0xFF3B2B24)
+        ..color = const Color(0x883B302A)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6,
+        ..strokeWidth = 1.2,
     );
 
     final gaugeTrack = Paint()
@@ -1922,22 +1940,38 @@ class PropertyShotGame extends FlameGame {
       canvas.clipPath(topPath);
       canvas.drawRect(
         Rect.fromLTWH(rect.left - 8, rect.top, rect.width + 16, 7),
-        Paint()..color = const Color(0xFFB7E1C2),
+        Paint()..color = const Color(0xFFE3B66F),
       );
-      final railSeam = Paint()
-        ..color = const Color(0x55436563)
-        ..strokeWidth = 1.4;
-      for (var x = rect.left + 10; x < rect.right; x += 18) {
-        canvas.drawLine(
-          Offset(x, rect.top + 8),
-          Offset(x, rect.bottom - 2),
-          railSeam,
-        );
+      final plankSeam = Paint()
+        ..color = const Color(0x663B6C68)
+        ..strokeWidth = 1.25
+        ..strokeCap = StrokeCap.round;
+      if (rect.width >= rect.height) {
+        for (var x = rect.left + 14; x < rect.right; x += 20) {
+          canvas.drawLine(
+            Offset(x, rect.top + 8),
+            Offset(x, rect.bottom - 2),
+            plankSeam,
+          );
+        }
+      } else {
+        for (var y = rect.top + 16; y < rect.bottom; y += 20) {
+          canvas.drawLine(
+            Offset(rect.left + 2, y),
+            Offset(rect.right - 2, y),
+            plankSeam,
+          );
+        }
       }
       canvas.restore();
-      final rivet = Paint()..color = const Color(0xB8E6F0D2);
-      canvas.drawCircle(rect.topLeft.translate(8, 8), 2.1, rivet);
-      canvas.drawCircle(rect.topRight.translate(-8, 8), 2.1, rivet);
+      final post = Paint()..color = const Color(0xFFF2D18C);
+      if (rect.width >= rect.height) {
+        canvas.drawCircle(rect.topLeft.translate(8, 8), 2.5, post);
+        canvas.drawCircle(rect.topRight.translate(-8, 8), 2.5, post);
+      } else {
+        canvas.drawCircle(rect.topLeft.translate(5, 8), 2.5, post);
+        canvas.drawCircle(rect.bottomLeft.translate(5, -8), 2.5, post);
+      }
     }
     if (entity.type == EntityType.crate) {
       final line = Paint()
@@ -1973,7 +2007,7 @@ class PropertyShotGame extends FlameGame {
       case EntityType.hole:
         return const Color(0xFF1D1D1D);
       case EntityType.wall:
-        return const Color(0xFF3D8585);
+        return const Color(0xFF5A9187);
       case EntityType.crate:
         return const Color(0xFFB7854B);
       case EntityType.bumper:

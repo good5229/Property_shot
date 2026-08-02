@@ -1069,6 +1069,50 @@ class _GameplayBackdropPainter extends CustomPainter {
       ..close();
     canvas.drawPath(shore, sand);
 
+    final shoreEdge = Path()
+      ..moveTo(-20, size.height * 0.8)
+      ..quadraticBezierTo(
+        size.width * 0.3,
+        size.height * 0.72,
+        size.width * 0.58,
+        size.height * 0.81,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.84,
+        size.height * 0.9,
+        size.width + 20,
+        size.height * 0.76,
+      );
+    canvas.drawPath(
+      shoreEdge,
+      Paint()
+        ..color = const Color(0x559E743B)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2,
+    );
+
+    final sandTexture = Paint()
+      ..color = const Color(0x1F9E743B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    for (var index = 0; index < 4; index++) {
+      final y = size.height * (0.84 + index * 0.045);
+      canvas.drawArc(
+        Rect.fromLTWH(size.width * 0.08, y, size.width * 0.18, 10),
+        math.pi * 0.12,
+        math.pi * 0.72,
+        false,
+        sandTexture,
+      );
+      canvas.drawArc(
+        Rect.fromLTWH(size.width * 0.68, y + 5, size.width * 0.2, 10),
+        math.pi * 0.12,
+        math.pi * 0.72,
+        false,
+        sandTexture,
+      );
+    }
+
     final wave = Paint()
       ..color = const Color(0x664EAAA5)
       ..style = PaintingStyle.stroke
@@ -1091,13 +1135,30 @@ class _GameplayBackdropPainter extends CustomPainter {
       );
     }
 
-    final shell = Paint()..color = const Color(0x66EF765E);
+    final shell = Paint()
+      ..color = const Color(0x99EF765E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
     for (final point in [
       Offset(size.width * 0.12, size.height * 0.9),
       Offset(size.width * 0.82, size.height * 0.93),
       Offset(size.width * 0.68, size.height * 0.86),
     ]) {
-      canvas.drawCircle(point, 3, shell);
+      canvas.drawArc(
+        Rect.fromCenter(center: point, width: 16, height: 10),
+        math.pi,
+        math.pi,
+        false,
+        shell,
+      );
+      for (var ray = -1; ray <= 1; ray++) {
+        canvas.drawLine(
+          point.translate(ray * 3.5, 0),
+          point.translate(ray * 2.2, -4),
+          shell,
+        );
+      }
     }
   }
 
@@ -1493,6 +1554,14 @@ String _levelObjective(int levelIndex) {
   };
 }
 
+String _compactLevelObjective(int levelIndex) {
+  return switch (levelIndex) {
+    0 => '무거움으로 상자를 밀어 홀로 보내기',
+    1 => '탄성으로 벽에 반사해 홀로 보내기',
+    _ => '스위치와 문을 열어 홀로 가기',
+  };
+}
+
 int _starsForShot(int shotCount, int parShots) {
   if (shotCount <= parShots) {
     return 3;
@@ -1521,6 +1590,26 @@ String? _levelProgressHint(GameState state) {
     return '점착 공이 고정되었습니다. 다음 공에 무거움을 옮기거나 다른 길을 찾아보세요.';
   }
   return '무거운 공으로 스위치를 누르고 열린 문을 지나 홀로 가 보세요.';
+}
+
+String? _compactLevelProgressHint(GameState state) {
+  if (state.levelIndex != 2) {
+    return null;
+  }
+  final hasAnchor = state.entities.any(
+    (entity) =>
+        entity.type == EntityType.ball &&
+        entity.visualState == 'stuck' &&
+        !entity.movable,
+  );
+  if (!hasAnchor) {
+    return '무거움은 스위치 · 점착은 공 고정';
+  }
+  final hasHeavy = state.activeBall.traits.contains(TraitType.heavy);
+  if (!hasHeavy) {
+    return '고정한 공을 발판으로 무거움 옮기기';
+  }
+  return '무거운 공으로 스위치 → 열린 문 → 홀';
 }
 
 String _levelIntroMessage(int levelIndex) {
@@ -1615,6 +1704,7 @@ class _Hud extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progressHint = _levelProgressHint(state);
+    final compactProgressHint = _compactLevelProgressHint(state);
     if (compact) {
       return Container(
         key: const Key('compact_hud'),
@@ -1705,21 +1795,21 @@ class _Hud extends StatelessWidget {
                 ),
               ),
             Text(
-              _levelObjective(state.levelIndex),
+              _compactLevelObjective(state.levelIndex),
               key: const Key('compact_objective'),
-              maxLines: 2,
-              softWrap: true,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (progressHint != null)
+            if (compactProgressHint != null)
               Text(
-                progressHint,
+                compactProgressHint,
                 key: const Key('level_progress'),
-                maxLines: 2,
-                softWrap: true,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: const Color(0xFF2F8A62),
                   fontWeight: FontWeight.w700,
