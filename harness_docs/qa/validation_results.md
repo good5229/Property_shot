@@ -500,3 +500,23 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 | iOS | Xcode 컴파일 완료, Development Team·Provisioning Profile 부족으로 배포 단계 실패 |
 
 오디오 큐는 게임 상태·물리·햅틱을 기다리게 하지 않으며, 브라우저 자동 재생 정책이나 실제 iOS 음량·햅틱 품질은 별도 검증 대상이다.
+
+## 2026-08-02 선택형 추가 도전 회귀
+
+| 항목 | 결과 |
+|---|---|
+| 추가 도전 | 1단계 3회 이하, 2단계 젤리 충돌, 3단계 스위치 작동 |
+| 성공 조건과의 관계 | 선택형 기록이며 본 목표 성공·다음 단계 이동을 제한하지 않음 |
+| 저장 | `SharedPreferences` 단계별 기록, 재실행 후 결과 팝업 표시 |
+| 단위 테스트 | 조건 경계 3개 통과 |
+| 위젯 테스트 | 저장된 추가 도전 달성 상태 팝업 표시 통과 |
+| 전체 회귀 | `flutter test` 153개 통과 |
+| 정적 분석 | `flutter analyze` 통과 |
+| Web release | 되감기 보정 포함 빌드 통과, 기존 PID 74405 종료 후 PID 84151로 교체 |
+| HTTP | 루트·`main.dart.js` 모두 200 |
+| Chromium 콘솔 | 390×844·768×1024 모두 오류 0건 |
+| 프레임 시간 | idle·발사 평균 약 16.67ms, p95 최대 16.8ms, 20ms 초과 0% |
+| 캡처 | `390x844-bonus-goal-release-home.png`, `390x844-bonus-goal-release-play.png`, `768x1024-bonus-goal-release-home.png`, `768x1024-bonus-goal-release-play.png` |
+| iOS | Xcode 컴파일 완료, Development Team·Provisioning Profile 부족으로 배포 단계 실패 |
+
+추가 도전은 로컬 진행 피드백이며 온라인 리더보드나 사용자 성과로 해석하지 않는다. 독립 QA가 발견한 되감기 후 누적 플래그 잔존 P1은 발사 전 상태 이력 복원으로 해결했고, 관련 회귀를 추가했다. Web 수치는 실제 iPhone/iPad GPU·메모리·터치·햅틱 결과가 아니다.

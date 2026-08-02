@@ -1,5 +1,5 @@
 {
-  "measured_at": "2026-08-02T13:06:01.774957+00:00",
+  "measured_at": "2026-08-02T13:31:13.951900+00:00",
   "url": "http://127.0.0.1:8080/",
   "runtime": "Chromium headless Web release proxy; not a physical-device result",
   "records": [
@@ -19,13 +19,13 @@
       "console_errors": [],
       "idle": {
         "samples": 108,
-        "mean_ms": 16.667,
-        "p95_ms": 16.7,
+        "mean_ms": 16.666,
+        "p95_ms": 16.8,
         "max_ms": 16.8,
         "over_20ms_ratio": 0.0
       },
       "shot": {
-        "samples": 150,
+        "samples": 151,
         "mean_ms": 16.666,
         "p95_ms": 16.7,
         "max_ms": 16.8,
@@ -48,14 +48,14 @@
       "console_errors": [],
       "idle": {
         "samples": 108,
-        "mean_ms": 16.666,
-        "p95_ms": 16.8,
+        "mean_ms": 16.667,
+        "p95_ms": 16.7,
         "max_ms": 16.8,
         "over_20ms_ratio": 0.0
       },
       "shot": {
         "samples": 150,
-        "mean_ms": 16.667,
+        "mean_ms": 16.666,
         "p95_ms": 16.7,
         "max_ms": 16.8,
         "over_20ms_ratio": 0.0

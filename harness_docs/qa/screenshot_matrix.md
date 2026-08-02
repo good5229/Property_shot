@@ -126,3 +126,10 @@
 - `768x1024-feedback-queue-release-home.png`, `768x1024-feedback-queue-release-play.png`는 같은 번들의 넓은 세로 뷰포트 캡처다.
 - 두 해상도 모두 한글 HUD·해변 보드·공·홀·돌·상자의 위치와 보드 경계를 확인했으며 브라우저 콘솔 오류는 0건이었다.
 - 이 캡처는 실제 기기 사운드·햅틱·GPU·메모리 측정이 아니다.
+
+## 2026-08-02 선택형 추가 도전 포함 최신 캡처
+
+- `390x844-bonus-goal-release-home.png`, `390x844-bonus-goal-release-play.png`는 단계별 추가 도전 기록 코드가 포함된 최신 Web release의 모바일 캡처다.
+- `768x1024-bonus-goal-release-home.png`, `768x1024-bonus-goal-release-play.png`는 같은 번들의 넓은 세로 뷰포트 캡처다.
+- 플레이 캡처에서 한글 HUD, 실제 돌·상자 래스터, 홀·공·발사 조작 영역과 보드 경계를 확인했다. 결과 팝업의 저장 상태 표시는 `클리어 팝업은 로컬에 저장된 추가 도전 달성을 표시한다` 위젯 회귀로 보호한다.
+- 두 해상도 모두 브라우저 콘솔 오류 0건이다. Chromium Web 보조 증거이며 실제 iPhone/iPad 렌더링·성능·햅틱 증거는 아니다.
