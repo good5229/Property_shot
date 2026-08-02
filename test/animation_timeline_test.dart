@@ -20,9 +20,12 @@ void main() {
     for (final framesPerSecond in [30, 60, 120]) {
       var finished = 0;
       final impactKeys = <String>{};
+      final moveTriggerIndices = <int>[];
       final game = PropertyShotGame(
         result.state,
         onAnimationFinished: () => finished += 1,
+        onAnimationImpact: (move) =>
+            moveTriggerIndices.add(move.triggerPathIndex),
         onShotImpact: (impact) {
           impactKeys.add('${impact.entityId}:${impact.pathIndex}');
         },
@@ -44,6 +47,12 @@ void main() {
 
       expect(finished, 1, reason: '$framesPerSecond Hz에서 완료되지 않음');
       expect(impactKeys.length, result.impacts.length);
+      expect(moveTriggerIndices.length, result.moves.length);
+      expect(
+        moveTriggerIndices,
+        [...moveTriggerIndices]..sort(),
+        reason: '$framesPerSecond Hz에서 연쇄 이동 이벤트 순서가 뒤섞임',
+      );
       game.update(1 / framesPerSecond);
       expect(finished, 1, reason: '$framesPerSecond Hz에서 완료 콜백 중복');
     }
