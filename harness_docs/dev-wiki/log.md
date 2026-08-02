@@ -1401,3 +1401,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-02: 최종 통합 리포트를 재실행해 고유 성공 입력 기준 민감도를 1단계 37.76%·2단계 43.57%·3단계 36.52%로 확정했다. 전체 Flutter 회귀 156개·정적 분석 통과 후 기존 PID 2452를 종료하고 최신 Web release PID 28229로 교체했으며 루트·번들 HTTP 200과 Chromium 성능을 재확인한다.
 2026-08-02: 최신 통합 코드 기준 iOS 빌드를 다시 확인했다. Xcode 컴파일은 완료됐고 Development Team·Provisioning Profile 부족으로 배포 서명 단계에서 실패했으며, 코드 컴파일 오류가 아님을 최종 QA 문서에 남긴다.
 2026-08-02: 최종 문서 감사를 통해 `ai_usage_summary.md`의 과거 105개 테스트 수치와 게임성 전후 문서의 이전 복사 충전 표기가 현재 제품 상태와 어긋난 것을 확인했다. 최신 156개 회귀·결정론적 분석·스테이지 3 보상형 복제 코어 기준으로 최종 문서를 동기화한다.
+2026-08-02: 문서 동기화 후 현재 커밋에서 `flutter test` 156개·`flutter build web --release`를 재실행해 통과했다. 기존 PID 28229를 종료하고 최신 Web release PID 55374로 교체했으며 390×844·768×1024 Chromium 콘솔 오류 0건, 평균 16.665~16.667ms, p95 최대 16.7ms를 확인한다.

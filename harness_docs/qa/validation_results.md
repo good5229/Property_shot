@@ -610,10 +610,10 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 | 전체 회귀 | `flutter test` 156개 통과 |
 | 정적 분석 | `flutter analyze` 통과, 이슈 없음 |
 | 포맷 | `dart format` 7개 대상, 변경 없음 |
-| 서버 교체 | 기존 PID 2452 종료 후 최신 Web release PID 28229 시작 |
+| 서버 교체 | 기존 PID 28229 종료 후 최신 Web release PID 55374 시작 |
 | HTTP | 루트·`main.dart.js` HTTP 200 |
 | Chromium 콘솔 | 390×844·768×1024 오류 0건 |
-| 프레임 시간 | 390×844 idle·발사 평균 16.666ms, 768×1024 idle 16.665ms·발사 16.667ms, p95 최대 16.8ms, 20ms 초과 0% |
+| 프레임 시간 | 390×844 idle·발사 평균 16.666ms, 768×1024 idle 16.667ms·발사 16.665ms, p95 최대 16.7ms, 20ms 초과 0% |
 | 캡처 | `390x844-stage-route-analysis-final.png`, `768x1024-stage-route-analysis-final.png` |
 | iOS | Xcode 컴파일 완료, Development Team·Provisioning Profile 부족으로 배포 단계 실패 |
 
