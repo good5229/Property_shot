@@ -5,6 +5,7 @@ import '../domain/geometry.dart';
 import '../domain/shot_input.dart';
 import '../domain/trait.dart';
 import '../levels/levels.dart';
+import 'multi_shot_analyzer.dart';
 import '../simulation/shot_resolver.dart';
 import '../simulation/trait_resolver.dart';
 
@@ -20,6 +21,19 @@ class DifficultyMetrics {
     required this.largestConnectedRegion,
     required this.minimumShots,
     required this.recommendedParShots,
+    required this.angleStepDegrees,
+    required this.powerStepPercent,
+    required this.uniqueSuccessfulInputs,
+    required this.intendedStrategyId,
+    required this.dominantStrategyId,
+    required this.dominantStrategy,
+    required this.dominantStrategyShare,
+    required this.alternativeStrategyCount,
+    required this.intendedStrategyMatchesDominant,
+    required this.accidentalSuccessInputs,
+    required this.accidentalSuccessRate,
+    required this.inputPrecisionSensitivity,
+    required this.multiShotMetrics,
     required this.successfulStrategies,
     required this.copylessSuccess,
     required this.strategyMetrics,
@@ -35,6 +49,19 @@ class DifficultyMetrics {
   final int largestConnectedRegion;
   final int? minimumShots;
   final int? recommendedParShots;
+  final int angleStepDegrees;
+  final double powerStepPercent;
+  final int uniqueSuccessfulInputs;
+  final String? intendedStrategyId;
+  final String? dominantStrategyId;
+  final String? dominantStrategy;
+  final double dominantStrategyShare;
+  final int alternativeStrategyCount;
+  final bool intendedStrategyMatchesDominant;
+  final int accidentalSuccessInputs;
+  final double accidentalSuccessRate;
+  final double inputPrecisionSensitivity;
+  final MultiShotDifficultyMetrics? multiShotMetrics;
   final List<String> successfulStrategies;
   final bool copylessSuccess;
   final List<StrategyDifficultyMetrics> strategyMetrics;
@@ -42,6 +69,7 @@ class DifficultyMetrics {
 
 class StrategyDifficultyMetrics {
   const StrategyDifficultyMetrics({
+    required this.id,
     required this.label,
     required this.totalInputs,
     required this.successInputs,
@@ -50,8 +78,10 @@ class StrategyDifficultyMetrics {
     required this.widestPowerRange,
     required this.largestConnectedRegion,
     required this.minimumShots,
+    required this.inputPrecisionSensitivity,
   });
 
+  final String id;
   final String label;
   final int totalInputs;
   final int successInputs;
@@ -60,31 +90,40 @@ class StrategyDifficultyMetrics {
   final double widestPowerRange;
   final int largestConnectedRegion;
   final int? minimumShots;
+  final double inputPrecisionSensitivity;
 }
 
 class DifficultyAnalyzer {
   const DifficultyAnalyzer({
     this.angleStepDegrees = 10,
     this.powerSteps = 20,
+    this.acceptedStrategyIdsOverride,
+    this.multiShotAnalyzer = const MultiShotDifficultyAnalyzer(),
     this.shotResolver = const ShotResolver(),
     this.traitResolver = const TraitResolver(),
   });
 
   final int angleStepDegrees;
   final int powerSteps;
+  final Set<String>? acceptedStrategyIdsOverride;
+  final MultiShotDifficultyAnalyzer multiShotAnalyzer;
   final ShotResolver shotResolver;
   final TraitResolver traitResolver;
 
-  List<DifficultyMetrics> analyzeAll() {
+  List<DifficultyMetrics> analyzeAll({bool includeMultiShot = false}) {
     return [
-      for (var index = 0; index < levels.length; index++) analyzeLevel(index),
+      for (var index = 0; index < levels.length; index++)
+        analyzeLevel(index, includeMultiShot: includeMultiShot),
     ];
   }
 
-  DifficultyMetrics analyzeLevel(int levelIndex) {
+  DifficultyMetrics analyzeLevel(
+    int levelIndex, {
+    bool includeMultiShot = false,
+  }) {
     final level = levels[levelIndex];
     final strategies = <_Strategy>[
-      _Strategy('무속성', level.createState(levelIndex)),
+      _Strategy('none', '무속성', level.createState(levelIndex)),
     ];
     for (final source in level.createState(levelIndex).traitSources) {
       final selected = traitResolver.selectSource(
@@ -93,6 +132,7 @@ class DifficultyAnalyzer {
       );
       strategies.add(
         _Strategy(
+          source.id,
           '${source.id} (${source.traits.first.label})',
           traitResolver.transferSelectedTrait(selected),
         ),
@@ -105,6 +145,8 @@ class DifficultyAnalyzer {
     var widestAngle = 0.0;
     var widestPower = 0.0;
     var largestRegion = 0;
+    var accidentalSuccessInputs = 0;
+    final successfulCellsByStrategy = <String, Set<_InputCell>>{};
     final successfulStrategies = <String>[];
     final strategyMetrics = <StrategyDifficultyMetrics>[];
     var copylessSuccess = false;
@@ -149,6 +191,7 @@ class DifficultyAnalyzer {
         continue;
       }
       successfulStrategies.add(strategy.label);
+      successfulCellsByStrategy[strategy.id] = successes;
       final strategyWidestAngle =
           _widestCircularRun(successes, _angleCount) * angleStepDegrees;
       final strategyWidestPower = _widestPowerRun(successes) / powerSteps;
@@ -156,8 +199,22 @@ class DifficultyAnalyzer {
         successes,
         _angleCount,
       );
+      final strategyPrecision = _precisionSensitivity(
+        successes,
+        angleCount: _angleCount,
+        powerSteps: powerSteps,
+      );
+      final acceptedStrategyIds =
+          acceptedStrategyIdsOverride ?? level.acceptedStrategyIds;
+      final accepted =
+          acceptedStrategyIds.isEmpty ||
+          acceptedStrategyIds.contains(strategy.id);
+      if (!accepted) {
+        accidentalSuccessInputs += strategySuccessInputs;
+      }
       strategyMetrics.add(
         StrategyDifficultyMetrics(
+          id: strategy.id,
           label: strategy.label,
           totalInputs: _angleCount * powerSteps,
           successInputs: strategySuccessInputs,
@@ -166,6 +223,7 @@ class DifficultyAnalyzer {
           widestPowerRange: strategyWidestPower,
           largestConnectedRegion: strategyLargestRegion,
           minimumShots: strategyMinimumShots,
+          inputPrecisionSensitivity: strategyPrecision.ratio,
         ),
       );
       widestAngle = math.max(
@@ -175,6 +233,23 @@ class DifficultyAnalyzer {
       widestPower = math.max(widestPower, strategyWidestPower * powerSteps);
       largestRegion = math.max(largestRegion, strategyLargestRegion);
     }
+
+    final uniqueSuccessfulCells = <_InputCell>{};
+    for (final cells in successfulCellsByStrategy.values) {
+      uniqueSuccessfulCells.addAll(cells);
+    }
+    final dominantMetrics = strategyMetrics.isEmpty
+        ? null
+        : (List<StrategyDifficultyMetrics>.of(strategyMetrics)..sort(
+                (left, right) =>
+                    right.successInputs.compareTo(left.successInputs),
+              ))
+              .first;
+    final dominantStrategyId = dominantMetrics?.id;
+    final dominantStrategy = dominantMetrics?.label;
+    final dominantStrategyCells = dominantStrategyId == null
+        ? const <_InputCell>{}
+        : successfulCellsByStrategy[dominantStrategyId] ?? const <_InputCell>{};
 
     return DifficultyMetrics(
       levelIndex: levelIndex,
@@ -190,6 +265,34 @@ class DifficultyAnalyzer {
         minimumShots: minimumShots,
         successRate: totalInputs == 0 ? 0 : successInputs / totalInputs,
       ),
+      angleStepDegrees: angleStepDegrees,
+      powerStepPercent: 1 / powerSteps,
+      uniqueSuccessfulInputs: uniqueSuccessfulCells.length,
+      intendedStrategyId: level.intendedStrategyId,
+      dominantStrategyId: dominantStrategyId,
+      dominantStrategy: dominantStrategy,
+      dominantStrategyShare: uniqueSuccessfulCells.isEmpty
+          ? 0
+          : dominantStrategyCells.length / uniqueSuccessfulCells.length,
+      alternativeStrategyCount: math.max(
+        0,
+        strategyMetrics.length - (dominantStrategyId == null ? 0 : 1),
+      ),
+      intendedStrategyMatchesDominant:
+          level.intendedStrategyId != null &&
+          level.intendedStrategyId == dominantStrategyId,
+      accidentalSuccessInputs: accidentalSuccessInputs,
+      accidentalSuccessRate: totalInputs == 0
+          ? 0
+          : accidentalSuccessInputs / totalInputs,
+      inputPrecisionSensitivity: _precisionSensitivity(
+        uniqueSuccessfulCells,
+        angleCount: _angleCount,
+        powerSteps: powerSteps,
+      ).ratio,
+      multiShotMetrics: includeMultiShot
+          ? multiShotAnalyzer.analyzeLevel(levelIndex)
+          : null,
       successfulStrategies: successfulStrategies,
       copylessSuccess: copylessSuccess,
       strategyMetrics: strategyMetrics,
@@ -213,10 +316,20 @@ int? recommendedParShotsFor({
 }
 
 class _Strategy {
-  const _Strategy(this.label, this.state);
+  const _Strategy(this.id, this.label, this.state);
 
+  final String id;
   final String label;
   final GameState state;
+}
+
+class _PrecisionMeasurement {
+  const _PrecisionMeasurement(this.boundaryCount, this.neighborCount);
+
+  final int boundaryCount;
+  final int neighborCount;
+
+  double get ratio => neighborCount == 0 ? 0 : boundaryCount / neighborCount;
 }
 
 class _InputCell {
@@ -307,4 +420,44 @@ int _largestConnectedRegion(Set<_InputCell> cells, int angleCount) {
     largest = math.max(largest, size);
   }
   return largest;
+}
+
+_PrecisionMeasurement _precisionSensitivity(
+  Set<_InputCell> cells, {
+  required int angleCount,
+  required int powerSteps,
+}) {
+  var boundaryCount = 0;
+  var neighborCount = 0;
+  for (final cell in cells) {
+    final neighbors =
+        [
+          _InputCell(
+            degreeIndex: (cell.degreeIndex + 1) % angleCount,
+            powerStep: cell.powerStep,
+          ),
+          _InputCell(
+            degreeIndex: (cell.degreeIndex - 1 + angleCount) % angleCount,
+            powerStep: cell.powerStep,
+          ),
+          _InputCell(
+            degreeIndex: cell.degreeIndex,
+            powerStep: cell.powerStep + 1,
+          ),
+          _InputCell(
+            degreeIndex: cell.degreeIndex,
+            powerStep: cell.powerStep - 1,
+          ),
+        ].where(
+          (neighbor) =>
+              neighbor.powerStep >= 1 && neighbor.powerStep <= powerSteps,
+        );
+    for (final neighbor in neighbors) {
+      neighborCount++;
+      if (!cells.contains(neighbor)) {
+        boundaryCount++;
+      }
+    }
+  }
+  return _PrecisionMeasurement(boundaryCount, neighborCount);
 }

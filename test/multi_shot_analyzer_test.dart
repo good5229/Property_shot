@@ -1,36 +1,40 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:property_shot/game/analysis/multi_shot_analyzer.dart';
+import 'package:property_shot/game/analysis/difficulty_analyzer.dart';
 
 void main() {
   test('이전 공 상태를 보존한 다중 샷 분석은 성공 순서와 최소 샷을 기록한다', () {
-    const analyzer = MultiShotDifficultyAnalyzer(
-      angleStepDegrees: 20,
-      powerSteps: 5,
-      maxShots: 2,
-    );
-    final metrics = analyzer.analyzeLevel(0);
+    const analyzer = DifficultyAnalyzer();
+    final metrics = analyzer.analyzeLevel(0, includeMultiShot: true);
+    final multiShot = metrics.multiShotMetrics!;
 
-    expect(metrics.totalSequences, greaterThan(0));
-    expect(metrics.successfulSequences, greaterThan(0));
-    expect(metrics.minimumShots, lessThanOrEqualTo(2));
-    expect(metrics.copylessSuccess, isTrue);
+    expect(multiShot.totalSequences, greaterThan(0));
+    expect(multiShot.successfulSequences, greaterThan(0));
+    expect(multiShot.minimumShots, lessThanOrEqualTo(2));
+    expect(multiShot.copylessSuccess, isTrue);
+    expect(multiShot.dominantStrategy, isNotNull);
+    expect(multiShot.dominantStrategyShare, inInclusiveRange(0, 1));
+    expect(multiShot.alternativeStrategyCount, greaterThanOrEqualTo(0));
     expect(
-      metrics.strategyMetrics.any((item) => item.label.contains('복제')),
+      multiShot.strategyMetrics.any((item) => item.label.contains('복제')),
       isTrue,
     );
-    expect(metrics.examples.every((plan) => plan.shots.length <= 2), isTrue);
+    expect(multiShot.examples.every((plan) => plan.shots.length <= 2), isTrue);
     expect(
-      metrics.examples.every(
+      multiShot.examples.every(
         (plan) => plan.actions.length == plan.shots.length,
       ),
       isTrue,
     );
     expect(
-      metrics.examples.every((plan) => plan.events.length == plan.shots.length),
+      multiShot.examples.every(
+        (plan) => plan.events.length == plan.shots.length,
+      ),
       isTrue,
     );
 
-    final thirdStage = analyzer.analyzeLevel(2);
+    final thirdStage = analyzer
+        .analyzeLevel(2, includeMultiShot: true)
+        .multiShotMetrics!;
     final stickyFollowUp = thirdStage.strategyMetrics
         .expand((strategy) => strategy.examples)
         .where((plan) => plan.actions.length == 2)

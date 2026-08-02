@@ -12,6 +12,8 @@ final levels = <LevelDefinition>[
     copyCharges: 0,
     parShots: 2,
     bonusGoal: '3회 이하로 상자와 홀의 길을 완성하세요.',
+    intendedStrategyId: 'anvil',
+    acceptedStrategyIds: {'none', 'anvil'},
     entities: const [
       EntityState(
         id: 'hole',
@@ -62,6 +64,8 @@ final levels = <LevelDefinition>[
     copyCharges: 0,
     parShots: 2,
     bonusGoal: '젤리와 한 번 부딪힌 뒤 홀에 넣어 보세요.',
+    intendedStrategyId: 'jelly',
+    acceptedStrategyIds: {'none', 'jelly'},
     entities: const [
       EntityState(
         id: 'hole',
@@ -118,6 +122,8 @@ final levels = <LevelDefinition>[
     parShots: 3,
     bonusGoal: '스위치를 눌러 문을 열고 홀에 넣어 보세요.',
     copyCoreReward: 1,
+    intendedStrategyId: 'steel',
+    acceptedStrategyIds: {'none', 'steel', 'glue'},
     entities: const [
       EntityState(
         id: 'hole',

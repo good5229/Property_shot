@@ -49,6 +49,7 @@ class MultiShotDifficultyAnalyzer {
       ];
       var strategyTotal = 0;
       var strategySuccess = 0;
+      var strategyCopylessSuccess = 0;
       var strategyMinimum = null as int?;
       final strategyExamples = <ShotSequencePlan>[];
 
@@ -78,8 +79,12 @@ class MultiShotDifficultyAnalyzer {
                 minimumShots = minimumShots == null
                     ? depth
                     : math.min(minimumShots, depth);
-                if (!strategy.label.contains('복제')) {
+                final sequenceCopyless = actionSequence.every(
+                  (action) => !action.contains('복제'),
+                );
+                if (sequenceCopyless) {
                   copylessSuccess = true;
+                  strategyCopylessSuccess++;
                 }
                 if (strategyExamples.length < 3) {
                   strategyExamples.add(
@@ -121,11 +126,22 @@ class MultiShotDifficultyAnalyzer {
           label: strategy.label,
           totalSequences: strategyTotal,
           successfulSequences: strategySuccess,
+          copylessSuccessfulSequences: strategyCopylessSuccess,
           minimumShots: strategyMinimum,
           examples: strategyExamples,
         ),
       );
     }
+
+    final dominantStrategyMetrics = strategyMetrics.isEmpty
+        ? null
+        : (List<SequenceStrategyMetrics>.of(strategyMetrics)..sort(
+                (left, right) => right.successfulSequences.compareTo(
+                  left.successfulSequences,
+                ),
+              ))
+              .first;
+    final dominantStrategy = dominantStrategyMetrics?.label;
 
     return MultiShotDifficultyMetrics(
       levelIndex: levelIndex,
@@ -135,6 +151,15 @@ class MultiShotDifficultyAnalyzer {
       successfulSequences: successfulSequences,
       minimumShots: minimumShots,
       copylessSuccess: copylessSuccess,
+      dominantStrategy: dominantStrategy,
+      dominantStrategyShare: successfulSequences == 0
+          ? 0
+          : (dominantStrategyMetrics?.successfulSequences ?? 0) /
+                successfulSequences,
+      alternativeStrategyCount: math.max(
+        0,
+        strategyMetrics.length - (dominantStrategy == null ? 0 : 1),
+      ),
       strategyMetrics: strategyMetrics,
       examples: examples,
     );
@@ -210,6 +235,9 @@ class MultiShotDifficultyMetrics {
     required this.successfulSequences,
     required this.minimumShots,
     required this.copylessSuccess,
+    required this.dominantStrategy,
+    required this.dominantStrategyShare,
+    required this.alternativeStrategyCount,
     required this.strategyMetrics,
     required this.examples,
   });
@@ -221,6 +249,9 @@ class MultiShotDifficultyMetrics {
   final int successfulSequences;
   final int? minimumShots;
   final bool copylessSuccess;
+  final String? dominantStrategy;
+  final double dominantStrategyShare;
+  final int alternativeStrategyCount;
   final List<SequenceStrategyMetrics> strategyMetrics;
   final List<ShotSequencePlan> examples;
 }
@@ -230,6 +261,7 @@ class SequenceStrategyMetrics {
     required this.label,
     required this.totalSequences,
     required this.successfulSequences,
+    required this.copylessSuccessfulSequences,
     required this.minimumShots,
     required this.examples,
   });
@@ -237,6 +269,7 @@ class SequenceStrategyMetrics {
   final String label;
   final int totalSequences;
   final int successfulSequences;
+  final int copylessSuccessfulSequences;
   final int? minimumShots;
   final List<ShotSequencePlan> examples;
 }

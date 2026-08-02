@@ -8,13 +8,11 @@ void main() {
     final metrics = analyzer.analyzeAll();
 
     expect(metrics, hasLength(3));
-    expect(
-      metrics.map((result) => result.recommendedParShots),
-      [2, 2, 3],
-    );
+    expect(metrics.map((result) => result.recommendedParShots), [2, 2, 3]);
     expect(
       metrics.asMap().entries.map(
-        (entry) => levels[entry.key].parShots == entry.value.recommendedParShots,
+        (entry) =>
+            levels[entry.key].parShots == entry.value.recommendedParShots,
       ),
       everyElement(isTrue),
     );
@@ -28,6 +26,23 @@ void main() {
       expect(result.minimumShots, 1);
       expect(result.successfulStrategies, isNotEmpty);
       expect(result.strategyMetrics, isNotEmpty);
+      expect(result.intendedStrategyId, isNotNull);
+      expect(result.dominantStrategyId, isNotNull);
+      expect(result.dominantStrategy, isNotNull);
+      expect(result.dominantStrategyShare, greaterThan(0));
+      expect(result.dominantStrategyShare, lessThanOrEqualTo(1));
+      expect(result.alternativeStrategyCount, greaterThanOrEqualTo(0));
+      expect(result.intendedStrategyMatchesDominant, isTrue);
+      expect(result.uniqueSuccessfulInputs, greaterThan(0));
+      expect(result.accidentalSuccessInputs, 0);
+      expect(result.accidentalSuccessRate, 0);
+      expect(result.inputPrecisionSensitivity, greaterThan(0));
+      expect(
+        result.strategyMetrics.every(
+          (strategy) => strategy.inputPrecisionSensitivity >= 0,
+        ),
+        isTrue,
+      );
     }
   });
 
@@ -39,18 +54,33 @@ void main() {
   });
 
   test('성공률이 낮은 단계에는 분석 기반 파 여유를 더한다', () {
-    expect(
-      recommendedParShotsFor(minimumShots: 1, successRate: 0.06),
-      2,
-    );
-    expect(
-      recommendedParShotsFor(minimumShots: 1, successRate: 0.03),
-      3,
-    );
+    expect(recommendedParShotsFor(minimumShots: 1, successRate: 0.06), 2);
+    expect(recommendedParShotsFor(minimumShots: 1, successRate: 0.03), 3);
     expect(
       recommendedParShotsFor(minimumShots: null, successRate: 0.03),
       isNull,
     );
+  });
+
+  test('승인되지 않은 전략은 우연 경로 후보로 분리한다', () {
+    const analyzer = DifficultyAnalyzer();
+    final metrics = analyzer.analyzeLevel(0);
+
+    expect(metrics.successfulStrategies, contains('무속성'));
+    expect(metrics.successfulStrategies, contains('anvil (무거움)'));
+    expect(metrics.accidentalSuccessInputs, 0);
+    expect(metrics.dominantStrategy, 'anvil (무거움)');
+    expect(metrics.alternativeStrategyCount, 1);
+    expect(metrics.uniqueSuccessfulInputs, 73);
+    expect(metrics.dominantStrategyShare, 1);
+  });
+
+  test('QA 허용 목록 재정의가 우연 경로 후보를 실제로 드러낸다', () {
+    const analyzer = DifficultyAnalyzer(acceptedStrategyIdsOverride: {'none'});
+    final metrics = analyzer.analyzeLevel(0);
+
+    expect(metrics.accidentalSuccessInputs, 73);
+    expect(metrics.accidentalSuccessRate, closeTo(73 / 1440, 0.000001));
   });
 
   test('3단계 고해상도 분석은 무거움 없이도 성공하는 전략을 집계한다', () {

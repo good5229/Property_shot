@@ -11,6 +11,8 @@ class LevelDefinition {
     this.parShots = 3,
     this.bonusGoal = '복사 없이 클리어',
     this.copyCoreReward = 0,
+    this.intendedStrategyId,
+    this.acceptedStrategyIds = const {},
   });
 
   final String name;
@@ -20,6 +22,8 @@ class LevelDefinition {
   final int parShots;
   final String bonusGoal;
   final int copyCoreReward;
+  final String? intendedStrategyId;
+  final Set<String> acceptedStrategyIds;
 
   GameState createState(
     int index, {
