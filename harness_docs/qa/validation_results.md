@@ -202,3 +202,25 @@
 이번 반복은 물리 좌표·히트박스·충돌 계산을 변경하지 않고 Canvas 도형에 공통 왼쪽 위 광원, 하단 음영, 상단·하단 에지 마감을 낮은 불투명도로 추가했다. 390px 플레이 캡처에서 벽의 상단 광원과 하단 접지감이 기존 돌·상자 래스터의 압출·윤곽 처리와 함께 보이며, HUD 한글 문장과 보드 경계가 겹치지 않는다.
 
 Playwright WebKit 런타임이 설치되어 있지 않아 모바일 캡처는 Chromium 390×844 뷰포트로 대체했다. 실제 iPhone·iPad 터치, 60fps·GPU·메모리, 햅틱·사운드 체감과 실제 사용자 이해도는 여전히 검증하지 않았다.
+
+## 2026-08-02 래스터 표면 마감 반복
+
+| 항목 | 결과 |
+|---|---|
+| `dart format lib/game/property_shot_game.dart` | 통과 |
+| `git diff --check` | 통과 |
+| `flutter analyze` | 통과, 이슈 없음 |
+| `flutter test` | 통과, 124개 |
+| `dart run tool/physics_benchmark.dart` | 통과, 1단계 344.1µs·2단계 282.8µs·3단계 300.7µs |
+| `flutter build web --release` | 통과 |
+| 데모 서버 교체 | 기존 PID 71571 종료 후 PID 81493으로 교체 |
+| 서버 응답 | 루트 HTTP 200, `main.dart.js` HTTP 200 |
+| 390×844 실제 플레이 | 시작 입력 후 캡처, 콘솔 오류 0건 |
+| 768×1024 실제 플레이 | 시작 입력 후 캡처, 콘솔 오류 0건 |
+| `flutter build ios --no-codesign` | Xcode 컴파일 완료 후 Development Team·프로비저닝 프로파일 부족으로 실패 |
+
+이번 반복은 기존 돌·상자·젤리 래스터 질감과 압출을 유지하면서 Canvas 도형과 동일한 광원 방향·하단 음영·상단·하단 에지 토큰을 `srcATop` 표면 마감으로 통합했다. 물리 좌표·히트박스·충돌 계산은 변경하지 않았다.
+
+새 캡처는 `390x844-raster-finish-play.png`, `768x1024-raster-finish-play.png`이며 두 화면 모두 한글 HUD·보드·하단 조작 영역이 겹치지 않는다. WebKit 런타임은 설치되어 있지 않아 Chromium 뷰포트로 검증했으며, 실제 iPhone/iPad 프레임·GPU·메모리·햅틱·사운드 체감은 미검증이다.
+
+Turing 독립 사후 QA는 P0 없이 조건부 통과로 판정했다. 한글 UI·모바일 레이아웃·오브젝트 식별성과 물리 불변은 통과했지만, bitmap 질감과 Canvas 벽의 완전한 재질 통일은 P1, 하단 모래 영역의 낮은 정보 밀도는 P2로 남겼다.

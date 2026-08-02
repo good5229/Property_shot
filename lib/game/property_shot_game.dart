@@ -1312,30 +1312,59 @@ class PropertyShotGame extends FlameGame {
       target,
       Paint()..filterQuality = FilterQuality.high,
     );
-    canvas.save();
-    canvas.clipRRect(
-      RRect.fromRectAndRadius(
-        target,
-        Radius.circular(entity.type == EntityType.weight ? 12 : 6),
-      ),
-    );
-    canvas.drawRect(
-      target,
-      Paint()
-        ..blendMode = BlendMode.srcATop
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0x66FFFFFF), Color(0x00FFFFFF), Color(0x3D101A16)],
-          stops: [0.0, 0.42, 1.0],
-        ).createShader(target),
-    );
-    canvas.restore();
+    _drawRasterSurfaceFinish(canvas, entity, target);
     canvas.restore();
     if (entity.type == EntityType.bumper && motion.impact > 0.04) {
       _drawJellySpriteImpact(canvas, center, target, motion.impact);
     }
     _drawSpriteGleam(canvas, entity, target, motion);
+  }
+
+  void _drawRasterSurfaceFinish(
+    Canvas canvas,
+    EntityState entity,
+    Rect target,
+  ) {
+    final radius = Radius.circular(entity.type == EntityType.weight ? 12 : 6);
+    final finish = Paint()
+      ..blendMode = BlendMode.srcATop
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          _lightColor.withValues(alpha: 0.12),
+          const Color(0x00000000),
+          _occlusionColor.withValues(alpha: 0.16),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(target.inflate(2));
+    final edgeLight = Paint()
+      ..blendMode = BlendMode.srcATop
+      ..color = _lightColor.withValues(alpha: 0.18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    final edgeShade = Paint()
+      ..blendMode = BlendMode.srcATop
+      ..color = _occlusionColor.withValues(alpha: 0.24)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+
+    canvas.save();
+    canvas.clipRRect(RRect.fromRectAndRadius(target, radius));
+    canvas.drawRect(target, finish);
+    canvas.drawLine(
+      target.topLeft.translate(2, 1),
+      target.topRight.translate(-2, 1),
+      edgeLight,
+    );
+    canvas.drawLine(
+      target.bottomLeft.translate(2, -1),
+      target.bottomRight.translate(-2, -1),
+      edgeShade,
+    );
+    canvas.restore();
   }
 
   void _drawJellySpriteImpact(
