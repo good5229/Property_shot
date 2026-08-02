@@ -119,3 +119,10 @@
 - `390x844-medal-feedback-release-home.png`, `390x844-medal-feedback-release-play.png`는 별·메달 보상 큐가 포함된 최신 Web release에서 생성했다.
 - `768x1024-medal-feedback-release-home.png`, `768x1024-medal-feedback-release-play.png`는 같은 번들의 넓은 세로 뷰포트 캡처다.
 - 두 해상도 모두 시작 입력 후 콘솔 오류 0건을 확인했다. 캡처는 Web 렌더링 증거이며 실제 iOS 사운드·햅틱·기기 성능을 의미하지 않는다.
+
+## 2026-08-02 세부 피드백 큐 포함 최신 캡처
+
+- `390x844-feedback-queue-release-home.png`, `390x844-feedback-queue-release-play.png`는 전용 피드백 큐와 오디오 순서화가 포함된 최신 Web release 캡처다.
+- `768x1024-feedback-queue-release-home.png`, `768x1024-feedback-queue-release-play.png`는 같은 번들의 넓은 세로 뷰포트 캡처다.
+- 두 해상도 모두 한글 HUD·해변 보드·공·홀·돌·상자의 위치와 보드 경계를 확인했으며 브라우저 콘솔 오류는 0건이었다.
+- 이 캡처는 실제 기기 사운드·햅틱·GPU·메모리 측정이 아니다.
