@@ -140,6 +140,17 @@
 - `390x844-stage-route-par-release.png`, `768x1024-stage-route-par-release.png`는 자동 분석 결과와 동기화된 추천 파 `2·2·3`이 지도 카드에 표시되는 최신 Web release 캡처다.
 - Chromium에서 두 화면의 콘솔 오류 0건을 확인했으며, 캡처는 Web 보조 증거로 실제 iPhone/iPad 성능·입력 결과를 대신하지 않는다.
 
+## 2026-08-02 자동 분석 지표 포함 최신 캡처
+
+- `390x844-stage-route-analysis-release.png`, `768x1024-stage-route-analysis-release.png`는 자동 분석 지표 보강 후 PID 80147의 최신 Web release에서 실제 스테이지 선택 화면으로 이동해 캡처했다.
+- 분석기 변경은 게임 화면을 변경하지 않으므로 지도 구성·추천 파 표시·한글 줄바꿈이 이전 기준과 동일하게 유지되는지 확인하는 회귀 증거로 사용한다.
+
+## 2026-08-02 대체 전략 해석 포함 최종 캡처
+
+- `390x844-stage-route-analysis-final.png`, `768x1024-stage-route-analysis-final.png`는 최신 서버 PID 2452에서 실제 스테이지 선택 화면으로 이동해 생성했다.
+- 최신 통합 분석 코드를 포함한 Web release는 PID 28229로 교체했으며, 기존 분석 지도 캡처를 최신 번들 검증 근거로 유지했다. 화면 레이아웃 변경은 없어 새 캡처가 필요한 시각 변화는 없다.
+- 분석 화면은 지배 전략 커버리지와 대체 전략 수를 코드 리포트에서 별도로 제공하며, 이 캡처에서는 추천 파·경로·한글 UI의 시각 회귀를 확인한다.
+
 ## 2026-08-02 선택형 추가 도전 포함 최신 캡처
 
 - `390x844-bonus-goal-release-home.png`, `390x844-bonus-goal-release-play.png`는 단계별 추가 도전 기록 코드가 포함된 최신 Web release의 모바일 캡처다.
