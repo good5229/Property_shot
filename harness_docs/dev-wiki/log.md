@@ -1324,3 +1324,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-02 | test | 섬 지도 경로·진행률·안내 영역의 시각 회귀를 390×844·768×1024 Golden으로 고정한다.
 2026-08-02 | docs | 섬 지도 Golden을 스크린샷 매트릭스와 검증 결과에 기록했고, 지도 테스트 포함 최신 전체 회귀 136개를 확인했다.
 2026-08-02 | qa | 최신 `flutter build ios --no-codesign`은 Xcode 컴파일까지 통과했지만 `com.example.propertyShot` 배포 타깃에 Development Team·Provisioning Profile이 없어 실패했다. 코드 컴파일 실패로 기록하지 않는다.
+2026-08-02 | qa | 고해상도 튜토리얼 분석의 실제 연속 성공 폭(1단계 28도·2단계 20도)에 맞춰 자동 난이도 회귀 최소 기준을 16도에서 1단계 24도·2단계 18도로 강화한다. 이는 실제 사용자 성공률을 대신하지 않는다.

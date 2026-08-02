@@ -140,9 +140,9 @@ void main() {
       );
       widths['${index + 1}단계'] = width;
     }
-    expect(widths['1단계']!.angle, greaterThanOrEqualTo(16));
+    expect(widths['1단계']!.angle, greaterThanOrEqualTo(24));
     expect(widths['1단계']!.power, greaterThanOrEqualTo(0.20));
-    expect(widths['2단계']!.angle, greaterThanOrEqualTo(16));
+    expect(widths['2단계']!.angle, greaterThanOrEqualTo(18));
     expect(widths['2단계']!.power, greaterThanOrEqualTo(0.20));
     expect(widths['1단계']!.component, greaterThanOrEqualTo(8));
     expect(widths['2단계']!.component, greaterThanOrEqualTo(8));
