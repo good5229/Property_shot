@@ -1438,3 +1438,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: 현재 신규 테스트 10개와 기존 회귀를 합친 실행은 170개까지 진행되며, 다중 샷 분석 단독은 41초에 통과했다. QA 문서에는 확정된 통과 항목과 아직 실행하지 않은 Web·서버·다중 해상도 증거를 분리해 기록한다.
 2026-08-03: 이전 Web 서버 PID 95957을 종료한 뒤 Web release를 재빌드하고 IPv4 명시 서버 PID 76155를 127.0.0.1:8080에 띄웠다. 루트와 `main.dart.js` HTTP 200을 동일 권한 curl로 확인했다.
 2026-08-03: Python Playwright와 Chromium을 설치해 최신 서버에서 390×844·393×852·430×932·768×1024·1024×1366 홈·지도·플레이 15장을 캡처했다. 다섯 해상도 모두 콘솔 오류 0건이며 루트·번들 HTTP 200이다.
+2026-08-03: 최종 `flutter test --reporter compact`가 00:51에 171개 전부 통과했다. `flutter analyze`와 `flutter build web --release`도 통과했으며, 현재 시각 01:52 KST 기준 목표 시한 전 작업을 종료할 수 있는 상태다.
