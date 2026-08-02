@@ -51,3 +51,18 @@ copied here.
 - [Prompt Records](prompts/current_goal.md)
 - [Decisions](decisions/decision_log.md)
 - [Final Records](final/final_evaluation.md)
+
+## Agent Manuals And Research
+
+- [Agent Operating Standard](manuals/00_agent_operating_standard.md)
+- [Agent Activation Gate](agents/activation_gate_2026-08-03.md)
+- [Role Reference Index](research/role_reference_index.md)
+- [Commercial Game Practice Matrix](research/commercial_game_practice_matrix.md)
+- [UX Copy Inventory](ux/copy_inventory.md)
+- [UX Terminology Guide](ux/terminology_guide.md)
+- [Copy Decision Log](ux/copy_decision_log.md)
+- [Object Quality Audit](art/object_quality_audit.md)
+- [Asset Registry](assets/asset_registry.md)
+- [Manual Cross Review](agents/manual_cross_review_2026-08-03.md)
+
+각 역할 매뉴얼은 `manuals/01_*.md`부터 `manuals/17_*.md`까지 이어진다. 역할 활성화 전 공통 표준과 활성화 게이트, 참고자료 색인을 먼저 읽는다.
