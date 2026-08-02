@@ -71,12 +71,20 @@ class TraitResolver {
       }
     }
 
+    final nextCharges = state.copyCharges - 1;
+    final nextCoreCount = state.copyCoreCount > 0
+        ? state.copyCoreCount - 1
+        : state.copyCoreCount;
+    final remaining = state.copyCoreCount > 0
+        ? '복제 코어 $nextCoreCount개 남음'
+        : '복사 $nextCharges회 남음';
     return state.copyWith(
       entities: entities,
       equippedTrait: trait,
-      copyCharges: state.copyCharges - 1,
+      copyCharges: nextCharges,
+      copyCoreCount: nextCoreCount,
       clearSelection: true,
-      message: '${trait.label} 속성을 복사했습니다. 복사 ${state.copyCharges - 1}회 남음.',
+      message: '${trait.label} 속성을 복사했습니다. $remaining.',
     );
   }
 }

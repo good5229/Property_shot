@@ -10,6 +10,7 @@ class LevelDefinition {
     this.copyCharges = 1,
     this.parShots = 3,
     this.bonusGoal = '복사 없이 클리어',
+    this.copyCoreReward = 0,
   });
 
   final String name;
@@ -18,14 +19,23 @@ class LevelDefinition {
   final int copyCharges;
   final int parShots;
   final String bonusGoal;
+  final int copyCoreReward;
 
-  GameState createState(int index, {bool productRules = false}) {
+  GameState createState(
+    int index, {
+    bool productRules = false,
+    int copyCoreCount = 0,
+    bool copyCoreRewarded = false,
+  }) {
+    final startingCoreCount = productRules ? copyCoreCount : 0;
     return GameState(
       levelIndex: index,
       levelName: name,
       ballSpawn: ballSpawn,
-      copyCharges: productRules ? 0 : copyCharges,
-      copyChargeLimit: productRules ? 0 : copyCharges,
+      copyCharges: productRules ? startingCoreCount : copyCharges,
+      copyChargeLimit: productRules ? startingCoreCount : copyCharges,
+      copyCoreCount: startingCoreCount,
+      copyCoreRewarded: productRules && copyCoreRewarded,
       entities: [
         EntityState(
           id: 'active_ball',

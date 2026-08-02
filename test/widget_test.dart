@@ -57,6 +57,22 @@ void main() {
     expect(find.textContaining('복사 0회'), findsNothing);
   });
 
+  testWidgets('복제 코어를 보유하면 속성 팝업에 선택 행동이 표시된다', (tester) async {
+    final state = levels[0].createState(
+      0,
+      productRules: true,
+      copyCoreCount: 1,
+    );
+    await tester.pumpWidget(PropertyShotApp(initialState: state));
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+
+    expect(find.text('복제 코어로 공에 담기'), findsOneWidget);
+    expect(find.text('복제 코어 1개 남음'), findsOneWidget);
+  });
+
   testWidgets('속성을 선택해 공으로 옮길 수 있다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();

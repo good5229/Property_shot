@@ -20,6 +20,8 @@ class GameState {
     this.aimPower = 0.5,
     this.copyCharges = 1,
     this.copyChargeLimit = 1,
+    this.copyCoreCount = 0,
+    this.copyCoreRewarded = false,
     this.message = '속성을 선택하고 조준하세요.',
     this.history = const [],
   });
@@ -38,6 +40,8 @@ class GameState {
   final double aimPower;
   final int copyCharges;
   final int copyChargeLimit;
+  final int copyCoreCount;
+  final bool copyCoreRewarded;
   final String message;
   final List<GameState> history;
 
@@ -73,6 +77,8 @@ class GameState {
     double? aimPower,
     int? copyCharges,
     int? copyChargeLimit,
+    int? copyCoreCount,
+    bool? copyCoreRewarded,
     String? message,
     List<GameState>? history,
   }) {
@@ -97,6 +103,8 @@ class GameState {
       aimPower: aimPower ?? this.aimPower,
       copyCharges: copyCharges ?? this.copyCharges,
       copyChargeLimit: copyChargeLimit ?? this.copyChargeLimit,
+      copyCoreCount: copyCoreCount ?? this.copyCoreCount,
+      copyCoreRewarded: copyCoreRewarded ?? this.copyCoreRewarded,
       message: message ?? this.message,
       history: history ?? this.history,
     );

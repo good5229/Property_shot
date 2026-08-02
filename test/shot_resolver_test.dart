@@ -993,6 +993,32 @@ void main() {
     expect(levels[2].createState(2).copyCharges, 2);
   });
 
+  test('제품 규칙의 첫 챕터는 복제 코어 없이 시작한다', () {
+    for (var index = 0; index < levels.length; index++) {
+      final state = levels[index].createState(index, productRules: true);
+      expect(state.copyCharges, 0);
+      expect(state.copyCoreCount, 0);
+      expect(state.copyCoreRewarded, isFalse);
+    }
+    expect(levels[2].copyCoreReward, 1);
+  });
+
+  test('복제 코어를 사용하면 원본은 유지되고 코어가 줄어든다', () {
+    final state = levels[0].createState(
+      0,
+      productRules: true,
+      copyCoreCount: 1,
+    );
+    final selected = traits.selectSource(state, 'anvil');
+    final copied = traits.copySelectedTrait(selected);
+
+    expect(copied.entityById('anvil')!.traits, contains(TraitType.heavy));
+    expect(copied.activeBall.traits, contains(TraitType.heavy));
+    expect(copied.copyCharges, 0);
+    expect(copied.copyCoreCount, 0);
+    expect(copied.message, contains('복제 코어 0개 남음'));
+  });
+
   test('되감기는 발사 전 상태를 복원한다', () {
     final state = traits.transferSelectedTrait(
       traits.selectSource(levels[0].createState(0), 'anvil'),

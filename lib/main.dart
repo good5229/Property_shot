@@ -1,10 +1,15 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/domain/game_state.dart';
 import 'game/levels/levels.dart';
 import 'ui/game_screen.dart';
+
+const _copyCoreCountKey = 'property_shot_copy_core_count';
+const _copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
 
 void main() {
   runApp(const PropertyShotApp(showHome: true));
@@ -53,6 +58,34 @@ class _PropertyShotRouter extends StatefulWidget {
 class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int? _activeStage;
   bool _showStageSelect = false;
+  int _copyCoreCount = 0;
+  bool _copyCoreRewarded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCopyCore();
+  }
+
+  Future<void> _loadCopyCore() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _copyCoreCount = preferences.getInt(_copyCoreCountKey) ?? 0;
+      _copyCoreRewarded = preferences.getBool(_copyCoreRewardedKey) ?? false;
+    });
+  }
+
+  void _saveCopyCore() {
+    unawaited(
+      SharedPreferences.getInstance().then((preferences) async {
+        await preferences.setInt(_copyCoreCountKey, _copyCoreCount);
+        await preferences.setBool(_copyCoreRewardedKey, _copyCoreRewarded);
+      }),
+    );
+  }
 
   void _startStage(int index) {
     setState(() => _activeStage = index);
@@ -65,6 +98,14 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     });
   }
 
+  void _earnCopyCore(int amount) {
+    setState(() {
+      _copyCoreCount += amount;
+      _copyCoreRewarded = true;
+    });
+    _saveCopyCore();
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeStage = _activeStage;
@@ -74,9 +115,12 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         initialState: levels[activeStage].createState(
           activeStage,
           productRules: true,
+          copyCoreCount: _copyCoreCount,
+          copyCoreRewarded: _copyCoreRewarded,
         ),
         showStageSelector: false,
         onExit: _returnHome,
+        onCopyCoreEarned: _earnCopyCore,
       );
     }
     if (_showStageSelect) {

@@ -117,6 +117,7 @@ final levels = <LevelDefinition>[
     copyCharges: 2,
     parShots: 5,
     bonusGoal: '문을 여는 길과 다른 물리 경로를 모두 탐색해 보세요.',
+    copyCoreReward: 1,
     entities: const [
       EntityState(
         id: 'hole',

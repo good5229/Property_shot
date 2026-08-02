@@ -23,11 +23,13 @@ class GameScreen extends StatefulWidget {
     this.initialState,
     this.showStageSelector = true,
     this.onExit,
+    this.onCopyCoreEarned,
   });
 
   final GameState? initialState;
   final bool showStageSelector;
   final VoidCallback? onExit;
+  final ValueChanged<int>? onCopyCoreEarned;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -164,7 +166,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showFailurePopup = false;
     _setState(
       levels[index]
-          .createState(index, productRules: !widget.showStageSelector)
+          .createState(
+            index,
+            productRules: !widget.showStageSelector,
+            copyCoreCount: _state.copyCoreCount,
+            copyCoreRewarded: _state.copyCoreRewarded,
+          )
           .copyWith(message: _levelIntroMessage(index)),
     );
   }
@@ -210,13 +217,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _feedback.traitCopied();
     _showBallInfo = false;
     _inspectedEntityId = null;
+    final next = _traitResolver.copySelectedTrait(_state);
+    final remaining = _state.copyCoreCount > 0
+        ? '복제 코어 ${next.copyCoreCount}개 남음'
+        : '복사 ${next.copyCharges}회 남음';
     _setState(
-      _traitResolver
-          .copySelectedTrait(_state)
-          .copyWith(
-            message:
-                '원본에 속성을 남기고 공에 복사했습니다. 복사 ${_state.copyCharges - 1}회 남음. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
-          ),
+      next.copyWith(
+        message:
+            '원본에 속성을 남기고 공에 복사했습니다. $remaining. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
+      ),
     );
   }
 
@@ -258,6 +267,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     final cleared = _state.phase == GamePhase.success;
+    if (cleared &&
+        !widget.showStageSelector &&
+        !_state.copyCoreRewarded &&
+        levels[_state.levelIndex].copyCoreReward > 0) {
+      final reward = levels[_state.levelIndex].copyCoreReward;
+      _state = _state.copyWith(
+        copyCharges: _state.copyCharges + reward,
+        copyChargeLimit: _state.copyChargeLimit + reward,
+        copyCoreCount: _state.copyCoreCount + reward,
+        copyCoreRewarded: true,
+        message: '섬의 보상으로 복제 코어 $reward개를 얻었습니다.',
+      );
+      widget.onCopyCoreEarned?.call(reward);
+    }
     setState(() {
       _isAnimatingShot = false;
       _showClearPopup = cleared;
@@ -908,6 +931,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: _EntityInfoPanel(
                     entity: inspectedEntity,
                     copyCharges: _state.copyCharges,
+                    copyCoreCount: _state.copyCoreCount,
                     onTransfer: inspectedEntity.traits.isEmpty
                         ? null
                         : _transferTrait,
@@ -1858,18 +1882,21 @@ class _EntityInfoPanel extends StatelessWidget {
   const _EntityInfoPanel({
     required this.entity,
     required this.copyCharges,
+    required this.copyCoreCount,
     this.onTransfer,
     this.onCopy,
   });
 
   final EntityState entity;
   final int copyCharges;
+  final int copyCoreCount;
   final VoidCallback? onTransfer;
   final VoidCallback? onCopy;
 
   @override
   Widget build(BuildContext context) {
     final trait = entity.traits.isEmpty ? null : entity.traits.first;
+    final hasCopyCore = copyCoreCount > 0;
     return Container(
       key: const Key('entity_info_panel'),
       width: double.infinity,
@@ -1901,14 +1928,18 @@ class _EntityInfoPanel extends StatelessWidget {
                   if (copyCharges > 0) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '옮기기: 원본에서 사라짐 · 복사: 원본에 유지됨',
+                      hasCopyCore
+                          ? '옮기기: 원본에서 사라짐 · 복제 코어: 원본에 유지됨'
+                          : '옮기기: 원본에서 사라짐 · 복사: 원본에 유지됨',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF59685F),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '복사 $copyCharges회 남음',
+                      hasCopyCore
+                          ? '복제 코어 $copyCoreCount개 남음'
+                          : '복사 $copyCharges회 남음',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF59685F),
                         fontWeight: FontWeight.w700,
@@ -1934,13 +1965,17 @@ class _EntityInfoPanel extends StatelessWidget {
                       ),
                       if (copyCharges > 0)
                         Semantics(
-                          label: '선택한 ${trait.label} 속성을 원본에 남기고 공으로 복사하기',
+                          label: hasCopyCore
+                              ? '선택한 ${trait.label} 속성을 복제 코어로 공에 복사하기'
+                              : '선택한 ${trait.label} 속성을 원본에 남기고 공으로 복사하기',
                           button: true,
                           child: OutlinedButton.icon(
                             key: const Key('copy_button'),
                             onPressed: onCopy,
                             icon: const Icon(Icons.copy, size: 16),
-                            label: const Text('원본에 남기고 공에 복사하기'),
+                            label: Text(
+                              hasCopyCore ? '복제 코어로 공에 담기' : '원본에 남기고 공에 복사하기',
+                            ),
                             style: OutlinedButton.styleFrom(
                               visualDensity: VisualDensity.compact,
                             ),
