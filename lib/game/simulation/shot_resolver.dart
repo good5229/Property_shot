@@ -1038,6 +1038,24 @@ class ShotResolver {
     return tangent + n * (normalSpeed * normalCoefficient);
   }
 
+  Vec2 _wallBounceVelocity(
+    Vec2 incoming,
+    Vec2 normal,
+    EntityState moving,
+    EntityState wall,
+  ) {
+    final n = normal.normalized();
+    final normalSpeed = incoming.dot(n);
+    if (normalSpeed >= 0 || incoming.length <= 0.001) {
+      return incoming;
+    }
+    final restitution = moving.traits.contains(TraitType.bouncy)
+        ? math.max(wall.restitution, 0.88)
+        : wall.restitution;
+    final tangent = incoming - n * normalSpeed;
+    return tangent - n * (normalSpeed * restitution);
+  }
+
   double _postImpactSpeedFactor(double movingMass, double targetMass) {
     if (movingMass > targetMass) {
       return (0.64 +
@@ -1473,15 +1491,10 @@ class ShotResolver {
           visualState: 'wall_bounced',
         );
         _appendMovePoint(path, current.position);
-        velocity = _collisionVelocity(
-          velocity,
-          normal,
-          _massOf(current),
-          _massOf(hit),
-          _collisionRestitution(current, hit),
-        );
-        final wallScale = target.type == EntityType.ball ? 0.58 : 0.34;
-        velocity *= wallScale;
+        // 벽과 문은 고정되어 있으므로 연쇄 물체도 활성 공과 같은
+        // 무한 질량 반사식을 사용한다. 임의의 wallScale로 줄이면
+        // 같은 입사각·재질인데 충돌 주체에 따라 물리 결과가 달라진다.
+        velocity = _wallBounceVelocity(velocity, normal, current, hit);
         remaining = velocity.length;
         if (remaining > 0.001) {
           impulseDirection = velocity.normalized();

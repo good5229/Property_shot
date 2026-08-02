@@ -25,4 +25,12 @@ void main() {
 
     expect(metrics.every((result) => result.copylessSuccess), isTrue);
   });
+
+  test('3단계 고해상도 분석은 무거움 없이도 성공하는 전략을 집계한다', () {
+    const analyzer = DifficultyAnalyzer(angleStepDegrees: 2, powerSteps: 50);
+    final metrics = analyzer.analyzeLevel(2);
+
+    expect(metrics.successfulStrategies, contains('무속성'));
+    expect(metrics.successfulStrategies, contains('steel (무거움)'));
+  });
 }

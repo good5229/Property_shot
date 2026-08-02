@@ -116,11 +116,14 @@ class DifficultyAnalyzer {
         continue;
       }
       successfulStrategies.add(strategy.label);
-      widestAngle = math.max(widestAngle, _widestCircularRun(successes));
+      widestAngle = math.max(
+        widestAngle,
+        _widestCircularRun(successes, _angleCount),
+      );
       widestPower = math.max(widestPower, _widestPowerRun(successes));
       largestRegion = math.max(
         largestRegion,
-        _largestConnectedRegion(successes),
+        _largestConnectedRegion(successes, _angleCount),
       );
     }
 
@@ -138,6 +141,8 @@ class DifficultyAnalyzer {
       copylessSuccess: copylessSuccess,
     );
   }
+
+  int get _angleCount => (360 / angleStepDegrees).round();
 }
 
 class _Strategy {
@@ -164,20 +169,19 @@ class _InputCell {
   int get hashCode => Object.hash(degreeIndex, powerStep);
 }
 
-double _widestCircularRun(Set<_InputCell> cells) {
+double _widestCircularRun(Set<_InputCell> cells, int angleCount) {
   final degrees = cells.map((cell) => cell.degreeIndex).toSet();
-  final period = 360 ~/ 10;
   var longest = 0;
   var current = 0;
-  for (var index = 0; index < period * 2; index++) {
-    if (degrees.contains(index % period)) {
+  for (var index = 0; index < angleCount * 2; index++) {
+    if (degrees.contains(index % angleCount)) {
       current++;
       longest = math.max(longest, current);
     } else {
       current = 0;
     }
   }
-  return math.min(longest, period).toDouble();
+  return math.min(longest, angleCount).toDouble();
 }
 
 double _widestPowerRun(Set<_InputCell> cells) {
@@ -198,7 +202,7 @@ double _widestPowerRun(Set<_InputCell> cells) {
   return math.max(0, longest - 1).toDouble();
 }
 
-int _largestConnectedRegion(Set<_InputCell> cells) {
+int _largestConnectedRegion(Set<_InputCell> cells, int angleCount) {
   final remaining = Set<_InputCell>.of(cells);
   var largest = 0;
   while (remaining.isNotEmpty) {
@@ -211,11 +215,11 @@ int _largestConnectedRegion(Set<_InputCell> cells) {
       size++;
       final neighbors = [
         _InputCell(
-          degreeIndex: (cell.degreeIndex + 1) % 36,
+          degreeIndex: (cell.degreeIndex + 1) % angleCount,
           powerStep: cell.powerStep,
         ),
         _InputCell(
-          degreeIndex: (cell.degreeIndex + 35) % 36,
+          degreeIndex: (cell.degreeIndex - 1 + angleCount) % angleCount,
           powerStep: cell.powerStep,
         ),
         _InputCell(
