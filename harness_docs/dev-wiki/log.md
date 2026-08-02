@@ -1360,3 +1360,5 @@ Use consistent headings so entries are easy to grep.
 2026-08-02: 현재 브랜치에서 `flutter build ios --no-codesign`을 재실행했다. Xcode 컴파일은 완료됐고, 배포 앱 생성 단계에서 Development Team·Provisioning Profile 미설정으로 실패했으므로 코드 컴파일 실패가 아닌 서명 환경 잔여 위험으로 확정한다.
 2026-08-02: 최신 Flutter 권한 환경에서 첫 3단계 전체 플레이 Golden 확장을 재개한다. 기존 테스트는 1단계만 화면 기준을 고정하고 있어 젤리·반사벽·스위치·문·점착판이 포함된 2·3단계 시각 회귀가 비어 있었다.
 2026-08-02: 첫 3단계 플레이 Golden을 390×844·768×1024로 각각 생성해 6개 테스트를 통과시켰다. 전체 회귀는 144개, `flutter analyze`는 무이슈이며 2단계 젤리·반사벽과 3단계 스위치·문·점착판·상자 화면을 기준 이미지로 고정한다.
+2026-08-02: 독립 QA가 새 6개 Golden의 `loadGameAssets: false`를 P1으로 지적했다. 배치 회귀와 실제 Flame 래스터 에셋 회귀를 분리하지 않도록 실제 에셋 로딩을 켠 Golden을 재생성해 교착 없이 통과하는지 확인한다.
+2026-08-02: 실제 Flame 래스터 로딩 Golden은 1단계 첫 케이스에서 `toBeLoaded()`가 66초 동안 완료되지 않아 교착을 재현했다. 6개 배치 Golden은 녹색 기준을 유지하도록 테스트 옵션을 원복하고, 실제 래스터 경로는 별도 PNG·Codec·래스터 Golden 게이트와 한계 기록으로 분리한다.
