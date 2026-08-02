@@ -7,6 +7,7 @@ import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 import 'package:property_shot/ui/play_telemetry.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('실제 시작 흐름은 홈·섬 지도·플레이를 연결한다', (tester) async {
@@ -47,12 +48,13 @@ void main() {
   });
 
   testWidgets('홈 설정에서 효과음과 진동을 각각 끌 수 있다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     addTearDown(() {
       GameFeedback.soundEnabled = true;
       GameFeedback.hapticsEnabled = true;
     });
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('feedback_settings_button')));
     await tester.pumpAndSettle();

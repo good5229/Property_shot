@@ -77,3 +77,9 @@
 - 변경 전 기준: `390x844-current-play-audit.png`, `768x1024-current-play-audit.png`, `1024x1366-current-play-audit.png`.
 - 변경 후: `390x844-compact-hud-pass.png`, `393x852-compact-hud-pass.png`, `430x932-compact-hud-pass.png`, `768x1024-compact-hud-pass.png`, `1024x1366-compact-hud-pass.png`.
 - 변경 후 다섯 뷰포트에서 보드·공·돌·상자·홀·컨트롤이 보드 안에 유지되고 콘솔 오류는 0건이었다. 실제 iPhone·iPad 렌더링이나 터치 지연을 증명하는 캡처는 아니다.
+
+## 2026-08-02 피드백 설정 캡처
+
+- `390x844-feedback-settings.png`: 홈 설정에서 효과음·진동 토글이 보이는 실제 Web 팝업.
+- `390x844-feedback-persisted.png`: 효과음을 끈 뒤 새로고침하고 팝업을 다시 열어 꺼짐 상태가 복원된 캡처.
+- 두 캡처 모두 Chromium Web 실행이며 콘솔 오류 0건이다. 실제 기기 사운드·무음 모드·햅틱 체감 증거로 해석하지 않는다.

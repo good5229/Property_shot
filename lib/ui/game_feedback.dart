@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
 
@@ -12,6 +13,8 @@ class GameFeedback {
   GameFeedback({SoundPlayer? soundPlayer})
     : _soundPlayer = soundPlayer ?? _playSystemSound;
 
+  static const soundPreferenceKey = 'property_shot_sound_enabled';
+  static const hapticsPreferenceKey = 'property_shot_haptics_enabled';
   static bool soundEnabled = true;
   static bool hapticsEnabled = true;
 
@@ -20,6 +23,35 @@ class GameFeedback {
 
   static Future<void> _playSystemSound(SystemSoundType type) {
     return SystemSound.play(type);
+  }
+
+  static Future<void> loadPreferences() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      soundEnabled = preferences.getBool(soundPreferenceKey) ?? true;
+      hapticsEnabled = preferences.getBool(hapticsPreferenceKey) ?? true;
+    } on Exception {
+      // 설정 저장소를 사용할 수 없는 환경에서도 기본값으로 계속 실행한다.
+    }
+  }
+
+  static Future<void> setSoundEnabled(bool enabled) async {
+    soundEnabled = enabled;
+    await _savePreference(soundPreferenceKey, enabled);
+  }
+
+  static Future<void> setHapticsEnabled(bool enabled) async {
+    hapticsEnabled = enabled;
+    await _savePreference(hapticsPreferenceKey, enabled);
+  }
+
+  static Future<void> _savePreference(String key, bool value) async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(key, value);
+    } on Exception {
+      // 웹·테스트 환경의 저장소 실패는 피드백 자체를 중단시키지 않는다.
+    }
   }
 
   void traitSelected() {
@@ -68,6 +100,10 @@ class GameFeedback {
 
   void switchOpened() {
     _emit('switch_opened', haptic: HapticFeedback.heavyImpact);
+  }
+
+  void gateOpened() {
+    _emit('gate_opened', haptic: HapticFeedback.mediumImpact, alert: true);
   }
 
   void shotCleared() {

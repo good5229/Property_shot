@@ -100,18 +100,23 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<void> _loadCopyCore() async {
-    final preferences = await SharedPreferences.getInstance();
-    if (!mounted) {
-      return;
+    await GameFeedback.loadPreferences();
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _copyCoreCount = preferences.getInt(_copyCoreCountKey) ?? 0;
+        _copyCoreRewarded = preferences.getBool(_copyCoreRewardedKey) ?? false;
+        _unlockedLevel = (preferences.getInt(_unlockedLevelKey) ?? 0).clamp(
+          0,
+          levels.length - 1,
+        );
+      });
+    } on Exception {
+      // 저장소를 사용할 수 없어도 기본 진행 상태로 홈을 표시한다.
     }
-    setState(() {
-      _copyCoreCount = preferences.getInt(_copyCoreCountKey) ?? 0;
-      _copyCoreRewarded = preferences.getBool(_copyCoreRewardedKey) ?? false;
-      _unlockedLevel = (preferences.getInt(_unlockedLevelKey) ?? 0).clamp(
-        0,
-        levels.length - 1,
-      );
-    });
   }
 
   void _saveCopyCore() {
@@ -454,8 +459,9 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
             contentPadding: EdgeInsets.zero,
             title: const Text('효과음'),
             value: GameFeedback.soundEnabled,
-            onChanged: (enabled) {
+            onChanged: (enabled) async {
               setState(() => GameFeedback.soundEnabled = enabled);
+              await GameFeedback.setSoundEnabled(enabled);
             },
           ),
           SwitchListTile.adaptive(
@@ -463,8 +469,9 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
             contentPadding: EdgeInsets.zero,
             title: const Text('진동'),
             value: GameFeedback.hapticsEnabled,
-            onChanged: (enabled) {
+            onChanged: (enabled) async {
               setState(() => GameFeedback.hapticsEnabled = enabled);
+              await GameFeedback.setHapticsEnabled(enabled);
             },
           ),
         ],

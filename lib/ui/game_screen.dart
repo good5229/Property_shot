@@ -344,11 +344,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onAnimationImpact(ShotAnimationMove move) {
-    if (!mounted || !_isAnimatingShot || move.visualState == 'opening') {
+    if (!mounted || !_isAnimatingShot) {
       return;
     }
     if (move.visualState == 'pressed') {
       _feedback.switchOpened();
+    } else if (move.visualState == 'opening') {
+      _feedback.gateOpened();
     }
     _telemetry.record(
       '연쇄 이동',
