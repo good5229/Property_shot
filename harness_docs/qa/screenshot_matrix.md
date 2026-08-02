@@ -151,6 +151,11 @@
 - 최신 통합 분석 코드를 포함한 Web release는 PID 55374로 교체했으며, 기존 분석 지도 캡처를 최신 번들 검증 근거로 유지했다. 화면 레이아웃 변경은 없어 새 캡처가 필요한 시각 변화는 없다.
 - 분석 화면은 지배 전략 커버리지와 대체 전략 수를 코드 리포트에서 별도로 제공하며, 이 캡처에서는 추천 파·경로·한글 UI의 시각 회귀를 확인한다.
 
+## 2026-08-02 현재 서버 직접 캡처
+
+- `scripts/capture_web_screenshots.py --url http://127.0.0.1:8080/`로 현재 PID 55374에서 `390x844-home-current.png`, `390x844-map-current.png`, `390x844-play-current.png`, `768x1024-home-current.png`, `768x1024-map-current.png`, `768x1024-play-current.png`를 생성했다.
+- 시작·지도·플레이 상태 모두 콘솔 오류 0건이다. Web 의미 DOM 대신 기존 성능 감사에서 확인한 Flutter Web 좌표를 사용했으므로 실제 iOS 터치 좌표 검증으로 확대하지 않는다.
+
 ## 2026-08-02 선택형 추가 도전 포함 최신 캡처
 
 - `390x844-bonus-goal-release-home.png`, `390x844-bonus-goal-release-play.png`는 단계별 추가 도전 기록 코드가 포함된 최신 Web release의 모바일 캡처다.
