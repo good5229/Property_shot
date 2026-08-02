@@ -71,6 +71,12 @@
 - `test/goldens/raster_assets_390x844.png`, `test/goldens/raster_assets_768x1024.png`에 돌·상자·젤리 래스터와 얼굴 공을 함께 캡처했다.
 - 홈 미리보기와 플레이 공은 `GameBallIconPainter`를 공유하며, 레거시 농구공 이미지가 화면에 다시 사용되지 않도록 회귀를 추가했다.
 
+## 2026-08-02 벽 재질 회귀
+
+- `test/goldens/game_screen_390x844.png`, `test/goldens/game_screen_768x1024.png`를 벽 표면 변경 후 재생성했다.
+- 390×844·768×1024에서 벽의 고정 경계 가독성, 내부 모래색 가장자리, 공·홀·상자 배치를 확인했다.
+- Golden은 Canvas 재질 회귀를 검증하며 실제 Web 색감·터치·실기기 성능을 대신하지 않는다.
+
 ## 2026-08-02 섬 지도 진행 경로 Golden
 
 - `test/goldens/stage_select_390x844.png`, `test/goldens/stage_select_768x1024.png`를 추가했다.

@@ -984,9 +984,21 @@ class PropertyShotGame extends FlameGame {
     final down = Offset(0, depth);
     final base = _colorFor(entity);
     final side = Paint()
-      ..color = Color.lerp(base, const Color(0xFF17231E), 0.3)!;
+      ..color = Color.lerp(
+        base,
+        entity.type == EntityType.wall
+            ? const Color(0xFF214E50)
+            : const Color(0xFF17231E),
+        entity.type == EntityType.wall ? 0.38 : 0.3,
+      )!;
     final end = Paint()
-      ..color = Color.lerp(base, const Color(0xFF17231E), 0.46)!;
+      ..color = Color.lerp(
+        base,
+        entity.type == EntityType.wall
+            ? const Color(0xFF173E42)
+            : const Color(0xFF17231E),
+        entity.type == EntityType.wall ? 0.5 : 0.46,
+      )!;
     final leftFace = Path()
       ..moveTo(topPoints[0].dx, topPoints[0].dy)
       ..lineTo(topPoints[3].dx, topPoints[3].dy)
@@ -1016,17 +1028,29 @@ class PropertyShotGame extends FlameGame {
         ..strokeWidth = 1.2,
     );
     if (entity.type == EntityType.wall) {
-      final mortar = Paint()
-        ..color = const Color(0x44505F5C)
-        ..strokeWidth = 1.2;
+      final joint = Paint()
+        ..color = const Color(0x3A173E42)
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round;
       canvas.save();
       canvas.clipPath(_pathFromPoints(topPoints));
-      for (var y = topPoints[0].dy + 10; y < topPoints[3].dy; y += 12) {
-        canvas.drawLine(
-          Offset(topPoints[0].dx, y),
-          Offset(topPoints[1].dx, y),
-          mortar,
-        );
+      final rect = _projectedRect(entity);
+      if (rect.width >= rect.height) {
+        for (var x = rect.left + 42; x < rect.right; x += 42) {
+          canvas.drawLine(
+            Offset(x, rect.top + 4),
+            Offset(x - 2, rect.bottom - 4),
+            joint,
+          );
+        }
+      } else {
+        for (var y = rect.top + 34; y < rect.bottom; y += 34) {
+          canvas.drawLine(
+            Offset(rect.left + 4, y),
+            Offset(rect.right - 4, y + 2),
+            joint,
+          );
+        }
       }
       canvas.restore();
     }
@@ -1985,30 +2009,53 @@ class PropertyShotGame extends FlameGame {
       canvas.clipPath(topPath);
       canvas.drawRect(
         Rect.fromLTWH(rect.left - 8, rect.top, rect.width + 16, 7),
-        Paint()..color = const Color(0xFFE3B66F),
+        Paint()..color = const Color(0xFFF2C978),
       );
       final plankSeam = Paint()
-        ..color = const Color(0x663B6C68)
+        ..color = const Color(0x5A2D6664)
         ..strokeWidth = 1.25
         ..strokeCap = StrokeCap.round;
       if (rect.width >= rect.height) {
-        for (var x = rect.left + 14; x < rect.right; x += 20) {
+        for (var x = rect.left + 34; x < rect.right; x += 42) {
           canvas.drawLine(
-            Offset(x, rect.top + 8),
-            Offset(x, rect.bottom - 2),
+            Offset(x, rect.top + 9),
+            Offset(x - 2, rect.bottom - 3),
             plankSeam,
           );
         }
       } else {
-        for (var y = rect.top + 16; y < rect.bottom; y += 20) {
+        for (var y = rect.top + 32; y < rect.bottom; y += 34) {
           canvas.drawLine(
-            Offset(rect.left + 2, y),
-            Offset(rect.right - 2, y),
+            Offset(rect.left + 3, y),
+            Offset(rect.right - 3, y + 2),
             plankSeam,
           );
         }
       }
       canvas.restore();
+      final innerEdge = Paint()
+        ..color = const Color(0xA8F6D995)
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round;
+      if (rect.width >= rect.height) {
+        canvas.drawLine(
+          rect.bottomLeft.translate(4, -3),
+          rect.bottomRight.translate(-4, -3),
+          innerEdge,
+        );
+      } else if (rect.center.dx < logicalSize.x / 2) {
+        canvas.drawLine(
+          rect.topRight.translate(-3, 5),
+          rect.bottomRight.translate(-3, -5),
+          innerEdge,
+        );
+      } else {
+        canvas.drawLine(
+          rect.topLeft.translate(3, 5),
+          rect.bottomLeft.translate(3, -5),
+          innerEdge,
+        );
+      }
       final post = Paint()..color = const Color(0xFFF2D18C);
       if (rect.width >= rect.height) {
         canvas.drawCircle(rect.topLeft.translate(8, 8), 2.5, post);
@@ -2052,7 +2099,7 @@ class PropertyShotGame extends FlameGame {
       case EntityType.hole:
         return const Color(0xFF1D1D1D);
       case EntityType.wall:
-        return const Color(0xFF5A9187);
+        return const Color(0xFF6EA99D);
       case EntityType.crate:
         return const Color(0xFFB7854B);
       case EntityType.bumper:
