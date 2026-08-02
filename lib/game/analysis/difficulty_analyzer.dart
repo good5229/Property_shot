@@ -21,6 +21,7 @@ class DifficultyMetrics {
     required this.minimumShots,
     required this.successfulStrategies,
     required this.copylessSuccess,
+    required this.strategyMetrics,
   });
 
   final int levelIndex;
@@ -34,6 +35,29 @@ class DifficultyMetrics {
   final int? minimumShots;
   final List<String> successfulStrategies;
   final bool copylessSuccess;
+  final List<StrategyDifficultyMetrics> strategyMetrics;
+}
+
+class StrategyDifficultyMetrics {
+  const StrategyDifficultyMetrics({
+    required this.label,
+    required this.totalInputs,
+    required this.successInputs,
+    required this.successRate,
+    required this.widestAngleDegrees,
+    required this.widestPowerRange,
+    required this.largestConnectedRegion,
+    required this.minimumShots,
+  });
+
+  final String label;
+  final int totalInputs;
+  final int successInputs;
+  final double successRate;
+  final double widestAngleDegrees;
+  final double widestPowerRange;
+  final int largestConnectedRegion;
+  final int? minimumShots;
 }
 
 class DifficultyAnalyzer {
@@ -80,10 +104,13 @@ class DifficultyAnalyzer {
     var widestPower = 0.0;
     var largestRegion = 0;
     final successfulStrategies = <String>[];
+    final strategyMetrics = <StrategyDifficultyMetrics>[];
     var copylessSuccess = false;
 
     for (final strategy in strategies) {
       final successes = <_InputCell>{};
+      var strategySuccessInputs = 0;
+      var strategyMinimumShots = null as int?;
       for (var degree = 0; degree < 360; degree += angleStepDegrees) {
         final radians = degree * math.pi / 180;
         for (var powerStep = 1; powerStep <= powerSteps; powerStep++) {
@@ -100,6 +127,7 @@ class DifficultyAnalyzer {
             continue;
           }
           successInputs++;
+          strategySuccessInputs++;
           copylessSuccess = true;
           successes.add(
             _InputCell(
@@ -110,21 +138,40 @@ class DifficultyAnalyzer {
           minimumShots = minimumShots == null
               ? result.state.shotCount
               : math.min(minimumShots, result.state.shotCount);
+          strategyMinimumShots = strategyMinimumShots == null
+              ? result.state.shotCount
+              : math.min(strategyMinimumShots, result.state.shotCount);
         }
       }
       if (successes.isEmpty) {
         continue;
       }
       successfulStrategies.add(strategy.label);
+      final strategyWidestAngle =
+          _widestCircularRun(successes, _angleCount) * angleStepDegrees;
+      final strategyWidestPower = _widestPowerRun(successes) / powerSteps;
+      final strategyLargestRegion = _largestConnectedRegion(
+        successes,
+        _angleCount,
+      );
+      strategyMetrics.add(
+        StrategyDifficultyMetrics(
+          label: strategy.label,
+          totalInputs: _angleCount * powerSteps,
+          successInputs: strategySuccessInputs,
+          successRate: strategySuccessInputs / (_angleCount * powerSteps),
+          widestAngleDegrees: strategyWidestAngle,
+          widestPowerRange: strategyWidestPower,
+          largestConnectedRegion: strategyLargestRegion,
+          minimumShots: strategyMinimumShots,
+        ),
+      );
       widestAngle = math.max(
         widestAngle,
-        _widestCircularRun(successes, _angleCount),
+        strategyWidestAngle / angleStepDegrees,
       );
-      widestPower = math.max(widestPower, _widestPowerRun(successes));
-      largestRegion = math.max(
-        largestRegion,
-        _largestConnectedRegion(successes, _angleCount),
-      );
+      widestPower = math.max(widestPower, strategyWidestPower * powerSteps);
+      largestRegion = math.max(largestRegion, strategyLargestRegion);
     }
 
     return DifficultyMetrics(
@@ -139,6 +186,7 @@ class DifficultyAnalyzer {
       minimumShots: minimumShots,
       successfulStrategies: successfulStrategies,
       copylessSuccess: copylessSuccess,
+      strategyMetrics: strategyMetrics,
     );
   }
 

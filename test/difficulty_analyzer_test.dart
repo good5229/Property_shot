@@ -16,6 +16,7 @@ void main() {
       expect(result.largestConnectedRegion, greaterThanOrEqualTo(1));
       expect(result.minimumShots, 1);
       expect(result.successfulStrategies, isNotEmpty);
+      expect(result.strategyMetrics, isNotEmpty);
     }
   });
 
@@ -32,5 +33,14 @@ void main() {
 
     expect(metrics.successfulStrategies, contains('무속성'));
     expect(metrics.successfulStrategies, contains('steel (무거움)'));
+    final normal = metrics.strategyMetrics.firstWhere(
+      (strategy) => strategy.label == '무속성',
+    );
+    expect(normal.successInputs, greaterThan(0));
+    expect(normal.successRate, greaterThan(0));
+    expect(normal.widestAngleDegrees, greaterThan(0));
+    expect(normal.largestConnectedRegion, greaterThan(0));
+    expect(normal.widestAngleDegrees, 2);
+    expect(normal.largestConnectedRegion, 19);
   });
 }

@@ -15,6 +15,15 @@ void main() {
     print('최대 연결 성공 영역: ${metrics.largestConnectedRegion}셀');
     print('최소 샷: ${metrics.minimumShots ?? '-'}');
     print('성공 전략: ${metrics.successfulStrategies.join(', ')}');
+    for (final strategy in metrics.strategyMetrics) {
+      print(
+        '  ${strategy.label}: ${strategy.successInputs}/${strategy.totalInputs} '
+        '(${(strategy.successRate * 100).toStringAsFixed(2)}%), '
+        '각도 ${strategy.widestAngleDegrees.toStringAsFixed(0)}도, '
+        '힘 ${(strategy.widestPowerRange * 100).toStringAsFixed(0)}%, '
+        '연결 ${strategy.largestConnectedRegion}셀',
+      );
+    }
     print('복사 없는 성공: ${metrics.copylessSuccess ? '예' : '아니오'}');
     print('---');
   }
@@ -24,4 +33,13 @@ void main() {
   );
   final thirdStage = highResolution.analyzeLevel(2);
   print('3단계 고해상도 대체 풀이: ${thirdStage.successfulStrategies.join(', ')}');
+  for (final strategy in thirdStage.strategyMetrics) {
+    print(
+      '  ${strategy.label}: ${strategy.successInputs}/${strategy.totalInputs} '
+      '(${(strategy.successRate * 100).toStringAsFixed(2)}%), '
+      '각도 ${strategy.widestAngleDegrees.toStringAsFixed(0)}도, '
+      '힘 ${(strategy.widestPowerRange * 100).toStringAsFixed(0)}%, '
+      '연결 ${strategy.largestConnectedRegion}셀',
+    );
+  }
 }
