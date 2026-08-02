@@ -7,7 +7,7 @@ class LevelDefinition {
     required this.name,
     required this.ballSpawn,
     required this.entities,
-    this.copyCharges = 1,
+    this.copyCharges = 0,
     this.parShots = 3,
     this.bonusGoal = '복사 없이 클리어',
     this.copyCoreReward = 0,

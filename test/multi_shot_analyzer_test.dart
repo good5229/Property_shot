@@ -25,6 +25,10 @@ void main() {
       ),
       isTrue,
     );
+    expect(
+      metrics.examples.every((plan) => plan.events.length == plan.shots.length),
+      isTrue,
+    );
 
     final thirdStage = analyzer.analyzeLevel(2);
     final stickyFollowUp = thirdStage.strategyMetrics
@@ -37,5 +41,7 @@ void main() {
           orElse: () => throw StateError('점착 후 무거움 재선택 경로가 없습니다.'),
         );
     expect(stickyFollowUp.shots, hasLength(2));
+    expect(stickyFollowUp.events.first, contains('sticky_attached'));
+    expect(stickyFollowUp.events.last, contains('hole_entered'));
   });
 }

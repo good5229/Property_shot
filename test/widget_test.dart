@@ -6,6 +6,7 @@ import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
+import 'package:property_shot/ui/play_telemetry.dart';
 
 void main() {
   testWidgets('실제 시작 흐름은 홈·섬 지도·플레이를 연결한다', (tester) async {
@@ -86,7 +87,9 @@ void main() {
       productRules: true,
       copyCoreCount: 1,
     );
-    await tester.pumpWidget(PropertyShotApp(initialState: state));
+    await tester.pumpWidget(
+      PropertyShotApp(initialState: state, showStageSelector: false),
+    );
     await tester.pump();
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
@@ -96,12 +99,36 @@ void main() {
     expect(find.text('복제 코어 1개 남음'), findsOneWidget);
   });
 
+  testWidgets('단계 초기화는 진입 시점의 복제 코어를 복원한다', (tester) async {
+    final state = levels[0].createState(
+      0,
+      productRules: true,
+      copyCoreCount: 1,
+    );
+    await tester.pumpWidget(
+      PropertyShotApp(initialState: state, showStageSelector: false),
+    );
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('copy_button')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reset_button')));
+    await tester.pump();
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+
+    expect(find.text('복제 코어 1개 남음'), findsOneWidget);
+  });
+
   testWidgets('속성을 선택해 공으로 옮길 수 있다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
     expect(find.textContaining('1. 무거움 익히기'), findsOneWidget);
-    expect(find.textContaining('방향 조정'), findsOneWidget);
+    expect(find.byKey(const Key('compact_message')), findsOneWidget);
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
@@ -114,30 +141,40 @@ void main() {
   });
 
   testWidgets('속성을 선택해 공으로 복사할 수 있다', (tester) async {
-    await tester.pumpWidget(const PropertyShotApp());
+    final state = levels[0].createState(
+      0,
+      productRules: true,
+      copyCoreCount: 1,
+    );
+    await tester.pumpWidget(PropertyShotApp(initialState: state));
     await tester.pump();
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
-    expect(find.text('복사 1회 남음'), findsOneWidget);
+    expect(find.text('복제 코어 1개 남음'), findsOneWidget);
     await tester.tap(find.byKey(const Key('copy_button')));
     await tester.pump();
 
     expect(find.textContaining('공: 무거움'), findsOneWidget);
     expect(find.textContaining('복사했습니다'), findsOneWidget);
-    expect(find.textContaining('복사 0회 남음'), findsOneWidget);
+    expect(find.textContaining('복제 코어 0개 남음'), findsOneWidget);
     expect(find.textContaining('선택:'), findsNothing);
   });
 
   testWidgets('이전과 복사의 원본 결과를 구분해 안내한다', (tester) async {
-    await tester.pumpWidget(const PropertyShotApp());
+    final state = levels[0].createState(
+      0,
+      productRules: true,
+      copyCoreCount: 1,
+    );
+    await tester.pumpWidget(PropertyShotApp(initialState: state));
     await tester.pump();
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
 
     expect(find.text('떼어 공에 옮기기'), findsOneWidget);
-    expect(find.text('원본에 남기고 공에 복사하기'), findsOneWidget);
+    expect(find.text('복제 코어로 공에 담기'), findsOneWidget);
     expect(find.textContaining('원본에서 사라짐'), findsOneWidget);
     expect(find.textContaining('원본에 유지됨'), findsOneWidget);
   });
@@ -318,6 +355,22 @@ void main() {
     expect(find.textContaining('3. 연쇄 문 열기'), findsOneWidget);
   });
 
+  testWidgets('클리어 패널은 모바일에서 내용 중심 높이를 사용한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final clearState = levels[1]
+        .createState(1)
+        .copyWith(phase: GamePhase.success, shotCount: 3, message: '홀 진입 성공!');
+    await tester.pumpWidget(PropertyShotApp(initialState: clearState));
+    await tester.pump();
+
+    final panel = tester.getRect(find.byKey(const Key('clear_panel')));
+    final next = tester.getRect(find.byKey(const Key('next_stage_button')));
+    expect(panel.height, lessThan(600));
+    expect(next.bottom, lessThanOrEqualTo(844));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('클리어 결과에서 기록 다시 도전은 같은 단계로 돌아간다', (tester) async {
     final clearState = levels[0]
         .createState(0)
@@ -427,6 +480,44 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('제품 라우터의 축약 화면에도 첫 발사 순서가 표시된다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(768, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await tester.pump();
+
+    expect(
+      tester.widget<Text>(find.byKey(const Key('compact_message'))).data,
+      contains('길게 누르기'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('화면 계측기는 단계 시작과 속성 이전 이벤트를 보존한다', (tester) async {
+    final telemetry = LocalPlayTelemetry();
+    await tester.pumpWidget(
+      PropertyShotApp(
+        initialState: levels[0].createState(0, productRules: true),
+        showStageSelector: false,
+        telemetry: telemetry,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('transfer_button')));
+    await tester.pump();
+
+    expect(
+      telemetry.events.map((event) => event['유형']),
+      containsAllInOrder(['단계 시작', '속성 이전']),
+    );
+    expect(telemetry.exportJson(), contains('무거움'));
   });
 
   testWidgets('좁은 화면의 정보 팝업과 닫기 버튼이 화면 안에 있다', (tester) async {

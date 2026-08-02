@@ -16,12 +16,14 @@ import '../game/property_shot_game.dart';
 import '../game/simulation/shot_resolver.dart';
 import '../game/simulation/trait_resolver.dart';
 import 'game_feedback.dart';
+import 'play_telemetry.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
     this.initialState,
     this.showStageSelector = true,
+    this.telemetry,
     this.onExit,
     this.onCopyCoreEarned,
     this.onLevelUnlocked,
@@ -29,6 +31,7 @@ class GameScreen extends StatefulWidget {
 
   final GameState? initialState;
   final bool showStageSelector;
+  final LocalPlayTelemetry? telemetry;
   final VoidCallback? onExit;
   final ValueChanged<int>? onCopyCoreEarned;
   final ValueChanged<int>? onLevelUnlocked;
@@ -41,6 +44,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _shotResolver = const ShotResolver();
   final _traitResolver = const TraitResolver();
   final _feedback = GameFeedback();
+  late final LocalPlayTelemetry _telemetry;
   late GameState _state;
   late PropertyShotGame _game;
   bool _showBallInfo = false;
@@ -60,14 +64,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Future<void>? _bestShotsLoadFuture;
   final Map<int, int> _bestShots = {};
   int _unlockedLevel = 0;
+  late int _stageCopyCoreAtStart;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     _state =
         widget.initialState ??
-        levels.first.createState(0).copyWith(message: _levelIntroMessage(0));
+        levels.first
+            .createState(0, productRules: true)
+            .copyWith(message: _levelIntroMessage(0));
+    _stageCopyCoreAtStart = _state.copyCoreCount;
     if (widget.initialState != null) {
       _unlockedLevel = levels.length - 1;
     }
@@ -79,6 +88,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
+    _telemetry.record('단계 시작', stage: _state.levelIndex);
   }
 
   Future<void> _loadBestShots() async {
@@ -167,16 +177,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _inspectedEntityId = null;
     _showClearPopup = false;
     _showFailurePopup = false;
-    _setState(
-      levels[index]
-          .createState(
-            index,
-            productRules: !widget.showStageSelector,
-            copyCoreCount: _state.copyCoreCount,
-            copyCoreRewarded: _state.copyCoreRewarded,
-          )
-          .copyWith(message: _levelIntroMessage(index)),
-    );
+    final sameStage = index == _state.levelIndex;
+    final availableCores = sameStage
+        ? _stageCopyCoreAtStart
+        : _state.copyCoreCount;
+    final next = levels[index]
+        .createState(
+          index,
+          productRules: !widget.showStageSelector,
+          copyCoreCount: availableCores,
+          copyCoreRewarded: _state.copyCoreRewarded,
+        )
+        .copyWith(message: _levelIntroMessage(index));
+    _stageCopyCoreAtStart = next.copyCoreCount;
+    _setState(next);
+    _telemetry.record('단계 시작', stage: index);
   }
 
   void _goNextLevel() {
@@ -205,15 +220,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _feedback.traitTransferred();
     _showBallInfo = false;
     _inspectedEntityId = null;
-    _setState(
-      _traitResolver
-          .transferSelectedTrait(_state)
-          .copyWith(
-            message: _state.levelIndex == 0
-                ? '추천 경로를 준비했습니다. 공을 길게 눌렀다 손을 떼면 자동 발사됩니다.'
-                : '속성을 공에 담았습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
-          ),
+    final next = _traitResolver
+        .transferSelectedTrait(_state)
+        .copyWith(
+          message: _state.levelIndex == 0
+              ? '추천 경로를 준비했습니다. 공을 길게 눌렀다 손을 떼면 자동 발사됩니다.'
+              : '속성을 공에 담았습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
+        );
+    _telemetry.record(
+      '속성 이전',
+      stage: _state.levelIndex,
+      trait: next.equippedTrait?.label,
+      action: '이전',
     );
+    _setState(next);
   }
 
   void _copyTrait() {
@@ -230,6 +250,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             '원본에 속성을 남기고 공에 복사했습니다. $remaining. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
       ),
     );
+    _telemetry.record(
+      '속성 복사',
+      stage: _state.levelIndex,
+      trait: next.equippedTrait?.label,
+      action: '복제 코어',
+    );
   }
 
   void _launch() {
@@ -243,6 +269,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         power: _state.aimPower,
         equippedTrait: _state.equippedTrait,
       ),
+    );
+    _telemetry.record(
+      '발사',
+      stage: _state.levelIndex,
+      attempt: _state.shotCount + 1,
+      angle: math.atan2(_state.aimDirection.y, _state.aimDirection.x),
+      power: _state.aimPower,
+      trait: _state.equippedTrait?.label,
     );
     _feedback.shotLaunched();
     _showBallInfo = false;
@@ -282,6 +316,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         copyCoreRewarded: true,
         message: '섬의 보상으로 복제 코어 $reward개를 얻었습니다.',
       );
+      _stageCopyCoreAtStart = _state.copyCoreCount;
       widget.onCopyCoreEarned?.call(reward);
     }
     setState(() {
@@ -290,8 +325,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _showFailurePopup = !cleared;
     });
     if (cleared) {
+      _telemetry.record(
+        '클리어',
+        stage: _state.levelIndex,
+        attempt: _state.shotCount,
+        result: '성공',
+      );
       _feedback.shotCleared();
     } else {
+      _telemetry.record(
+        '실패',
+        stage: _state.levelIndex,
+        attempt: _state.shotCount,
+        result: '재도전 가능',
+      );
       _feedback.shotFailed();
     }
   }
@@ -303,6 +350,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (move.visualState == 'pressed') {
       _feedback.switchOpened();
     }
+    _telemetry.record(
+      '연쇄 이동',
+      stage: _state.levelIndex,
+      target: move.entityId,
+      result: move.visualState,
+    );
   }
 
   void _onShotImpact(ShotImpact impact) {
@@ -310,6 +363,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _feedback.collision(impact.entityType);
+    _telemetry.record(
+      '충돌',
+      stage: _state.levelIndex,
+      target: impact.entityType.name,
+    );
   }
 
   void _rewind() {
@@ -317,6 +375,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _showFailurePopup = false;
+    _telemetry.record('되감기', stage: _state.levelIndex);
     _setState(_shotResolver.rewind(_state));
   }
 
@@ -677,7 +736,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFE3E8DF),
+        backgroundColor: const Color(0xFFBFE8E3),
         appBar: widget.showStageSelector
             ? AppBar(
                 title: const Text('속성 한방'),
@@ -700,6 +759,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         body: SafeArea(
           child: Stack(
             children: [
+              const Positioned.fill(child: _GameplayBackdrop()),
               AbsorbPointer(
                 absorbing: inputBlocked,
                 child: ExcludeSemantics(
@@ -741,7 +801,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               absorbing: inputBlocked,
                               child: Padding(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: compactLayout ? 4 : 12,
+                                  horizontal: compactLayout ? 0 : 12,
                                 ),
                                 child: LayoutBuilder(
                                   builder: (context, constraints) {
@@ -972,6 +1032,79 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 }
 
+class _GameplayBackdrop extends StatelessWidget {
+  const _GameplayBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(painter: _GameplayBackdropPainter());
+  }
+}
+
+class _GameplayBackdropPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFFBFE8E3),
+    );
+
+    final sand = Paint()..color = const Color(0xFFF6D995);
+    final shore = Path()
+      ..moveTo(-20, size.height * 0.8)
+      ..quadraticBezierTo(
+        size.width * 0.3,
+        size.height * 0.72,
+        size.width * 0.58,
+        size.height * 0.81,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.84,
+        size.height * 0.9,
+        size.width + 20,
+        size.height * 0.76,
+      )
+      ..lineTo(size.width + 20, size.height + 20)
+      ..lineTo(-20, size.height + 20)
+      ..close();
+    canvas.drawPath(shore, sand);
+
+    final wave = Paint()
+      ..color = const Color(0x664EAAA5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    for (var index = 0; index < 3; index++) {
+      final y = size.height * (0.08 + index * 0.09);
+      canvas.drawArc(
+        Rect.fromLTWH(size.width * 0.04, y, size.width * 0.18, 12),
+        math.pi * 0.1,
+        math.pi * 0.8,
+        false,
+        wave,
+      );
+      canvas.drawArc(
+        Rect.fromLTWH(size.width * 0.78, y + 16, size.width * 0.18, 12),
+        math.pi * 0.1,
+        math.pi * 0.8,
+        false,
+        wave,
+      );
+    }
+
+    final shell = Paint()..color = const Color(0x66EF765E);
+    for (final point in [
+      Offset(size.width * 0.12, size.height * 0.9),
+      Offset(size.width * 0.82, size.height * 0.93),
+      Offset(size.width * 0.68, size.height * 0.86),
+    ]) {
+      canvas.drawCircle(point, 3, shell);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class _ClearPopup extends StatelessWidget {
   const _ClearPopup({
     required this.state,
@@ -1002,182 +1135,229 @@ class _ClearPopup extends StatelessWidget {
           key: const Key('clear_popup'),
           color: const Color(0x88000000),
           child: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: math.max(1, MediaQuery.sizeOf(context).height - 40),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7DB),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: const Color(0xFF503C2E),
-                          width: 3,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x44000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '클리어!',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.headlineSmall,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text('${state.shotCount}번 만에 성공'),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    key: const Key('clear_stars'),
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      for (var index = 0; index < 3; index++)
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 2,
-                                          ),
-                                          child: Icon(
-                                            index < stars
-                                                ? Icons.star_rounded
-                                                : Icons.star_border_rounded,
-                                            color: index < stars
-                                                ? const Color(0xFFF0AE34)
-                                                : const Color(0xFFB7B6A9),
-                                            size: 32,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  Text(
-                                    '파 ${level.parShots}회 · $stars/3 별',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelLarge
-                                        ?.copyWith(
-                                          color: const Color(0xFF6A5947),
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    level.bonusGoal,
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: const Color(0xFF5D6657),
-                                        ),
-                                  ),
-                                  if (!isFinal) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${state.levelIndex + 2}단계가 열렸습니다.',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                            color: const Color(0xFF236B4A),
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                  ],
-                                  if (bestShot != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text('내 최고 기록 $bestShot회'),
-                                  ],
-                                  const SizedBox(height: 14),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.74,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: const Color(0xFFE4C56A),
-                                      ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final panelHeight = math
+                    .min(540.0, math.max(1, constraints.maxHeight - 48))
+                    .toDouble();
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.96, end: 1),
+                        duration: const Duration(milliseconds: 360),
+                        curve: Curves.easeOutBack,
+                        builder: (context, scale, child) =>
+                            Transform.scale(scale: scale, child: child),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: panelHeight,
+                          child: Container(
+                            key: const Key('clear_panel'),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7DB),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: const Color(0xFF503C2E),
+                                width: 3,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x44000000),
+                                  blurRadius: 18,
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      18,
+                                      18,
+                                      18,
+                                      8,
                                     ),
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Text('예시 기록 · 온라인 순위 아님'),
-                                        const SizedBox(height: 2),
                                         Text(
-                                          '현재는 데모용 기록만 표시합니다.',
+                                          '클리어!',
                                           style: Theme.of(
                                             context,
-                                          ).textTheme.bodySmall,
+                                          ).textTheme.headlineSmall,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text('${state.shotCount}번 만에 성공'),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          key: const Key('clear_stars'),
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            for (
+                                              var index = 0;
+                                              index < 3;
+                                              index++
+                                            )
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 2,
+                                                    ),
+                                                child: Icon(
+                                                  index < stars
+                                                      ? Icons.star_rounded
+                                                      : Icons
+                                                            .star_border_rounded,
+                                                  color: index < stars
+                                                      ? const Color(0xFFF0AE34)
+                                                      : const Color(0xFFB7B6A9),
+                                                  size: 32,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        Text(
+                                          '파 ${level.parShots}회 · $stars/3 별',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelLarge
+                                              ?.copyWith(
+                                                color: const Color(0xFF6A5947),
+                                                fontWeight: FontWeight.w800,
+                                              ),
                                         ),
                                         const SizedBox(height: 8),
-                                        for (var i = 0; i < rows.length; i++)
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 3,
+                                        Text(
+                                          level.bonusGoal,
+                                          textAlign: TextAlign.center,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: const Color(0xFF5D6657),
+                                              ),
+                                        ),
+                                        if (!isFinal) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${state.levelIndex + 2}단계가 열렸습니다.',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFF236B4A,
+                                                  ),
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        ],
+                                        if (bestShot != null) ...[
+                                          const SizedBox(height: 4),
+                                          Text('내 최고 기록 $bestShot회'),
+                                        ],
+                                        const SizedBox(height: 14),
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.74,
                                             ),
-                                            child: Row(
-                                              children: [
-                                                SizedBox(
-                                                  width: 28,
-                                                  child: Text('${i + 1}위'),
-                                                ),
-                                                Expanded(
-                                                  child: Text(rows[i].name),
-                                                ),
-                                                Text('${rows[i].shots}회'),
-                                              ],
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(0xFFE4C56A),
                                             ),
                                           ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Text('예시 기록 · 온라인 순위 아님'),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '현재는 데모용 기록만 표시합니다.',
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              for (
+                                                var i = 0;
+                                                i < rows.length;
+                                                i++
+                                              )
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 3,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      SizedBox(
+                                                        width: 28,
+                                                        child: Text(
+                                                          '${i + 1}위',
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        child: Text(
+                                                          rows[i].name,
+                                                        ),
+                                                      ),
+                                                      Text('${rows[i].shots}회'),
+                                                    ],
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-                            child: Column(
-                              children: [
-                                FilledButton.icon(
-                                  key: const Key('next_stage_button'),
-                                  autofocus: true,
-                                  onPressed: onNext,
-                                  icon: const Icon(Icons.arrow_forward),
-                                  label: Text(isFinal ? '처음부터 다시' : '다음'),
                                 ),
-                                const SizedBox(height: 8),
-                                OutlinedButton.icon(
-                                  key: const Key('retry_stage_button'),
-                                  onPressed: onRetry,
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('기록 다시 도전'),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    18,
+                                    0,
+                                    18,
+                                    18,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      FilledButton.icon(
+                                        key: const Key('next_stage_button'),
+                                        autofocus: true,
+                                        onPressed: onNext,
+                                        icon: const Icon(Icons.arrow_forward),
+                                        label: Text(isFinal ? '처음부터 다시' : '다음'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      OutlinedButton.icon(
+                                        key: const Key('retry_stage_button'),
+                                        onPressed: onRetry,
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('기록 다시 도전'),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),

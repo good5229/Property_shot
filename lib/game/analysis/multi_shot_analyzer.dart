@@ -14,8 +14,8 @@ import '../domain/trait.dart';
 /// 수 있는 각도·힘 격자를 사용한다. 실제 판정은 항상 ShotResolver에 위임한다.
 class MultiShotDifficultyAnalyzer {
   const MultiShotDifficultyAnalyzer({
-    this.angleStepDegrees = 30,
-    this.powerSteps = 4,
+    this.angleStepDegrees = 20,
+    this.powerSteps = 5,
     this.maxShots = 2,
     this.includeConditionalCopy = true,
     this.shotResolver = const ShotResolver(),
@@ -44,6 +44,7 @@ class MultiShotDifficultyAnalyzer {
           state: strategy.state,
           inputs: const [],
           actions: [strategy.label],
+          events: const [],
         ),
       ];
       var strategyTotal = 0;
@@ -67,6 +68,7 @@ class MultiShotDifficultyAnalyzer {
               final actionSequence = node.inputs.isEmpty
                   ? node.actions
                   : [...node.actions, action.label];
+              final eventSequence = [...node.events, result.events];
               if (result.state.phase == GamePhase.success) {
                 strategySuccess++;
                 successfulSequences++;
@@ -85,6 +87,7 @@ class MultiShotDifficultyAnalyzer {
                       strategy: strategy.label,
                       shots: sequence,
                       actions: actionSequence,
+                      events: eventSequence,
                     ),
                   );
                 }
@@ -94,6 +97,7 @@ class MultiShotDifficultyAnalyzer {
                       strategy: strategy.label,
                       shots: sequence,
                       actions: actionSequence,
+                      events: eventSequence,
                     ),
                   );
                 }
@@ -103,6 +107,7 @@ class MultiShotDifficultyAnalyzer {
                     state: result.state,
                     inputs: sequence,
                     actions: actionSequence,
+                    events: eventSequence,
                   ),
                 );
               }
@@ -241,11 +246,13 @@ class ShotSequencePlan {
     required this.strategy,
     required this.shots,
     this.actions = const [],
+    this.events = const [],
   });
 
   final String strategy;
   final List<ShotInput> shots;
   final List<String> actions;
+  final List<List<String>> events;
 }
 
 class _Strategy {
@@ -260,11 +267,13 @@ class _SearchNode {
     required this.state,
     required this.inputs,
     required this.actions,
+    required this.events,
   });
 
   final GameState state;
   final List<ShotInput> inputs;
   final List<String> actions;
+  final List<List<String>> events;
 }
 
 class _Action {

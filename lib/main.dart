@@ -8,20 +8,37 @@ import 'game/domain/game_state.dart';
 import 'game/levels/levels.dart';
 import 'ui/game_feedback.dart';
 import 'ui/game_screen.dart';
+import 'ui/play_telemetry.dart';
 
 const _copyCoreCountKey = 'property_shot_copy_core_count';
 const _copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
 const _unlockedLevelKey = 'property_shot_unlocked_level';
+
+String _stageIntroMessage(int levelIndex) {
+  return switch (levelIndex) {
+    0 => '상자를 밀어 홀로 → 방향 조정 · 길게 누르기 · 손 떼기',
+    1 => '첫 반사면 찾기 → 방향 조정 · 길게 누르기 · 손 떼기',
+    _ => '스위치와 문 살피기 → 여러 경로로 도전',
+  };
+}
 
 void main() {
   runApp(const PropertyShotApp(showHome: true));
 }
 
 class PropertyShotApp extends StatelessWidget {
-  const PropertyShotApp({super.key, this.initialState, this.showHome = false});
+  const PropertyShotApp({
+    super.key,
+    this.initialState,
+    this.showHome = false,
+    this.showStageSelector = true,
+    this.telemetry,
+  });
 
   final GameState? initialState;
   final bool showHome;
+  final bool showStageSelector;
+  final LocalPlayTelemetry? telemetry;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +68,11 @@ class PropertyShotApp extends StatelessWidget {
       ),
       home: showHome && initialState == null
           ? const _PropertyShotRouter()
-          : GameScreen(initialState: initialState),
+          : GameScreen(
+              initialState: initialState,
+              showStageSelector: showStageSelector,
+              telemetry: telemetry,
+            ),
     );
   }
 }
@@ -140,12 +161,14 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     if (activeStage != null) {
       return GameScreen(
         key: ValueKey('stage_$activeStage'),
-        initialState: levels[activeStage].createState(
-          activeStage,
-          productRules: true,
-          copyCoreCount: _copyCoreCount,
-          copyCoreRewarded: _copyCoreRewarded,
-        ),
+        initialState: levels[activeStage]
+            .createState(
+              activeStage,
+              productRules: true,
+              copyCoreCount: _copyCoreCount,
+              copyCoreRewarded: _copyCoreRewarded,
+            )
+            .copyWith(message: _stageIntroMessage(activeStage)),
         showStageSelector: false,
         onExit: _returnHome,
         onCopyCoreEarned: _earnCopyCore,
@@ -201,15 +224,7 @@ class _HomeScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                      Semantics(
-                        image: true,
-                        label: '웃는 얼굴의 속성 공',
-                        child: Image.asset(
-                          'assets/icons/ball.png',
-                          width: 112,
-                          height: 112,
-                        ),
-                      ),
+                      const _HomePlayPreview(),
                       const SizedBox(height: 12),
                       Text(
                         '속성 한방',
@@ -276,6 +291,142 @@ class _HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomePlayPreview extends StatelessWidget {
+  const _HomePlayPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      image: true,
+      label: '공과 상자와 무거운 돌이 있는 목표 홀 보드',
+      child: Container(
+        height: 174,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFE3A1),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFF3B7776), width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33406B65),
+              blurRadius: 10,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(painter: _PreviewBoardPainter()),
+            ),
+            Positioned(
+              left: 34,
+              top: 40,
+              child: Image.asset(
+                'assets/generated/stone-v2.png',
+                width: 72,
+                height: 54,
+                fit: BoxFit.contain,
+              ),
+            ),
+            Positioned(
+              left: 146,
+              top: 92,
+              child: Image.asset(
+                'assets/generated/crate-v2.png',
+                width: 56,
+                height: 56,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const Positioned(right: 26, top: 28, child: _PreviewHole()),
+            Positioned(
+              left: 66,
+              bottom: 18,
+              child: Image.asset(
+                'assets/icons/ball.png',
+                width: 54,
+                height: 54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewHole extends StatelessWidget {
+  const _PreviewHole();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 62,
+      height: 70,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF122523),
+              border: Border.all(color: const Color(0xFF4EAAA5), width: 5),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x6650C2B2),
+                  blurRadius: 0,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+          ),
+          const Positioned(
+            right: 3,
+            top: 0,
+            child: Icon(Icons.flag_rounded, color: Color(0xFFEF765E), size: 28),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewBoardPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line = Paint()
+      ..color = const Color(0x1F9B6E38)
+      ..strokeWidth = 2;
+    for (var y = 18.0; y < size.height; y += 28) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
+    }
+    final pebble = Paint()..color = const Color(0x559A9D73);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.42, 36),
+        width: 18,
+        height: 7,
+      ),
+      pebble,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.86, size.height * 0.78),
+        width: 16,
+        height: 6,
+      ),
+      pebble,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _PreviewBoardPainter oldDelegate) => false;
 }
 
 class _FeedbackSettingsDialog extends StatefulWidget {
