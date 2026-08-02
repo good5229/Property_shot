@@ -42,7 +42,7 @@ void main() {
     );
   });
 
-  test('3단계는 점착 발판과 직접 스위치 풀이를 모두 허용한다', () {
+  test('3단계는 점착 고정 역할과 직접 스위치 풀이를 구분해 허용한다', () {
     final initial = levels[2].createState(2);
     final sticky = _transfer(initial, 'glue');
     final attached = shots.resolve(

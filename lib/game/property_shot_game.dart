@@ -434,6 +434,9 @@ class PropertyShotGame extends FlameGame {
     }
     final sample = elapsed.clamp(0.0, points.length - 1.0);
     final index = sample.floor();
+    if (index >= points.length - 1) {
+      return points.last;
+    }
     final local = sample - index;
     final from = points[index];
     final to = points[index + 1];

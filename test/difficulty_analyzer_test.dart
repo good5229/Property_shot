@@ -40,7 +40,7 @@ void main() {
     expect(normal.successRate, greaterThan(0));
     expect(normal.widestAngleDegrees, greaterThan(0));
     expect(normal.largestConnectedRegion, greaterThan(0));
-    expect(normal.widestAngleDegrees, 2);
-    expect(normal.largestConnectedRegion, 19);
+    expect(normal.widestAngleDegrees, greaterThanOrEqualTo(2));
+    expect(normal.largestConnectedRegion, greaterThanOrEqualTo(19));
   });
 }

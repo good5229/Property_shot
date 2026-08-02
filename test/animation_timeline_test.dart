@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+
+import 'package:flame/game.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/domain/geometry.dart';
@@ -74,5 +77,30 @@ void main() {
 
     expect(finished, 0);
     expect(impacts.length, lessThan(result.impacts.length));
+  });
+
+  test('애니메이션 마지막 경로 점을 그릴 때 다음 인덱스를 읽지 않는다', () {
+    const resolver = ShotResolver();
+    final start = levels[0].createState(0);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, -0.4), power: 0.86),
+    );
+    final game = PropertyShotGame(result.state);
+    game.onGameResize(Vector2(360, 520));
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      animationTransaction: true,
+    );
+    for (var frame = 0; frame < 4000; frame++) {
+      game.update(1 / 60);
+    }
+    final recorder = ui.PictureRecorder();
+    game.render(ui.Canvas(recorder));
+    recorder.endRecording();
   });
 }
