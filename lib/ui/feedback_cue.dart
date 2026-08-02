@@ -10,5 +10,6 @@ enum FeedbackCue {
   switchPressed,
   gateOpened,
   clear,
+  medal,
   fail,
 }

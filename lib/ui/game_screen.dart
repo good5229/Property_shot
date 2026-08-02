@@ -308,6 +308,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     final cleared = _state.phase == GamePhase.success;
+    final awardedStars = cleared
+        ? _starsForShot(_state.shotCount, levels[_state.levelIndex].parShots)
+        : 0;
     if (cleared &&
         !widget.showStageSelector &&
         !_state.copyCoreRewarded &&
@@ -336,6 +339,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         result: '성공',
       );
       _feedback.shotCleared();
+      _feedback.medalAwarded(awardedStars);
     } else {
       _telemetry.record(
         '실패',

@@ -27,6 +27,18 @@ void main() {
     expect(cues, [SystemSoundType.alert]);
   });
 
+  test('클리어 보상은 별도 메달 피드백 큐를 낸다', () {
+    final cues = <FeedbackCue>[];
+    final feedback = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+
+    feedback.medalAwarded(3);
+
+    expect(cues, [FeedbackCue.medal]);
+  });
+
   test('충돌 재질은 합성 피드백 큐도 구분한다', () {
     final cues = <FeedbackCue>[];
     final feedback = GameFeedback(

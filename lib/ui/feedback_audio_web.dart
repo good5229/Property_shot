@@ -89,6 +89,12 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
         volume: 0.07,
         wave: 'sine',
       ),
+      FeedbackCue.medal => (
+        frequency: 1040.0,
+        duration: 0.2,
+        volume: 0.055,
+        wave: 'triangle',
+      ),
       FeedbackCue.fail => (
         frequency: 180.0,
         duration: 0.16,

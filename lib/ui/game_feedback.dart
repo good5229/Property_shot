@@ -148,6 +148,18 @@ class GameFeedback {
     );
   }
 
+  void medalAwarded(int stars) {
+    if (stars <= 0) {
+      return;
+    }
+    _emit(
+      'medal_awarded',
+      minimumInterval: const Duration(milliseconds: 240),
+      haptic: HapticFeedback.lightImpact,
+      cue: FeedbackCue.medal,
+    );
+  }
+
   void shotFailed() {
     _emit(
       'shot_failed',
