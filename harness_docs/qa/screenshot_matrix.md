@@ -148,13 +148,13 @@
 ## 2026-08-02 대체 전략 해석 포함 최종 캡처
 
 - `390x844-stage-route-analysis-final.png`, `768x1024-stage-route-analysis-final.png`는 최신 서버 PID 2452에서 실제 스테이지 선택 화면으로 이동해 생성했다.
-- 이전 통합 분석 반복의 Web release는 PID 55374에서 실행됐고, 해당 지도 캡처는 분석 화면 회귀의 역사적 근거로 유지한다. 현재 화면 근거는 아래 PID 90106 직접 캡처를 사용한다.
+- 이전 통합 분석 반복의 Web release는 PID 55374에서 실행됐고, 해당 지도 캡처는 분석 화면 회귀의 역사적 근거로 유지한다. 현재 화면 근거는 아래 PID 16872 직접 캡처를 사용한다.
 - 분석 화면은 지배 전략 커버리지와 대체 전략 수를 코드 리포트에서 별도로 제공하며, 이 캡처에서는 추천 파·경로·한글 UI의 시각 회귀를 확인한다.
 
 ## 2026-08-02 현재 서버 직접 캡처
 
 - `scripts/capture_web_screenshots.py --url http://127.0.0.1:8080/`로 현재 PID 55374에서 `390x844-home-current.png`, `390x844-map-current.png`, `390x844-play-current.png`, `768x1024-home-current.png`, `768x1024-map-current.png`, `768x1024-play-current.png`를 생성했다.
-- `scripts/capture_web_screenshots.py --url http://127.0.0.1:8080/`로 현재 PID 90106에서 `390x844-home-current.png`, `390x844-map-current.png`, `390x844-play-current.png`, `768x1024-home-current.png`, `768x1024-map-current.png`, `768x1024-play-current.png`를 갱신했다.
+- `scripts/capture_web_screenshots.py --url http://127.0.0.1:8080/`로 현재 PID 16872에서 `390x844-home-current.png`, `390x844-map-current.png`, `390x844-play-current.png`, `768x1024-home-current.png`, `768x1024-map-current.png`, `768x1024-play-current.png`를 갱신했다.
 - `test/widget_test.dart`의 결과 상태를 동일한 PID 기준 현재 레벨 값으로 고정해 `390x844-result-current.png`, `768x1024-result-current.png`를 생성했다. 결과 화면은 `파 2회 · 3/3 별`, 리더보드, `다음` 버튼을 포함한다.
 - 시작·지도·플레이 상태 모두 콘솔 오류 0건이다. Web 의미 DOM 대신 기존 성능 감사에서 확인한 Flutter Web 좌표를 사용했으므로 실제 iOS 터치 좌표 검증으로 확대하지 않는다.
 
