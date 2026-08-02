@@ -16,6 +16,7 @@ import '../game/property_shot_game.dart';
 import '../game/simulation/shot_resolver.dart';
 import '../game/simulation/trait_resolver.dart';
 import 'game_feedback.dart';
+import 'game_ball_painter.dart';
 import 'play_telemetry.dart';
 
 class GameScreen extends StatefulWidget {
@@ -2438,7 +2439,7 @@ class _EntityThumbnail extends StatelessWidget {
             : _traitUiColor(trait),
         child: entity.type == EntityType.ball
             ? CustomPaint(
-                painter: _GameBallIconPainter(trait),
+                painter: GameBallIconPainter(trait),
                 size: const Size(34, 34),
               )
             : assetPath == null
@@ -2468,7 +2469,7 @@ class _BallThumbnail extends StatelessWidget {
       child: _ThumbnailFrame(
         backgroundColor: trait == null ? Colors.white : _traitUiColor(trait!),
         child: CustomPaint(
-          painter: _GameBallIconPainter(trait),
+          painter: GameBallIconPainter(trait),
           size: const Size(34, 34),
         ),
       ),
@@ -2627,78 +2628,6 @@ class _EntityIconPainter extends CustomPainter {
       oldDelegate.entity.pressed != entity.pressed;
 }
 
-class _GameBallIconPainter extends CustomPainter {
-  const _GameBallIconPainter(this.trait);
-
-  final TraitType? trait;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.shortestSide * 0.42;
-    final baseColor = trait == null ? Colors.white : _traitBallColor(trait!);
-    final gradient = RadialGradient(
-      center: const Alignment(-0.45, -0.55),
-      radius: 0.96,
-      colors: [
-        Colors.white.withValues(alpha: 0.98),
-        baseColor,
-        Color.lerp(baseColor, const Color(0xFF152018), 0.22)!,
-      ],
-      stops: const [0.0, 0.58, 1.0],
-    );
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center.translate(3, radius * 0.72),
-        width: radius * 1.6,
-        height: radius * 0.42,
-      ),
-      Paint()..color = const Color(0x24000000),
-    );
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..shader = gradient.createShader(
-          Rect.fromCircle(center: center, radius: radius),
-        ),
-    );
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = const Color(0xFF24352D)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.7,
-    );
-    final eye = Paint()..color = const Color(0xFF3B302A);
-    final blush = Paint()..color = const Color(0x44FF8EA1);
-    canvas.drawCircle(center.translate(-4.2, -2.6), 1.45, eye);
-    canvas.drawCircle(center.translate(4.2, -2.6), 1.45, eye);
-    canvas.drawCircle(center.translate(-6.4, 3.6), 2.2, blush);
-    canvas.drawCircle(center.translate(6.4, 3.6), 2.2, blush);
-    canvas.drawArc(
-      Rect.fromCenter(center: center.translate(0, 1), width: 7, height: 5),
-      0.15,
-      2.84,
-      false,
-      Paint()
-        ..color = const Color(0xFF3B302A)
-        ..strokeWidth = 1.2
-        ..style = PaintingStyle.stroke,
-    );
-    canvas.drawCircle(
-      center.translate(-4.2, -6.3),
-      2.6,
-      Paint()..color = const Color(0x88FFFFFF),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _GameBallIconPainter oldDelegate) =>
-      oldDelegate.trait != trait;
-}
-
 String? _assetPath(EntityState entity) {
   return switch (entity.type) {
     EntityType.crate => 'assets/generated/crate-v2.png',
@@ -2762,16 +2691,5 @@ Color _traitUiColor(TraitType trait) {
       return const Color(0xFFA9E7BF);
     case TraitType.sticky:
       return const Color(0xFFD2B5F0);
-  }
-}
-
-Color _traitBallColor(TraitType trait) {
-  switch (trait) {
-    case TraitType.heavy:
-      return const Color(0xFF4D6572);
-    case TraitType.bouncy:
-      return const Color(0xFF2EAD74);
-    case TraitType.sticky:
-      return const Color(0xFF8D5BB8);
   }
 }

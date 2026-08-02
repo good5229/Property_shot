@@ -66,6 +66,11 @@
 - Golden 호스트에서는 Flame 래스터 디코더 교착을 피하기 위해 `loadGameAssets: false`를 사용한다. 제품 기본 실행은 래스터 자산을 계속 사용하므로 Web 캡처와 자산 HTTP 200 검증을 함께 본다.
 - 390×844와 768×1024 Golden 테스트 2개가 통과했다. 실제 iOS 렌더링과 프레임 측정은 별도 미검증이다.
 
+## 2026-08-02 공 화풍 일관성 Golden
+
+- `test/goldens/raster_assets_390x844.png`, `test/goldens/raster_assets_768x1024.png`에 돌·상자·젤리 래스터와 얼굴 공을 함께 캡처했다.
+- 홈 미리보기와 플레이 공은 `GameBallIconPainter`를 공유하며, 레거시 농구공 이미지가 화면에 다시 사용되지 않도록 회귀를 추가했다.
+
 ## 2026-08-02 섬 지도 진행 경로 Golden
 
 - `test/goldens/stage_select_390x844.png`, `test/goldens/stage_select_768x1024.png`를 추가했다.
@@ -84,7 +89,7 @@
 - 테스트 환경 폰트 로딩을 명시해 네모 글리프가 기준 이미지에 섞이지 않도록 했다.
 - `390x844-home-font-gate.png`, `768x1024-home-font-gate.png`는 폰트 보정 후 최신 Web release의 실제 홈 화면 캡처이며 두 화면의 콘솔 오류는 0건이다.
 - 시작 버튼 `첫 섬에서 시작하기`는 Golden과 실제 Web 캡처에서 동일한 한글 글리프로 확인했다.
-- Golden 캡처 전 `stone-v2.png`·`crate-v2.png`·`ball.png`를 명시적으로 precache해 390px에서 오브젝트가 누락되던 순서 의존성을 제거했다. 최신 캡처와 기준 이미지 모두 세 오브젝트를 포함한다.
+- Golden 캡처 전 `stone-v2.png`·`crate-v2.png`·`jelly-bumper-v1.png`를 명시적으로 precache해 래스터 오브젝트가 누락되는 순서 의존성을 제거했다. 공은 `GameBallIconPainter`로 그리며, 최신 캡처와 기준 이미지 모두 돌·상자·젤리·얼굴 공을 포함한다.
 
 ## 2026-08-02 모바일 HUD 안내 축약 캡처
 

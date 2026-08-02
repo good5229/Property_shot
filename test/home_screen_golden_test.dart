@@ -40,7 +40,6 @@ void main() {
         for (final asset in const [
           'assets/generated/stone-v2.png',
           'assets/generated/crate-v2.png',
-          'assets/icons/ball.png',
         ]) {
           await precacheImage(AssetImage(asset), context);
         }

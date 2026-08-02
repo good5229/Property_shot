@@ -6,7 +6,7 @@
 
 | 경로 | 용도 | 권리 상태 |
 |---|---|---|
-| `assets/icons/ball.png` | 공 썸네일·게임 공 | CC0 원본, 권리대장 확인 |
+| `assets/icons/ball.png` | 레거시 보관 자산, 제품 화면 미사용 | CC0 원본, 권리대장 확인 |
 | `assets/icons/crate.png` | 상자 썸네일·게임 오브젝트 | CC0 원본, 권리대장 확인 |
 | `assets/generated/crate-v2.png` | 상자 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
 | `assets/icons/stone_boulder.png` | 돌 썸네일·게임 오브젝트 | CC0 원본, 권리대장 확인 |

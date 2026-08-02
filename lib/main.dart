@@ -8,6 +8,7 @@ import 'game/domain/game_state.dart';
 import 'game/levels/levels.dart';
 import 'ui/game_feedback.dart';
 import 'ui/game_screen.dart';
+import 'ui/game_ball_painter.dart';
 import 'ui/play_telemetry.dart';
 
 const _copyCoreCountKey = 'property_shot_copy_core_count';
@@ -358,10 +359,9 @@ class _HomePlayPreview extends StatelessWidget {
             Positioned(
               left: 66,
               bottom: 18,
-              child: Image.asset(
-                'assets/icons/ball.png',
-                width: 54,
-                height: 54,
+              child: CustomPaint(
+                painter: const GameBallIconPainter(null),
+                size: const Size(54, 54),
               ),
             ),
           ],

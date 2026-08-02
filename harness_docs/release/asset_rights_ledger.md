@@ -8,7 +8,7 @@
 
 | 파일 | 원본 | 사용 위치 | 라이선스 | 해시 기록 |
 |---|---|---|---|---|
-| `assets/icons/ball.png` | `Sprites/Ball 1.png` in `smooth_physics_props.zip` | 공 썸네일 | CC0 1.0 Universal | `assets/licenses/asset_hashes.txt` |
+| `assets/icons/ball.png` | `Sprites/Ball 1.png` in `smooth_physics_props.zip` | 레거시 보관 자산, 현재 UI 미사용 | CC0 1.0 Universal | `assets/licenses/asset_hashes.txt` |
 | `assets/icons/crate.png` | `Sprites/Crate Wood.png` in `smooth_physics_props.zip` | 상자 썸네일·게임 화면 | CC0 1.0 Universal | `assets/licenses/asset_hashes.txt` |
 | `assets/icons/stone_boulder.png` | `Sprites/Stone Boulder.png` in `smooth_physics_props.zip` | 무거운 돌 썸네일·게임 화면 | CC0 1.0 Universal | `assets/licenses/asset_hashes.txt` |
 
@@ -29,6 +29,7 @@
 - `assets/generated/crate-v2.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 상자 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
 - `assets/generated/stone-v2.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 무거운 돌 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
 - `assets/generated/jelly-bumper-v1.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 젤리 범퍼 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 원본과 변환 이력, 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
+- 공 얼굴·광택·속성 색상은 `lib/ui/game_ball_painter.dart`의 `GameBallIconPainter`로 그리며, 홈·게임·팝업·Golden에서 동일한 표현을 공유한다. `assets/icons/ball.png`는 CC0 레거시 파일로 번들 폴더에 남아 있지만 제품 화면에는 사용하지 않는다.
 
 ## 출품 전 확인 항목
 

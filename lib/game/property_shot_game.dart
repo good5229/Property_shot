@@ -12,6 +12,7 @@ import 'domain/geometry.dart';
 import 'domain/trait.dart';
 import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
+import '../ui/game_ball_painter.dart';
 
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(
@@ -757,7 +758,6 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawEntity(Canvas canvas, EntityState entity, bool highlighted) {
-    final paint = Paint()..color = _colorFor(entity);
     final stroke = Paint()
       ..color = highlighted ? const Color(0xFFFFC857) : const Color(0xFF24352D)
       ..style = PaintingStyle.stroke
@@ -809,11 +809,13 @@ class PropertyShotGame extends FlameGame {
       if (entity.type == EntityType.hole) {
         _drawHoleSurface(canvas, entity, stroke);
       } else {
-        _drawBallSphere(canvas, entity, paint, stroke);
+        GameBallIconPainter.drawBall(
+          canvas,
+          center: center,
+          radius: entity.radius,
+          trait: entity.traits.isEmpty ? null : entity.traits.first,
+        );
         _drawBallTraitTexture(canvas, entity);
-      }
-      if (entity.type == EntityType.ball) {
-        _drawBallFace(canvas, entity);
       }
     } else {
       final rect = _projectedRect(entity);
@@ -1733,35 +1735,6 @@ class PropertyShotGame extends FlameGame {
     );
   }
 
-  void _drawBallSphere(
-    Canvas canvas,
-    EntityState entity,
-    Paint paint,
-    Paint stroke,
-  ) {
-    final center = _project(entity.position);
-    final radius = entity.radius;
-    final gradient = RadialGradient(
-      center: const Alignment(-0.45, -0.55),
-      radius: 0.95,
-      colors: [
-        Colors.white.withValues(alpha: 0.95),
-        paint.color,
-        Color.lerp(paint.color, const Color(0xFF152018), 0.28)!,
-      ],
-      stops: const [0.0, 0.58, 1.0],
-    );
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..shader = gradient.createShader(
-          Rect.fromCircle(center: center, radius: radius),
-        ),
-    );
-    canvas.drawCircle(center, radius, stroke);
-  }
-
   double _capturedMoveProgress(EntityState entity) {
     ShotAnimationMove? captureMove;
     for (final move in _animationMoves) {
@@ -1797,14 +1770,13 @@ class PropertyShotGame extends FlameGame {
       Paint()..color = Colors.white.withValues(alpha: opacity),
     );
     _drawCircularContactShadow(canvas, entity);
-    final paint = Paint()..color = _colorFor(entity);
-    final stroke = Paint()
-      ..color = const Color(0xFF24352D)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    _drawBallSphere(canvas, entity, paint, stroke);
+    GameBallIconPainter.drawBall(
+      canvas,
+      center: center,
+      radius: entity.radius,
+      trait: entity.traits.isEmpty ? null : entity.traits.first,
+    );
     _drawBallTraitTexture(canvas, entity);
-    _drawBallFace(canvas, entity);
     canvas.restore();
     canvas.restore();
 
@@ -1854,31 +1826,6 @@ class PropertyShotGame extends FlameGame {
         }
     }
     canvas.restore();
-  }
-
-  void _drawBallFace(Canvas canvas, EntityState entity) {
-    final eye = Paint()..color = const Color(0xFF3B302A);
-    final blush = Paint()..color = const Color(0x44FF8EA1);
-    final c = _project(entity.position);
-    canvas.drawCircle(Offset(c.dx - 5, c.dy - 3), 1.8, eye);
-    canvas.drawCircle(Offset(c.dx + 5, c.dy - 3), 1.8, eye);
-    canvas.drawCircle(Offset(c.dx - 8, c.dy + 4), 2.6, blush);
-    canvas.drawCircle(Offset(c.dx + 8, c.dy + 4), 2.6, blush);
-    canvas.drawArc(
-      Rect.fromCenter(center: Offset(c.dx, c.dy + 1), width: 8, height: 6),
-      0.15,
-      2.84,
-      false,
-      Paint()
-        ..color = const Color(0xFF3B302A)
-        ..strokeWidth = 1.4
-        ..style = PaintingStyle.stroke,
-    );
-    canvas.drawCircle(
-      Offset(c.dx - 5, c.dy - 7),
-      3,
-      Paint()..color = const Color(0x88FFFFFF),
-    );
   }
 
   void _drawHoleFlag(Canvas canvas, EntityState entity) {
