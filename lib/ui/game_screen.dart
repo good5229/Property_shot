@@ -18,9 +18,16 @@ import '../game/simulation/trait_resolver.dart';
 import 'game_feedback.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, this.initialState});
+  const GameScreen({
+    super.key,
+    this.initialState,
+    this.showStageSelector = true,
+    this.onExit,
+  });
 
   final GameState? initialState;
+  final bool showStageSelector;
+  final VoidCallback? onExit;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -645,23 +652,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFE3E8DF),
-        appBar: AppBar(
-          title: const Text('속성 한방'),
-          backgroundColor: const Color(0xFF24352D),
-          foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              key: const Key('pause_button'),
-              tooltip: _state.phase == GamePhase.paused ? '계속' : '멈춤',
-              onPressed: _togglePause,
-              icon: Icon(
-                _state.phase == GamePhase.paused
-                    ? Icons.play_arrow
-                    : Icons.pause,
-              ),
-            ),
-          ],
-        ),
+        appBar: widget.showStageSelector
+            ? AppBar(
+                title: const Text('속성 한방'),
+                backgroundColor: const Color(0xFF24352D),
+                foregroundColor: Colors.white,
+                actions: [
+                  IconButton(
+                    key: const Key('pause_button'),
+                    tooltip: _state.phase == GamePhase.paused ? '계속' : '멈춤',
+                    onPressed: _togglePause,
+                    icon: Icon(
+                      _state.phase == GamePhase.paused
+                          ? Icons.play_arrow
+                          : Icons.pause,
+                    ),
+                  ),
+                ],
+              )
+            : null,
         body: SafeArea(
           child: Stack(
             children: [
@@ -672,7 +681,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: Center(
                     child: SizedBox(
                       width: contentWidth,
-                      height: math.max(0, screenSize.height - kToolbarHeight),
+                      height: math.max(
+                        0,
+                        screenSize.height -
+                            (widget.showStageSelector ? kToolbarHeight : 0),
+                      ),
                       child: Column(
                         children: [
                           if (!compactLayout)
@@ -680,6 +693,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               state: _state,
                               unlockedLevel: _unlockedLevel,
                               onSelectLevel: _selectLevel,
+                              showStageSelector: widget.showStageSelector,
+                              onPause: _togglePause,
+                              onExit: widget.onExit,
                             ),
                           if (compactLayout)
                             Padding(
@@ -689,6 +705,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 state: _state,
                                 unlockedLevel: _unlockedLevel,
                                 onSelectLevel: _selectLevel,
+                                showStageSelector: widget.showStageSelector,
+                                onPause: _togglePause,
+                                onExit: widget.onExit,
                               ),
                             ),
                           Expanded(
@@ -1276,12 +1295,18 @@ class _Hud extends StatelessWidget {
     required this.state,
     required this.unlockedLevel,
     required this.onSelectLevel,
+    this.showStageSelector = true,
+    required this.onPause,
+    this.onExit,
   });
 
   final bool compact;
   final GameState state;
   final int unlockedLevel;
   final ValueChanged<int> onSelectLevel;
+  final bool showStageSelector;
+  final VoidCallback onPause;
+  final VoidCallback? onExit;
 
   @override
   Widget build(BuildContext context) {
@@ -1322,38 +1347,59 @@ class _Hud extends StatelessWidget {
                 Text('시도 ${state.shotCount}'),
                 const SizedBox(width: 6),
                 Text('점수 ${state.score}'),
+                if (!showStageSelector && onExit != null)
+                  IconButton(
+                    key: const Key('home_button'),
+                    tooltip: '섬 지도',
+                    onPressed: onExit,
+                    icon: const Icon(Icons.map_outlined),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (!showStageSelector)
+                  IconButton(
+                    key: const Key('pause_button'),
+                    tooltip: state.phase == GamePhase.paused ? '계속' : '멈춤',
+                    onPressed: onPause,
+                    icon: Icon(
+                      state.phase == GamePhase.paused
+                          ? Icons.play_arrow
+                          : Icons.pause,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
               ],
             ),
             const SizedBox(height: 2),
-            SizedBox(
-              height: 30,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (var i = 0; i < levels.length; i++)
-                    Semantics(
-                      label: i <= unlockedLevel
-                          ? '${i + 1}단계 선택'
-                          : '${i + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
-                      button: i <= unlockedLevel,
-                      selected: state.levelIndex == i,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: ChoiceChip(
-                          key: Key('level_$i'),
-                          label: Text('${i + 1}'),
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          selected: state.levelIndex == i,
-                          onSelected: i <= unlockedLevel
-                              ? (_) => onSelectLevel(i)
-                              : null,
+            if (showStageSelector)
+              SizedBox(
+                height: 30,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (var i = 0; i < levels.length; i++)
+                      Semantics(
+                        label: i <= unlockedLevel
+                            ? '${i + 1}단계 선택'
+                            : '${i + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
+                        button: i <= unlockedLevel,
+                        selected: state.levelIndex == i,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: ChoiceChip(
+                            key: Key('level_$i'),
+                            label: Text('${i + 1}'),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            selected: state.levelIndex == i,
+                            onSelected: i <= unlockedLevel
+                                ? (_) => onSelectLevel(i)
+                                : null,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
             Text(
               _levelObjective(state.levelIndex),
               key: const Key('compact_objective'),
@@ -1405,6 +1451,26 @@ class _Hud extends StatelessWidget {
               Text('시도 ${state.shotCount}'),
               const SizedBox(width: 12),
               Text('점수 ${state.score}'),
+              if (!showStageSelector && onExit != null)
+                IconButton(
+                  key: const Key('home_button'),
+                  tooltip: '섬 지도',
+                  onPressed: onExit,
+                  icon: const Icon(Icons.map_outlined),
+                  visualDensity: VisualDensity.compact,
+                ),
+              if (!showStageSelector)
+                IconButton(
+                  key: const Key('pause_button'),
+                  tooltip: state.phase == GamePhase.paused ? '계속' : '멈춤',
+                  onPressed: onPause,
+                  icon: Icon(
+                    state.phase == GamePhase.paused
+                        ? Icons.play_arrow
+                        : Icons.pause,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
             ],
           ),
           const SizedBox(height: 2),
@@ -1433,34 +1499,35 @@ class _Hud extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    for (var i = 0; i < levels.length; i++)
-                      Semantics(
-                        label: i <= unlockedLevel
-                            ? '${i + 1}단계 선택'
-                            : '${i + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
-                        button: i <= unlockedLevel,
-                        selected: state.levelIndex == i,
-                        child: ChoiceChip(
-                          key: Key('level_$i'),
-                          label: Text('${i + 1}'),
+          if (showStageSelector)
+            Row(
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (var i = 0; i < levels.length; i++)
+                        Semantics(
+                          label: i <= unlockedLevel
+                              ? '${i + 1}단계 선택'
+                              : '${i + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
+                          button: i <= unlockedLevel,
                           selected: state.levelIndex == i,
-                          onSelected: i <= unlockedLevel
-                              ? (_) => onSelectLevel(i)
-                              : null,
+                          child: ChoiceChip(
+                            key: Key('level_$i'),
+                            label: Text('${i + 1}'),
+                            selected: state.levelIndex == i,
+                            onSelected: i <= unlockedLevel
+                                ? (_) => onSelectLevel(i)
+                                : null,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 6),
           Container(
             width: double.infinity,

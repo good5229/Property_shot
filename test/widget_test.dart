@@ -7,6 +7,42 @@ import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/main.dart';
 
 void main() {
+  testWidgets('실제 시작 흐름은 홈·섬 지도·플레이를 연결한다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+
+    expect(find.text('속성 한방'), findsOneWidget);
+    expect(find.byKey(const Key('start_game_button')), findsOneWidget);
+    expect(find.byKey(const Key('stage_select_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await tester.pump();
+    expect(find.text('섬 지도'), findsOneWidget);
+    expect(find.byKey(const Key('stage_tile_0')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('stage_tile_0')));
+    await tester.pump();
+    expect(find.byKey(const Key('aim_area')), findsOneWidget);
+    expect(find.byKey(const Key('home_button')), findsOneWidget);
+    expect(find.byKey(const Key('level_1')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('home_button')));
+    await tester.pump();
+    expect(find.byKey(const Key('start_game_button')), findsOneWidget);
+  });
+
+  testWidgets('홈의 첫 섬 시작 버튼은 첫 스테이지 플레이로 이동한다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('aim_area')), findsOneWidget);
+    expect(find.byKey(const Key('home_button')), findsOneWidget);
+    expect(find.text('1. 무거움 익히기'), findsOneWidget);
+  });
+
   testWidgets('속성을 선택해 공으로 옮길 수 있다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
