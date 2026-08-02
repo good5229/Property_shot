@@ -325,6 +325,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
       _stageCopyCoreAtStart = _state.copyCoreCount;
       widget.onCopyCoreEarned?.call(reward);
+      _feedback.copyCoreAwarded(reward);
     }
     setState(() {
       _isAnimatingShot = false;
@@ -372,7 +373,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!mounted || !_isAnimatingShot) {
       return;
     }
-    _feedback.collision(impact.entityType);
+    _feedback.collision(
+      impact.entityType,
+      emphasizeJelly: impact.entityType == EntityType.bumper,
+    );
     _telemetry.record(
       '충돌',
       stage: _state.levelIndex,
@@ -661,6 +665,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _chargeTimer?.cancel();
     _isCharging = true;
+    _feedback.aimChargeStarted();
     _setState(
       _state.copyWith(aimPower: 0.12, message: '힘 모으는 중 · 손을 떼면 발사됩니다'),
     );

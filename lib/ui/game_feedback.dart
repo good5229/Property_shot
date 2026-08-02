@@ -24,6 +24,7 @@ class GameFeedback {
   final SoundPlayer _soundPlayer;
   final SoundCuePlayer _cuePlayer;
   final Map<String, DateTime> _lastPlayed = <String, DateTime>{};
+  Future<void>? _audioTail;
 
   static Future<void> _playSystemSound(SystemSoundType type) {
     return SystemSound.play(type);
@@ -62,7 +63,7 @@ class GameFeedback {
     _emit(
       'trait_selected',
       haptic: HapticFeedback.selectionClick,
-      sound: false,
+      cue: FeedbackCue.ui,
     );
   }
 
@@ -82,6 +83,28 @@ class GameFeedback {
     );
   }
 
+  void copyCoreAwarded(int amount) {
+    if (amount <= 0) {
+      return;
+    }
+    _emit(
+      'copy_core_awarded',
+      minimumInterval: const Duration(milliseconds: 240),
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.copyCoreAwarded,
+      alert: true,
+    );
+  }
+
+  void aimChargeStarted() {
+    _emit(
+      'aim_charge_started',
+      minimumInterval: const Duration(milliseconds: 300),
+      cue: FeedbackCue.aimCharge,
+      sound: true,
+    );
+  }
+
   void shotLaunched() {
     _emit(
       'shot_launched',
@@ -90,7 +113,7 @@ class GameFeedback {
     );
   }
 
-  void collision(EntityType type) {
+  void collision(EntityType type, {bool emphasizeJelly = false}) {
     final haptic = switch (type) {
       EntityType.wall ||
       EntityType.gate ||
@@ -107,8 +130,12 @@ class GameFeedback {
       minimumInterval: const Duration(milliseconds: 70),
       haptic: haptic,
       cue: switch (type) {
-        EntityType.bumper => FeedbackCue.bouncyCollision,
+        EntityType.bumper =>
+          emphasizeJelly
+              ? FeedbackCue.jellyCollision
+              : FeedbackCue.bouncyCollision,
         EntityType.stickySurface => FeedbackCue.stickyCollision,
+        EntityType.hole => FeedbackCue.holeEntered,
         EntityType.wall ||
         EntityType.gate ||
         EntityType.weight => FeedbackCue.heavyCollision,
@@ -200,18 +227,37 @@ class GameFeedback {
       return;
     }
     _lastPlayed[key] = now;
+    if (haptic != null && hapticsEnabled) {
+      unawaited(_safe(haptic));
+    }
+    if (sound && soundEnabled) {
+      _queueAudio(cue: cue, alert: alert);
+    }
+  }
+
+  void _queueAudio({required FeedbackCue cue, required bool alert}) {
+    final previous = _audioTail;
+    final next = previous == null
+        ? _playAudio(cue: cue, alert: alert)
+        : previous.then((_) => _playAudio(cue: cue, alert: alert));
+    _audioTail = next;
     unawaited(
-      Future.wait<void>([
-        if (haptic != null && hapticsEnabled) _safe(haptic),
-        if (sound && soundEnabled) _safe(() => _cuePlayer(cue)),
-        if (sound && soundEnabled)
-          _safe(
-            () => _soundPlayer(
-              alert ? SystemSoundType.alert : SystemSoundType.click,
-            ),
-          ),
-      ]),
+      next.whenComplete(() {
+        if (identical(_audioTail, next)) {
+          _audioTail = null;
+        }
+      }),
     );
+  }
+
+  Future<void> _playAudio({required FeedbackCue cue, required bool alert}) {
+    return Future.wait<void>([
+      _safe(() => _cuePlayer(cue)),
+      _safe(
+        () =>
+            _soundPlayer(alert ? SystemSoundType.alert : SystemSoundType.click),
+      ),
+    ]);
   }
 
   Future<void> _safe(Future<void> Function() action) async {

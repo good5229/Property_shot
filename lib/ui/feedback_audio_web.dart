@@ -41,6 +41,18 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
         volume: 0.06,
         wave: 'triangle',
       ),
+      FeedbackCue.copyCoreAwarded => (
+        frequency: 960.0,
+        duration: 0.22,
+        volume: 0.065,
+        wave: 'triangle',
+      ),
+      FeedbackCue.aimCharge => (
+        frequency: 320.0,
+        duration: 0.08,
+        volume: 0.035,
+        wave: 'sine',
+      ),
       FeedbackCue.launch => (
         frequency: 190.0,
         duration: 0.11,
@@ -71,6 +83,12 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
         volume: 0.055,
         wave: 'triangle',
       ),
+      FeedbackCue.jellyCollision => (
+        frequency: 680.0,
+        duration: 0.13,
+        volume: 0.06,
+        wave: 'sine',
+      ),
       FeedbackCue.switchPressed => (
         frequency: 420.0,
         duration: 0.12,
@@ -81,6 +99,12 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
         frequency: 300.0,
         duration: 0.22,
         volume: 0.07,
+        wave: 'sine',
+      ),
+      FeedbackCue.holeEntered => (
+        frequency: 520.0,
+        duration: 0.32,
+        volume: 0.075,
         wave: 'sine',
       ),
       FeedbackCue.clear => (
