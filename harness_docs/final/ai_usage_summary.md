@@ -10,5 +10,7 @@ AI는 저장소 구조 분석, Dart/Flutter 코드 수정, 순수 Dart 시뮬레
 - Subagent 결과: 축약 HUD의 발사 순서 누락, Canvas·래스터 질감 혼재, 3단계 정보량, 실제 기기·사용자 검증 공백을 확인했다.
 - 채택한 변경: 초기 상태 메시지를 `방향 조정 → 공 길게 누르기 → 손 떼기`로 단축하고 320px 위젯 회귀를 추가했다. 보드 최소 폭을 침범하는 별도 행은 채택하지 않았다.
 - 생성·수정 문서: 공유 컨텍스트, 난이도·복사·오브젝트·온보딩·피드백·기기 매트릭스, 전후 비교, 교차 검토, 다음 반복 기록.
-- 검증: `dart format .`, `flutter analyze`, `flutter test` 105개, `flutter build web --release`, benchmark, 서버 루트·번들 HTTP 200.
+- 검증: `dart format .`, `flutter analyze`, `flutter test` 156개, `flutter build web --release`, 자동 단일·다중 샷 분석 리포트, Web Chromium 성능, 서버 루트·번들 HTTP 200.
+- 최신 분석 결과: 첫 3단계의 추천 파는 `2·2·3회`이며 고유 성공 입력은 `73·72·59개`, 입력 정밀도 민감도는 `37.76%·43.57%·36.52%`다. 이는 결정론적 격자 분석 결과이지 실제 사용자 평균이 아니다.
+- 최신 iOS 결과: Xcode 컴파일은 완료됐지만 Development Team·Provisioning Profile 부족으로 배포 서명 단계가 실패했다. 실제 iPhone/iPad 검증을 수행했다고 주장하지 않는다.
 - 사람의 검토가 필요한 내용: 실제 iPhone/iPad 프레임·메모리·햅틱, 초보자의 첫 3회 이해도, 복사권 가치와 반복 플레이 의향.
