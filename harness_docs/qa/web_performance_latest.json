@@ -1,0 +1,65 @@
+{
+  "measured_at": "2026-08-02T10:54:46.306925+00:00",
+  "url": "http://127.0.0.1:8080/",
+  "runtime": "Chromium headless Web release proxy; not a physical-device result",
+  "records": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "start_button": {
+        "x": 194.5,
+        "y": 530.5
+      },
+      "launch_point": {
+        "x": 60,
+        "y": 580
+      },
+      "console_errors": [],
+      "idle": {
+        "samples": 108,
+        "mean_ms": 16.666,
+        "p95_ms": 16.7,
+        "max_ms": 16.8,
+        "over_20ms_ratio": 0.0
+      },
+      "shot": {
+        "samples": 151,
+        "mean_ms": 16.666,
+        "p95_ms": 16.8,
+        "max_ms": 16.8,
+        "over_20ms_ratio": 0.0
+      }
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "start_button": {
+        "x": 383.5,
+        "y": 634.5
+      },
+      "launch_point": {
+        "x": 176,
+        "y": 850
+      },
+      "console_errors": [],
+      "idle": {
+        "samples": 108,
+        "mean_ms": 16.666,
+        "p95_ms": 16.7,
+        "max_ms": 16.8,
+        "over_20ms_ratio": 0.0
+      },
+      "shot": {
+        "samples": 151,
+        "mean_ms": 16.666,
+        "p95_ms": 16.8,
+        "max_ms": 16.8,
+        "over_20ms_ratio": 0.0
+      }
+    }
+  ]
+}
