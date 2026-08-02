@@ -372,6 +372,19 @@ void main() {
     expect(find.textContaining('3. 연쇄 문 열기'), findsOneWidget);
   });
 
+  testWidgets('클리어 팝업은 로컬에 저장된 추가 도전 달성을 표시한다', (tester) async {
+    SharedPreferences.setMockInitialValues({'bonus_goal_level_1': true});
+    final clearState = levels[1]
+        .createState(1)
+        .copyWith(phase: GamePhase.success, shotCount: 3, message: '홀 진입 성공!');
+    await tester.pumpWidget(PropertyShotApp(initialState: clearState));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('bonus_goal_status')), findsOneWidget);
+    expect(find.text('추가 도전 달성'), findsOneWidget);
+  });
+
   testWidgets('클리어 패널은 모바일에서 내용 중심 높이를 사용한다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));

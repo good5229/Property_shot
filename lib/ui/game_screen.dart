@@ -17,6 +17,7 @@ import '../game/simulation/shot_resolver.dart';
 import '../game/simulation/trait_resolver.dart';
 import 'game_feedback.dart';
 import 'game_ball_painter.dart';
+import 'bonus_goal.dart';
 import 'play_telemetry.dart';
 
 class GameScreen extends StatefulWidget {
@@ -66,8 +67,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _bestShotsLoaded = false;
   Future<void>? _bestShotsLoadFuture;
   final Map<int, int> _bestShots = {};
+  final Map<int, bool> _bonusGoals = {};
   int _unlockedLevel = 0;
   late int _stageCopyCoreAtStart;
+  bool _bonusBumperHit = false;
+  bool _bonusSwitchPressed = false;
+  final List<bool> _bonusBumperHistory = [];
+  final List<bool> _bonusSwitchHistory = [];
+  bool _bonusChallengeAchieved = false;
 
   @override
   void initState() {
@@ -101,10 +108,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     final loaded = <int, int>{};
+    final loadedBonusGoals = <int, bool>{};
     for (var index = 0; index < levels.length; index++) {
       final best = preferences.getInt(_bestShotKey(index));
       if (best != null) {
         loaded[index] = best;
+      }
+      if (preferences.getBool(_bonusGoalKey(index)) == true) {
+        loadedBonusGoals[index] = true;
       }
     }
     final storedUnlocked = preferences.getInt(_unlockedLevelKey) ?? 0;
@@ -116,7 +127,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ..clear()
         ..addAll(loaded),
     );
+    _bonusGoals
+      ..clear()
+      ..addAll(loadedBonusGoals);
+    _bonusChallengeAchieved = _bonusGoals[_state.levelIndex] ?? false;
     _bestShotsLoaded = true;
+  }
+
+  Future<void> _recordBonusGoal(int levelIndex) async {
+    if (_bonusGoals[levelIndex] == true) {
+      return;
+    }
+    _bonusGoals[levelIndex] = true;
+    if (mounted) {
+      setState(() => _bonusChallengeAchieved = true);
+    }
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(_bonusGoalKey(levelIndex), true);
+    } on Exception {
+      // 기록 저장소 실패가 클리어 결과나 다음 단계 이동을 막지 않는다.
+    }
   }
 
   Future<void> _recordBestShot(int levelIndex, int shotCount) async {
@@ -181,6 +212,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _inspectedEntityId = null;
     _showClearPopup = false;
     _showFailurePopup = false;
+    _bonusBumperHit = false;
+    _bonusSwitchPressed = false;
+    _bonusBumperHistory.clear();
+    _bonusSwitchHistory.clear();
+    _bonusChallengeAchieved = _bonusGoals[index] ?? false;
     final sameStage = index == _state.levelIndex;
     final availableCores = sameStage
         ? _stageCopyCoreAtStart
@@ -266,6 +302,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
     }
+    _bonusBumperHistory.insert(0, _bonusBumperHit);
+    _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
     final result = _shotResolver.resolve(
       _state,
       ShotInput(
@@ -287,6 +325,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _inspectedEntityId = null;
     _showFailurePopup = false;
     _failureAdvice = _failureAdviceFor(result.events);
+    _bonusBumperHit =
+        _bonusBumperHit ||
+        result.impacts.any((impact) => impact.entityType == EntityType.bumper);
+    _bonusSwitchPressed =
+        _bonusSwitchPressed || result.events.contains('switch_pressed');
     _isAnimatingShot = true;
     _setState(
       result.state,
@@ -296,11 +339,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       impacts: result.impacts,
     );
     if (result.state.phase == GamePhase.success) {
+      if (_bonusGoalReached(result)) {
+        unawaited(_recordBonusGoal(result.state.levelIndex));
+      }
       _unlockNextLevel(result.state.levelIndex);
       unawaited(
         _recordBestShot(result.state.levelIndex, result.state.shotCount),
       );
     }
+  }
+
+  bool _bonusGoalReached(ShotResult result) {
+    return result.state.phase == GamePhase.success &&
+        bonusGoalReached(
+          levelIndex: result.state.levelIndex,
+          shotCount: result.state.shotCount,
+          bumperHit: _bonusBumperHit,
+          switchPressed: _bonusSwitchPressed,
+        );
   }
 
   void _onAnimationFinished() {
@@ -390,6 +446,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _showFailurePopup = false;
     _telemetry.record('되감기', stage: _state.levelIndex);
+    if (_state.history.isNotEmpty) {
+      _bonusBumperHit = _bonusBumperHistory.isEmpty
+          ? false
+          : _bonusBumperHistory.removeAt(0);
+      _bonusSwitchPressed = _bonusSwitchHistory.isEmpty
+          ? false
+          : _bonusSwitchHistory.removeAt(0);
+    }
     _setState(_shotResolver.rewind(_state));
   }
 
@@ -1035,6 +1099,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 _ClearPopup(
                   state: _state,
                   bestShot: _bestShots[_state.levelIndex],
+                  bonusAchieved: _bonusChallengeAchieved,
                   onNext: _goNextLevel,
                   onRetry: () => _selectLevel(_state.levelIndex),
                   isFinal: _state.levelIndex >= levels.length - 1,
@@ -1292,6 +1357,7 @@ class _ClearPopup extends StatelessWidget {
     required this.onNext,
     required this.onRetry,
     required this.isFinal,
+    required this.bonusAchieved,
     this.bestShot,
   });
 
@@ -1299,6 +1365,7 @@ class _ClearPopup extends StatelessWidget {
   final VoidCallback onNext;
   final VoidCallback onRetry;
   final bool isFinal;
+  final bool bonusAchieved;
   final int? bestShot;
 
   @override
@@ -1413,15 +1480,73 @@ class _ClearPopup extends StatelessWidget {
                                               ),
                                         ),
                                         const SizedBox(height: 8),
-                                        Text(
-                                          level.bonusGoal,
-                                          textAlign: TextAlign.center,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: const Color(0xFF5D6657),
+                                        Container(
+                                          key: const Key('bonus_goal_status'),
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: bonusAchieved
+                                                ? const Color(0xFFDDF3D5)
+                                                : const Color(0xFFF7EAC0),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(
+                                                bonusAchieved
+                                                    ? Icons.emoji_events
+                                                    : Icons.flag_outlined,
+                                                size: 20,
+                                                color: bonusAchieved
+                                                    ? const Color(0xFF2F8A62)
+                                                    : const Color(0xFF8B6E35),
                                               ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      bonusAchieved
+                                                          ? '추가 도전 달성'
+                                                          : '추가 도전',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .labelLarge
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                            color: bonusAchieved
+                                                                ? const Color(
+                                                                    0xFF236B4A,
+                                                                  )
+                                                                : const Color(
+                                                                    0xFF6A5947,
+                                                                  ),
+                                                          ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      level.bonusGoal,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: const Color(
+                                                              0xFF5D6657,
+                                                            ),
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                         if (!isFinal) ...[
                                           const SizedBox(height: 4),
@@ -1663,6 +1788,8 @@ class _LeaderboardRow {
 }
 
 String _bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
+
+String _bonusGoalKey(int levelIndex) => 'bonus_goal_level_$levelIndex';
 
 const _unlockedLevelKey = 'unlocked_level';
 
