@@ -1205,13 +1205,7 @@ String? _levelProgressHint(GameState state) {
 }
 
 String _levelIntroMessage(int levelIndex) {
-  return switch (levelIndex) {
-    0 => '1/3 무거운 돌을 눌러 속성을 공에 옮긴 뒤, 공을 길게 눌렀다 손을 떼 발사하세요.',
-    1 =>
-      '2/3 젤리를 눌러 탄성을 확인하세요. 속성을 쓰지 않는 경로도 시도할 수 있습니다. 공을 길게 눌렀다 손을 떼면 발사됩니다.',
-    _ =>
-      '3/3 점착·무거움 조합은 추천 경로입니다. 다른 충돌 경로로 홀에 닿아도 성공하며, 공을 길게 눌렀다 손을 떼면 발사됩니다.',
-  };
+  return '방향 조정 → 공 길게 누르기 → 손 떼기';
 }
 
 String _failureAdviceFor(List<String> events) {
@@ -1506,7 +1500,7 @@ class _AimInstruction extends StatelessWidget {
           const SizedBox(width: 4),
           Expanded(
             child: Text(
-              '화면을 움직여 조준하고, 공을 0.45초 이상 누른 뒤 손을 떼세요.',
+              '손가락을 움직여 조준하고, 공을 0.45초 이상 누른 뒤 손을 떼세요.',
               key: const Key('aim_instruction'),
               softWrap: true,
               style: style,

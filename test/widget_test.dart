@@ -11,8 +11,8 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    expect(find.textContaining('1/3'), findsOneWidget);
-    expect(find.textContaining('길게 눌렀다 손을 떼'), findsOneWidget);
+    expect(find.textContaining('1. 무거움 익히기'), findsOneWidget);
+    expect(find.textContaining('방향 조정'), findsOneWidget);
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
@@ -310,6 +310,10 @@ void main() {
     expect(find.byKey(const Key('compact_control_panel')), findsOneWidget);
     expect(find.byKey(const Key('compact_objective')), findsOneWidget);
     expect(find.byKey(const Key('compact_message')), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('compact_message'))).data,
+      contains('방향 조정'),
+    );
     expect(
       tester.widget<Text>(find.byKey(const Key('compact_message'))).overflow,
       isNull,
