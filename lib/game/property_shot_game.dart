@@ -186,7 +186,7 @@ class PropertyShotGame extends FlameGame {
   }
 
   @override
-  Color backgroundColor() => const Color(0xFFEBF2EC);
+  Color backgroundColor() => const Color(0xFFBFE8E3);
 
   @override
   void render(Canvas canvas) {
@@ -501,12 +501,12 @@ class PropertyShotGame extends FlameGame {
       ..color = const Color(0x553B2B24)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
     final frame = Paint()
-      ..color = const Color(0xFF8B5A35)
+      ..color = const Color(0xFF2D777A)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12
       ..strokeJoin = StrokeJoin.round;
     final innerFrame = Paint()
-      ..color = const Color(0xFFE9B866)
+      ..color = const Color(0xFFF5C778)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     final boardPath = _pathFromPoints([
@@ -521,22 +521,22 @@ class PropertyShotGame extends FlameGame {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFE4F7C9), Color(0xFFB9E6B7), Color(0xFF8ECFAD)],
+        colors: [Color(0xFFFFE9B5), Color(0xFFF6D995), Color(0xFFEBC376)],
         stops: [0.0, 0.52, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, logicalSize.x, logicalSize.y));
     canvas.drawPath(boardPath, fieldGradient);
     canvas.save();
     canvas.clipPath(boardPath);
-    final lawnStripe = Paint()..color = const Color(0x160F8A54);
+    final sandStripe = Paint()..color = const Color(0x16A8733A);
     for (var y = 10.0; y < logicalSize.y; y += 28) {
-      canvas.drawRect(Rect.fromLTWH(0, y, logicalSize.x, 12), lawnStripe);
+      canvas.drawRect(Rect.fromLTWH(0, y, logicalSize.x, 10), sandStripe);
     }
     final sun = Paint()
       ..shader = RadialGradient(
         colors: const [Color(0x55FFF7C7), Color(0x00FFF7C7)],
       ).createShader(const Rect.fromLTWH(18, 18, 180, 180));
     canvas.drawCircle(const Offset(58, 58), 92, sun);
-    final pebble = Paint()..color = const Color(0x33658E70);
+    final pebble = Paint()..color = const Color(0x666D8C72);
     for (final dot in const [
       Vec2(28, 42),
       Vec2(338, 64),
@@ -549,7 +549,7 @@ class PropertyShotGame extends FlameGame {
         pebble,
       );
     }
-    final island = Paint()..color = const Color(0x1F5E9C62);
+    final island = Paint()..color = const Color(0x1F9A6B3D);
     for (final center in const [
       Offset(32, 106),
       Offset(330, 474),
@@ -563,24 +563,28 @@ class PropertyShotGame extends FlameGame {
       canvas.drawCircle(center.translate(4, 2), 4, pebble);
     }
     canvas.restore();
-    final tileLine = Paint()
-      ..color = const Color(0x38FFFFFF)
-      ..strokeWidth = 1;
-    for (var x = 24.0; x < logicalSize.x; x += 36) {
-      canvas.drawLine(
-        _project(Vec2(x, 0)),
-        _project(Vec2(x, logicalSize.y)),
-        tileLine,
+    final waterMark = Paint()
+      ..color = const Color(0x30649F9B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    for (var index = 0; index < 5; index++) {
+      final y = 76.0 + index * 92;
+      canvas.drawArc(
+        Rect.fromLTWH(8, y, 34, 10),
+        math.pi * 0.12,
+        math.pi * 0.78,
+        false,
+        waterMark,
+      );
+      canvas.drawArc(
+        Rect.fromLTWH(logicalSize.x - 42, y + 18, 34, 10),
+        math.pi * 0.12,
+        math.pi * 0.78,
+        false,
+        waterMark,
       );
     }
-    for (var y = 24.0; y < logicalSize.y; y += 36) {
-      canvas.drawLine(
-        _project(Vec2(0, y)),
-        _project(Vec2(logicalSize.x, y)),
-        tileLine,
-      );
-    }
-    final flower = Paint()..color = const Color(0xFFFFE17C);
+    final flower = Paint()..color = const Color(0xFFFFA46F);
     for (final dot in const [
       Vec2(44, 86),
       Vec2(318, 174),
@@ -590,7 +594,7 @@ class PropertyShotGame extends FlameGame {
     ]) {
       canvas.drawCircle(_project(dot), 2.6, flower);
     }
-    final cornerLeaf = Paint()..color = const Color(0x88639D64);
+    final cornerLeaf = Paint()..color = const Color(0x886AA76D);
     for (final center in const [
       Vec2(24, 22),
       Vec2(336, 22),
@@ -1914,10 +1918,10 @@ class PropertyShotGame extends FlameGame {
       canvas.clipPath(topPath);
       canvas.drawRect(
         Rect.fromLTWH(rect.left - 8, rect.top, rect.width + 16, 7),
-        Paint()..color = const Color(0xFF72C978),
+        Paint()..color = const Color(0xFFB7E1C2),
       );
       final railSeam = Paint()
-        ..color = const Color(0x55304742)
+        ..color = const Color(0x55436563)
         ..strokeWidth = 1.4;
       for (var x = rect.left + 10; x < rect.right; x += 18) {
         canvas.drawLine(
@@ -1927,7 +1931,7 @@ class PropertyShotGame extends FlameGame {
         );
       }
       canvas.restore();
-      final rivet = Paint()..color = const Color(0xB8D4E0D2);
+      final rivet = Paint()..color = const Color(0xB8E6F0D2);
       canvas.drawCircle(rect.topLeft.translate(8, 8), 2.1, rivet);
       canvas.drawCircle(rect.topRight.translate(-8, 8), 2.1, rivet);
     }
@@ -1965,7 +1969,7 @@ class PropertyShotGame extends FlameGame {
       case EntityType.hole:
         return const Color(0xFF1D1D1D);
       case EntityType.wall:
-        return const Color(0xFF536F72);
+        return const Color(0xFF3D8585);
       case EntityType.crate:
         return const Color(0xFFB7854B);
       case EntityType.bumper:
