@@ -113,3 +113,9 @@
 - `390x844-feedback-settings.png`: 홈 설정에서 효과음·진동 토글이 보이는 실제 Web 팝업.
 - `390x844-feedback-persisted.png`: 효과음을 끈 뒤 새로고침하고 팝업을 다시 열어 꺼짐 상태가 복원된 캡처.
 - 두 캡처 모두 Chromium Web 실행이며 콘솔 오류 0건이다. 실제 기기 사운드·무음 모드·햅틱 체감 증거로 해석하지 않는다.
+
+## 2026-08-02 별·메달 피드백 포함 최신 캡처
+
+- `390x844-medal-feedback-release-home.png`, `390x844-medal-feedback-release-play.png`는 별·메달 보상 큐가 포함된 최신 Web release에서 생성했다.
+- `768x1024-medal-feedback-release-home.png`, `768x1024-medal-feedback-release-play.png`는 같은 번들의 넓은 세로 뷰포트 캡처다.
+- 두 해상도 모두 시작 입력 후 콘솔 오류 0건을 확인했다. 캡처는 Web 렌더링 증거이며 실제 iOS 사운드·햅틱·기기 성능을 의미하지 않는다.
