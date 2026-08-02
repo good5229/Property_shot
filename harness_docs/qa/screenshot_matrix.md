@@ -57,14 +57,19 @@
 - `768x1024-shore-detail-play.png`: 큰 플레이 보드와 주변 해변 배경의 비율, 장식의 낮은 대비와 비충돌성을 확인했다.
 - 두 캡처 모두 브라우저 콘솔 오류 0건이다. Chromium 뷰포트 검증이며 실제 기기 렌더링·성능 증거로 해석하지 않는다.
 
-## 2026-08-02 Golden 화면 회귀 게이트
-
 ## 2026-08-02 전체 플레이 화면 Golden 회귀 게이트
 
-- `test/goldens/game_screen_390x844.png`, `test/goldens/game_screen_768x1024.png`를 추가했다.
+- `test/goldens/game_screen_stage{1,2,3}_{390x844,768x1024}.png`를 생성해 첫 3단계의 6개 기준을 고정했다.
 - 전체 플레이 화면은 해변 배경, HUD, 보드 프레임, 벽, 홀, 공, 물체, 조준 화살표, 하단 컨트롤을 함께 캡처한다.
+- 2단계는 중앙 반사벽·젤리, 3단계는 스위치·문·점착판·상자까지 단계별 기믹 배치를 자동 픽셀 회귀로 보호한다.
 - Golden 호스트에서는 Flame 래스터 디코더 교착을 피하기 위해 `loadGameAssets: false`를 사용한다. 제품 기본 실행은 래스터 자산을 계속 사용하므로 Web 캡처와 자산 HTTP 200 검증을 함께 본다.
-- 390×844와 768×1024 Golden 테스트 2개가 통과했다. 실제 iOS 렌더링과 프레임 측정은 별도 미검증이다.
+- 390×844와 768×1024에서 1·2·3단계 Golden 테스트 6개가 통과했다. 실제 Flame 래스터 로딩을 켠 동일 테스트는 `toBeLoaded()` 교착으로 분리했으며, 실제 iOS 렌더링과 프레임 측정은 별도 미검증이다.
+
+## 2026-08-02 최신 Web release 시각·성능 증거
+
+- `390x844-audio-release-home.png`, `390x844-audio-release-play.png`, `768x1024-audio-release-home.png`, `768x1024-audio-release-play.png`는 최신 오디오 코드가 포함된 Web release의 변경 후 캡처다.
+- `harness_docs/qa/web_performance_latest.json`은 Chromium 390×844·768×1024에서 idle·발사 구간을 측정한 결과로, 콘솔 오류 0건·평균 약 16.67ms·20ms 초과 프레임 0%를 기록한다.
+- 이 자료는 Web 보조 측정이며 실제 iPhone/iPad GPU·메모리·터치·햅틱 결과로 해석하지 않는다.
 
 ## 2026-08-02 공 화풍 일관성 Golden
 
