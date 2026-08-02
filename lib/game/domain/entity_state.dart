@@ -13,6 +13,8 @@ enum EntityType {
   weight,
   switchPad,
   gate,
+  balloon,
+  spikeSource,
 }
 
 class EntityState {
@@ -30,6 +32,7 @@ class EntityState {
     this.visualState = '',
     this.hitboxScale = 0.88,
     this.restitution = 0.72,
+    this.linkId,
   });
 
   final String id;
@@ -45,8 +48,12 @@ class EntityState {
   final String visualState;
   final double hitboxScale;
   final double restitution;
+  final String? linkId;
 
-  bool get isCircle => type == EntityType.ball || type == EntityType.hole;
+  bool get isCircle =>
+      type == EntityType.ball ||
+      type == EntityType.hole ||
+      type == EntityType.balloon;
   double get radius => math.min(size.x, size.y) / 2;
   double get hitRadius => radius * hitboxScale;
   Bounds get bounds => Bounds(
@@ -71,6 +78,7 @@ class EntityState {
     String? visualState,
     double? hitboxScale,
     double? restitution,
+    String? linkId,
   }) {
     return EntityState(
       id: id ?? this.id,
@@ -86,6 +94,7 @@ class EntityState {
       visualState: visualState ?? this.visualState,
       hitboxScale: hitboxScale ?? this.hitboxScale,
       restitution: restitution ?? this.restitution,
+      linkId: linkId ?? this.linkId,
     );
   }
 }

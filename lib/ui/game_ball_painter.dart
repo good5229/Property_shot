@@ -120,5 +120,7 @@ Color _traitBallColor(TraitType trait) {
       return const Color(0xFF2EAD74);
     case TraitType.sticky:
       return const Color(0xFF8D5BB8);
+    case TraitType.sharp:
+      return const Color(0xFFE47758);
   }
 }

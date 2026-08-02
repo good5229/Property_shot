@@ -364,6 +364,8 @@ class PropertyShotGame extends FlameGame {
         EntityType.crate => const Color(0xFFE9B866),
         EntityType.switchPad => const Color(0xFFFFE17C),
         EntityType.ball => const Color(0xFFFFF7D1),
+        EntityType.balloon => const Color(0xFFFF9A87),
+        EntityType.spikeSource => const Color(0xFFFFE49B),
       };
       final ring = Paint()
         ..color = accent.withValues(alpha: 0.82 * (1 - progress))
@@ -819,6 +821,9 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawEntity(Canvas canvas, EntityState entity, bool highlighted) {
+    if (!entity.active) {
+      return;
+    }
     final stroke = Paint()
       ..color = highlighted ? const Color(0xFFFFC857) : const Color(0xFF24352D)
       ..style = PaintingStyle.stroke
@@ -831,6 +836,10 @@ class PropertyShotGame extends FlameGame {
         return;
       }
       final center = _project(entity.position);
+      if (entity.type == EntityType.balloon) {
+        _drawBalloon(canvas, entity, center);
+        return;
+      }
       if (entity.type == EntityType.ball &&
           state.phase == GamePhase.planning &&
           entity.id == 'active_ball' &&
@@ -903,6 +912,8 @@ class PropertyShotGame extends FlameGame {
         } else if (entity.type == EntityType.gate &&
             entity.visualState == 'opening') {
           _drawGateOpening(canvas, entity, topPoints);
+        } else if (entity.type == EntityType.spikeSource) {
+          _drawSpikeSource(canvas, entity, rect);
         } else {
           canvas.drawPath(topPath, litPaint);
           canvas.drawPath(topPath, stroke);
@@ -915,6 +926,98 @@ class PropertyShotGame extends FlameGame {
     }
 
     _drawEntityIcon(canvas, entity);
+  }
+
+  void _drawBalloon(Canvas canvas, EntityState entity, Offset center) {
+    final radius = entity.radius;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(0, -2),
+        width: radius * 1.75,
+        height: radius * 2.05,
+      ),
+      Paint()..color = const Color(0x33414B40),
+    );
+    final body = Paint()
+      ..shader =
+          RadialGradient(
+            center: const Alignment(-0.35, -0.42),
+            radius: 1.0,
+            colors: const [
+              Color(0xFFFFD0A2),
+              Color(0xFFF28A78),
+              Color(0xFFC75A62),
+            ],
+          ).createShader(
+            Rect.fromCircle(center: center.translate(0, -2), radius: radius),
+          );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(0, -2),
+        width: radius * 1.7,
+        height: radius * 1.95,
+      ),
+      body,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(0, -2),
+        width: radius * 1.7,
+        height: radius * 1.95,
+      ),
+      Paint()
+        ..color = const Color(0xFF24352D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(-radius * 0.36, -radius * 0.48),
+        width: radius * 0.32,
+        height: radius * 0.58,
+      ),
+      Paint()..color = const Color(0xBFFFF7DD),
+    );
+    final knot = Path()
+      ..moveTo(center.dx - 5, center.dy + radius * 0.83)
+      ..lineTo(center.dx, center.dy + radius * 1.08)
+      ..lineTo(center.dx + 5, center.dy + radius * 0.83)
+      ..close();
+    canvas.drawPath(knot, Paint()..color = const Color(0xFFB74F60));
+    canvas.drawLine(
+      center.translate(0, radius * 1.03),
+      center.translate(3, radius * 1.55),
+      Paint()
+        ..color = const Color(0xFF6B4B35)
+        ..strokeWidth = 1.4,
+    );
+  }
+
+  void _drawSpikeSource(Canvas canvas, EntityState entity, Rect rect) {
+    final center = rect.center;
+    canvas.drawCircle(
+      center,
+      rect.shortestSide * 0.26,
+      Paint()..color = const Color(0xFFF08B78),
+    );
+    final spikePaint = Paint()..color = const Color(0xFFFFE49B);
+    for (var index = 0; index < 8; index++) {
+      final angle = index * math.pi / 4;
+      final start = center + Offset(math.cos(angle), math.sin(angle)) * 10;
+      final tip = center + Offset(math.cos(angle), math.sin(angle)) * 22;
+      final side = Offset(-math.sin(angle), math.cos(angle)) * 4;
+      final path = Path()
+        ..moveTo(start.dx, start.dy)
+        ..lineTo((tip - side).dx, (tip - side).dy)
+        ..lineTo((tip + side).dx, (tip + side).dy)
+        ..close();
+      canvas.drawPath(path, spikePaint);
+    }
+    canvas.drawCircle(
+      center.translate(-4, -5),
+      4,
+      Paint()..color = const Color(0xBBFFF7DD),
+    );
   }
 
   Paint _materialPaint(EntityState entity, Rect rect) {
@@ -1909,6 +2012,22 @@ class PropertyShotGame extends FlameGame {
             drops,
           );
         }
+      case TraitType.sharp:
+        for (var index = 0; index < 5; index++) {
+          final angle = -math.pi * 0.85 + index * math.pi * 0.42;
+          final base =
+              center + Offset(math.cos(angle), math.sin(angle)) * radius * 0.66;
+          final tip =
+              center + Offset(math.cos(angle), math.sin(angle)) * radius * 1.22;
+          canvas.drawLine(
+            base,
+            tip,
+            Paint()
+              ..color = const Color(0xFFFFE49B)
+              ..strokeWidth = 3
+              ..strokeCap = StrokeCap.round,
+          );
+        }
     }
     canvas.restore();
   }
@@ -1950,6 +2069,21 @@ class PropertyShotGame extends FlameGame {
       case EntityType.ball:
       case EntityType.hole:
       case EntityType.wall:
+        return;
+      case EntityType.balloon:
+        canvas.drawCircle(
+          center.translate(-5, -7),
+          4,
+          Paint()..color = const Color(0xCCFFF7DD),
+        );
+        canvas.drawLine(
+          center.translate(0, 12),
+          center.translate(2, 20),
+          Paint()
+            ..color = const Color(0xFF6B4B35)
+            ..strokeWidth = 1.2,
+        );
+      case EntityType.spikeSource:
         return;
       case EntityType.crate:
         if (_objectImages.containsKey(EntityType.crate)) {
@@ -2175,6 +2309,10 @@ class PropertyShotGame extends FlameGame {
             : const Color(0xFFE2C044);
       case EntityType.gate:
         return entity.open ? const Color(0x664EAF7C) : const Color(0xFFC24E3A);
+      case EntityType.balloon:
+        return const Color(0xFFF28A78);
+      case EntityType.spikeSource:
+        return const Color(0xFFF08B78);
     }
   }
 
@@ -2186,6 +2324,8 @@ class PropertyShotGame extends FlameGame {
         return const Color(0xFF2EAD74);
       case TraitType.sticky:
         return const Color(0xFF8D5BB8);
+      case TraitType.sharp:
+        return const Color(0xFFE47758);
     }
   }
 
@@ -2231,6 +2371,14 @@ class PropertyShotGame extends FlameGame {
         for (var y = rect.top + 9; y < rect.bottom; y += 14) {
           canvas.drawCircle(Offset(rect.left + 12, y), 3, fill);
           canvas.drawCircle(Offset(rect.right - 14, y + 5), 4, fill);
+        }
+      case TraitType.sharp:
+        for (var x = rect.left + 8; x < rect.right; x += 12) {
+          canvas.drawLine(
+            Offset(x, rect.bottom - 4),
+            Offset(x + 5, rect.top + 5),
+            texture,
+          );
         }
     }
     canvas.restore();

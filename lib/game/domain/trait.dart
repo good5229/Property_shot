@@ -1,4 +1,4 @@
-enum TraitType { heavy, bouncy, sticky }
+enum TraitType { heavy, bouncy, sticky, sharp }
 
 extension TraitTypeLabel on TraitType {
   String get label {
@@ -9,6 +9,8 @@ extension TraitTypeLabel on TraitType {
         return '탄성';
       case TraitType.sticky:
         return '점착';
+      case TraitType.sharp:
+        return '뾰족함';
     }
   }
 
@@ -20,6 +22,8 @@ extension TraitTypeLabel on TraitType {
         return '탄';
       case TraitType.sticky:
         return '점';
+      case TraitType.sharp:
+        return '뾰';
     }
   }
 
@@ -31,6 +35,8 @@ extension TraitTypeLabel on TraitType {
         return '벽에 부딪히면 첫 충돌 뒤 방향을 바꿔 튕깁니다.';
       case TraitType.sticky:
         return '처음 닿은 유효 표면에 붙어 다음 전략의 발판이 됩니다.';
+      case TraitType.sharp:
+        return '풍선만 찌를 수 있으며, 한 번 사용하면 사라집니다.';
     }
   }
 }

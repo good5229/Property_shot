@@ -693,6 +693,50 @@ class _StageSelectScreen extends StatelessWidget {
   }
 }
 
+class _StageBalloonPainter extends CustomPainter {
+  const _StageBalloonPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.42);
+    final body = Paint()..color = const Color(0xFFF28A78);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center,
+        width: size.width * 0.5,
+        height: size.height * 0.58,
+      ),
+      body,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center,
+        width: size.width * 0.5,
+        height: size.height * 0.58,
+      ),
+      Paint()
+        ..color = const Color(0xFF24352D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawCircle(
+      center.translate(-size.width * 0.1, -size.height * 0.12),
+      size.width * 0.06,
+      Paint()..color = const Color(0xCCFFF7DD),
+    );
+    canvas.drawLine(
+      center.translate(0, size.height * 0.28),
+      center.translate(size.width * 0.04, size.height * 0.48),
+      Paint()
+        ..color = const Color(0xFF6B4B35)
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _StageBalloonPainter oldDelegate) => false;
+}
+
 class _StageTile extends StatelessWidget {
   const _StageTile({
     required this.index,
@@ -710,12 +754,15 @@ class _StageTile extends StatelessWidget {
       '무거운 성질로 상자를 움직여 보세요.',
       '탄성 있는 반사로 방향을 바꿔 보세요.',
       '문과 스위치 사이의 연쇄를 실험해 보세요.',
+      '풍선은 밀리고, 뾰족한 공에는 터집니다.',
     ];
     final assets = [
       'assets/icons/stone_boulder.png',
       'assets/generated/jelly-bumper-v1.png',
       'assets/icons/crate.png',
+      '',
     ];
+    final stageAsset = assets[index];
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
@@ -760,10 +807,14 @@ class _StageTile extends StatelessWidget {
                                         Colors.transparent,
                                         BlendMode.dst,
                                       ),
-                                child: Image.asset(
-                                  assets[index],
-                                  fit: BoxFit.contain,
-                                ),
+                                child: stageAsset.isEmpty
+                                    ? const CustomPaint(
+                                        painter: _StageBalloonPainter(),
+                                      )
+                                    : Image.asset(
+                                        stageAsset,
+                                        fit: BoxFit.contain,
+                                      ),
                               ),
                             ),
                           ),
@@ -868,26 +919,35 @@ class _StageRoutePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final points = [
       Offset(size.width * 0.22, 58),
-      Offset(size.width * 0.78, 175),
-      Offset(size.width * 0.22, 292),
+      Offset(size.width * 0.78, 135),
+      Offset(size.width * 0.22, 224),
+      Offset(size.width * 0.78, 292),
     ];
     final path = Path()
       ..moveTo(points.first.dx, points.first.dy)
       ..cubicTo(
         size.width * 0.58,
-        76,
+        64,
         size.width * 0.58,
-        154,
+        118,
         points[1].dx,
         points[1].dy,
       )
       ..cubicTo(
         size.width * 0.58,
-        196,
+        154,
         size.width * 0.58,
-        274,
+        212,
         points[2].dx,
         points[2].dy,
+      )
+      ..cubicTo(
+        size.width * 0.58,
+        236,
+        size.width * 0.58,
+        278,
+        points[3].dx,
+        points[3].dy,
       );
     final route = Paint()
       ..color = const Color(0x9C6B9D8B)

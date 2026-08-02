@@ -19,7 +19,7 @@ void main() {
     await materialIcons.load();
   });
 
-  for (var stageIndex = 0; stageIndex < 3; stageIndex++) {
+  for (var stageIndex = 0; stageIndex < 4; stageIndex++) {
     for (final fixture in const [
       (name: '390x844', width: 390.0, height: 844.0),
       (name: '768x1024', width: 768.0, height: 1024.0),
@@ -39,7 +39,9 @@ void main() {
             child: PropertyShotApp(
               initialState: levels[stageIndex]
                   .createState(stageIndex, productRules: true)
-                  .copyWith(message: '방향 조정 · 길게 누르기 · 손 떼기'),
+                  .copyWith(message: stageIndex == 3
+                      ? '풍선 관찰하기 · 속성 옮기기 · 여러 경로로 도전'
+                      : '방향 조정 · 길게 누르기 · 손 떼기'),
               showStageSelector: false,
               fontFamilyOverride: 'GoldenNanumGothic',
               loadGameAssets: false,

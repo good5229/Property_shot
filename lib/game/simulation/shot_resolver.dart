@@ -6,6 +6,7 @@ import '../domain/geometry.dart';
 import '../domain/shot_input.dart';
 import '../domain/trait.dart';
 import '../levels/levels.dart';
+import 'impact_metrics.dart';
 
 class ShotResult {
   const ShotResult({
@@ -32,6 +33,9 @@ class ShotImpact {
     required this.pathIndex,
     required this.strength,
     this.sourceEntityId = 'active_ball',
+    this.relativeNormalSpeed = 0,
+    this.impulse = 0,
+    this.impactTier = ImpactTier.light,
   });
 
   final String entityId;
@@ -41,6 +45,9 @@ class ShotImpact {
   final int pathIndex;
   final double strength;
   final String sourceEntityId;
+  final double relativeNormalSpeed;
+  final double impulse;
+  final ImpactTier impactTier;
 }
 
 class ShotAnimationMove {
@@ -209,11 +216,104 @@ class ShotResolver {
           normal: collision.normal,
           pathIndex: path.length - 1,
           strength: (speed / 24).clamp(0.18, 1.0),
+          relativeNormalSpeed: speed * -collision.normal.dot(direction),
+          impulse: ImpactMetrics.normalizedImpulse(
+            relativeNormalSpeed: speed * -collision.normal.dot(direction),
+            movingMass: movingMass,
+            targetMass: _massOf(hit),
+          ),
+          impactTier: ImpactMetrics.tierFor(
+            ImpactMetrics.normalizedImpulse(
+              relativeNormalSpeed: speed * -collision.normal.dot(direction),
+              movingMass: movingMass,
+              targetMass: _massOf(hit),
+            ),
+          ),
         ),
       );
       final contactPosition = position;
 
       if (hit.type == EntityType.gate && hit.open) {
+        continue;
+      }
+
+      if (hit.type == EntityType.balloon) {
+        if (ball.traits.contains(TraitType.sharp)) {
+          entities = _replace(
+            entities,
+            hit.copyWith(active: false, solid: false, visualState: 'popped'),
+          );
+          if (hit.linkId != null) {
+            entities = _openLinkedEntity(entities, hit.linkId!);
+            final linked = entities.where((entity) => entity.id == hit.linkId);
+            for (final gate in linked) {
+              moves.add(
+                ShotAnimationMove(
+                  entityId: gate.id,
+                  from: gate.position,
+                  to: gate.position,
+                  triggerPathIndex: path.length + 2,
+                  visualState: 'opening',
+                ),
+              );
+            }
+            events.add('linked_state_changed');
+          }
+          moves.add(
+            ShotAnimationMove(
+              entityId: hit.id,
+              from: hit.position,
+              to: hit.position,
+              triggerPathIndex: path.length - 1,
+              visualState: 'popped',
+              impactPosition: contactPosition,
+              impactNormal: collision.normal,
+            ),
+          );
+          ball = ball.copyWith(
+            traits: {...ball.traits}..remove(TraitType.sharp),
+          );
+          events.add('balloon_popped');
+          events.add('sharpness_consumed');
+          speed *= 0.86;
+          continue;
+        }
+        final balloonBefore = hit.position;
+        entities = _pushWithMomentum(
+          entities,
+          hit,
+          direction,
+          speed * 0.86,
+          events,
+          moves,
+          path.length - 1,
+          collision.normal,
+          0,
+          false,
+          const {},
+          impacts,
+        );
+        final movedBalloon = entities.firstWhere(
+          (entity) => entity.id == hit.id,
+        );
+        if (movedBalloon.position.distanceTo(balloonBefore) > 0.01) {
+          events.add('balloon_moved');
+        }
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
+        direction = _postImpactDirection(
+          direction,
+          collision.normal,
+          movingMass,
+          _massOf(hit),
+        );
+        speed *= 0.72 * _restitutionMultiplier(ball, hit);
+        events.add('balloon_bounced');
         continue;
       }
 
@@ -603,7 +703,7 @@ class ShotResolver {
       type: EntityType.ball,
       position: state.ballSpawn,
       size: ball.size,
-      traits: input.equippedTrait == null ? const {} : {input.equippedTrait!},
+      traits: ball.traits,
       movable: true,
       visualState: 'ready',
     );
@@ -631,7 +731,7 @@ class ShotResolver {
       shotCount: state.shotCount + 1,
       score: math.max(0, state.score - 75),
       clearSelection: true,
-      clearEquippedTrait: !success,
+      clearEquippedTrait: !success || events.contains('sharpness_consumed'),
       message: success ? '홀 진입 성공!' : _messageFor(events),
       history: [beforeShot, ...state.history],
     );
@@ -1055,7 +1155,18 @@ class ShotResolver {
         ? math.max(wall.restitution, 0.88)
         : wall.restitution;
     final tangent = incoming - n * normalSpeed;
-    return tangent - n * (normalSpeed * restitution);
+    final tangentRetention = _tangentRetention(wall);
+    return tangent * tangentRetention - n * (normalSpeed * restitution);
+  }
+
+  double _tangentRetention(EntityState surface) {
+    return switch (surface.type) {
+      EntityType.stickySurface => 0.12,
+      EntityType.bumper => 0.96,
+      EntityType.balloon => 0.82,
+      EntityType.wall || EntityType.gate => 1.0,
+      _ => 1.0,
+    };
   }
 
   double _postImpactSpeedFactor(double movingMass, double targetMass) {
@@ -1106,6 +1217,8 @@ class ShotResolver {
       EntityType.gate => 8.0,
       EntityType.wall => 999.0,
       EntityType.hole => 0.0,
+      EntityType.balloon => 0.18,
+      EntityType.spikeSource => 1.2,
     };
   }
 
@@ -1171,6 +1284,18 @@ class ShotResolver {
     ];
   }
 
+  List<EntityState> _openLinkedEntity(
+    List<EntityState> entities,
+    String linkId,
+  ) {
+    return [
+      for (final entity in entities)
+        entity.id == linkId
+            ? entity.copyWith(open: true, solid: false, visualState: 'open')
+            : entity,
+    ];
+  }
+
   String _messageFor(List<String> events) {
     if (events.contains('hole_rejected_crate')) {
       return '홀에 닿지 못했어요. 상자와의 충돌 또는 다른 경로를 시도해 보세요.';
@@ -1202,6 +1327,12 @@ class ShotResolver {
     if (events.contains('sticky_attached')) {
       return '접착 속성으로 표면에 붙었습니다.';
     }
+    if (events.contains('balloon_popped')) {
+      return '팡! 풍선이 터져 길이 열렸습니다.';
+    }
+    if (events.contains('balloon_bounced')) {
+      return '풍선은 밀렸지만 터지지 않았습니다.';
+    }
     return '공이 멈췄습니다. 남은 공을 다음 전략에 활용하세요.';
   }
 
@@ -1226,6 +1357,9 @@ class ShotResolver {
     if (!target.movable ||
         target.type == EntityType.wall ||
         depth >= entities.length) {
+      if (depth >= entities.length) {
+        events.add('chain_safety_stop');
+      }
       return entities;
     }
 
@@ -1246,7 +1380,8 @@ class ShotResolver {
     var iterations = 0;
     final path = <Vec2>[target.position];
 
-    while (velocity.length > 0.8 && iterations < 96) {
+    final maxIterations = entities.length * 8 + 16;
+    while (velocity.length > 0.8 && iterations < maxIterations) {
       iterations += 1;
       final availableSpeed = velocity.length;
       final step = math.min(availableSpeed, 4.0);
@@ -1349,6 +1484,70 @@ class ShotResolver {
       _appendMovePoint(path, collision.position);
       _appendMovePoint(path, current.position);
       events.add('chain_collision_${hit.type.name}');
+
+      if (hit.type == EntityType.balloon) {
+        if (current.traits.contains(TraitType.sharp)) {
+          entities = _replace(
+            entities,
+            hit.copyWith(active: false, solid: false, visualState: 'popped'),
+          );
+          if (hit.linkId != null) {
+            entities = _openLinkedEntity(entities, hit.linkId!);
+            final linked = entities.where((entity) => entity.id == hit.linkId);
+            for (final gate in linked) {
+              moves?.add(
+                ShotAnimationMove(
+                  entityId: gate.id,
+                  from: gate.position,
+                  to: gate.position,
+                  triggerPathIndex: collisionTrigger + 2,
+                  visualState: 'opening',
+                ),
+              );
+            }
+            events.add('linked_state_changed');
+          }
+          current = current.copyWith(
+            traits: {...current.traits}..remove(TraitType.sharp),
+            visualState: 'pushed',
+          );
+          moves?.add(
+            ShotAnimationMove(
+              entityId: hit.id,
+              from: hit.position,
+              to: hit.position,
+              triggerPathIndex: collisionTrigger,
+              visualState: 'popped',
+              impactPosition: collision.position,
+              impactNormal: normal,
+            ),
+          );
+          events.add('balloon_popped');
+          events.add('sharpness_consumed');
+          velocity *= 0.86;
+          remaining = velocity.length;
+          if (remaining > 0.001) {
+            impulseDirection = velocity.normalized();
+          }
+          entities = _replace(entities, current);
+          continue;
+        }
+        velocity =
+            _collisionVelocity(
+              velocity,
+              normal,
+              _massOf(current),
+              _massOf(hit),
+              _collisionRestitution(current, hit),
+            ) *
+            0.8;
+        remaining = velocity.length;
+        if (remaining > 0.001) {
+          impulseDirection = velocity.normalized();
+        }
+        events.add('balloon_bounced');
+        continue;
+      }
 
       if (hit.type == EntityType.stickySurface) {
         entities = _replace(entities, hit.copyWith(visualState: 'stuck'));
@@ -1531,6 +1730,10 @@ class ShotResolver {
 
       current = current.copyWith(visualState: 'blocked');
       break;
+    }
+
+    if (velocity.length > 0.8 && iterations >= maxIterations) {
+      events.add('chain_safety_stop');
     }
 
     if (current.position != target.position) {

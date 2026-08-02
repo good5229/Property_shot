@@ -416,6 +416,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _feedback.switchOpened();
     } else if (move.visualState == 'opening') {
       _feedback.gateOpened();
+    } else if (move.visualState == 'popped') {
+      _feedback.balloonPopped();
     }
     _telemetry.record(
       '연쇄 이동',
@@ -432,6 +434,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _feedback.collision(
       impact.entityType,
       emphasizeJelly: impact.entityType == EntityType.bumper,
+      impactStrength: impact.impulse,
     );
     _telemetry.record(
       '충돌',
@@ -547,6 +550,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       EntityType.hole => '목표 홀',
       EntityType.switchPad => entity.pressed ? '눌림' : '누르기 전',
       EntityType.gate => entity.open ? '열림' : '닫힘',
+      EntityType.balloon => entity.visualState == 'popped' ? '터짐' : '풍선',
+      EntityType.spikeSource => '뾰족함 공급 물체',
       EntityType.wall => '움직이지 않는 장애물',
       _ =>
         entity.traits.isEmpty
@@ -1141,7 +1146,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   bonusAchieved: _bonusChallengeAchieved,
                   onNext: _goNextLevel,
                   onRetry: () => _selectLevel(_state.levelIndex),
-                  isFinal: _state.levelIndex >= levels.length - 1,
+                  isFinal:
+                      _state.levelIndex >= levels.length - 1 ||
+                      (widget.showStageSelector && _state.levelIndex == 2),
                 ),
             ],
           ),
@@ -1855,7 +1862,8 @@ String _levelObjective(int levelIndex) {
   return switch (levelIndex) {
     0 => '추천: 무거움을 옮겨 상자를 밀어 보세요. 다른 충돌 경로도 홀에 닿으면 성공합니다.',
     1 => '추천: 탄성을 옮겨 벽에 반사시켜 보세요. 다른 각도와 경로도 시도할 수 있습니다.',
-    _ => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
+    2 => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
+    _ => '풍선은 일반 공에 밀리고 뾰족한 공에 터집니다. 어느 경로로도 홀에 도착할 수 있습니다.',
   };
 }
 
@@ -1863,7 +1871,8 @@ String _compactLevelObjective(int levelIndex) {
   return switch (levelIndex) {
     0 => '무거움으로 상자를 밀어 홀로 보내기',
     1 => '탄성으로 벽에 반사해 홀로 보내기',
-    _ => '스위치와 문을 열어 홀로 가기',
+    2 => '스위치와 문을 열어 홀로 가기',
+    _ => '풍선을 밀거나 터뜨려 홀로 가기',
   };
 }
 
@@ -1878,6 +1887,17 @@ int _starsForShot(int shotCount, int parShots) {
 }
 
 String? _levelProgressHint(GameState state) {
+  if (state.levelIndex == 3) {
+    final balloon = state.entityById('balloon');
+    if (balloon?.active == false) {
+      return '풍선이 터졌습니다. 열린 문을 지나 홀로 가 보세요.';
+    }
+    final activeBall = state.entityById('active_ball');
+    if (activeBall?.traits.contains(TraitType.sharp) == true) {
+      return '뾰족한 공입니다. 풍선에 닿으면 팡! 하고 터집니다.';
+    }
+    return '풍선은 밀리지만 일반 공으로는 터지지 않습니다. 우회도 가능합니다.';
+  }
   if (state.levelIndex != 2) {
     return null;
   }
@@ -1898,6 +1918,14 @@ String? _levelProgressHint(GameState state) {
 }
 
 String? _compactLevelProgressHint(GameState state) {
+  if (state.levelIndex == 3) {
+    return state.entityById('balloon')?.active == false
+        ? '팝 완료 · 열린 문 → 홀'
+        : state.entityById('active_ball')?.traits.contains(TraitType.sharp) ==
+              true
+        ? '뾰족함 장착 · 풍선에 닿기'
+        : '풍선 밀기 또는 우회하기';
+  }
   if (state.levelIndex != 2) {
     return null;
   }
@@ -1921,7 +1949,8 @@ String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
     0 => '방향 조정 · 길게 누르기 · 손 떼기',
     1 => '방향 조정 · 길게 누르기 · 손 떼기',
-    _ => '스위치 살피기 · 여러 경로로 도전',
+    2 => '스위치 살피기 · 여러 경로로 도전',
+    _ => '풍선 관찰하기 · 속성 옮기기 · 여러 경로로 도전',
   };
 }
 
@@ -2879,6 +2908,45 @@ class _EntityIconPainter extends CustomPainter {
           center.translate(11, 8),
           outline,
         );
+      case EntityType.balloon:
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: center.translate(0, -2),
+            width: 22,
+            height: 28,
+          ),
+          Paint()..color = const Color(0xFFF28A78),
+        );
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: center.translate(0, -2),
+            width: 22,
+            height: 28,
+          ),
+          outline,
+        );
+        canvas.drawCircle(
+          center.translate(-4, -8),
+          3,
+          Paint()..color = const Color(0xCCFFF7DD),
+        );
+        canvas.drawLine(
+          center.translate(0, 12),
+          center.translate(2, 20),
+          outline,
+        );
+      case EntityType.spikeSource:
+        canvas.drawCircle(center, 7, Paint()..color = const Color(0xFFF08B78));
+        for (var index = 0; index < 6; index++) {
+          final angle = index * math.pi / 3;
+          canvas.drawLine(
+            center + Offset(math.cos(angle), math.sin(angle)) * 6,
+            center + Offset(math.cos(angle), math.sin(angle)) * 13,
+            Paint()
+              ..color = const Color(0xFFFFE49B)
+              ..strokeWidth = 2.5,
+          );
+        }
       case EntityType.ball:
       case EntityType.crate:
       case EntityType.weight:
@@ -2922,6 +2990,10 @@ String _entityName(EntityState entity) {
       return '스위치';
     case EntityType.gate:
       return '문';
+    case EntityType.balloon:
+      return '풍선';
+    case EntityType.spikeSource:
+      return '가시 성게';
   }
 }
 
@@ -2945,6 +3017,10 @@ String _entityDescription(EntityState entity) {
       return '무거운 공만 누를 수 있습니다. 누르면 반짝이며 문이 열립니다.';
     case EntityType.gate:
       return entity.open ? '열려 있는 문입니다.' : '닫힌 문입니다. 공은 맞고 튕깁니다.';
+    case EntityType.balloon:
+      return '일반 공에는 밀리고 뾰족한 공에는 터지는 풍선입니다.';
+    case EntityType.spikeSource:
+      return '공에 옮기면 풍선을 터뜨릴 수 있는 뾰족함을 줍니다.';
   }
 }
 
@@ -2956,5 +3032,7 @@ Color _traitUiColor(TraitType trait) {
       return const Color(0xFFA9E7BF);
     case TraitType.sticky:
       return const Color(0xFFD2B5F0);
+    case TraitType.sharp:
+      return const Color(0xFFF5B18B);
   }
 }

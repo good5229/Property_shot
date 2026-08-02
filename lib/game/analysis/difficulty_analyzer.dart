@@ -110,9 +110,13 @@ class DifficultyAnalyzer {
   final ShotResolver shotResolver;
   final TraitResolver traitResolver;
 
-  List<DifficultyMetrics> analyzeAll({bool includeMultiShot = false}) {
+  List<DifficultyMetrics> analyzeAll({
+    bool includeMultiShot = false,
+    bool includeNewStages = false,
+  }) {
+    final count = includeNewStages ? levels.length : math.min(3, levels.length);
     return [
-      for (var index = 0; index < levels.length; index++)
+      for (var index = 0; index < count; index++)
         analyzeLevel(index, includeMultiShot: includeMultiShot),
     ];
   }

@@ -113,7 +113,11 @@ class GameFeedback {
     );
   }
 
-  void collision(EntityType type, {bool emphasizeJelly = false}) {
+  void collision(
+    EntityType type, {
+    bool emphasizeJelly = false,
+    double impactStrength = 0,
+  }) {
     final haptic = switch (type) {
       EntityType.wall ||
       EntityType.gate ||
@@ -124,6 +128,10 @@ class GameFeedback {
       EntityType.bumper => HapticFeedback.lightImpact,
       EntityType.stickySurface => HapticFeedback.selectionClick,
       EntityType.hole => HapticFeedback.heavyImpact,
+      EntityType.balloon => impactStrength >= 0.78
+          ? HapticFeedback.heavyImpact
+          : HapticFeedback.mediumImpact,
+      EntityType.spikeSource => HapticFeedback.lightImpact,
     };
     _emit(
       'collision_${type.name}',
@@ -136,6 +144,8 @@ class GameFeedback {
               : FeedbackCue.bouncyCollision,
         EntityType.stickySurface => FeedbackCue.stickyCollision,
         EntityType.hole => FeedbackCue.holeEntered,
+        EntityType.balloon => FeedbackCue.heavyCollision,
+        EntityType.spikeSource => FeedbackCue.lightCollision,
         EntityType.wall ||
         EntityType.gate ||
         EntityType.weight => FeedbackCue.heavyCollision,
@@ -146,6 +156,16 @@ class GameFeedback {
           type == EntityType.gate ||
           type == EntityType.weight ||
           type == EntityType.hole,
+    );
+  }
+
+  void balloonPopped() {
+    _emit(
+      'balloon_popped',
+      minimumInterval: const Duration(milliseconds: 100),
+      haptic: HapticFeedback.heavyImpact,
+      cue: FeedbackCue.heavyCollision,
+      alert: true,
     );
   }
 
