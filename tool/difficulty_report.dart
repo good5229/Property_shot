@@ -44,10 +44,13 @@ void main() {
     for (final strategy in metrics.strategyMetrics.where(
       (item) => item.successfulSequences > 0,
     )) {
+      final representative = strategy.examples.isEmpty
+          ? '-'
+          : strategy.examples.first.actions.join(' → ');
       print(
         '  ${strategy.label}: ${strategy.successfulSequences}회 성공, '
         '최소 ${strategy.minimumShots ?? '-'}샷, '
-        '대표 순서 ${strategy.examples.isEmpty ? '-' : strategy.examples.first.shots.length}회',
+        '대표 순서 $representative',
       );
     }
   }
