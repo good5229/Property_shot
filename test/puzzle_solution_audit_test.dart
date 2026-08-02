@@ -97,11 +97,7 @@ void main() {
         }
       }
     }
-    expect(
-      bypass,
-      isNotNull,
-      reason: '특정 기믹을 수행하지 않아도 물리 경로로 홀에 도달할 수 있어야 한다',
-    );
+    expect(bypass, isNotNull, reason: '특정 기믹을 수행하지 않아도 물리 경로로 홀에 도달할 수 있어야 한다');
   });
 
   test('첫 2단계 성공 영역은 연결된 입력 영역으로 측정된다', () {
