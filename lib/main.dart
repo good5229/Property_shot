@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/domain/game_state.dart';
 import 'game/levels/levels.dart';
+import 'ui/game_feedback.dart';
 import 'ui/game_screen.dart';
 
 const _copyCoreCountKey = 'property_shot_copy_core_count';
@@ -150,6 +151,19 @@ class _HomeScreen extends StatelessWidget {
         child: Stack(
           children: [
             const Positioned.fill(child: _IslandBackdrop()),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton.filledTonal(
+                key: const Key('feedback_settings_button'),
+                tooltip: '소리와 진동 설정',
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const _FeedbackSettingsDialog(),
+                ),
+                icon: const Icon(Icons.tune_rounded),
+              ),
+            ),
             Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
@@ -231,6 +245,52 @@ class _HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FeedbackSettingsDialog extends StatefulWidget {
+  const _FeedbackSettingsDialog();
+
+  @override
+  State<_FeedbackSettingsDialog> createState() =>
+      _FeedbackSettingsDialogState();
+}
+
+class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('소리와 진동'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SwitchListTile.adaptive(
+            key: const Key('sound_toggle'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('효과음'),
+            value: GameFeedback.soundEnabled,
+            onChanged: (enabled) {
+              setState(() => GameFeedback.soundEnabled = enabled);
+            },
+          ),
+          SwitchListTile.adaptive(
+            key: const Key('haptics_toggle'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('진동'),
+            value: GameFeedback.hapticsEnabled,
+            onChanged: (enabled) {
+              setState(() => GameFeedback.hapticsEnabled = enabled);
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('닫기'),
+        ),
+      ],
     );
   }
 }

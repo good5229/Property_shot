@@ -5,6 +5,7 @@ import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/main.dart';
+import 'package:property_shot/ui/game_feedback.dart';
 
 void main() {
   testWidgets('실제 시작 흐름은 홈·섬 지도·플레이를 연결한다', (tester) async {
@@ -41,6 +42,27 @@ void main() {
     expect(find.byKey(const Key('aim_area')), findsOneWidget);
     expect(find.byKey(const Key('home_button')), findsOneWidget);
     expect(find.text('1. 무거움 익히기'), findsOneWidget);
+  });
+
+  testWidgets('홈 설정에서 효과음과 진동을 각각 끌 수 있다', (tester) async {
+    addTearDown(() {
+      GameFeedback.soundEnabled = true;
+      GameFeedback.hapticsEnabled = true;
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('feedback_settings_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('소리와 진동'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sound_toggle')));
+    await tester.tap(find.byKey(const Key('haptics_toggle')));
+    await tester.pump();
+
+    expect(GameFeedback.soundEnabled, isFalse);
+    expect(GameFeedback.hapticsEnabled, isFalse);
+    expect(find.text('닫기'), findsOneWidget);
   });
 
   testWidgets('복제 코어가 없으면 실제 플레이 화면에 복사 행동을 노출하지 않는다', (tester) async {

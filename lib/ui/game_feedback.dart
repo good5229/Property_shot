@@ -12,6 +12,9 @@ class GameFeedback {
   GameFeedback({SoundPlayer? soundPlayer})
     : _soundPlayer = soundPlayer ?? _playSystemSound;
 
+  static bool soundEnabled = true;
+  static bool hapticsEnabled = true;
+
   final SoundPlayer _soundPlayer;
   final Map<String, DateTime> _lastPlayed = <String, DateTime>{};
 
@@ -107,8 +110,8 @@ class GameFeedback {
     _lastPlayed[key] = now;
     unawaited(
       Future.wait<void>([
-        if (haptic != null) _safe(haptic),
-        if (sound)
+        if (haptic != null && hapticsEnabled) _safe(haptic),
+        if (sound && soundEnabled)
           _safe(
             () => _soundPlayer(
               alert ? SystemSoundType.alert : SystemSoundType.click,
