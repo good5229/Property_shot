@@ -1380,7 +1380,7 @@ class ShotResolver {
     var iterations = 0;
     final path = <Vec2>[target.position];
 
-    final maxIterations = entities.length * 8 + 16;
+    final maxIterations = entities.length * 2 + 16;
     while (velocity.length > 0.8 && iterations < maxIterations) {
       iterations += 1;
       final availableSpeed = velocity.length;
