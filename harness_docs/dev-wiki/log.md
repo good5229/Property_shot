@@ -1323,3 +1323,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-02 | ux | 섬 지도 카드가 목록처럼 보이는 문제를 보완하기 위해 연결 경로·진행률·다음 항해 안내를 추가하고, 실제 한 번 탭 동작과 접근성 힌트를 일치시킨다.
 2026-08-02 | test | 섬 지도 경로·진행률·안내 영역의 시각 회귀를 390×844·768×1024 Golden으로 고정한다.
 2026-08-02 | docs | 섬 지도 Golden을 스크린샷 매트릭스와 검증 결과에 기록했고, 지도 테스트 포함 최신 전체 회귀 136개를 확인했다.
+2026-08-02 | qa | 최신 `flutter build ios --no-codesign`은 Xcode 컴파일까지 통과했지만 `com.example.propertyShot` 배포 타깃에 Development Team·Provisioning Profile이 없어 실패했다. 코드 컴파일 실패로 기록하지 않는다.

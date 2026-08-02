@@ -126,6 +126,16 @@
 
 이번 반복의 최신 회귀 기준은 `flutter analyze` 통과와 `flutter test` 136개 통과다. 과거 섹션에 남은 105·119·128·131·133개 수치는 각 시점의 역사적 기준선이며 현재 판정에 사용하지 않는다.
 
+## 2026-08-02 최신 iOS 빌드 재확인
+
+| 명령 | 결과 |
+|---|---|
+| `flutter build ios --no-codesign` | Xcode 컴파일 통과, 배포 단계에서 Development Team·Provisioning Profile 부족으로 실패 |
+| 실패 분류 | 프로젝트 코드 컴파일 실패가 아닌 서명·프로비저닝 환경 미완료 |
+| 현재 제한 | 실제 iPhone/iPad 설치·터치·프레임·GPU·메모리·햅틱 측정 불가 |
+
+빌드 로그의 타깃은 `com.example.propertyShot`이며 Apple Developer 계정과 고유 Bundle ID, Team 선택이 필요하다. 사용자가 실제 기기 검증 환경을 제공하기 전에는 iOS 출시 준비 완료로 표현하지 않는다.
+
 ## 2026-08-02 최신 최종 회귀
 
 | 항목 | 결과 |
