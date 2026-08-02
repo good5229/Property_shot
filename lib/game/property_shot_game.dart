@@ -99,9 +99,10 @@ class PropertyShotGame extends FlameGame {
     if (_animationPath.isNotEmpty) {
       _animationUpdateCount += 1;
       // A background-resume frame must not skip an entire collision beat.
-      final boundedDt = dt > 0.5
-          ? (_animationEndCursor - _animationCursor) / 34
-          : dt.clamp(0.0, 1 / 30).toDouble();
+      // 백그라운드 복귀로 생긴 큰 시간 간격은 건너뛰지 않는다.
+      // 한 프레임에 남은 충돌을 모두 소비하면 물체 이동과 타격 피드백의
+      // 인과가 사라지므로, 다음 정상 프레임부터 시간축을 이어간다.
+      final boundedDt = dt > 0.5 ? 0.0 : dt.clamp(0.0, 1 / 30).toDouble();
       _animationCursor += boundedDt * 34;
       for (var index = 0; index < _animationMoves.length; index++) {
         final move = _animationMoves[index];

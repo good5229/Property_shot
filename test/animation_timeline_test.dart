@@ -45,4 +45,34 @@ void main() {
       expect(finished, 1, reason: '$framesPerSecond Hz에서 완료 콜백 중복');
     }
   });
+
+  test('백그라운드 복귀의 큰 시간 간격은 충돌 애니메이션을 건너뛰지 않는다', () {
+    const resolver = ShotResolver();
+    final start = levels[0].createState(0);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, -0.4), power: 0.86),
+    );
+    var finished = 0;
+    final impacts = <String>{};
+    final game = PropertyShotGame(
+      result.state,
+      onAnimationFinished: () => finished += 1,
+      onShotImpact: (impact) =>
+          impacts.add('${impact.entityId}:${impact.pathIndex}'),
+    );
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      animationTransaction: true,
+    );
+
+    game.update(0.6);
+
+    expect(finished, 0);
+    expect(impacts.length, lessThan(result.impacts.length));
+  });
 }
