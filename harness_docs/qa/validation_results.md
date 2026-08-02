@@ -242,3 +242,18 @@ Turing 독립 사후 QA는 P0 없이 조건부 통과로 판정했다. 한글 UI
 보드 바깥 하단 모래 영역에 낮은 대비의 해변 장식을 추가했다. 장식은 `CustomPainter` 배경에만 그려지며 충돌·입력 대상이 아니다. 390px에서 단색 여백 인상이 줄었고, 768px에서는 큰 보드 뒤의 배경 장식으로 물러난다.
 
 Hooke 독립 사후 QA는 P0·P1 없이 통과했다. 390·768px 간 장식 노출 차이와 반복 패턴은 P2 잔여 위험으로 기록했으며, 기능 UI·물리·입력 침범은 발견되지 않았다.
+
+## 2026-08-02 Golden 화면 회귀 게이트
+
+| 항목 | 결과 |
+|---|---|
+| Golden 테스트 | `test/gameplay_backdrop_golden_test.dart` 추가, 390×844·768×1024 기준 이미지 생성 |
+| `flutter test test/gameplay_backdrop_golden_test.dart` | 통과, 2개 |
+| `flutter test` | 통과, 126개 |
+| `dart format --output=none --set-exit-if-changed .` | 통과, 27개 파일 검사 |
+| `flutter analyze` | 통과, 이슈 없음 |
+| Web release 빌드 | 통과 |
+| 데모 서버 교체 | 기존 PID 89192 종료 후 PID 96760으로 교체 |
+| 390×844·768×1024 실제 플레이 | 캡처 생성, 브라우저 콘솔 오류 0건 |
+
+`GameplayBackdropPainter`를 픽셀 회귀 대상에 고정해 해변 배경의 파도·모래 경계·하단 장식이 의도 없이 바뀌면 테스트가 실패하도록 했다. Golden은 배경 레이어를 검증하며 실제 iPhone/iPad 렌더링·프레임·GPU·메모리 증거를 대신하지 않는다.

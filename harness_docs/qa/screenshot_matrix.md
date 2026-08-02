@@ -56,3 +56,9 @@
 - `390x844-shore-detail-play.png`: 하단 모래 영역의 조수 웅덩이·잎사귀·불가사리 장식이 HUD와 입력 영역을 침범하지 않는지 확인했다.
 - `768x1024-shore-detail-play.png`: 큰 플레이 보드와 주변 해변 배경의 비율, 장식의 낮은 대비와 비충돌성을 확인했다.
 - 두 캡처 모두 브라우저 콘솔 오류 0건이다. Chromium 뷰포트 검증이며 실제 기기 렌더링·성능 증거로 해석하지 않는다.
+
+## 2026-08-02 Golden 화면 회귀 게이트
+
+- `test/goldens/gameplay_backdrop_390x844.png`, `test/goldens/gameplay_backdrop_768x1024.png`를 해변 플레이 배경의 기준 이미지로 추가했다.
+- `390x844-golden-gate-play.png`, `768x1024-golden-gate-play.png`는 Golden 추가 후 최신 Web release의 실제 시작 흐름 캡처다.
+- Golden은 배경 레이어만 픽셀 비교하며, 실제 기기 렌더링·성능 검증으로 확대 해석하지 않는다.

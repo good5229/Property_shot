@@ -1037,11 +1037,11 @@ class _GameplayBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(painter: _GameplayBackdropPainter());
+    return CustomPaint(painter: GameplayBackdropPainter());
   }
 }
 
-class _GameplayBackdropPainter extends CustomPainter {
+class GameplayBackdropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(
