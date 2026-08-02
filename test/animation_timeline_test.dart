@@ -58,6 +58,63 @@ void main() {
     }
   });
 
+  test('충돌과 이동 콜백은 같은 경로 시점에서 충돌을 먼저 방출한다', () {
+    const resolver = ShotResolver();
+    final start = levels[2].createState(2);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(0.8, -0.6), power: 0.92),
+    );
+    final callbacks = <String>[];
+    final game = PropertyShotGame(
+      result.state,
+      onAnimationImpact: (move) =>
+          callbacks.add('move:${move.triggerPathIndex}:${move.entityId}'),
+      onShotImpact: (impact) =>
+          callbacks.add('impact:${impact.pathIndex}:${impact.entityId}'),
+    );
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      animationTransaction: true,
+    );
+
+    for (var frame = 0; frame < 4000; frame++) {
+      game.update(1 / 60);
+    }
+
+    final expected =
+        <({int pathIndex, int kind, int sequence, String value})>[
+          for (var index = 0; index < result.impacts.length; index++)
+            (
+              pathIndex: result.impacts[index].pathIndex,
+              kind: 0,
+              sequence: index,
+              value:
+                  'impact:${result.impacts[index].pathIndex}:${result.impacts[index].entityId}',
+            ),
+          for (var index = 0; index < result.moves.length; index++)
+            (
+              pathIndex: result.moves[index].triggerPathIndex,
+              kind: 1,
+              sequence: index,
+              value:
+                  'move:${result.moves[index].triggerPathIndex}:${result.moves[index].entityId}',
+            ),
+        ]..sort((left, right) {
+          final path = left.pathIndex.compareTo(right.pathIndex);
+          if (path != 0) return path;
+          final kind = left.kind.compareTo(right.kind);
+          if (kind != 0) return kind;
+          return left.sequence.compareTo(right.sequence);
+        });
+
+    expect(callbacks, expected.map((event) => event.value).toList());
+  });
+
   test('백그라운드 복귀의 큰 시간 간격은 충돌 애니메이션을 건너뛰지 않는다', () {
     const resolver = ShotResolver();
     final start = levels[0].createState(0);

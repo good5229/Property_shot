@@ -14,6 +14,29 @@ import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 import '../ui/game_ball_painter.dart';
 
+class _AnimationEvent {
+  _AnimationEvent.impact(this.sequence, ShotImpact value)
+    : pathIndex = value.pathIndex,
+      kindOrder = 0,
+      key = 'impact:$sequence:${value.pathIndex}',
+      impact = value,
+      move = null;
+
+  _AnimationEvent.move(this.sequence, ShotAnimationMove value)
+    : pathIndex = value.triggerPathIndex,
+      kindOrder = 1,
+      key = 'move:$sequence:${value.entityId}:${value.triggerPathIndex}',
+      impact = null,
+      move = value;
+
+  final int sequence;
+  final int pathIndex;
+  final int kindOrder;
+  final String key;
+  final ShotImpact? impact;
+  final ShotAnimationMove? move;
+}
+
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(
     this.state, {
@@ -110,23 +133,7 @@ class PropertyShotGame extends FlameGame {
       // 인과가 사라지므로, 다음 정상 프레임부터 시간축을 이어간다.
       final boundedDt = dt > 0.5 ? 0.0 : dt.clamp(0.0, 1 / 30).toDouble();
       _animationCursor += boundedDt * 34;
-      for (var index = 0; index < _animationMoves.length; index++) {
-        final move = _animationMoves[index];
-        final key = '$index:${move.entityId}:${move.triggerPathIndex}';
-        if (move.triggerPathIndex <= _animationCursor &&
-            _reportedImpactKeys.add(key)) {
-          onAnimationImpact?.call(move);
-        }
-      }
-      for (var index = 0; index < _animationImpacts.length; index++) {
-        final impact = _animationImpacts[index];
-        if (impact.pathIndex <= _animationCursor) {
-          final key = 'impact:$index:${impact.pathIndex}';
-          if (_reportedImpactKeys.add(key)) {
-            onShotImpact?.call(impact);
-          }
-        }
-      }
+      _emitDueAnimationEvents();
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
       }
@@ -175,6 +182,7 @@ class PropertyShotGame extends FlameGame {
       // Flame이 아직 첫 프레임도 전달하지 않은 테스트 호스트에서는
       // 기존 위젯 계약을 유지하기 위해 최후 보조 완료를 허용한다.
       _animationCursor = _animationEndCursor;
+      _emitDueAnimationEvents();
       _finishAnimation();
       return;
     }
@@ -184,6 +192,39 @@ class PropertyShotGame extends FlameGame {
       const Duration(milliseconds: 80),
       _pollAnimationCompletion,
     );
+  }
+
+  void _emitDueAnimationEvents() {
+    final events =
+        <_AnimationEvent>[
+          for (var index = 0; index < _animationImpacts.length; index++)
+            _AnimationEvent.impact(index, _animationImpacts[index]),
+          for (var index = 0; index < _animationMoves.length; index++)
+            _AnimationEvent.move(index, _animationMoves[index]),
+        ]..sort((left, right) {
+          final byPath = left.pathIndex.compareTo(right.pathIndex);
+          if (byPath != 0) {
+            return byPath;
+          }
+          final byKind = left.kindOrder.compareTo(right.kindOrder);
+          if (byKind != 0) {
+            return byKind;
+          }
+          return left.sequence.compareTo(right.sequence);
+        });
+
+    for (final event in events) {
+      if (event.pathIndex > _animationCursor ||
+          !_reportedImpactKeys.add(event.key)) {
+        continue;
+      }
+      final impact = event.impact;
+      if (impact != null) {
+        onShotImpact?.call(impact);
+      } else {
+        onAnimationImpact?.call(event.move!);
+      }
+    }
   }
 
   @override

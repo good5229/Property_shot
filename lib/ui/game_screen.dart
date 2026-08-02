@@ -856,6 +856,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         children: [
                           if (!compactLayout)
                             _Hud(
+                              tutorialActive: tutorialTarget != null,
                               state: _state,
                               unlockedLevel: _unlockedLevel,
                               onSelectLevel: _selectLevel,
@@ -868,6 +869,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
                               child: _Hud(
                                 compact: true,
+                                tutorialActive: tutorialTarget != null,
                                 state: _state,
                                 unlockedLevel: _unlockedLevel,
                                 onSelectLevel: _selectLevel,
@@ -1067,6 +1069,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                 bottom: 6,
                                                 child: _ControlPanel(
                                                   compact: true,
+                                                  tutorialActive:
+                                                      tutorialTarget != null &&
+                                                      _state.equippedTrait ==
+                                                          null,
                                                   state: _state,
                                                   onRewind: _rewind,
                                                   onReset: () => _selectLevel(
@@ -1984,6 +1990,7 @@ List<_LeaderboardRow> _leaderboardRows(GameState state) {
 class _Hud extends StatelessWidget {
   const _Hud({
     this.compact = false,
+    this.tutorialActive = false,
     required this.state,
     required this.unlockedLevel,
     required this.onSelectLevel,
@@ -1993,6 +2000,7 @@ class _Hud extends StatelessWidget {
   });
 
   final bool compact;
+  final bool tutorialActive;
   final GameState state;
   final int unlockedLevel;
   final ValueChanged<int> onSelectLevel;
@@ -2114,17 +2122,30 @@ class _Hud extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-            Semantics(
-              liveRegion: true,
-              label: '게임 안내: ${state.message}',
-              child: Text(
-                state.message,
-                key: const Key('compact_message'),
-                maxLines: 2,
-                softWrap: true,
-                style: Theme.of(context).textTheme.bodySmall,
+            if (tutorialActive)
+              Opacity(
+                opacity: 0,
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    state.message,
+                    key: const Key('compact_message'),
+                    style: const TextStyle(fontSize: 0, height: 0),
+                  ),
+                ),
+              )
+            else
+              Semantics(
+                liveRegion: true,
+                label: '게임 안내: ${state.message}',
+                child: Text(
+                  state.message,
+                  key: const Key('compact_message'),
+                  maxLines: 2,
+                  softWrap: true,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-            ),
           ],
         ),
       );
@@ -2324,12 +2345,14 @@ class _TutorialCoachMark extends StatelessWidget {
 class _ControlPanel extends StatelessWidget {
   const _ControlPanel({
     this.compact = false,
+    this.tutorialActive = false,
     required this.state,
     required this.onRewind,
     required this.onReset,
   });
 
   final bool compact;
+  final bool tutorialActive;
   final GameState state;
   final VoidCallback onRewind;
   final VoidCallback onReset;
@@ -2354,18 +2377,21 @@ class _ControlPanel extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Expanded(
-              child: Text(
-                state.equippedTrait != null
-                    ? '공을 길게 눌러 힘을 모으세요'
-                    : state.selectedTrait == null
-                    ? '물체를 눌러 속성을 고르세요'
-                    : '선택: ${state.selectedTrait!.label}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
+            if (!tutorialActive)
+              Expanded(
+                child: Text(
+                  state.equippedTrait != null
+                      ? '공을 길게 눌러 힘을 모으세요'
+                      : state.selectedTrait == null
+                      ? '물체를 눌러 속성을 고르세요'
+                      : '선택: ${state.selectedTrait!.label}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              )
+            else
+              const Spacer(),
             Text(
               '공: ${state.equippedTrait?.label ?? '없음'}',
               maxLines: 1,
