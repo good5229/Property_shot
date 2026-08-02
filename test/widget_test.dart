@@ -146,6 +146,8 @@ void main() {
 
     expect(find.textContaining('1. 무거움 익히기'), findsOneWidget);
     expect(find.byKey(const Key('compact_message')), findsOneWidget);
+    expect(find.byKey(const Key('tutorial_coach_mark')), findsOneWidget);
+    expect(find.text('바위를 눌러 무거움을 골라요'), findsOneWidget);
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
@@ -155,6 +157,8 @@ void main() {
 
     expect(find.textContaining('공: 무거움'), findsOneWidget);
     expect(find.textContaining('추천 경로를 준비했습니다'), findsOneWidget);
+    expect(find.text('공을 길게 눌러 발사해요'), findsOneWidget);
+    expect(find.text('공을 길게 눌러 힘을 모으세요'), findsOneWidget);
   });
 
   testWidgets('속성을 선택해 공으로 복사할 수 있다', (tester) async {

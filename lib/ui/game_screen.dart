@@ -806,6 +806,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         inspectedEntity != null ||
         failurePopupOpen ||
         clearPopupOpen;
+    final tutorialTarget = _tutorialTarget;
     final inputBlocked = popupOpen || _isAnimatingShot;
     return PopScope<void>(
       canPop: !popupOpen,
@@ -989,6 +990,38 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                 ),
                                               ),
                                             ),
+                                            if (tutorialTarget != null)
+                                              Positioned(
+                                                left: math.min(
+                                                  math.max(
+                                                    6.0,
+                                                    (tutorialTarget.position.x -
+                                                            58) *
+                                                        scale,
+                                                  ),
+                                                  math.max(
+                                                    6.0,
+                                                    boardSize.width - 150,
+                                                  ),
+                                                ),
+                                                top: math.min(
+                                                  math.max(
+                                                    6.0,
+                                                    (tutorialTarget.position.y -
+                                                            66) *
+                                                        scale,
+                                                  ),
+                                                  math.max(
+                                                    6.0,
+                                                    boardSize.height - 54,
+                                                  ),
+                                                ),
+                                                child: IgnorePointer(
+                                                  child: _TutorialCoachMark(
+                                                    text: _tutorialHint,
+                                                  ),
+                                                ),
+                                              ),
                                             for (final entity
                                                 in _state.entities)
                                               if (entity.active)
@@ -1110,6 +1143,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     );
   }
+
+  EntityState? get _tutorialTarget {
+    if (_state.levelIndex != 0 ||
+        _state.shotCount != 0 ||
+        _state.phase != GamePhase.planning ||
+        _state.selectedSourceId != null) {
+      return null;
+    }
+    if (_state.equippedTrait == null) {
+      for (final entity in _state.traitSources) {
+        return entity;
+      }
+      return null;
+    }
+    return _state.activeBall;
+  }
+
+  String get _tutorialHint =>
+      _state.equippedTrait == null ? '바위를 눌러 무거움을 골라요' : '공을 길게 눌러 발사해요';
 }
 
 class _GameplayBackdrop extends StatelessWidget {
@@ -2220,6 +2272,55 @@ class _AimInstruction extends StatelessWidget {
   }
 }
 
+class _TutorialCoachMark extends StatelessWidget {
+  const _TutorialCoachMark({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      label: '튜토리얼 안내: $text',
+      child: Container(
+        key: const Key('tutorial_coach_mark'),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xF9FFF5D9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE7B45A), width: 1.5),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x443B2B24),
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.touch_app_rounded,
+              size: 17,
+              color: Color(0xFFB56B34),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              text,
+              style: const TextStyle(
+                color: Color(0xFF62462D),
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ControlPanel extends StatelessWidget {
   const _ControlPanel({
     this.compact = false,
@@ -2255,7 +2356,9 @@ class _ControlPanel extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                state.selectedTrait == null
+                state.equippedTrait != null
+                    ? '공을 길게 눌러 힘을 모으세요'
+                    : state.selectedTrait == null
                     ? '물체를 눌러 속성을 고르세요'
                     : '선택: ${state.selectedTrait!.label}',
                 maxLines: 1,

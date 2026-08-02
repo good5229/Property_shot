@@ -555,21 +555,13 @@ class _StageSelectScreen extends StatelessWidget {
                       width: 1.5,
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: CustomPaint(
-                            painter: _StageRoutePainter(
-                              unlockedLevel: unlockedLevel,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Column(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final cardWidth = constraints.maxWidth * 0.82;
+                      return Column(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
                             child: Row(
                               children: [
                                 const Icon(
@@ -598,15 +590,55 @@ class _StageSelectScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          for (var index = 0; index < levels.length; index++)
-                            _StageTile(
-                              index: index,
-                              locked: index > unlockedLevel,
-                              onTap: () => onSelectStage(index),
+                          SizedBox(
+                            height: 350,
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: CustomPaint(
+                                      painter: _StageRoutePainter(
+                                        unlockedLevel: unlockedLevel,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  left: 0,
+                                  width: cardWidth,
+                                  child: _StageTile(
+                                    index: 0,
+                                    locked: 0 > unlockedLevel,
+                                    onTap: () => onSelectStage(0),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 124,
+                                  right: 0,
+                                  width: cardWidth,
+                                  child: _StageTile(
+                                    index: 1,
+                                    locked: 1 > unlockedLevel,
+                                    onTap: () => onSelectStage(1),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 240,
+                                  left: 0,
+                                  width: cardWidth,
+                                  child: _StageTile(
+                                    index: 2,
+                                    locked: 2 > unlockedLevel,
+                                    onTap: () => onSelectStage(2),
+                                  ),
+                                ),
+                              ],
                             ),
+                          ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -834,28 +866,38 @@ class _StageRoutePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final centerX = size.width * 0.5;
-    final top = 60.0;
-    final bottom = size.height - 40;
+    final points = [
+      Offset(size.width * 0.22, 58),
+      Offset(size.width * 0.78, 175),
+      Offset(size.width * 0.22, 292),
+    ];
     final path = Path()
-      ..moveTo(centerX, top)
+      ..moveTo(points.first.dx, points.first.dy)
       ..cubicTo(
-        centerX - size.width * 0.24,
-        size.height * 0.28,
-        centerX + size.width * 0.24,
-        size.height * 0.54,
-        centerX,
-        bottom,
+        size.width * 0.58,
+        76,
+        size.width * 0.58,
+        154,
+        points[1].dx,
+        points[1].dy,
+      )
+      ..cubicTo(
+        size.width * 0.58,
+        196,
+        size.width * 0.58,
+        274,
+        points[2].dx,
+        points[2].dy,
       );
     final route = Paint()
-      ..color = const Color(0x5585B7A1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-    final completed = Paint()
-      ..color = const Color(0xB56FAE76)
+      ..color = const Color(0x9C6B9D8B)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    final completed = Paint()
+      ..color = const Color(0xE06FAE76)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, route);
     if (unlockedLevel > 0) {
@@ -867,9 +909,8 @@ class _StageRoutePainter extends CustomPainter {
       canvas.drawPath(progress, completed);
     }
     for (var index = 0; index < levels.length; index++) {
-      final center = Offset(centerX, top + (bottom - top) * index / 2);
       canvas.drawCircle(
-        center,
+        points[index],
         5,
         Paint()
           ..color = index <= unlockedLevel
