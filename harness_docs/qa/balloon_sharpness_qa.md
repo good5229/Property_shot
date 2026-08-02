@@ -22,7 +22,7 @@
 
 - 신규 단위 테스트 묶음: 10개 통과
 - 다중 샷 분석 단독: 41초에 통과
-- 최종 전체 Flutter 회귀: 171개 전부 통과
+- 최종 전체 Flutter 회귀: 172개 전부 통과
 - `flutter analyze`: 문제 없음
 - `flutter build web --release`: 성공
 - Web release 재빌드 완료, 이전 PID 95957 종료, 최신 서버 PID 76155 기동.

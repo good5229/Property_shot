@@ -278,27 +278,6 @@ class ShotResolver {
           speed *= 0.86;
           continue;
         }
-        final balloonBefore = hit.position;
-        entities = _pushWithMomentum(
-          entities,
-          hit,
-          direction,
-          speed * 0.86,
-          events,
-          moves,
-          path.length - 1,
-          collision.normal,
-          0,
-          false,
-          const {},
-          impacts,
-        );
-        final movedBalloon = entities.firstWhere(
-          (entity) => entity.id == hit.id,
-        );
-        if (movedBalloon.position.distanceTo(balloonBefore) > 0.01) {
-          events.add('balloon_moved');
-        }
         position = _separateFromCollision(
           hit,
           ball,
@@ -306,13 +285,14 @@ class ShotResolver {
           collision.normal,
         );
         path[path.length - 1] = position;
-        direction = _postImpactDirection(
-          direction,
+        final bouncedVelocity = _wallBounceVelocity(
+          direction * speed,
           collision.normal,
-          movingMass,
-          _massOf(hit),
+          ball,
+          hit,
         );
-        speed *= 0.72 * _restitutionMultiplier(ball, hit);
+        direction = bouncedVelocity.normalized();
+        speed = bouncedVelocity.length;
         events.add('balloon_bounced');
         continue;
       }

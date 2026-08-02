@@ -15,7 +15,9 @@ void main() {
     return base.copyWith(
       entities: [
         active,
-        ...base.entities.where((entity) => entity.id != 'active_ball').map(
+        ...base.entities
+            .where((entity) => entity.id != 'active_ball')
+            .map(
               (entity) => entity.id == 'balloon'
                   ? entity.copyWith(position: const Vec2(132, 466))
                   : entity,
@@ -32,9 +34,33 @@ void main() {
     );
 
     expect(result.events, contains('balloon_bounced'));
-    expect(result.events, contains('balloon_moved'));
     expect(result.events, isNot(contains('balloon_popped')));
     expect(result.state.entityById('balloon')!.active, isTrue);
+    expect(result.state.entityById('balloon')!.position, const Vec2(132, 466));
+  });
+
+  test('충돌 직전 속도가 클수록 고정 풍선에서 더 큰 반사 충격이 나온다', () {
+    final low = resolver.resolve(
+      stateWithBalloon(),
+      const ShotInput(direction: Vec2(1, 0), power: 0.35),
+    );
+    final high = resolver.resolve(
+      stateWithBalloon(),
+      const ShotInput(direction: Vec2(1, 0), power: 0.95),
+    );
+
+    final lowImpact = low.impacts.firstWhere(
+      (impact) => impact.entityId == 'balloon',
+    );
+    final highImpact = high.impacts.firstWhere(
+      (impact) => impact.entityId == 'balloon',
+    );
+    expect(
+      highImpact.relativeNormalSpeed,
+      greaterThan(lowImpact.relativeNormalSpeed),
+    );
+    expect(highImpact.impulse, greaterThan(lowImpact.impulse));
+    expect(high.state.entityById('balloon')!.position, const Vec2(132, 466));
   });
 
   test('뾰족함 공은 풍선을 팝하고 한 번 소모한다', () {
@@ -47,10 +73,10 @@ void main() {
       ),
     );
 
-    expect(result.events, containsAllInOrder([
-      'balloon_popped',
-      'sharpness_consumed',
-    ]));
+    expect(
+      result.events,
+      containsAllInOrder(['balloon_popped', 'sharpness_consumed']),
+    );
     expect(result.state.entityById('balloon')!.active, isFalse);
     expect(result.state.equippedTrait, isNull);
     expect(result.state.entityById('balloon')!.visualState, 'popped');
