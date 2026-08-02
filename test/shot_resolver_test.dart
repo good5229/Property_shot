@@ -965,6 +965,32 @@ void main() {
     expect(copied.equippedTrait, TraitType.heavy);
     expect(copied.entityById('anvil')!.traits, contains(TraitType.heavy));
     expect(copied.activeBall.traits, contains(TraitType.heavy));
+    expect(copied.copyCharges, 0);
+  });
+
+  test('복사권을 모두 쓰면 추가 복사가 되지 않는다', () {
+    final selected = traits.selectSource(levels[0].createState(0), 'anvil');
+    final copied = traits.copySelectedTrait(selected);
+    final selectedAgain = traits.selectSource(copied, 'anvil');
+    final exhausted = traits.copySelectedTrait(selectedAgain);
+
+    expect(exhausted.copyCharges, 0);
+    expect(exhausted.activeBall.traits, contains(TraitType.heavy));
+    expect(exhausted.message, contains('모두 사용했습니다'));
+  });
+
+  test('복사하지 못한 선택에서는 복사권이 줄지 않는다', () {
+    final state = levels[0].createState(0);
+    final result = traits.copySelectedTrait(state);
+
+    expect(result.copyCharges, state.copyCharges);
+    expect(result.message, contains('먼저 속성 물체를 선택하세요'));
+  });
+
+  test('스테이지별 복사권은 1·1·2회다', () {
+    expect(levels[0].createState(0).copyCharges, 1);
+    expect(levels[1].createState(1).copyCharges, 1);
+    expect(levels[2].createState(2).copyCharges, 2);
   });
 
   test('되감기는 발사 전 상태를 복원한다', () {
@@ -986,6 +1012,20 @@ void main() {
       rewound.entityById('crate_a')!.position,
       state.entityById('crate_a')!.position,
     );
+    expect(rewound.copyCharges, rewound.copyChargeLimit);
+  });
+
+  test('복사 후 발사한 샷을 되감으면 복사권이 초기화된다', () {
+    final copied = traits.copySelectedTrait(
+      traits.selectSource(levels[0].createState(0), 'anvil'),
+    );
+    final result = shots.resolve(
+      copied,
+      const ShotInput(direction: Vec2(1, 0), power: 0.5),
+    );
+
+    expect(result.state.copyCharges, 0);
+    expect(shots.rewind(result.state).copyCharges, 1);
   });
 
   test('문은 열리기 전까지 공을 막는다', () {

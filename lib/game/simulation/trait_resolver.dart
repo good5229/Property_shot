@@ -56,6 +56,11 @@ class TraitResolver {
     if (trait == null) {
       return state.copyWith(message: '먼저 속성 물체를 선택하세요.');
     }
+    if (state.copyCharges <= 0) {
+      return state.copyWith(
+        message: '이번 단계의 복사 횟수를 모두 사용했습니다. 속성을 옮기거나 되감아 다시 시도하세요.',
+      );
+    }
 
     final entities = <EntityState>[];
     for (final entity in state.entities) {
@@ -69,8 +74,9 @@ class TraitResolver {
     return state.copyWith(
       entities: entities,
       equippedTrait: trait,
+      copyCharges: state.copyCharges - 1,
       clearSelection: true,
-      message: '${trait.label} 속성을 복사했습니다.',
+      message: '${trait.label} 속성을 복사했습니다. 복사 ${state.copyCharges - 1}회 남음.',
     );
   }
 }

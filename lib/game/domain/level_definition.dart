@@ -7,17 +7,21 @@ class LevelDefinition {
     required this.name,
     required this.ballSpawn,
     required this.entities,
+    this.copyCharges = 1,
   });
 
   final String name;
   final Vec2 ballSpawn;
   final List<EntityState> entities;
+  final int copyCharges;
 
   GameState createState(int index) {
     return GameState(
       levelIndex: index,
       levelName: name,
       ballSpawn: ballSpawn,
+      copyCharges: copyCharges,
+      copyChargeLimit: copyCharges,
       entities: [
         EntityState(
           id: 'active_ball',

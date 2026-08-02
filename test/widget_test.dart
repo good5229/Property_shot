@@ -30,11 +30,13 @@ void main() {
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
+    expect(find.text('복사 1회 남음'), findsOneWidget);
     await tester.tap(find.byKey(const Key('copy_button')));
     await tester.pump();
 
     expect(find.textContaining('공: 무거움'), findsOneWidget);
     expect(find.textContaining('복사했습니다'), findsOneWidget);
+    expect(find.textContaining('복사 0회 남음'), findsOneWidget);
     expect(find.textContaining('선택:'), findsNothing);
   });
 

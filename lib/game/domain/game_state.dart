@@ -18,6 +18,8 @@ class GameState {
     this.equippedTrait,
     this.aimDirection = const Vec2(1, 0),
     this.aimPower = 0.5,
+    this.copyCharges = 1,
+    this.copyChargeLimit = 1,
     this.message = '속성을 선택하고 조준하세요.',
     this.history = const [],
   });
@@ -34,6 +36,8 @@ class GameState {
   final TraitType? equippedTrait;
   final Vec2 aimDirection;
   final double aimPower;
+  final int copyCharges;
+  final int copyChargeLimit;
   final String message;
   final List<GameState> history;
 
@@ -67,6 +71,8 @@ class GameState {
     bool clearEquippedTrait = false,
     Vec2? aimDirection,
     double? aimPower,
+    int? copyCharges,
+    int? copyChargeLimit,
     String? message,
     List<GameState>? history,
   }) {
@@ -89,6 +95,8 @@ class GameState {
           : equippedTrait ?? this.equippedTrait,
       aimDirection: aimDirection ?? this.aimDirection,
       aimPower: aimPower ?? this.aimPower,
+      copyCharges: copyCharges ?? this.copyCharges,
+      copyChargeLimit: copyChargeLimit ?? this.copyChargeLimit,
       message: message ?? this.message,
       history: history ?? this.history,
     );

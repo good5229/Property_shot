@@ -696,6 +696,7 @@ class ShotResolver {
       return state.copyWith(message: '되감기할 발사가 없습니다.');
     }
     return state.history.first.copyWith(
+      copyCharges: state.copyChargeLimit,
       message: '직전 발사 전 상태로 되감았습니다.',
       history: state.history.skip(1).toList(),
     );

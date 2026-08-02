@@ -207,7 +207,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _traitResolver
           .copySelectedTrait(_state)
           .copyWith(
-            message: '원본에 속성을 남기고 공에 복사했습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
+            message:
+                '원본에 속성을 남기고 공에 복사했습니다. 복사 ${_state.copyCharges - 1}회 남음. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
           ),
     );
   }
@@ -887,10 +888,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   onClose: _dismissInfo,
                   child: _EntityInfoPanel(
                     entity: inspectedEntity,
+                    copyCharges: _state.copyCharges,
                     onTransfer: inspectedEntity.traits.isEmpty
                         ? null
                         : _transferTrait,
-                    onCopy: inspectedEntity.traits.isEmpty ? null : _copyTrait,
+                    onCopy:
+                        inspectedEntity.traits.isEmpty ||
+                            _state.copyCharges <= 0
+                        ? null
+                        : _copyTrait,
                   ),
                 ),
               if (failurePopupOpen)
@@ -1695,9 +1701,15 @@ class _InfoPopup extends StatelessWidget {
 }
 
 class _EntityInfoPanel extends StatelessWidget {
-  const _EntityInfoPanel({required this.entity, this.onTransfer, this.onCopy});
+  const _EntityInfoPanel({
+    required this.entity,
+    required this.copyCharges,
+    this.onTransfer,
+    this.onCopy,
+  });
 
   final EntityState entity;
+  final int copyCharges;
   final VoidCallback? onTransfer;
   final VoidCallback? onCopy;
 
@@ -1737,6 +1749,16 @@ class _EntityInfoPanel extends StatelessWidget {
                     '옮기기: 원본에서 사라짐 · 복사: 원본에 유지됨',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: const Color(0xFF59685F),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '복사 $copyCharges회 남음',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: copyCharges == 0
+                          ? const Color(0xFF9A3B35)
+                          : const Color(0xFF59685F),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 8),

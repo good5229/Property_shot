@@ -9,6 +9,7 @@ final levels = <LevelDefinition>[
   LevelDefinition(
     name: '1. 무거움 익히기',
     ballSpawn: const Vec2(56, 456),
+    copyCharges: 1,
     entities: const [
       EntityState(
         id: 'hole',
@@ -56,6 +57,7 @@ final levels = <LevelDefinition>[
   LevelDefinition(
     name: '2. 탄성 익히기',
     ballSpawn: const Vec2(58, 462),
+    copyCharges: 1,
     entities: const [
       EntityState(
         id: 'hole',
@@ -108,6 +110,7 @@ final levels = <LevelDefinition>[
   LevelDefinition(
     name: '3. 연쇄 문 열기',
     ballSpawn: const Vec2(56, 466),
+    copyCharges: 2,
     entities: const [
       EntityState(
         id: 'hole',
