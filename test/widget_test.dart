@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
@@ -404,6 +405,46 @@ void main() {
     expect(next.bottom, lessThanOrEqualTo(844));
     expect(tester.takeException(), isNull);
   });
+
+  for (final fixture in const [
+    (name: '390x844', width: 390.0, height: 844.0),
+    (name: '768x1024', width: 768.0, height: 1024.0),
+  ]) {
+    testWidgets('최신 레벨 파를 반영한 클리어 팝업 Golden ${fixture.name}', (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final loader = FontLoader('ClearPopupNanumGothic')
+        ..addFont(rootBundle.load('assets/fonts/NanumGothic-Regular.ttf'))
+        ..addFont(rootBundle.load('assets/fonts/NanumGothic-Bold.ttf'))
+        ..addFont(rootBundle.load('assets/fonts/NanumGothic-ExtraBold.ttf'));
+      await loader.load();
+      await tester.binding.setSurfaceSize(Size(fixture.width, fixture.height));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final clearState = _directClearState().copyWith(
+        phase: GamePhase.success,
+        shotCount: 1,
+        message: '홀 진입 성공!',
+      );
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: const Key('clear_popup_golden'),
+          child: PropertyShotApp(
+            initialState: clearState,
+            showStageSelector: false,
+            fontFamilyOverride: 'ClearPopupNanumGothic',
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+      expect(find.text('파 2회 · 3/3 별'), findsOneWidget);
+      await expectLater(
+        find.byKey(const Key('clear_popup_golden')),
+        matchesGoldenFile('goldens/clear_popup_${fixture.name}.png'),
+      );
+    });
+  }
 
   testWidgets('클리어 결과에서 기록 다시 도전은 같은 단계로 돌아간다', (tester) async {
     final clearState = levels[0]
