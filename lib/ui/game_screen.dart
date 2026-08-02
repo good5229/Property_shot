@@ -27,6 +27,7 @@ class GameScreen extends StatefulWidget {
     this.onExit,
     this.onCopyCoreEarned,
     this.onLevelUnlocked,
+    this.loadGameAssets = true,
   });
 
   final GameState? initialState;
@@ -35,6 +36,7 @@ class GameScreen extends StatefulWidget {
   final VoidCallback? onExit;
   final ValueChanged<int>? onCopyCoreEarned;
   final ValueChanged<int>? onLevelUnlocked;
+  final bool loadGameAssets;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -85,6 +87,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       onAnimationFinished: _onAnimationFinished,
       onAnimationImpact: _onAnimationImpact,
       onShotImpact: _onShotImpact,
+      loadVisualAssets: widget.loadGameAssets,
     );
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();

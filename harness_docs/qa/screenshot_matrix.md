@@ -59,6 +59,20 @@
 
 ## 2026-08-02 Golden 화면 회귀 게이트
 
+## 2026-08-02 전체 플레이 화면 Golden 회귀 게이트
+
+- `test/goldens/game_screen_390x844.png`, `test/goldens/game_screen_768x1024.png`를 추가했다.
+- 전체 플레이 화면은 해변 배경, HUD, 보드 프레임, 벽, 홀, 공, 물체, 조준 화살표, 하단 컨트롤을 함께 캡처한다.
+- Golden 호스트에서는 Flame 래스터 디코더 교착을 피하기 위해 `loadGameAssets: false`를 사용한다. 제품 기본 실행은 래스터 자산을 계속 사용하므로 Web 캡처와 자산 HTTP 200 검증을 함께 본다.
+- 390×844와 768×1024 Golden 테스트 2개가 통과했다. 실제 iOS 렌더링과 프레임 측정은 별도 미검증이다.
+
+## 2026-08-02 섬 지도 진행 경로 Golden
+
+- `test/goldens/stage_select_390x844.png`, `test/goldens/stage_select_768x1024.png`를 추가했다.
+- `stage_route_map` 안에 진행 경로·잠금 상태·진행률을 표시하고, 하단 `map_hint_card`에서 여러 풀이 원칙을 짧게 전달한다.
+- 지도 화면 Golden 2개와 한 번 탭 접근성 힌트 위젯 테스트가 통과했다.
+- 768×1024는 Web 보조 태블릿 비율이며 실제 iPad 입력·프레임 증거가 아니다.
+
 - `test/goldens/gameplay_backdrop_390x844.png`, `test/goldens/gameplay_backdrop_768x1024.png`를 해변 플레이 배경의 기준 이미지로 추가했다.
 - `390x844-golden-gate-play.png`, `768x1024-golden-gate-play.png`는 Golden 추가 후 최신 Web release의 실제 시작 흐름 캡처다.
 - Golden은 배경 레이어만 픽셀 비교하며, 실제 기기 렌더링·성능 검증으로 확대 해석하지 않는다.

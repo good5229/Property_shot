@@ -35,6 +35,21 @@ void main() {
     expect(find.byKey(const Key('start_game_button')), findsOneWidget);
   });
 
+  testWidgets('섬 지도는 진행 경로와 실제 한 번 탭 동작을 안내한다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('stage_route_map')), findsOneWidget);
+    expect(find.byKey(const Key('map_hint_card')), findsOneWidget);
+    final semantics = tester.getSemantics(
+      find.byKey(const Key('stage_tile_0')),
+    );
+    expect(semantics.getSemanticsData().hint, '한 번 누르면 스테이지를 시작합니다');
+  });
+
   testWidgets('홈의 첫 섬 시작 버튼은 첫 스테이지 플레이로 이동한다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pump();

@@ -19,12 +19,14 @@ class PropertyShotGame extends FlameGame {
     this.onAnimationFinished,
     this.onAnimationImpact,
     this.onShotImpact,
+    this.loadVisualAssets = true,
   });
 
   GameState state;
   final VoidCallback? onAnimationFinished;
   final ValueChanged<ShotAnimationMove>? onAnimationImpact;
   final ValueChanged<ShotImpact>? onShotImpact;
+  final bool loadVisualAssets;
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   List<ShotImpact> _animationImpacts = const [];
@@ -45,6 +47,9 @@ class PropertyShotGame extends FlameGame {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    if (!loadVisualAssets) {
+      return;
+    }
     _objectImages[EntityType.crate] = await _loadUiImage(
       'assets/generated/crate-v2.png',
     );

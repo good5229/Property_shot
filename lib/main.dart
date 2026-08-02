@@ -34,6 +34,7 @@ class PropertyShotApp extends StatelessWidget {
     this.showStageSelector = true,
     this.telemetry,
     this.fontFamilyOverride,
+    this.loadGameAssets = true,
   });
 
   final GameState? initialState;
@@ -41,6 +42,7 @@ class PropertyShotApp extends StatelessWidget {
   final bool showStageSelector;
   final LocalPlayTelemetry? telemetry;
   final String? fontFamilyOverride;
+  final bool loadGameAssets;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +76,7 @@ class PropertyShotApp extends StatelessWidget {
               initialState: initialState,
               showStageSelector: showStageSelector,
               telemetry: telemetry,
+              loadGameAssets: loadGameAssets,
             ),
     );
   }
@@ -500,6 +503,7 @@ class _StageSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: const Key('stage_select_screen'),
       backgroundColor: const Color(0xFFBFE8E3),
       body: Stack(
         children: [
@@ -540,12 +544,114 @@ class _StageSelectScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                for (var index = 0; index < levels.length; index++)
-                  _StageTile(
-                    index: index,
-                    locked: index > unlockedLevel,
-                    onTap: () => onSelectStage(index),
+                Container(
+                  key: const Key('stage_route_map'),
+                  padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xB8FFFDF3),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0x6687B5A8),
+                      width: 1.5,
+                    ),
                   ),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _StageRoutePainter(
+                              unlockedLevel: unlockedLevel,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.route_rounded,
+                                  size: 18,
+                                  color: Color(0xFF397372),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '첫 항해 진행',
+                                  style: Theme.of(context).textTheme.labelLarge
+                                      ?.copyWith(
+                                        color: const Color(0xFF397372),
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  '${(unlockedLevel + 1).clamp(1, levels.length)} / ${levels.length}',
+                                  style: Theme.of(context).textTheme.labelLarge
+                                      ?.copyWith(
+                                        color: const Color(0xFF52706A),
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          for (var index = 0; index < levels.length; index++)
+                            _StageTile(
+                              index: index,
+                              locked: index > unlockedLevel,
+                              onTap: () => onSelectStage(index),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  key: const Key('map_hint_card'),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xD9E8F4D9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0x6695B98C)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.explore_rounded,
+                        size: 28,
+                        color: Color(0xFF4F8460),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '한 번의 발사, 여러 갈래의 길',
+                              style: TextStyle(
+                                color: Color(0xFF315C46),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              '속성을 이용해도, 다른 충돌 경로를 찾아도 괜찮아요.',
+                              style: TextStyle(
+                                color: Color(0xFF52706A),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -590,7 +696,7 @@ class _StageTile extends StatelessWidget {
           child: Semantics(
             button: !locked,
             label: '${index + 1}번 ${levels[index].name} 섬',
-            hint: locked ? '앞 섬을 클리어하면 열립니다' : '두 번 누르면 스테이지를 시작합니다',
+            hint: locked ? '앞 섬을 클리어하면 열립니다' : '한 번 누르면 스테이지를 시작합니다',
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -719,6 +825,63 @@ class _StageTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StageRoutePainter extends CustomPainter {
+  const _StageRoutePainter({required this.unlockedLevel});
+
+  final int unlockedLevel;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerX = size.width * 0.5;
+    final top = 60.0;
+    final bottom = size.height - 40;
+    final path = Path()
+      ..moveTo(centerX, top)
+      ..cubicTo(
+        centerX - size.width * 0.24,
+        size.height * 0.28,
+        centerX + size.width * 0.24,
+        size.height * 0.54,
+        centerX,
+        bottom,
+      );
+    final route = Paint()
+      ..color = const Color(0x5585B7A1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    final completed = Paint()
+      ..color = const Color(0xB56FAE76)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(path, route);
+    if (unlockedLevel > 0) {
+      final progress = Path();
+      final metric = path.computeMetrics().first;
+      final length =
+          metric.length * (unlockedLevel / (levels.length - 1)).clamp(0.0, 1.0);
+      progress.addPath(metric.extractPath(0, length), Offset.zero);
+      canvas.drawPath(progress, completed);
+    }
+    for (var index = 0; index < levels.length; index++) {
+      final center = Offset(centerX, top + (bottom - top) * index / 2);
+      canvas.drawCircle(
+        center,
+        5,
+        Paint()
+          ..color = index <= unlockedLevel
+              ? const Color(0xFF6FAE76)
+              : const Color(0x8890A59A),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StageRoutePainter oldDelegate) =>
+      oldDelegate.unlockedLevel != unlockedLevel;
 }
 
 class _IslandBackdrop extends StatelessWidget {
