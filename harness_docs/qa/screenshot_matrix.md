@@ -155,6 +155,7 @@
 
 - `scripts/capture_web_screenshots.py --url http://127.0.0.1:8080/`로 현재 PID 55374에서 `390x844-home-current.png`, `390x844-map-current.png`, `390x844-play-current.png`, `768x1024-home-current.png`, `768x1024-map-current.png`, `768x1024-play-current.png`를 생성했다.
 - `scripts/capture_web_screenshots.py --url http://127.0.0.1:8080/`로 현재 PID 90106에서 `390x844-home-current.png`, `390x844-map-current.png`, `390x844-play-current.png`, `768x1024-home-current.png`, `768x1024-map-current.png`, `768x1024-play-current.png`를 갱신했다.
+- `test/widget_test.dart`의 결과 상태를 동일한 PID 기준 현재 레벨 값으로 고정해 `390x844-result-current.png`, `768x1024-result-current.png`를 생성했다. 결과 화면은 `파 2회 · 3/3 별`, 리더보드, `다음` 버튼을 포함한다.
 - 시작·지도·플레이 상태 모두 콘솔 오류 0건이다. Web 의미 DOM 대신 기존 성능 감사에서 확인한 Flutter Web 좌표를 사용했으므로 실제 iOS 터치 좌표 검증으로 확대하지 않는다.
 
 ## 2026-08-02 선택형 추가 도전 포함 최신 캡처
