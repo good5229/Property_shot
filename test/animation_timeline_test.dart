@@ -36,6 +36,7 @@ void main() {
         transitionStart: start,
         moves: result.moves,
         impacts: result.impacts,
+        physicsEvents: result.physicsEvents,
         animationTransaction: true,
       );
 
@@ -56,6 +57,36 @@ void main() {
       game.update(1 / framesPerSecond);
       expect(finished, 1, reason: '$framesPerSecond Hz에서 완료 콜백 중복');
     }
+  });
+
+  test('공유 물리 이벤트 스트림은 애니메이션 콜백과 일대일로 재생된다', () {
+    const resolver = ShotResolver();
+    final start = levels[0].createState(0);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, -0.4), power: 0.86),
+    );
+    final eventIds = <String>[];
+    final game = PropertyShotGame(
+      result.state,
+      onPhysicsEvent: (event) => eventIds.add(event.eventId),
+    );
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+
+    for (var frame = 0; frame < 4000; frame++) {
+      game.update(1 / 60);
+    }
+
+    expect(eventIds, result.physicsEvents.map((event) => event.eventId));
+    expect(eventIds.toSet(), hasLength(eventIds.length));
   });
 
   test('충돌과 이동 콜백은 같은 경로 시점에서 충돌을 먼저 방출한다', () {

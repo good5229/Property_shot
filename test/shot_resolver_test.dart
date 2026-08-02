@@ -43,6 +43,62 @@ void main() {
           .map((move) => '${move.entityId}:${move.triggerPathIndex}')
           .toList(),
     );
+    expect(
+      firstResult.physicsEvents.map((event) => event.eventId).toList(),
+      secondResult.physicsEvents.map((event) => event.eventId).toList(),
+    );
+  });
+
+  test('물리 이벤트 스트림은 충돌·이동의 인과와 관찰된 결과 속도를 보존한다', () {
+    final state = traits.transferSelectedTrait(
+      traits.selectSource(levels[0].createState(0), 'anvil'),
+    );
+    final result = shots.resolve(
+      state,
+      const ShotInput(
+        direction: Vec2(1, -1.3),
+        power: 1,
+        equippedTrait: TraitType.heavy,
+      ),
+    );
+
+    final eventIds = result.physicsEvents
+        .map((event) => event.eventId)
+        .toList();
+    expect(eventIds, hasLength(result.impacts.length + result.moves.length));
+    expect(eventIds.toSet(), hasLength(eventIds.length));
+    expect(
+      result.physicsEvents
+          .where((event) => event.kind == PhysicsEventKind.impact)
+          .map((event) => event.impact),
+      everyElement(isNotNull),
+    );
+    expect(
+      result.physicsEvents
+          .where((event) => event.kind == PhysicsEventKind.move)
+          .map((event) => event.move),
+      everyElement(isNotNull),
+    );
+    expect(
+      result.physicsEvents.map((event) => event.pathIndex).toList(),
+      [...result.physicsEvents.map((event) => event.pathIndex)]..sort(),
+    );
+    expect(
+      result.physicsEvents
+          .where((event) => event.kind == PhysicsEventKind.impact)
+          .any((event) => event.resultingVelocity.length > 0),
+      isTrue,
+    );
+    for (final event in result.physicsEvents) {
+      final parentId = event.parentEventId;
+      if (parentId == null) {
+        continue;
+      }
+      expect(
+        eventIds.indexOf(parentId),
+        lessThan(eventIds.indexOf(event.eventId)),
+      );
+    }
   });
 
   test('무거운 공은 상자를 밀 수 있다', () {

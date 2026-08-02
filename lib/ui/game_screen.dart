@@ -95,6 +95,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       onAnimationFinished: _onAnimationFinished,
       onAnimationImpact: _onAnimationImpact,
       onShotImpact: _onShotImpact,
+      onPhysicsEvent: _onPhysicsEvent,
       loadVisualAssets: widget.loadGameAssets,
     );
     _showClearPopup = _state.phase == GamePhase.success;
@@ -187,6 +188,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     GameState? transitionStart,
     List<ShotAnimationMove> moves = const [],
     List<ShotImpact> impacts = const [],
+    List<PhysicsEvent> physicsEvents = const [],
   }) {
     setState(() {
       _state = next;
@@ -199,6 +201,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         transitionStart: transitionStart,
         moves: moves,
         impacts: impacts,
+        physicsEvents: physicsEvents,
         animationTransaction: path.isNotEmpty,
       );
     });
@@ -337,6 +340,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       transitionStart: _state,
       moves: result.moves,
       impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
     );
     if (result.state.phase == GamePhase.success) {
       if (_bonusGoalReached(result)) {
@@ -440,6 +444,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       '충돌',
       stage: _state.levelIndex,
       target: impact.entityType.name,
+    );
+  }
+
+  void _onPhysicsEvent(PhysicsEvent event) {
+    if (!mounted ||
+        !_isAnimatingShot ||
+        event.kind != PhysicsEventKind.chainSafetyStop) {
+      return;
+    }
+    _telemetry.record(
+      '연쇄 안전 중단',
+      stage: _state.levelIndex,
+      target: event.targetEntityId,
+      result:
+          '반복 ${event.iterations ?? 0}회·잔여 속도 ${(event.remainingSpeed ?? 0).toStringAsFixed(2)}',
     );
   }
 

@@ -14,35 +14,13 @@ import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 import '../ui/game_ball_painter.dart';
 
-class _AnimationEvent {
-  _AnimationEvent.impact(this.sequence, ShotImpact value)
-    : pathIndex = value.pathIndex,
-      kindOrder = 0,
-      key = 'impact:$sequence:${value.pathIndex}',
-      impact = value,
-      move = null;
-
-  _AnimationEvent.move(this.sequence, ShotAnimationMove value)
-    : pathIndex = value.triggerPathIndex,
-      kindOrder = 1,
-      key = 'move:$sequence:${value.entityId}:${value.triggerPathIndex}',
-      impact = null,
-      move = value;
-
-  final int sequence;
-  final int pathIndex;
-  final int kindOrder;
-  final String key;
-  final ShotImpact? impact;
-  final ShotAnimationMove? move;
-}
-
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(
     this.state, {
     this.onAnimationFinished,
     this.onAnimationImpact,
     this.onShotImpact,
+    this.onPhysicsEvent,
     this.loadVisualAssets = true,
   });
 
@@ -50,10 +28,12 @@ class PropertyShotGame extends FlameGame {
   final VoidCallback? onAnimationFinished;
   final ValueChanged<ShotAnimationMove>? onAnimationImpact;
   final ValueChanged<ShotImpact>? onShotImpact;
+  final ValueChanged<PhysicsEvent>? onPhysicsEvent;
   final bool loadVisualAssets;
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   List<ShotImpact> _animationImpacts = const [];
+  List<PhysicsEvent> _animationPhysicsEvents = const [];
   GameState? _animationStartState;
   double _animationCursor = 0;
   int _animationUpdateCount = 0;
@@ -98,6 +78,7 @@ class PropertyShotGame extends FlameGame {
     GameState? transitionStart,
     List<ShotAnimationMove> moves = const [],
     List<ShotImpact> impacts = const [],
+    List<PhysicsEvent> physicsEvents = const [],
     bool animationTransaction = false,
   }) {
     state = next;
@@ -105,6 +86,14 @@ class PropertyShotGame extends FlameGame {
       _animationPath = path;
       _animationMoves = moves;
       _animationImpacts = impacts;
+      _animationPhysicsEvents = physicsEvents.isEmpty
+          ? buildPhysicsEvents(
+              path: path,
+              impacts: impacts,
+              moves: moves,
+              chainSafetyDiagnostics: const [],
+            )
+          : physicsEvents;
       _animationStartState = transitionStart;
       _animationCursor = 0;
       _animationUpdateCount = 0;
@@ -150,6 +139,7 @@ class PropertyShotGame extends FlameGame {
     _animationPath = const [];
     _animationMoves = const [];
     _animationImpacts = const [];
+    _animationPhysicsEvents = const [];
     _animationStartState = null;
     _animationTrait = null;
     onAnimationFinished?.call();
@@ -195,33 +185,29 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _emitDueAnimationEvents() {
-    final events =
-        <_AnimationEvent>[
-          for (var index = 0; index < _animationImpacts.length; index++)
-            _AnimationEvent.impact(index, _animationImpacts[index]),
-          for (var index = 0; index < _animationMoves.length; index++)
-            _AnimationEvent.move(index, _animationMoves[index]),
-        ]..sort((left, right) {
-          final byPath = left.pathIndex.compareTo(right.pathIndex);
-          if (byPath != 0) {
-            return byPath;
-          }
-          final byKind = left.kindOrder.compareTo(right.kindOrder);
-          if (byKind != 0) {
-            return byKind;
-          }
-          return left.sequence.compareTo(right.sequence);
-        });
+    final events = [..._animationPhysicsEvents]
+      ..sort((left, right) {
+        final byPath = left.pathIndex.compareTo(right.pathIndex);
+        if (byPath != 0) {
+          return byPath;
+        }
+        final byKind = left.kind.index.compareTo(right.kind.index);
+        if (byKind != 0) {
+          return byKind;
+        }
+        return left.eventId.compareTo(right.eventId);
+      });
 
     for (final event in events) {
       if (event.pathIndex > _animationCursor ||
-          !_reportedImpactKeys.add(event.key)) {
+          !_reportedImpactKeys.add(event.eventId)) {
         continue;
       }
+      onPhysicsEvent?.call(event);
       final impact = event.impact;
       if (impact != null) {
         onShotImpact?.call(impact);
-      } else {
+      } else if (event.move != null) {
         onAnimationImpact?.call(event.move!);
       }
     }

@@ -15,6 +15,8 @@ class ShotResult {
     required this.events,
     this.moves = const [],
     this.impacts = const [],
+    this.physicsEvents = const [],
+    this.chainSafetyDiagnostics = const [],
   });
 
   final GameState state;
@@ -22,6 +24,68 @@ class ShotResult {
   final List<String> events;
   final List<ShotAnimationMove> moves;
   final List<ShotImpact> impacts;
+  final List<PhysicsEvent> physicsEvents;
+  final List<ChainSafetyDiagnostic> chainSafetyDiagnostics;
+}
+
+enum PhysicsEventKind { impact, move, chainSafetyStop }
+
+class ChainSafetyDiagnostic {
+  const ChainSafetyDiagnostic({
+    required this.targetEntityId,
+    required this.pathIndex,
+    required this.depth,
+    required this.iterations,
+    required this.remainingDistance,
+    required this.remainingSpeed,
+  });
+
+  final String targetEntityId;
+  final int pathIndex;
+  final int depth;
+  final int iterations;
+  final double remainingDistance;
+  final double remainingSpeed;
+}
+
+class PhysicsEvent {
+  const PhysicsEvent({
+    required this.eventId,
+    required this.kind,
+    required this.pathIndex,
+    required this.sourceEntityId,
+    required this.targetEntityId,
+    required this.targetType,
+    required this.position,
+    required this.normal,
+    required this.impulse,
+    required this.resultingVelocity,
+    this.parentEventId,
+    this.visualState,
+    this.remainingDistance,
+    this.remainingSpeed,
+    this.iterations,
+    this.impact,
+    this.move,
+  });
+
+  final String eventId;
+  final String? parentEventId;
+  final PhysicsEventKind kind;
+  final int pathIndex;
+  final String sourceEntityId;
+  final String targetEntityId;
+  final EntityType targetType;
+  final Vec2 position;
+  final Vec2 normal;
+  final double impulse;
+  final Vec2 resultingVelocity;
+  final String? visualState;
+  final double? remainingDistance;
+  final double? remainingSpeed;
+  final int? iterations;
+  final ShotImpact? impact;
+  final ShotAnimationMove? move;
 }
 
 class ShotImpact {
@@ -70,6 +134,123 @@ class ShotAnimationMove {
   final List<Vec2> path;
   final Vec2? impactPosition;
   final Vec2? impactNormal;
+}
+
+List<PhysicsEvent> buildPhysicsEvents({
+  required List<Vec2> path,
+  required List<ShotImpact> impacts,
+  required List<ShotAnimationMove> moves,
+  required List<ChainSafetyDiagnostic> chainSafetyDiagnostics,
+}) {
+  final events = <PhysicsEvent>[];
+  final impactEventsByTarget = <String, PhysicsEvent>{};
+
+  for (var index = 0; index < impacts.length; index++) {
+    final impact = impacts[index];
+    final event = PhysicsEvent(
+      eventId:
+          'impact:$index:${impact.sourceEntityId}:${impact.entityId}:${impact.pathIndex}',
+      parentEventId: impact.sourceEntityId == 'active_ball'
+          ? null
+          : impactEventsByTarget[impact.sourceEntityId]?.eventId,
+      kind: PhysicsEventKind.impact,
+      pathIndex: impact.pathIndex,
+      sourceEntityId: impact.sourceEntityId,
+      targetEntityId: impact.entityId,
+      targetType: impact.entityType,
+      position: impact.position,
+      normal: impact.normal,
+      impulse: impact.impulse,
+      resultingVelocity: _observedVelocity(path, impact.pathIndex),
+      impact: impact,
+    );
+    events.add(event);
+    impactEventsByTarget[impact.entityId] = event;
+  }
+
+  for (var index = 0; index < moves.length; index++) {
+    final move = moves[index];
+    final parent = events
+        .where(
+          (event) =>
+              event.kind == PhysicsEventKind.impact &&
+              event.pathIndex <= move.triggerPathIndex,
+        )
+        .fold<PhysicsEvent?>(
+          null,
+          (latest, event) =>
+              latest == null || event.pathIndex > latest.pathIndex
+              ? event
+              : latest,
+        );
+    final event = PhysicsEvent(
+      eventId: 'move:$index:${move.entityId}:${move.triggerPathIndex}',
+      parentEventId: parent?.eventId,
+      kind: PhysicsEventKind.move,
+      pathIndex: move.triggerPathIndex,
+      sourceEntityId: parent?.targetEntityId ?? 'simulation',
+      targetEntityId: move.entityId,
+      targetType: parent?.targetType ?? EntityType.ball,
+      position: move.impactPosition ?? move.from,
+      normal: move.impactNormal ?? Vec2.zero,
+      impulse: 0,
+      resultingVelocity: _observedVelocity(move.path, 0),
+      visualState: move.visualState,
+      move: move,
+    );
+    events.add(event);
+  }
+
+  for (var index = 0; index < chainSafetyDiagnostics.length; index++) {
+    final diagnostic = chainSafetyDiagnostics[index];
+    final parent = events
+        .where((event) => event.pathIndex <= diagnostic.pathIndex)
+        .fold<PhysicsEvent?>(
+          null,
+          (latest, event) =>
+              latest == null || event.pathIndex > latest.pathIndex
+              ? event
+              : latest,
+        );
+    events.add(
+      PhysicsEvent(
+        eventId: 'diagnostic:chain_safety_stop:$index:${diagnostic.pathIndex}',
+        parentEventId: parent?.eventId,
+        kind: PhysicsEventKind.chainSafetyStop,
+        pathIndex: diagnostic.pathIndex,
+        sourceEntityId: parent?.targetEntityId ?? 'simulation',
+        targetEntityId: diagnostic.targetEntityId,
+        targetType: EntityType.ball,
+        position: Vec2.zero,
+        normal: Vec2.zero,
+        impulse: 0,
+        resultingVelocity: Vec2.zero,
+        remainingDistance: diagnostic.remainingDistance,
+        remainingSpeed: diagnostic.remainingSpeed,
+        iterations: diagnostic.iterations,
+      ),
+    );
+  }
+
+  events.sort((left, right) {
+    final byPath = left.pathIndex.compareTo(right.pathIndex);
+    if (byPath != 0) {
+      return byPath;
+    }
+    final byKind = left.kind.index.compareTo(right.kind.index);
+    if (byKind != 0) {
+      return byKind;
+    }
+    return left.eventId.compareTo(right.eventId);
+  });
+  return events;
+}
+
+Vec2 _observedVelocity(List<Vec2> points, int index) {
+  if (index < 0 || index + 1 >= points.length) {
+    return Vec2.zero;
+  }
+  return points[index + 1] - points[index];
 }
 
 class TrajectoryPreview {
@@ -127,6 +308,7 @@ class ShotResolver {
     final events = <String>[];
     final moves = <ShotAnimationMove>[];
     final impacts = <ShotImpact>[];
+    final chainSafetyDiagnostics = <ChainSafetyDiagnostic>[];
     var success = false;
     var stopped = false;
     var previousPosition = position;
@@ -424,6 +606,7 @@ class ShotResolver {
             heavy,
             const {},
             impacts,
+            chainSafetyDiagnostics,
           );
           final pushedCrate =
               entities
@@ -489,6 +672,7 @@ class ShotResolver {
           ball.traits.contains(TraitType.heavy),
           const {},
           impacts,
+          chainSafetyDiagnostics,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -571,6 +755,7 @@ class ShotResolver {
           ball.traits.contains(TraitType.heavy),
           const {},
           impacts,
+          chainSafetyDiagnostics,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -722,6 +907,13 @@ class ShotResolver {
       events: events,
       moves: moves,
       impacts: impacts,
+      physicsEvents: buildPhysicsEvents(
+        path: path,
+        impacts: impacts,
+        moves: moves,
+        chainSafetyDiagnostics: chainSafetyDiagnostics,
+      ),
+      chainSafetyDiagnostics: chainSafetyDiagnostics,
     );
   }
 
@@ -1329,6 +1521,7 @@ class ShotResolver {
     bool carriesHeavy = false,
     Set<String> chainIds = const {},
     List<ShotImpact>? impacts,
+    List<ChainSafetyDiagnostic>? chainSafetyDiagnostics,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -1339,6 +1532,16 @@ class ShotResolver {
         depth >= entities.length) {
       if (depth >= entities.length) {
         events.add('chain_safety_stop');
+        chainSafetyDiagnostics?.add(
+          ChainSafetyDiagnostic(
+            targetEntityId: target.id,
+            pathIndex: triggerPathIndex,
+            depth: depth,
+            iterations: 0,
+            remainingDistance: distance,
+            remainingSpeed: distance,
+          ),
+        );
       }
       return entities;
     }
@@ -1641,6 +1844,7 @@ class ShotResolver {
           carriesHeavy || current.traits.contains(TraitType.heavy),
           {target.id},
           impacts,
+          chainSafetyDiagnostics,
         );
         events.add('chain_push');
         if (_anyBallInHole(entities)) {
@@ -1714,6 +1918,16 @@ class ShotResolver {
 
     if (velocity.length > 0.8 && iterations >= maxIterations) {
       events.add('chain_safety_stop');
+      chainSafetyDiagnostics?.add(
+        ChainSafetyDiagnostic(
+          targetEntityId: target.id,
+          pathIndex: triggerPathIndex + iterations,
+          depth: depth,
+          iterations: iterations,
+          remainingDistance: remaining,
+          remainingSpeed: velocity.length,
+        ),
+      );
     }
 
     if (current.position != target.position) {
