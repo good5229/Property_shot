@@ -1356,3 +1356,5 @@ Use consistent headings so entries are easy to grep.
 2026-08-02: 최신 JS 인터롭 구현은 컴파일되지만 `is` 기반 JS 타입 검사가 플랫폼 일관성 경고를 냈다. SDK가 제공하는 `JSAny.isA<T>()`로 생성자·노드·Promise 판정을 교체해 웹/VM 정적 분석 경고까지 닫는다.
 2026-08-02: JS 인터롭 타입 검사 패치 후 기존 함수 후반부가 중복된 것을 즉시 확인했다. 중복 호출·Promise 종료 블록을 제거해 웹 피드백 함수가 단일 시간축으로만 실행되도록 정리한다.
 2026-08-02: 재질별 합성 피드백 큐 테스트와 전체 Flutter 회귀 140개가 통과했다. Dart 분석도 이슈 없음이며, Web release 재빌드는 엔진 캐시 `engine.stamp`·`engine.realm` 쓰기 권한 오류로 중단되어 실행 중인 서버는 이전 검증 빌드를 유지한다.
+2026-08-02: 권한 승격으로 최신 Web release를 다시 빌드하고 기존 PID 21972를 종료한 뒤 PID 47804로 교체했다. Chromium 390×844·768×1024 성능 감사는 콘솔 오류 0건, 평균 16.67ms, 20ms 초과 프레임 0%였고 홈·플레이 실제 캡처 4장을 남긴다.
+2026-08-02: 현재 브랜치에서 `flutter build ios --no-codesign`을 재실행했다. Xcode 컴파일은 완료됐고, 배포 앱 생성 단계에서 Development Team·Provisioning Profile 미설정으로 실패했으므로 코드 컴파일 실패가 아닌 서명 환경 잔여 위험으로 확정한다.
