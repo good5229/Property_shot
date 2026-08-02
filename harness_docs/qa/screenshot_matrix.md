@@ -127,6 +127,14 @@
 - 두 해상도 모두 한글 HUD·해변 보드·공·홀·돌·상자의 위치와 보드 경계를 확인했으며 브라우저 콘솔 오류는 0건이었다.
 - 이 캡처는 실제 기기 사운드·햅틱·GPU·메모리 측정이 아니다.
 
+## 2026-08-02 항해 지도·첫 행동 코치마크 최신 캡처
+
+- 변경 전 지도·플레이 기준은 `390x844-map.png`, `390x844-play.png`다. 변경 후에는 카드가 좌우로 이어지는 섬 경로로 보이도록 재배치했다.
+- `390x844-stage-route-coach-release.png`, `768x1024-stage-route-coach-release.png`는 최신 Web release 항해 지도다.
+- `390x844-tutorial-coach-release.png`, `768x1024-tutorial-coach-release.png`는 첫 단계 바위 선택 코치마크다.
+- `390x844-tutorial-ball-coach-release.png`는 속성 이전 뒤 공 충전 코치마크와 하단 상태 문구가 일치하는 화면이다.
+- 다섯 캡처는 Chromium 콘솔 오류 0건이며, 실제 사용자 발견성·iOS 기기 결과로 확대 해석하지 않는다.
+
 ## 2026-08-02 선택형 추가 도전 포함 최신 캡처
 
 - `390x844-bonus-goal-release-home.png`, `390x844-bonus-goal-release-play.png`는 단계별 추가 도전 기록 코드가 포함된 최신 Web release의 모바일 캡처다.
