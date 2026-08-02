@@ -29,6 +29,12 @@ class PropertyShotApp extends StatelessWidget {
       title: '속성 한방',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        fontFamily: 'NanumGothic',
+        fontFamilyFallback: const [
+          'Apple SD Gothic Neo',
+          'Noto Sans CJK KR',
+          'Arial',
+        ],
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF2F6B7A),
           brightness: Brightness.light,

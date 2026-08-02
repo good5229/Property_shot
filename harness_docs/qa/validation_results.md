@@ -89,6 +89,27 @@
 
 최신 재실행 값은 1단계 330.8µs, 2단계 209.8µs, 3단계 286.7µs이며 확인값은 각각 75521, 48110, 63726이다. 위의 312.6/215.2/280.3µs는 이전 실행의 역사적 값이다.
 
+## 2026-08-02 최신 최종 회귀
+
+| 항목 | 결과 |
+|---|---|
+| `dart format` | 통과 |
+| `flutter analyze` | 통과, 이슈 없음 |
+| `flutter test` | 통과, 119개 |
+| `dart run tool/difficulty_report.dart` | 통과, 단일·다중 샷 지표 출력 |
+| `dart run tool/physics_benchmark.dart` | 통과, 1단계 331.4µs·2단계 311.3µs·3단계 295.5µs |
+| `flutter build web --release` | 통과 |
+| `flutter build web --release --wasm` | 통과 |
+| 최신 8080 서버 루트·`main.dart.js` | HTTP 200, PID 50866 |
+| Playwright 390×844 제품 경로 | 홈·지도·플레이·결과 캡처, 브라우저 콘솔 오류 0건 |
+| `flutter build ios --no-codesign` | Xcode 컴파일 후 Development Team·프로비저닝 프로파일 부족으로 실패 |
+
+추가된 다중 샷 분석기는 최대 2회 입력에서 이전 공·이동 물체·문 상태를 다음 상태로 전달하고, 무속성·속성 이전·조건부 복제 전략을 분리해 기록한다. 1·2단계 홀 크기 조정 후 고해상도 보조 분석에서 1단계 연속 조준 폭 28도, 2단계 20도를 확인했다.
+
+실제 iPhone·iPad 터치, 프레임·GPU·메모리, 햅틱·사운드 체감, 실제 사용자 이해도는 이 환경에서 검증하지 않았다. 점착은 충돌 부착 이벤트까지 자동 검증했으나 최종 홀 성공 시퀀스는 아직 확정하지 않았다.
+
+최신 Web release에는 OFL Nanum Gothic 정규·굵은·ExtraBold 글꼴을 번들했으며, 390×844 캡처에서 한글·공·오브젝트·결과 팝업을 다시 확인했다.
+
 ## 2026-08-02 데모 교체 스크립트
 
 - `./scripts/run_web_demo.sh`가 8080의 기존 `http.server`를 확인·종료한다.
