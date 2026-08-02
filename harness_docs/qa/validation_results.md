@@ -664,6 +664,6 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 | Chromium 콘솔 | 5개 해상도 모두 오류 0건 |
 | 포맷·정적 분석 | `dart format` 변경 없음, `flutter analyze` 통과 |
 | 회귀 | `flutter test` 159개 통과 |
-| Web 서버 | 기존 PID 16872 종료 후 최신 PID 43303, 루트·`main.dart.js` HTTP 200 |
+| Web 서버 | 기존 PID 16872 종료 후 최신 PID 95957, 루트·`main.dart.js` HTTP 200 |
 
 이번 반복은 조준 가이드와 증거 캡처의 변경이다. 재질별 마찰, 긴 연쇄 반복 상한, 전략 중복을 제외한 파 산출, 실제 iOS·사용자 검증은 다음 작업으로 남아 있다.
