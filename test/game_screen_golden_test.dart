@@ -19,57 +19,71 @@ void main() {
     await materialIcons.load();
   });
 
-  for (final fixture in const [
-    (name: '390x844', width: 390.0, height: 844.0),
-    (name: '768x1024', width: 768.0, height: 1024.0),
-  ]) {
-    testWidgets('전체 플레이 화면 Golden ${fixture.name}', (tester) async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      await tester.binding.setSurfaceSize(Size(fixture.width, fixture.height));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+  for (final stageIndex in const [0, 1, 2]) {
+    for (final fixture in const [
+      (name: '390x844', width: 390.0, height: 844.0),
+      (name: '768x1024', width: 768.0, height: 1024.0),
+    ]) {
+      testWidgets('전체 플레이 화면 Golden ${stageIndex + 1}단계 ${fixture.name}', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        await tester.binding.setSurfaceSize(
+          Size(fixture.width, fixture.height),
+        );
+        addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(
-        RepaintBoundary(
-          key: const Key('game_screen_golden'),
-          child: PropertyShotApp(
-            initialState: levels[0]
-                .createState(0, productRules: true)
-                .copyWith(message: '방향 조정 · 길게 누르기 · 손 떼기'),
-            showStageSelector: false,
-            fontFamilyOverride: 'GoldenNanumGothic',
-            loadGameAssets: false,
+        final message = switch (stageIndex) {
+          0 => '방향 조정 · 길게 누르기 · 손 떼기',
+          1 => '방향 조정 · 첫 반사를 관찰하세요',
+          _ => '스위치와 문 · 여러 경로로 도전',
+        };
+        await tester.pumpWidget(
+          RepaintBoundary(
+            key: const Key('game_screen_golden'),
+            child: PropertyShotApp(
+              initialState: levels[stageIndex]
+                  .createState(stageIndex, productRules: true)
+                  .copyWith(message: message),
+              showStageSelector: false,
+              fontFamilyOverride: 'GoldenNanumGothic',
+              loadGameAssets: false,
+            ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      final context = tester.element(find.byKey(const Key('aim_area')));
-      await tester.runAsync(() async {
-        for (final asset in const [
-          'assets/generated/stone-v2.png',
-          'assets/generated/crate-v2.png',
-          'assets/generated/jelly-bumper-v1.png',
-        ]) {
-          await precacheImage(AssetImage(asset), context);
-        }
+        final context = tester.element(find.byKey(const Key('aim_area')));
+        await tester.runAsync(() async {
+          for (final asset in const [
+            'assets/generated/stone-v2.png',
+            'assets/generated/crate-v2.png',
+            'assets/generated/jelly-bumper-v1.png',
+          ]) {
+            await precacheImage(AssetImage(asset), context);
+          }
+        });
+        // Flame의 onLoad와 실제 첫 렌더 프레임이 완료될 때까지 이벤트 루프를 진행한다.
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 300)),
+        );
+        final gameWidgetState = tester.state<GameWidgetState<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        );
+        await gameWidgetState.currentGame.toBeLoaded();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.byKey(const Key('aim_area')), findsOneWidget);
+        expect(find.byKey(const Key('compact_message')), findsOneWidget);
+        expect(find.text(levels[stageIndex].name), findsOneWidget);
+        final goldenPrefix = stageIndex == 0
+            ? 'game_screen'
+            : 'game_screen_stage${stageIndex + 1}';
+        await expectLater(
+          find.byKey(const Key('game_screen_golden')),
+          matchesGoldenFile('goldens/${goldenPrefix}_${fixture.name}.png'),
+        );
       });
-      // Flame의 onLoad와 실제 첫 렌더 프레임이 완료될 때까지 이벤트 루프를 진행한다.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)),
-      );
-      final gameWidgetState = tester.state<GameWidgetState<PropertyShotGame>>(
-        find.byType(GameWidget<PropertyShotGame>),
-      );
-      await gameWidgetState.currentGame.toBeLoaded();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.byKey(const Key('aim_area')), findsOneWidget);
-      expect(find.byKey(const Key('compact_message')), findsOneWidget);
-      expect(find.text('1. 무거움 익히기'), findsOneWidget);
-      await expectLater(
-        find.byKey(const Key('game_screen_golden')),
-        matchesGoldenFile('goldens/game_screen_${fixture.name}.png'),
-      );
-    });
+    }
   }
 }

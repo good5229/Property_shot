@@ -1345,3 +1345,5 @@ Use consistent headings so entries are easy to grep.
 2026-08-02: 벽 재질 변경은 `PropertyShotGame`의 Canvas 표면·광원 토큰만 수정하고 EntityState·ShotResolver·히트박스는 건드리지 않았다. 390×844·768×1024 플레이 Golden 4개와 `flutter analyze`를 통과했다.
 2026-08-02: 벽 재질 반복의 실제 Web 증거를 위해 최신 390×844 서버 홈·플레이 캡처를 생성한다. 캡처는 Flutter Golden과 별도로 Chromium 보조 검증으로 기록한다.
 2026-08-02: 실브라우저 캡처 명령은 자동 실행 승인 사용량 제한으로 실행되지 않았다. 실제 Web 증거로 오인하지 않도록 이번 반복의 새 증거는 390×844·768×1024 Golden과 서버 HTTP 상태로 한정하고, 기존 Chromium 캡처는 이전 반복 자료로 구분한다.
+2026-08-02: 전체 플레이 Golden이 1단계만 캡처하던 범위 공백을 확인했다. 첫 3단계의 젤리·반사벽·스위치·문·점착판 Canvas 화면을 390×844·768×1024에서 각각 고정한다.
+2026-08-02: 첫 3단계 Golden 테스트 확장 파일은 `dart analyze`에서 이슈 없음으로 확인했다. Flutter 테스트 러너 재실행은 엔진 캐시 `engine.stamp`·`engine.realm` 쓰기 권한 오류로 실행하지 못했으며, 직전 전체 139개 통과와 이번 변경의 미실행을 구분한다.
