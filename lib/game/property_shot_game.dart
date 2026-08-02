@@ -676,91 +676,114 @@ class PropertyShotGame extends FlameGame {
     final ball = state.activeBall;
     final direction = state.aimDirection.normalized();
     final start = ball.position;
-    final length = 68.0 + state.aimPower * 28.0;
-    final end = start + direction * length;
-    final shaftStart = start + direction * 9;
-    final shaftEnd = end - direction * 13;
     final normal = Vec2(-direction.y, direction.x);
     final accent = const Color(0xFFEF765E);
-    final shaftWidth = 4.0 + state.aimPower * 2.0;
-    final shaftTipWidth = 2.5 + state.aimPower * 1.2;
-    final ribbon = Path()
-      ..moveTo(
-        _project(shaftStart + normal * shaftWidth).dx,
-        _project(shaftStart + normal * shaftWidth).dy,
-      )
-      ..lineTo(
-        _project(shaftEnd + normal * shaftTipWidth).dx,
-        _project(shaftEnd + normal * shaftTipWidth).dy,
-      )
-      ..lineTo(
-        _project(shaftEnd - normal * shaftTipWidth).dx,
-        _project(shaftEnd - normal * shaftTipWidth).dy,
-      )
-      ..lineTo(
-        _project(shaftStart - normal * shaftWidth).dx,
-        _project(shaftStart - normal * shaftWidth).dy,
-      )
-      ..close();
-    final shadow = ribbon.shift(const Offset(0, 3));
+    final center = _project(start);
+
+    // 방향은 유지하되, 개발용 직선 화살표 대신 공 뒤의 큐 장력과
+    // 짧은 점형 마커만 보여 최종 궤적을 예고하지 않는다.
+    final cueTip = start - direction * (42 + state.aimPower * 18);
+    final cueHead = start - direction * (ball.radius + 3);
+    final cueShadow = Paint()
+      ..color = const Color(0x443B2B24)
+      ..strokeWidth = 9
+      ..strokeCap = StrokeCap.round;
     canvas.drawPath(
-      shadow,
-      Paint()
-        ..color = const Color(0x553B2B24)
-        ..style = PaintingStyle.fill,
+      Path()
+        ..moveTo(_project(cueTip).dx, _project(cueTip).dy)
+        ..lineTo(_project(cueHead).dx, _project(cueHead).dy),
+      cueShadow,
     );
-    canvas.drawPath(ribbon, Paint()..color = accent);
     canvas.drawLine(
-      _project(shaftStart + normal * (shaftWidth * 0.36)),
-      _project(shaftEnd + normal * (shaftTipWidth * 0.18)),
+      _project(cueTip),
+      _project(cueHead),
       Paint()
-        ..color = _lightColor.withValues(alpha: 0.82)
+        ..color = const Color(0xFFB8784C)
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawLine(
+      _project(cueTip + normal * 2),
+      _project(cueHead + normal * 2),
+      Paint()
+        ..color = const Color(0x99F7D8A5)
         ..strokeWidth = 1.4
         ..strokeCap = StrokeCap.round,
     );
+    for (final offset in [-7.0, 0.0, 7.0]) {
+      final grip = _project(cueTip + direction * offset);
+      canvas.drawLine(
+        grip - Offset(normal.x, normal.y) * 4,
+        grip + Offset(normal.x, normal.y) * 4,
+        Paint()
+          ..color = const Color(0xFF6A4938)
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round,
+      );
+    }
 
-    final anchor = start - direction * 2;
-    final anchorLeft = anchor + normal * (ball.radius * 0.6);
-    final anchorRight = anchor - normal * (ball.radius * 0.6);
+    final anchor = start - direction * (ball.radius + 1);
+    final anchorLeft = anchor + normal * (ball.radius * 0.62);
+    final anchorRight = anchor - normal * (ball.radius * 0.62);
     final elastic = Paint()
       ..color = const Color(0xB83B302A)
-      ..strokeWidth = 2.4
+      ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(
       _project(anchorLeft),
-      _project(shaftStart + normal * shaftWidth),
+      _project(cueHead + normal * 4),
       elastic,
     );
     canvas.drawLine(
       _project(anchorRight),
-      _project(shaftStart - normal * shaftWidth),
+      _project(cueHead - normal * 4),
       elastic,
     );
 
-    final headWidth = 14.0 + state.aimPower * 5.0;
-    final headBack = end - direction * 15;
-    final arrowHead = Path()
-      ..moveTo(_project(end).dx, _project(end).dy)
-      ..lineTo(
-        _project(headBack + normal * headWidth).dx,
-        _project(headBack + normal * headWidth).dy,
+    final markerLength = 34.0 + state.aimPower * 34.0;
+    for (var index = 0; index < 4; index++) {
+      final progress = (index + 1) / 5;
+      final point =
+          start + direction * (ball.radius + 9 + markerLength * progress);
+      final radius = 2.6 + state.aimPower * 1.2 - index * 0.2;
+      canvas.drawCircle(
+        _project(point) + const Offset(0, 2),
+        radius + 1,
+        Paint()..color = const Color(0x443B2B24),
+      );
+      canvas.drawCircle(
+        _project(point),
+        radius,
+        Paint()..color = accent.withValues(alpha: 0.48 + progress * 0.35),
+      );
+    }
+    final markerCenter = start + direction * (ball.radius + 9 + markerLength);
+    final markerSize = 5.0 + state.aimPower * 2.0;
+    final marker = Path()
+      ..moveTo(
+        _project(markerCenter + direction * markerSize).dx,
+        _project(markerCenter + direction * markerSize).dy,
       )
       ..lineTo(
-        _project(headBack + normal * 2).dx,
-        _project(headBack + normal * 2).dy,
+        _project(markerCenter + normal * markerSize).dx,
+        _project(markerCenter + normal * markerSize).dy,
       )
       ..lineTo(
-        _project(headBack - normal * headWidth).dx,
-        _project(headBack - normal * headWidth).dy,
+        _project(markerCenter - direction * markerSize).dx,
+        _project(markerCenter - direction * markerSize).dy,
+      )
+      ..lineTo(
+        _project(markerCenter - normal * markerSize).dx,
+        _project(markerCenter - normal * markerSize).dy,
       )
       ..close();
     canvas.drawPath(
-      arrowHead.shift(const Offset(0, 3)),
-      Paint()..color = const Color(0x553B2B24),
+      marker.shift(const Offset(0, 2)),
+      Paint()..color = const Color(0x443B2B24),
     );
-    canvas.drawPath(arrowHead, Paint()..color = accent);
+    canvas.drawPath(marker, Paint()..color = accent);
     canvas.drawPath(
-      arrowHead,
+      marker,
       Paint()
         ..color = const Color(0x883B302A)
         ..style = PaintingStyle.stroke
@@ -777,10 +800,7 @@ class PropertyShotGame extends FlameGame {
       ..strokeWidth = 5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    final gaugeRect = Rect.fromCircle(
-      center: _project(start),
-      radius: ball.radius + 12,
-    );
+    final gaugeRect = Rect.fromCircle(center: center, radius: ball.radius + 12);
     canvas.drawArc(gaugeRect, -math.pi / 2, math.pi * 2, false, gaugeTrack);
     canvas.drawArc(
       gaugeRect,
