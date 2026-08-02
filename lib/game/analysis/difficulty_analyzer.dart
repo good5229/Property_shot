@@ -19,6 +19,7 @@ class DifficultyMetrics {
     required this.widestPowerRange,
     required this.largestConnectedRegion,
     required this.minimumShots,
+    required this.recommendedParShots,
     required this.successfulStrategies,
     required this.copylessSuccess,
     required this.strategyMetrics,
@@ -33,6 +34,7 @@ class DifficultyMetrics {
   final double widestPowerRange;
   final int largestConnectedRegion;
   final int? minimumShots;
+  final int? recommendedParShots;
   final List<String> successfulStrategies;
   final bool copylessSuccess;
   final List<StrategyDifficultyMetrics> strategyMetrics;
@@ -184,6 +186,10 @@ class DifficultyAnalyzer {
       widestPowerRange: widestPower * (1 / powerSteps),
       largestConnectedRegion: largestRegion,
       minimumShots: minimumShots,
+      recommendedParShots: recommendedParShotsFor(
+        minimumShots: minimumShots,
+        successRate: totalInputs == 0 ? 0 : successInputs / totalInputs,
+      ),
       successfulStrategies: successfulStrategies,
       copylessSuccess: copylessSuccess,
       strategyMetrics: strategyMetrics,
@@ -191,6 +197,19 @@ class DifficultyAnalyzer {
   }
 
   int get _angleCount => (360 / angleStepDegrees).round();
+}
+
+/// 최소 샷을 그대로 파로 쓰지 않고, 분석된 성공군의 폭에 따라
+/// 첫 클리어와 기록 개선 사이에 한 단계의 여유를 둔다.
+int? recommendedParShotsFor({
+  required int? minimumShots,
+  required double successRate,
+}) {
+  if (minimumShots == null) {
+    return null;
+  }
+  final cushion = successRate < 0.05 ? 2 : 1;
+  return (minimumShots + cushion).clamp(1, 5).toInt();
 }
 
 class _Strategy {

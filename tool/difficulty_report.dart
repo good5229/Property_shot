@@ -15,6 +15,7 @@ void main() {
     print('최대 연속 힘: ${(metrics.widestPowerRange * 100).toStringAsFixed(0)}%');
     print('최대 연결 성공 영역: ${metrics.largestConnectedRegion}셀');
     print('최소 샷: ${metrics.minimumShots ?? '-'}');
+    print('분석 기반 파 샷: ${metrics.recommendedParShots ?? '-'}');
     print('성공 전략: ${metrics.successfulStrategies.join(', ')}');
     for (final strategy in metrics.strategyMetrics) {
       print(

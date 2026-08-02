@@ -359,14 +359,14 @@ void main() {
   testWidgets('클리어 팝업의 다음 버튼은 다음 스테이지로 이동한다', (tester) async {
     final clearState = levels[1]
         .createState(1)
-        .copyWith(phase: GamePhase.success, shotCount: 3, message: '홀 진입 성공!');
+        .copyWith(phase: GamePhase.success, shotCount: 2, message: '홀 진입 성공!');
     await tester.pumpWidget(PropertyShotApp(initialState: clearState));
     await tester.pump();
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
     expect(find.textContaining('예시 기록'), findsOneWidget);
     expect(find.byKey(const Key('clear_stars')), findsOneWidget);
-    expect(find.text('파 4회 · 3/3 별'), findsOneWidget);
+    expect(find.text('파 2회 · 3/3 별'), findsOneWidget);
     expect(find.byKey(const Key('retry_stage_button')), findsOneWidget);
     expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsNothing);
 
@@ -380,7 +380,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'bonus_goal_level_1': true});
     final clearState = levels[1]
         .createState(1)
-        .copyWith(phase: GamePhase.success, shotCount: 3, message: '홀 진입 성공!');
+        .copyWith(phase: GamePhase.success, shotCount: 2, message: '홀 진입 성공!');
     await tester.pumpWidget(PropertyShotApp(initialState: clearState));
     await tester.pump();
     await tester.pump();

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/analysis/difficulty_analyzer.dart';
+import 'package:property_shot/game/levels/levels.dart';
 
 void main() {
   test('첫 챕터 자동 분석은 각 단계의 성공 영역과 최소 샷을 산출한다', () {
@@ -7,6 +8,16 @@ void main() {
     final metrics = analyzer.analyzeAll();
 
     expect(metrics, hasLength(3));
+    expect(
+      metrics.map((result) => result.recommendedParShots),
+      [2, 2, 3],
+    );
+    expect(
+      metrics.asMap().entries.map(
+        (entry) => levels[entry.key].parShots == entry.value.recommendedParShots,
+      ),
+      everyElement(isTrue),
+    );
     for (final result in metrics) {
       expect(result.totalInputs, greaterThan(0));
       expect(result.successInputs, greaterThan(0));
@@ -25,6 +36,21 @@ void main() {
     final metrics = analyzer.analyzeAll();
 
     expect(metrics.every((result) => result.copylessSuccess), isTrue);
+  });
+
+  test('성공률이 낮은 단계에는 분석 기반 파 여유를 더한다', () {
+    expect(
+      recommendedParShotsFor(minimumShots: 1, successRate: 0.06),
+      2,
+    );
+    expect(
+      recommendedParShotsFor(minimumShots: 1, successRate: 0.03),
+      3,
+    );
+    expect(
+      recommendedParShotsFor(minimumShots: null, successRate: 0.03),
+      isNull,
+    );
   });
 
   test('3단계 고해상도 분석은 무거움 없이도 성공하는 전략을 집계한다', () {
