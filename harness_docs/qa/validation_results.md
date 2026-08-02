@@ -182,3 +182,23 @@
 최종 재실행에서는 축약 3단계 진행 힌트도 줄임표 없이 `무거움은 스위치 · 점착은 공 고정`처럼 상태별 핵심 문장으로 표시되도록 확인했고, 전체 `flutter test`는 다시 124개 통과했다. 최신 데모 PID는 61743이며 루트와 `main.dart.js`는 HTTP 200이다.
 
 `flutter build ios --simulator`도 최신 코드에서 재실행했다. Xcode 컴파일 단계까지 진행됐으나 iOS 18.2 Simulator Runtime이 설치되지 않아 `generic:1, platform:iOS Simulator` 대상 선택 단계에서 실패했다. 따라서 현재 iOS 상태는 디바이스 배포 서명 부족과 시뮬레이터 런타임 부족이 서로 다른 환경 문제로 남아 있다.
+
+## 2026-08-02 Canvas 표면 마감 반복
+
+| 항목 | 결과 |
+|---|---|
+| `dart format lib/game/property_shot_game.dart` | 통과, 변경 파일 포맷 완료 |
+| `git diff --check` | 통과 |
+| `flutter analyze` | 통과, 이슈 없음 |
+| `flutter test` | 통과, 124개 |
+| `dart run tool/difficulty_report.dart` | 통과, 1단계 28도·86%, 2단계 20도·76%, 3단계 무속성·무거움 대체 풀이 확인 |
+| `dart run tool/physics_benchmark.dart` | 통과, 1단계 590.1µs·2단계 576.7µs·3단계 511.2µs |
+| Web release 빌드 | 통과 |
+| 데모 서버 교체 | 기존 PID 61743 종료 후 PID 71571로 8080 교체 |
+| 서버 응답 | 루트 HTTP 200, `main.dart.js` HTTP 200 |
+| 390×844 실제 시작 입력 | 플레이 화면 진입, 콘솔 오류 0건 |
+| 390×844·768×1024 캡처 | `390x844-canvas-finish-play.png`, `390x844-canvas-finish.png`, `768x1024-canvas-finish.png` 생성 |
+
+이번 반복은 물리 좌표·히트박스·충돌 계산을 변경하지 않고 Canvas 도형에 공통 왼쪽 위 광원, 하단 음영, 상단·하단 에지 마감을 낮은 불투명도로 추가했다. 390px 플레이 캡처에서 벽의 상단 광원과 하단 접지감이 기존 돌·상자 래스터의 압출·윤곽 처리와 함께 보이며, HUD 한글 문장과 보드 경계가 겹치지 않는다.
+
+Playwright WebKit 런타임이 설치되어 있지 않아 모바일 캡처는 Chromium 390×844 뷰포트로 대체했다. 실제 iPhone·iPad 터치, 60fps·GPU·메모리, 햅틱·사운드 체감과 실제 사용자 이해도는 여전히 검증하지 않았다.

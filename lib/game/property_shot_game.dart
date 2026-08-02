@@ -839,6 +839,7 @@ class PropertyShotGame extends FlameGame {
           canvas.drawPath(topPath, litPaint);
           canvas.drawPath(topPath, stroke);
         }
+        _drawCanvasSurfaceFinish(canvas, entity, rect, topPath);
         _drawCuteBlockDetails(canvas, entity, rect, topPath);
         _drawDirectionalLight(canvas, entity, rect, topPath);
       }
@@ -859,6 +860,69 @@ class PropertyShotGame extends FlameGame {
         colors: [highlight, base, shade],
         stops: const [0.0, 0.46, 1.0],
       ).createShader(rect.inflate(8));
+  }
+
+  void _drawCanvasSurfaceFinish(
+    Canvas canvas,
+    EntityState entity,
+    Rect rect,
+    Path topPath,
+  ) {
+    final finish = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          _lightColor.withValues(alpha: 0.12),
+          const Color(0x00000000),
+          _occlusionColor.withValues(alpha: 0.16),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(rect.inflate(6));
+    final edgeLight = Paint()
+      ..color = _lightColor.withValues(alpha: 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    final edgeShade = Paint()
+      ..color = _occlusionColor.withValues(alpha: 0.28)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+
+    canvas.save();
+    canvas.clipPath(topPath);
+    canvas.drawRect(rect.inflate(6), finish);
+    canvas.drawLine(
+      rect.topLeft.translate(3, 2),
+      rect.topRight.translate(-3, 2),
+      edgeLight,
+    );
+    canvas.drawLine(
+      rect.bottomLeft.translate(3, -2),
+      rect.bottomRight.translate(-3, -2),
+      edgeShade,
+    );
+    canvas.restore();
+
+    // Keep material identity visible on small controls without changing their hitbox.
+    if (entity.type == EntityType.stickySurface) {
+      final gloss = Paint()
+        ..color = const Color(0x30FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6;
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: rect.topLeft.translate(rect.width * 0.22, rect.height * 0.22),
+          width: rect.width * 0.46,
+          height: rect.height * 0.18,
+        ),
+        math.pi * 1.05,
+        math.pi * 0.62,
+        false,
+        gloss,
+      );
+    }
   }
 
   void _drawContactShadow(Canvas canvas, EntityState entity, Rect rect) {
