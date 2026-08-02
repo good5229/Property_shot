@@ -1309,7 +1309,7 @@ String _levelObjective(int levelIndex) {
   return switch (levelIndex) {
     0 => '추천: 무거움을 옮겨 상자를 밀어 보세요. 다른 충돌 경로도 홀에 닿으면 성공합니다.',
     1 => '추천: 탄성을 옮겨 벽에 반사시켜 보세요. 다른 각도와 경로도 시도할 수 있습니다.',
-    _ => '추천: 점착과 무거움을 조합해 보세요. 스위치·문을 거치지 않는 경로도 성공할 수 있습니다.',
+    _ => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
   };
 }
 
@@ -1334,17 +1334,21 @@ String? _levelProgressHint(GameState state) {
         !entity.movable,
   );
   if (!hasAnchor) {
-    return '추천 경로: 점착 속성을 옮겨 점착판에 붙여 보세요. 다른 경로도 가능합니다.';
+    return '추천 경로: 무거움으로 스위치를 누르는 길을 살펴보세요. 점착은 공을 고정합니다.';
   }
   final hasHeavy = state.activeBall.traits.contains(TraitType.heavy);
   if (!hasHeavy) {
-    return '추천 경로: 무거움을 공에 옮겨 스위치를 눌러 보세요. 점착 없이 직접 가는 길도 찾아보세요.';
+    return '점착 공이 고정되었습니다. 다음 공에 무거움을 옮기거나 다른 길을 찾아보세요.';
   }
-  return '추천 경로: 무거운 공으로 스위치를 눌러 보세요. 홀에 먼저 닿으면 성공입니다.';
+  return '무거운 공으로 스위치를 누르고 열린 문을 지나 홀로 가 보세요.';
 }
 
 String _levelIntroMessage(int levelIndex) {
-  return '방향 조정 → 공 길게 누르기 → 손 떼기';
+  return switch (levelIndex) {
+    0 => '상자를 밀어 홀로 → 방향 조정 · 길게 누르기 · 손 떼기',
+    1 => '첫 반사면 찾기 → 방향 조정 · 길게 누르기 · 손 떼기',
+    _ => '스위치와 문 살피기 → 여러 경로로 도전',
+  };
 }
 
 String _failureAdviceFor(List<String> events) {

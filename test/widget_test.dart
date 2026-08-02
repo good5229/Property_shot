@@ -587,17 +587,15 @@ void main() {
     expect(find.textContaining('추천: 무거움을 옮겨 상자를 밀어 보세요.'), findsOneWidget);
   });
 
-  testWidgets('3단계는 점착 추천 경로와 대체 경로를 첫 화면에 표시한다', (tester) async {
+  testWidgets('3단계는 스위치 경로와 점착의 고정 역할을 첫 화면에 표시한다', (tester) async {
     await tester.pumpWidget(
       PropertyShotApp(initialState: levels[2].createState(2)),
     );
     await tester.pump();
 
     expect(find.byKey(const Key('level_progress')), findsOneWidget);
-    expect(
-      find.textContaining('추천 경로: 점착 속성을 옮겨 점착판에 붙여 보세요.'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('무거움으로 스위치를 누르는 길'), findsOneWidget);
+    expect(find.textContaining('점착은 공을 고정합니다'), findsOneWidget);
   });
 }
 
