@@ -539,3 +539,21 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 | 변경 후 캡처 | `390x844-stage-route-coach-release.png`, `390x844-tutorial-coach-release.png`, `390x844-tutorial-ball-coach-release.png`, `768x1024-stage-route-coach-release.png`, `768x1024-tutorial-coach-release.png` |
 
 코치마크는 발견성을 보조하는 Web·위젯 증거이며, 실제 초보자의 30초·5분 이해도나 iPhone/iPad 터치·햅틱을 증명하지 않는다. 최종 iOS 진단은 Xcode 컴파일 완료 후 서명 환경 부족으로 배포 단계에서 멈췄다.
+
+## 2026-08-02 자동 파 샷 연동 최신 회귀
+
+| 항목 | 결과 |
+|---|---|
+| 분석 정책 | 성공군 최소 샷에 성공률 5% 이상은 +1회, 미만은 +2회를 더하고 1~5회로 제한 |
+| 분석 결과 | 1단계 2회, 2단계 2회, 3단계 3회 |
+| 제품 연결 | `LevelDefinition.parShots`, 지도 추천 파, 결과 팝업 별점 기준을 분석 결과와 동기화 |
+| 회귀 | 분석 기반 파 정책 경계 테스트·레벨 값 동기화·결과 팝업 Golden 포함 |
+| 전체 회귀 | `flutter test` 154개 통과 |
+| 정적 분석 | `flutter analyze` 통과, 이슈 없음 |
+| Web release | 기존 PID 27962 종료 후 최신 PID 52054로 교체, 루트·`main.dart.js` HTTP 200 |
+| Chromium 콘솔 | 390×844·768×1024 모두 오류 0건 |
+| 프레임 시간 | idle·발사 평균 16.665~16.667ms, p95 최대 16.8ms, 20ms 초과 0% |
+| 캡처 | `390x844-stage-route-par-release.png`, `768x1024-stage-route-par-release.png` |
+| iOS | Xcode 컴파일 완료, Development Team·Provisioning Profile 부족으로 배포 단계 실패 |
+
+분석 기반 파는 결정론적 시뮬레이션 휴리스틱이며 실제 사용자 평균이나 실기기 조작 난이도는 아니다. 우발적 성공·주요 전략·입력 정밀도 민감도와 실제 30초·5분 사용자 검증은 남은 위험으로 유지한다.

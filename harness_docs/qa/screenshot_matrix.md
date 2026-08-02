@@ -135,6 +135,11 @@
 - `390x844-tutorial-ball-coach-release.png`는 속성 이전 뒤 공 충전 코치마크와 하단 상태 문구가 일치하는 화면이다.
 - 다섯 캡처는 Chromium 콘솔 오류 0건이며, 실제 사용자 발견성·iOS 기기 결과로 확대 해석하지 않는다.
 
+## 2026-08-02 분석 파 표시 최신 캡처
+
+- `390x844-stage-route-par-release.png`, `768x1024-stage-route-par-release.png`는 자동 분석 결과와 동기화된 추천 파 `2·2·3`이 지도 카드에 표시되는 최신 Web release 캡처다.
+- Chromium에서 두 화면의 콘솔 오류 0건을 확인했으며, 캡처는 Web 보조 증거로 실제 iPhone/iPad 성능·입력 결과를 대신하지 않는다.
+
 ## 2026-08-02 선택형 추가 도전 포함 최신 캡처
 
 - `390x844-bonus-goal-release-home.png`, `390x844-bonus-goal-release-play.png`는 단계별 추가 도전 기록 코드가 포함된 최신 Web release의 모바일 캡처다.
