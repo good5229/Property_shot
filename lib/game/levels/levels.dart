@@ -10,6 +10,8 @@ final levels = <LevelDefinition>[
     name: '1. 무거움 익히기',
     ballSpawn: const Vec2(56, 456),
     copyCharges: 1,
+    parShots: 3,
+    bonusGoal: '복사 없이 상자와 홀의 길을 완성하세요.',
     entities: const [
       EntityState(
         id: 'hole',
@@ -58,6 +60,8 @@ final levels = <LevelDefinition>[
     name: '2. 탄성 익히기',
     ballSpawn: const Vec2(58, 462),
     copyCharges: 1,
+    parShots: 4,
+    bonusGoal: '탄성 충돌을 한 번 읽고 홀에 넣어 보세요.',
     entities: const [
       EntityState(
         id: 'hole',
@@ -111,6 +115,8 @@ final levels = <LevelDefinition>[
     name: '3. 연쇄 문 열기',
     ballSpawn: const Vec2(56, 466),
     copyCharges: 2,
+    parShots: 5,
+    bonusGoal: '문을 여는 길과 다른 물리 경로를 모두 탐색해 보세요.',
     entities: const [
       EntityState(
         id: 'hole',

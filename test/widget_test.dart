@@ -43,6 +43,20 @@ void main() {
     expect(find.text('1. 무거움 익히기'), findsOneWidget);
   });
 
+  testWidgets('복제 코어가 없으면 실제 플레이 화면에 복사 행동을 노출하지 않는다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+
+    expect(find.byKey(const Key('transfer_button')), findsOneWidget);
+    expect(find.byKey(const Key('copy_button')), findsNothing);
+    expect(find.textContaining('복사 0회'), findsNothing);
+  });
+
   testWidgets('속성을 선택해 공으로 옮길 수 있다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
@@ -254,12 +268,30 @@ void main() {
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
     expect(find.textContaining('예시 기록'), findsOneWidget);
+    expect(find.byKey(const Key('clear_stars')), findsOneWidget);
+    expect(find.text('파 4회 · 3/3 별'), findsOneWidget);
+    expect(find.byKey(const Key('retry_stage_button')), findsOneWidget);
     expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsNothing);
 
     await tester.tap(find.byKey(const Key('next_stage_button')));
     await tester.pump();
 
     expect(find.textContaining('3. 연쇄 문 열기'), findsOneWidget);
+  });
+
+  testWidgets('클리어 결과에서 기록 다시 도전은 같은 단계로 돌아간다', (tester) async {
+    final clearState = levels[0]
+        .createState(0)
+        .copyWith(phase: GamePhase.success, shotCount: 5, message: '홀 진입 성공!');
+    await tester.pumpWidget(PropertyShotApp(initialState: clearState));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('retry_stage_button')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('clear_popup')), findsNothing);
+    expect(find.byKey(const Key('aim_area')), findsOneWidget);
+    expect(find.textContaining('시도 0'), findsOneWidget);
   });
 
   testWidgets('클리어 팝업을 뒤로가기로 닫으면 다시 조준할 수 있다', (tester) async {

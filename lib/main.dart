@@ -71,7 +71,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     if (activeStage != null) {
       return GameScreen(
         key: ValueKey('stage_$activeStage'),
-        initialState: levels[activeStage].createState(activeStage),
+        initialState: levels[activeStage].createState(
+          activeStage,
+          productRules: true,
+        ),
         showStageSelector: false,
         onExit: _returnHome,
       );
