@@ -71,3 +71,9 @@
 - `390x844-home-font-gate.png`, `768x1024-home-font-gate.png`는 폰트 보정 후 최신 Web release의 실제 홈 화면 캡처이며 두 화면의 콘솔 오류는 0건이다.
 - 시작 버튼 `첫 섬에서 시작하기`는 Golden과 실제 Web 캡처에서 동일한 한글 글리프로 확인했다.
 - Golden 캡처 전 `stone-v2.png`·`crate-v2.png`·`ball.png`를 명시적으로 precache해 390px에서 오브젝트가 누락되던 순서 의존성을 제거했다. 최신 캡처와 기준 이미지 모두 세 오브젝트를 포함한다.
+
+## 2026-08-02 모바일 HUD 안내 축약 캡처
+
+- 변경 전 기준: `390x844-current-play-audit.png`, `768x1024-current-play-audit.png`, `1024x1366-current-play-audit.png`.
+- 변경 후: `390x844-compact-hud-pass.png`, `393x852-compact-hud-pass.png`, `430x932-compact-hud-pass.png`, `768x1024-compact-hud-pass.png`, `1024x1366-compact-hud-pass.png`.
+- 변경 후 다섯 뷰포트에서 보드·공·돌·상자·홀·컨트롤이 보드 안에 유지되고 콘솔 오류는 0건이었다. 실제 iPhone·iPad 렌더링이나 터치 지연을 증명하는 캡처는 아니다.

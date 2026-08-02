@@ -1719,9 +1719,9 @@ String? _compactLevelProgressHint(GameState state) {
 
 String _levelIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 => '상자를 밀어 홀로 → 방향 조정 · 길게 누르기 · 손 떼기',
-    1 => '첫 반사면 찾기 → 방향 조정 · 길게 누르기 · 손 떼기',
-    _ => '스위치와 문 살피기 → 여러 경로로 도전',
+    0 => '방향 조정 · 길게 누르기 · 손 떼기',
+    1 => '방향 조정 · 길게 누르기 · 손 떼기',
+    _ => '스위치 살피기 · 여러 경로로 도전',
   };
 }
 

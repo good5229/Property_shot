@@ -480,6 +480,10 @@ void main() {
       contains('방향 조정'),
     );
     expect(
+      tester.widget<Text>(find.byKey(const Key('compact_message'))).data,
+      isNot(contains('상자를 밀어 홀로')),
+    );
+    expect(
       tester.widget<Text>(find.byKey(const Key('compact_message'))).overflow,
       isNull,
     );
@@ -572,7 +576,11 @@ void main() {
     });
     tester.view.padding = const FakeViewPadding(top: 24, bottom: 34);
 
-    for (final size in [const Size(320, 568), const Size(390, 844)]) {
+    for (final size in [
+      const Size(320, 568),
+      const Size(390, 844),
+      const Size(768, 1024),
+    ]) {
       await tester.binding.setSurfaceSize(size);
       final clearState = levels[1]
           .createState(1)
@@ -613,7 +621,11 @@ void main() {
     });
     tester.view.padding = const FakeViewPadding(top: 24, bottom: 34);
 
-    for (final size in [const Size(320, 568), const Size(390, 844)]) {
+    for (final size in [
+      const Size(320, 568),
+      const Size(390, 844),
+      const Size(768, 1024),
+    ]) {
       await tester.binding.setSurfaceSize(size);
       await tester.pumpWidget(const PropertyShotApp());
       await tester.pump();
