@@ -4,14 +4,17 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
+import 'feedback_audio.dart';
 
 typedef SoundPlayer = Future<void> Function(SystemSoundType type);
+typedef SoundCuePlayer = Future<void> Function(FeedbackCue cue);
 
 /// 외부 오디오 파일 없이 플랫폼 기본 피드백을 조합한다.
 /// 웹이나 무음·미지원 플랫폼에서 실패해도 게임 상태에는 영향을 주지 않는다.
 class GameFeedback {
-  GameFeedback({SoundPlayer? soundPlayer})
-    : _soundPlayer = soundPlayer ?? _playSystemSound;
+  GameFeedback({SoundPlayer? soundPlayer, SoundCuePlayer? cuePlayer})
+    : _soundPlayer = soundPlayer ?? _playSystemSound,
+      _cuePlayer = cuePlayer ?? playFeedbackCue;
 
   static const soundPreferenceKey = 'property_shot_sound_enabled';
   static const hapticsPreferenceKey = 'property_shot_haptics_enabled';
@@ -19,6 +22,7 @@ class GameFeedback {
   static bool hapticsEnabled = true;
 
   final SoundPlayer _soundPlayer;
+  final SoundCuePlayer _cuePlayer;
   final Map<String, DateTime> _lastPlayed = <String, DateTime>{};
 
   static Future<void> _playSystemSound(SystemSoundType type) {
@@ -63,15 +67,27 @@ class GameFeedback {
   }
 
   void traitTransferred() {
-    _emit('trait_transferred', haptic: HapticFeedback.mediumImpact);
+    _emit(
+      'trait_transferred',
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.trait,
+    );
   }
 
   void traitCopied() {
-    _emit('trait_copied', haptic: HapticFeedback.selectionClick);
+    _emit(
+      'trait_copied',
+      haptic: HapticFeedback.selectionClick,
+      cue: FeedbackCue.copy,
+    );
   }
 
   void shotLaunched() {
-    _emit('shot_launched', haptic: HapticFeedback.mediumImpact);
+    _emit(
+      'shot_launched',
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.launch,
+    );
   }
 
   void collision(EntityType type) {
@@ -90,6 +106,14 @@ class GameFeedback {
       'collision_${type.name}',
       minimumInterval: const Duration(milliseconds: 70),
       haptic: haptic,
+      cue: switch (type) {
+        EntityType.bumper => FeedbackCue.bouncyCollision,
+        EntityType.stickySurface => FeedbackCue.stickyCollision,
+        EntityType.wall ||
+        EntityType.gate ||
+        EntityType.weight => FeedbackCue.heavyCollision,
+        _ => FeedbackCue.lightCollision,
+      },
       alert:
           type == EntityType.wall ||
           type == EntityType.gate ||
@@ -99,19 +123,38 @@ class GameFeedback {
   }
 
   void switchOpened() {
-    _emit('switch_opened', haptic: HapticFeedback.heavyImpact);
+    _emit(
+      'switch_opened',
+      haptic: HapticFeedback.heavyImpact,
+      cue: FeedbackCue.switchPressed,
+    );
   }
 
   void gateOpened() {
-    _emit('gate_opened', haptic: HapticFeedback.mediumImpact, alert: true);
+    _emit(
+      'gate_opened',
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.gateOpened,
+      alert: true,
+    );
   }
 
   void shotCleared() {
-    _emit('shot_cleared', haptic: HapticFeedback.heavyImpact, alert: true);
+    _emit(
+      'shot_cleared',
+      haptic: HapticFeedback.heavyImpact,
+      cue: FeedbackCue.clear,
+      alert: true,
+    );
   }
 
   void shotFailed() {
-    _emit('shot_failed', haptic: HapticFeedback.mediumImpact, alert: true);
+    _emit(
+      'shot_failed',
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.fail,
+      alert: true,
+    );
   }
 
   void paused(bool isPaused) {
@@ -137,6 +180,7 @@ class GameFeedback {
     Future<void> Function()? haptic,
     bool sound = true,
     bool alert = false,
+    FeedbackCue cue = FeedbackCue.ui,
   }) {
     final now = DateTime.now();
     final previous = _lastPlayed[key];
@@ -147,6 +191,7 @@ class GameFeedback {
     unawaited(
       Future.wait<void>([
         if (haptic != null && hapticsEnabled) _safe(haptic),
+        if (sound && soundEnabled) _safe(() => _cuePlayer(cue)),
         if (sound && soundEnabled)
           _safe(
             () => _soundPlayer(
