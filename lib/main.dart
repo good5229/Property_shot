@@ -33,12 +33,14 @@ class PropertyShotApp extends StatelessWidget {
     this.showHome = false,
     this.showStageSelector = true,
     this.telemetry,
+    this.fontFamilyOverride,
   });
 
   final GameState? initialState;
   final bool showHome;
   final bool showStageSelector;
   final LocalPlayTelemetry? telemetry;
+  final String? fontFamilyOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +48,7 @@ class PropertyShotApp extends StatelessWidget {
       title: '속성 한방',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        fontFamily: 'NanumGothic',
+        fontFamily: fontFamilyOverride ?? 'NanumGothic',
         fontFamilyFallback: const [
           'Apple SD Gothic Neo',
           'Noto Sans CJK KR',
@@ -197,7 +199,9 @@ class _HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appFontFamily = Theme.of(context).textTheme.bodyLarge?.fontFamily;
     return Scaffold(
+      key: const Key('home_screen_golden'),
       backgroundColor: const Color(0xFFBFE8E3),
       body: SafeArea(
         child: Stack(
@@ -258,7 +262,7 @@ class _HomeScreen extends StatelessWidget {
                           textStyle: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                          ),
+                          ).copyWith(fontFamily: appFontFamily),
                         ),
                       ),
                       const SizedBox(height: 10),

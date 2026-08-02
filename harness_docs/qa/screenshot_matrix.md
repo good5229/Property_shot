@@ -62,3 +62,12 @@
 - `test/goldens/gameplay_backdrop_390x844.png`, `test/goldens/gameplay_backdrop_768x1024.png`를 해변 플레이 배경의 기준 이미지로 추가했다.
 - `390x844-golden-gate-play.png`, `768x1024-golden-gate-play.png`는 Golden 추가 후 최신 Web release의 실제 시작 흐름 캡처다.
 - Golden은 배경 레이어만 픽셀 비교하며, 실제 기기 렌더링·성능 검증으로 확대 해석하지 않는다.
+
+## 2026-08-02 홈 화면 Golden 캡처
+
+- `test/goldens/home_screen_390x844.png`, `test/goldens/home_screen_768x1024.png`를 홈 전체 화면의 기준 이미지로 추가했다.
+- 홈 Golden은 한글 제목·설명·시작 버튼·스테이지 선택 버튼·Material 아이콘·보드 미리보기를 포함한다.
+- 테스트 환경 폰트 로딩을 명시해 네모 글리프가 기준 이미지에 섞이지 않도록 했다.
+- `390x844-home-font-gate.png`, `768x1024-home-font-gate.png`는 폰트 보정 후 최신 Web release의 실제 홈 화면 캡처이며 두 화면의 콘솔 오류는 0건이다.
+- 시작 버튼 `첫 섬에서 시작하기`는 Golden과 실제 Web 캡처에서 동일한 한글 글리프로 확인했다.
+- Golden 캡처 전 `stone-v2.png`·`crate-v2.png`·`ball.png`를 명시적으로 precache해 390px에서 오브젝트가 누락되던 순서 의존성을 제거했다. 최신 캡처와 기준 이미지 모두 세 오브젝트를 포함한다.

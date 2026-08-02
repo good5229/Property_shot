@@ -259,3 +259,24 @@ Hooke 독립 사후 QA는 P0·P1 없이 통과했다. 390·768px 간 장식 노�
 `GameplayBackdropPainter`를 픽셀 회귀 대상에 고정해 해변 배경의 파도·모래 경계·하단 장식이 의도 없이 바뀌면 테스트가 실패하도록 했다. Golden은 배경 레이어를 검증하며 실제 iPhone/iPad 렌더링·프레임·GPU·메모리 증거를 대신하지 않는다.
 
 Arendt 독립 QA는 P0 없이 통과했으며, Golden 범위가 배경 페인터 목적에는 적절하다고 평가했다. 다만 상·하단 HUD, 보드 배치, 한글 텍스트는 자동 Golden 대상이 아니므로 실제 브라우저 캡처와 위젯·레이아웃 테스트가 보완 증거이며, 전체 화면 픽셀 회귀 게이트는 아직 P1 잔여 위험이다.
+
+## 2026-08-02 홈 화면 Golden 보강
+
+| 항목 | 결과 |
+|---|---|
+| 홈 화면 Golden | `test/home_screen_golden_test.dart` 추가, 390×844·768×1024 기준 이미지 생성 |
+| 테스트 폰트 | NanumGothic 정규·굵은·ExtraBold와 MaterialIcons를 명시 로드 |
+| 홈 Golden 테스트 | 통과, 2개 |
+| `flutter test` | 통과, 128개 |
+| `flutter analyze` | 통과, 이슈 없음 |
+| 에셋 준비 | `stone-v2.png`·`crate-v2.png`·`ball.png`를 `runAsync` + `precacheImage`로 명시 준비 |
+
+첫 이미지 생성에서 Flutter 테스트 환경의 폰트 로딩이 Web 캡처와 달라 한글·아이콘이 네모로 보이는 문제를 발견했다. 테스트 전용 폰트 로더를 보강한 뒤 기준 이미지를 재생성했고, 이제 홈의 한글 문구·버튼·아이콘·보드 미리보기를 자동 픽셀 회귀 대상으로 보호한다.
+
+최신 Web release는 기존 PID 96760 종료 후 PID 10257로 교체했다. `390x844-home-font-gate.png`와 `768x1024-home-font-gate.png`에서 한글·Material 아이콘·보드 미리보기를 다시 확인했고 두 브라우저 콘솔 오류는 0건이었다.
+
+추가 검증에서 Flutter Golden의 `FilledButton` 라벨이 테마 폰트를 상속하지 않아 한글이 깨지는 회귀를 발견했다. `FilledButton` 스타일에 현재 테마 폰트 패밀리를 명시한 뒤 Golden 기준 이미지와 실제 Web 홈 캡처를 다시 생성했으며, 시작 버튼의 `첫 섬에서 시작하기` 라벨이 정상 표시된다.
+
+Carver의 독립 QA에서 처음 390px Golden만 이미지 로딩 전에 캡처되어 보드 오브젝트가 빠지는 순서 의존성을 P1로 보고했다. 이미지 세 자산을 명시적으로 precache하고 디코딩 완료 후 다시 펌프하도록 수정했으며, 재생성된 390px·768px 기준 이미지 모두 돌·상자·공·홀을 포함한다. 실제 Web release도 기존 PID 10257 종료 후 PID 25735로 교체했고 두 홈 캡처의 콘솔 오류는 0건이다.
+
+Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·Material 아이콘과 콘텐츠 겹침을 확인해 P0·P1 없음으로 판정했다. Golden과 실제 Web 캡처의 주요 콘텐츠가 약 8px 어긋나는 차이는 Flutter 테스트 렌더러와 Chromium의 안전영역·텍스트 배치 차이로 보이며 P2로 남긴다. Golden은 자동 픽셀 회귀, Web 캡처는 실제 브라우저 사용성 증거로 역할을 분리한다.
