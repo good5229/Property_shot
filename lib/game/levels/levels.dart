@@ -123,7 +123,7 @@ final levels = <LevelDefinition>[
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(304, 96),
-        size: Vec2(34, 34),
+        size: Vec2(50, 50),
         solid: false,
       ),
       EntityState(
@@ -148,13 +148,13 @@ final levels = <LevelDefinition>[
         id: 'gate',
         type: EntityType.gate,
         position: Vec2(238, 226),
-        size: Vec2(28, 118),
+        size: Vec2(44, 118),
       ),
       EntityState(
         id: 'switch',
         type: EntityType.switchPad,
         position: Vec2(154, 352),
-        size: Vec2(70, 22),
+        size: Vec2(100, 22),
         solid: true,
       ),
       EntityState(
