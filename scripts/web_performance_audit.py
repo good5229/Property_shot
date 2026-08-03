@@ -80,6 +80,43 @@ def _measure_frames(page, duration_ms: int) -> list[float]:
     )
 
 
+def _start_long_task_capture(page) -> None:
+    page.evaluate(
+        """
+        () => {
+          window.__propertyShotLongTasks = [];
+          if (!('PerformanceObserver' in window)) return;
+          const observer = new PerformanceObserver(list => {
+            for (const entry of list.getEntries()) {
+              window.__propertyShotLongTasks.push({
+                duration_ms: entry.duration,
+                start_ms: entry.startTime,
+              });
+            }
+          });
+          try {
+            observer.observe({type: 'longtask', buffered: true});
+            window.__propertyShotLongTaskObserver = observer;
+          } catch (_) {
+            window.__propertyShotLongTasks = [];
+          }
+        }
+        """
+    )
+
+
+def _drain_long_tasks(page) -> list[dict[str, float]]:
+    return page.evaluate(
+        """
+        () => {
+          const tasks = window.__propertyShotLongTasks || [];
+          window.__propertyShotLongTasks = [];
+          return tasks;
+        }
+        """
+    )
+
+
 def _stats(samples: list[float]) -> dict[str, float | int | None]:
     if not samples:
         return {"samples": 0, "mean_ms": None, "p95_ms": None, "max_ms": None, "over_20ms_ratio": None}
@@ -102,6 +139,8 @@ def main() -> int:
         type=Path,
         default=Path("harness_docs/qa/web_performance_latest.json"),
     )
+    parser.add_argument("--page-warmup-ms", type=int, default=1800)
+    parser.add_argument("--play-warmup-ms", type=int, default=1200)
     args = parser.parse_args()
 
     records = []
@@ -112,16 +151,19 @@ def main() -> int:
             errors: list[str] = []
             page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
             page.goto(args.url)
-            page.wait_for_timeout(1800)
+            page.wait_for_timeout(args.page_warmup_ms)
             start = _start_button_center(page.screenshot())
             page.mouse.click(*start)
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(args.play_warmup_ms)
+            _start_long_task_capture(page)
             idle = _measure_frames(page, 1800)
+            idle_long_tasks = _drain_long_tasks(page)
             page.mouse.move(*BALL_POINTS[(width, height)])
             page.mouse.down()
             page.wait_for_timeout(650)
             page.mouse.up()
             shot = _measure_frames(page, 2500)
+            shot_long_tasks = _drain_long_tasks(page)
             records.append(
                 {
                     "viewport": {"width": width, "height": height},
@@ -129,7 +171,9 @@ def main() -> int:
                     "launch_point": {"x": BALL_POINTS[(width, height)][0], "y": BALL_POINTS[(width, height)][1]},
                     "console_errors": errors,
                     "idle": _stats(idle),
+                    "idle_long_tasks": idle_long_tasks,
                     "shot": _stats(shot),
+                    "shot_long_tasks": shot_long_tasks,
                 }
             )
             page.close()
@@ -139,6 +183,12 @@ def main() -> int:
         "measured_at": datetime.now(timezone.utc).isoformat(),
         "url": args.url,
         "runtime": "Chromium headless Web release proxy; not a physical-device result",
+        "warmup_ms": {
+            "page": args.page_warmup_ms,
+            "play": args.play_warmup_ms,
+        },
+        "frame_target_ms": 16.667,
+        "long_task_threshold_ms": 50.0,
         "records": records,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
