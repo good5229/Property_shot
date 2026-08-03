@@ -65,6 +65,7 @@ class PropertyShotGame extends FlameGame {
   Timer? _animationCompletionTimer;
   final Set<String> _reportedImpactKeys = <String>{};
   final Map<EntityType, ui.Image> _objectImages = {};
+  static const int _runtimeAssetDecodeSize = 256;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
   static const Offset _lightDirection = Offset(-0.72, -0.69);
@@ -77,22 +78,29 @@ class PropertyShotGame extends FlameGame {
     if (!loadVisualAssets) {
       return;
     }
-    _objectImages[EntityType.crate] = await _loadUiImage(
-      'assets/generated/crate-v2.png',
-    );
-    _objectImages[EntityType.weight] = await _loadUiImage(
-      'assets/generated/stone-v2.png',
-    );
-    _objectImages[EntityType.bumper] = await _loadUiImage(
-      'assets/generated/jelly-bumper-v1.png',
-    );
+    final images = await Future.wait([
+      _loadUiImage('assets/generated/crate-v2.png'),
+      _loadUiImage('assets/generated/stone-v2.png'),
+      _loadUiImage('assets/generated/jelly-bumper-v1.png'),
+    ]);
+    _objectImages[EntityType.crate] = images[0];
+    _objectImages[EntityType.weight] = images[1];
+    _objectImages[EntityType.bumper] = images[2];
   }
 
   Future<ui.Image> _loadUiImage(String assetPath) async {
     final data = await rootBundle.load(assetPath);
-    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-    final frame = await codec.getNextFrame();
-    return frame.image;
+    final codec = await ui.instantiateImageCodec(
+      data.buffer.asUint8List(),
+      targetWidth: _runtimeAssetDecodeSize,
+      targetHeight: _runtimeAssetDecodeSize,
+    );
+    try {
+      final frame = await codec.getNextFrame();
+      return frame.image;
+    } finally {
+      codec.dispose();
+    }
   }
 
   void setStateSnapshot(
@@ -240,6 +248,10 @@ class PropertyShotGame extends FlameGame {
   @override
   void onRemove() {
     _animationCompletionTimer?.cancel();
+    for (final image in _objectImages.values) {
+      image.dispose();
+    }
+    _objectImages.clear();
     super.onRemove();
   }
 
