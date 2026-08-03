@@ -644,6 +644,28 @@ void main() {
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
+    expect(
+      telemetry.events.map((event) => event['event_code']),
+      containsAllInOrder([
+        'stage_enter',
+        'hint_exposed',
+        'object_inspected',
+        'attribute_transfer_opened',
+      ]),
+    );
+    expect(
+      telemetry.events.lastWhere(
+        (event) => event['event_code'] == 'object_inspected',
+      )['object_id'],
+      'anvil',
+    );
+
+    await tester.tap(find.byKey(const Key('info_close_button')));
+    await tester.pump();
+    expect(telemetry.events.last['event_code'], 'attribute_action_cancelled');
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('transfer_button')));
     await tester.pump();
 
@@ -651,6 +673,11 @@ void main() {
       telemetry.events.map((event) => event['유형']),
       containsAllInOrder(['단계 시작', '속성 이전']),
     );
+    final transfer = telemetry.events.lastWhere(
+      (event) => event['event_code'] == 'attribute_transferred',
+    );
+    expect(transfer['object_id'], 'anvil');
+    expect(transfer['attribute_before'], '무거움');
     expect(telemetry.exportJson(), contains('무거움'));
   });
 
