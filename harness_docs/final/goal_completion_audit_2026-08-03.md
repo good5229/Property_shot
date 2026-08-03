@@ -36,6 +36,16 @@
 - 기존 Web 서버를 종료한 뒤 PID `81320`으로 8080 서버를 교체했고 새 루트·번들 HTTP 200을 확인했다.
 - Android ARM64 에뮬레이터 최신 앱 PID `4338`, `FATAL EXCEPTION` 0건, 로딩 완료 한글 홈 화면 캡처 해시 `f10c347539533e3eb572be2b44d893b3ac4efad9c8caed983ed946d5913f4d23`
 
+## 최신 계측 스키마·iOS·릴리스 재검증
+
+- 계측 이벤트에 안정 `stage_id`, `result_code`, `route_tag` 필드를 추가한 기능 commit `898afd2 feat: 계측 이벤트 스키마 확장`을 원격 브랜치에 push했다.
+- 전체 `flutter test`: 252개 통과, `flutter analyze`: 통과
+- `flutter build web --release`: 통과, `main.dart.js` SHA-256 `4cdb3941b7d7f4bd91004f49954c8f95cf9dad92e41ccfe88c5f8a431a2bbf42`
+- `flutter build apk --release`: 통과, APK 57.3MB, SHA-256 `ecb73064d8fb198f782cf02c8a4560c035171eb91985902fe6522f04138ce8e1`
+- 기존 Web 데모 PID `48924`를 종료한 뒤 최신 빌드를 PID `75036`으로 8080에서 교체했고 루트·`main.dart.js` HTTP 200을 확인했다.
+- Android ARM64 API 28 에뮬레이터에 최신 APK를 재설치·실행했고 앱 PID `4503`, `FATAL EXCEPTION` 0건을 확인했다. 최신 한글 홈 캡처 `android-arm64-batched-telemetry-latest.png` SHA-256은 `71fbfc08aa5f37d508837ea4ed3f224630547f240a005a7e080b9f0fa20ef6ed`다.
+- `flutter build ios --no-codesign`에서 Xcode 컴파일은 완료됐고, Development Team·Provisioning Profile 부족으로 배포 가능한 iOS 앱 생성은 차단됐다.
+
 ## 최신 레벨·런타임 보정
 
 - 4단계 `balloon_crate`가 논리 보드 밖 `y=640`에 있던 P1 배치 결함을 `y=400`으로 수정했다. 화면 Golden에서 상자 전체가 보이고 하단 조작 패널에 가리지 않는 것을 확인했다.
@@ -74,7 +84,7 @@
 - Android 실행 로그: 앱 `FATAL EXCEPTION` 0건. 단, 에뮬레이터는 실기기 성능·GPU·메모리·햅틱 증거가 아님
 - Debug 진단 화면의 내부 영문 ID 노출은 `4b83361`에서 한글 표시명 변환과 회귀 테스트로 수정
 
-따라서 현재 종합 판정은 **Conditional Go**다. 자동 검증과 Web·Android 에뮬레이터 기능 흐름은 확인했지만, 실제 iPhone·Android·iPad 성능, 외부 초보 플레이테스트, 생성 에셋의 최종 법적 검토는 완료되지 않았다. 이 세 영역을 통과하기 전에는 최종 Go로 승격하지 않는다.
+따라서 현재 종합 판정은 **실험 진행 중**이다. 자동 검증과 Web·Android 에뮬레이터 기능 흐름은 확인했지만, 실제 iPhone·Android·iPad 성능, 외부 초보 플레이테스트, Web·모바일 이벤트 지문 동등성, 생성 에셋의 최종 법적 검토는 완료되지 않았다. 이 영역들을 통과하기 전에는 `Go` 또는 `Conditional Go`로 확정하지 않는다.
 
 | 요구 영역 | 현재 증거 | 판정 |
 |---|---|---|

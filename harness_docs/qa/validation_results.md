@@ -35,6 +35,18 @@
 - Android ARM64 에뮬레이터: 최신 APK 실행 PID 4338, `FATAL EXCEPTION` 0건
 - 최신 로딩 완료 캡처: `android-arm64-batched-telemetry-layout.png`, SHA-256 `f10c347539533e3eb572be2b44d893b3ac4efad9c8caed983ed946d5913f4d23`
 
+## 최신 계측 스키마·릴리스 재검증
+
+- `stage_id`, `result_code`, `route_tag` 필드와 CSV 내보내기 회귀 통과
+- 기능 commit `898afd2` 원격 push 완료
+- 전체 `flutter test`: 252개 통과, `flutter analyze`: 통과
+- Web Release `main.dart.js` SHA-256: `4cdb3941b7d7f4bd91004f49954c8f95cf9dad92e41ccfe88c5f8a431a2bbf42`
+- Android Release APK SHA-256: `ecb73064d8fb198f782cf02c8a4560c035171eb91985902fe6522f04138ce8e1`
+- Web 데모: 기존 PID 48924 종료 후 PID 75036으로 8080 재시작, 루트·번들 HTTP 200
+- Android ARM64 에뮬레이터: 최신 APK 실행 PID 4503, `FATAL EXCEPTION` 0건
+- 최신 로딩 완료 캡처: `android-arm64-batched-telemetry-latest.png`, SHA-256 `71fbfc08aa5f37d508837ea4ed3f224630547f240a005a7e080b9f0fa20ef6ed`
+- iOS: `flutter build ios --no-codesign` Xcode 컴파일 완료, Development Team·Provisioning Profile 부족으로 배포 단계 미완료
+
 ## 최신 레벨·런타임 재검증
 
 - 전체 `flutter test`: 247개 통과

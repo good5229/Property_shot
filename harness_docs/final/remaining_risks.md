@@ -3,13 +3,14 @@
 ## 최신 기준 보정 · 2026-08-03 KST
 
 - `ProgressStore`는 `74e86e5`의 인스턴스별 순차 큐와 `5425dcb`의 라우터·플레이 화면 공유 주입으로 앱 한 세션의 저장 경합을 줄였다. 실제 강제 종료 직전 저장 완료와 서로 독립된 외부 인스턴스 간 경합은 여전히 통합 검증 대상이다.
-- 최신 전체 테스트는 252개이며 분석·Web Release·Android Release 빌드가 통과했다. Web `main.dart.js` 해시는 `1fe40c3251534312926e5a93f41b409bbb95711d29ad01295d06da93ed904b88`다.
+- 최신 전체 테스트는 252개이며 분석·Web Release·Android Release 빌드가 통과했다. Web `main.dart.js` 해시는 `4cdb3941b7d7f4bd91004f49954c8f95cf9dad92e41ccfe88c5f8a431a2bbf42`다.
 - 4단계 상자 초기 위치를 `y=400`으로 고정하고 초기·연쇄 히트박스 보드 경계 회귀를 추가했다.
-- 최신 Android ARM64 에뮬레이터 앱 PID는 4338이며 시작 화면 캡처와 `FATAL EXCEPTION` 0건을 `android-arm64-latest-layout-evidence.json`에 보존했다.
+- 최신 Android ARM64 에뮬레이터 앱 PID는 4503이며 시작 화면 캡처와 `FATAL EXCEPTION` 0건을 `android-arm64-latest-layout-evidence.json`에 보존했다.
+- 계측 이벤트는 `stage_id`, `result_code`, `route_tag`를 포함해 스테이지 순서 변경과 경로별 분석을 지원하지만, 실제 사용자 표본의 경로 태그 품질은 아직 검증하지 않았다.
 - 로컬 계측은 250ms 묶음 저장과 종료 flush로 고빈도 충돌 장면의 저장 호출을 줄였지만, 실제 iPhone·Android에서 계측 포함 프레임 비용은 아직 미측정이다.
 
 - Android ARM64 API 28 에뮬레이터에서 Release 단계4 전체 흐름을 실제 입력으로 확인했다. 지도 `4 / 4` 해금, 속성 이전, 충전·자동 발사, 스위치·문, 홀 성공, 클리어 팝업과 앱 치명적 예외 0건을 증거로 보존했다.
-- Web Release 서버는 기존 프로세스를 종료하고 PID 95164로 교체했으며 루트·번들 HTTP 200을 확인했다.
+- Web Release 서버는 기존 프로세스를 종료하고 PID 75036으로 교체했으며 루트·번들 HTTP 200을 확인했다.
 - 전체 Flutter 테스트 최신 기준은 244개 통과이며 `flutter analyze`, Web Release, Android Release APK 빌드도 통과했다.
 - Debug 메뉴에서 발견된 `anvil`·`spike_source` 내부 식별자 노출은 `4b83361`에서 한글 표시명으로 변환했다. Release 번들에는 Debug 메뉴가 포함되지 않는다.
 - 위 Android 결과는 에뮬레이터 기능 스모크다. 실기기 FPS·GPU·메모리·터치 지연·햅틱·사운드 품질을 대신하지 않는다.

@@ -6,13 +6,13 @@
   "apk_size": "57.3MB",
   "install": "성공",
   "launch": "성공",
-  "app_pid": "4338",
+  "app_pid": "4503",
   "app_fatal_exceptions": 0,
-  "apk_sha256": "f914baa8786d339cf1abddbc18b4b4ef69c68f876e783fdb4555940c1c32f37f",
+  "apk_sha256": "ecb73064d8fb198f782cf02c8a4560c035171eb91985902fe6522f04138ce8e1",
   "verification": [
-    "저장 스키마 버전 2·묶음 로컬 계측 저장을 포함한 Release APK 설치 후 앱 시작",
+    "저장 스키마 버전 2·stage_id·result_code·route_tag·묶음 로컬 계측 저장을 포함한 Release APK 설치 후 앱 시작",
     "앱 프로세스 실행 상태 확인",
-    "adb logcat 최근 400줄에서 FATAL EXCEPTION 0건 확인"
+    "adb logcat 최근 500줄에서 FATAL EXCEPTION 0건 확인"
   ],
   "limitations": [
     "이번 반복에서는 새 APK 설치·시작 스모크만 추가하고 단계4 전체 좌표 재생은 기존 증거를 사용함",
