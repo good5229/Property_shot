@@ -1,5 +1,18 @@
 # 2026-08-03 단계4 실제 Web 조작 증거 포함 최신 검증
 
+## 최신 저장·계측·릴리스 재검증
+
+- 안정 단계 ID 키와 기존 인덱스 키의 마이그레이션·배열 순서 변경 회귀 통과
+- 개인정보 없는 로컬 플레이 계측 저장·복원·최근 2,000개 제한·순차 쓰기 회귀 통과
+- 전체 `flutter test`: 251개 통과
+- `flutter analyze`: 통과
+- Web Release `main.dart.js` SHA-256: `f22d8e7bd9e3f4156a5220eb0d37de7db8722fee1cb7095b18faa483e12bfaa8`
+- Web 데모: 기존 서버 종료 후 PID `18121`로 8080 재시작, 루트·번들 HTTP 200
+- Android Release APK: 57.3MB, SHA-256 `546be5692ab2d5b861c35ef7c1d9cf14b0d59a14efa1a7979a729e6eacafc9f6`
+- Android ARM64 API 28 에뮬레이터: 재설치·실행 성공, PID `4012`, `FATAL EXCEPTION` 0건
+- 최신 Android 시작 화면 캡처: `android-arm64-storage-latest-layout.png`, SHA-256 `281daca02f798c35d77b8caefccbfbb357a5cd74a24dfa266420084b02466486`
+- 기능 commit `bbd9117` 원격 push 완료
+
 ## 최신 레벨·런타임 재검증
 
 - 전체 `flutter test`: 247개 통과

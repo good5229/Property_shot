@@ -2,6 +2,18 @@
 
 기준일: 2026-08-03 KST
 
+## 최신 저장·계측·런타임 보강
+
+- 단계 정의에 안정적인 내부 ID를 추가하고 `ProgressStore`가 단계 ID 키와 기존 인덱스 키를 함께 읽고 쓰도록 보강했다. 배열 순서 변경과 구버전 숫자 키 복원 회귀를 추가했다.
+- 플레이 계측을 메모리 전용에서 개인정보 없는 로컬 최근 이벤트 저장소로 확장했다. 최대 2,000개 이벤트를 순차 저장하고 복원·삭제할 수 있으며, 동시 기록 순서 회귀를 추가했다.
+- 전체 `flutter test`: 최신 실행 기준 251개 통과
+- `flutter analyze`: 통과
+- `flutter build web --release`: 통과, `main.dart.js` SHA-256 `f22d8e7bd9e3f4156a5220eb0d37de7db8722fee1cb7095b18faa483e12bfaa8`
+- `flutter build apk --release`: 통과, APK 57.3MB, SHA-256 `546be5692ab2d5b861c35ef7c1d9cf14b0d59a14efa1a7979a729e6eacafc9f6`
+- Web 데모는 이전 서버를 종료한 뒤 PID `18121`로 8080에서 재시작했고 루트와 `main.dart.js` HTTP 200을 확인했다.
+- Android ARM64 API 28 에뮬레이터에 최신 APK를 재설치·실행했고 앱 PID `4012`, `FATAL EXCEPTION` 0건을 확인했다. 최신 시작 화면 해시는 `281daca02f798c35d77b8caefccbfbb357a5cd74a24dfa266420084b02466486`이다.
+- 기능 commit `bbd9117 feat: 로컬 계측과 안정 단계 저장 보강`을 원격에 push했다.
+
 ## 최신 레벨·런타임 보정
 
 - 4단계 `balloon_crate`가 논리 보드 밖 `y=640`에 있던 P1 배치 결함을 `y=400`으로 수정했다. 화면 Golden에서 상자 전체가 보이고 하단 조작 패널에 가리지 않는 것을 확인했다.
