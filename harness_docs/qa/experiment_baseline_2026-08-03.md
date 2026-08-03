@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `d6fd6ce`
+코드 기준 커밋: `7b775ab`
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
