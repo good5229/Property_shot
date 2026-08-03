@@ -5,7 +5,7 @@
 
 ## 최신 Release 빌드 기준 · 2026-08-03 KST
 
-- Web Release는 기존 데모 PID 61485를 종료한 뒤 런타임 자산 최적화를 포함한 최신 빌드를 PID 71544로 교체했다. 최신 `main.dart.js` SHA-256은 `7adaeb81babcfb2789021c3cc07452aa59bc2bbd33c095211221c3ae46a382e9`다.
+- 최신 Web 감사 후보는 기존 데모 PID 2283을 종료한 뒤 PID 7795에서 실행했다. `main.dart.js` SHA-256은 `2738b00fae84719864756376ad3179facb03ceaea3c66f91cb031dd0aaa832d1`이며, 감사 완료 후 서버 재시작은 실행 환경 사용 한도로 보류됐다.
 - Android Release APK는 저장 스키마 2·안정 단계 ID·`result_code`·`route_tag`·묶음 로컬 계측 저장을 포함해 다시 빌드되어 57.3MB이며 ARM64 API 28 에뮬레이터에 설치·실행됐다.
 - 앱 PID 4503이 실행 중이고 최근 로그에서 앱 `FATAL EXCEPTION` 0건을 확인했다.
 - 전체 Flutter 테스트는 252개 통과했고 묶음 계측 저장·저장소 공유·4단계 경계·고속 연쇄 회귀를 포함한다.
@@ -22,10 +22,10 @@
 
 | 뷰포트 | idle | 발사 | 콘솔 | Long Task 관찰 |
 |---|---:|---:|---:|---|
-| 390×844 | 평균 20.186ms, p95 33.4ms | 평균 25.419ms, p95 66.6ms | 0건 | idle 최대 1,425ms, 발사 최대 269ms |
-| 768×1024 | 평균 32.739ms, p95 35.2ms | 평균 42.222ms, p95 150ms | 0건 | idle 최대 1,590ms, 발사 최대 417ms |
+| 390×844 | 평균 17.986ms, p95 33.3ms | 평균 24.195ms, p95 51.5ms | 0건 | idle 최대 1,320ms, 발사 최대 275ms |
+| 768×1024 | 평균 32.163ms, p95 35.3ms | 평균 38.717ms, p95 66.6ms | 0건 | idle 최대 1,479ms, 발사 최대 360ms |
 
-런타임 물체 이미지는 1254px 원본을 화면 표시 규모에 맞춘 256px로 디코드하고 세 자산을 병렬 로드한다. 디코드 직후 `ui.Codec`와 게임 제거 시 소유한 `ui.Image`를 해제해 수명 비용을 줄였다. 보드·물체 `ui.Picture` 캐시는 Golden 동적 효과 회귀 또는 최신 성능 악화로 유지하지 않았다. 현재 번들은 60FPS 목표인 16.7ms p95를 충족하지 못했고, 특히 768×1024 발사 구간의 최신 p95 150ms를 추가 프로파일링해야 한다. 이 수치는 Chromium Web 보조 결과이며 실제 iPhone·Android·iPad 성능으로 확대하지 않는다. 현재 성능 게이트는 `미통과`이고, 최신 원자료는 [web_performance_latest.json](web_performance_latest.json)이다.
+런타임 물체 이미지는 1254px 원본을 화면 표시 규모에 맞춘 256px로 디코드하고 세 자산을 병렬 로드한다. 디코드 직후 `ui.Codec`와 게임 제거 시 소유한 `ui.Image`를 해제하며, 정적 비원형 물체는 개별 `ui.Picture`로 재생한다. 작은 표시 크기에 맞춰 래스터 필터는 중간 품질을 사용한다. 보드 래스터 캐시는 검증되지 않아 제거했다. 현재 번들은 60FPS 목표인 16.7ms p95를 충족하지 못했지만, 이전 후보의 768×1024 p95 150ms에서 66.6ms로 개선됐다. 이 수치는 Chromium Web 보조 결과이며 실제 iPhone·Android·iPad 성능으로 확대하지 않는다. 현재 성능 게이트는 `미통과`이고, 최신 원자료는 [web_performance_latest.json](web_performance_latest.json)이다.
 
 ## 확보된 측정
 
@@ -35,8 +35,8 @@
 | `ShotResolver` 2단계 | 평균 329.8µs | 렌더링·GPU·입력 제외 |
 | `ShotResolver` 3단계 | 평균 338.6µs | 렌더링·GPU·입력 제외 |
 | `ShotResolver` 4단계 | 평균 354.9µs | 렌더링·GPU·입력 제외 |
-| Web 390×844 | 최신 발사 평균 25.419ms, p95 66.6ms | Headless Chromium, 성능 게이트 미통과 |
-| Web 768×1024 | 최신 발사 평균 42.222ms, p95 150ms | Headless Chromium, 성능 게이트 미통과 |
+| Web 390×844 | 최신 발사 평균 24.195ms, p95 51.5ms | Headless Chromium, 성능 게이트 미통과 |
+| Web 768×1024 | 최신 발사 평균 38.717ms, p95 66.6ms | Headless Chromium, 성능 게이트 미통과 |
 | Web 콘솔 | 5개 뷰포트 오류 0건 | 실제 모바일 브라우저 아님 |
 | Android ARM64 API 28 AVD | 1080×1920 세로 Release에서 4단계 진입·속성 이전·45% 충전·자동 발사·홀 성공까지 입력 스모크 통과 | 프레임 시간·GPU·메모리·햅틱 미측정 |
 

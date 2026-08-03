@@ -5,7 +5,7 @@
 | Flutter 위젯 320x568 | 축약 HUD·팝업 경계·한글 오버플로 회귀 | 통과 |
 | Flutter 위젯 390x844 | 일반 모바일 레이아웃·팝업·접근성 회귀 | 통과 |
 | Web release | `flutter build web --release`, 루트·번들 HTTP 200 | 통과 |
-| Headless Chromium Web 390×844·768×1024 | 최신 5초 워밍업 발사 rAF 감사, p95 66.6·150ms, 콘솔 오류 0건 | 성능 게이트 미통과, 실기기 대체 아님 |
+| Headless Chromium Web 390×844·768×1024 | 최신 5초 워밍업 발사 rAF 감사, p95 51.5·66.6ms, 콘솔 오류 0건 | 성능 게이트 미통과, 실기기 대체 아님 |
 | Android Debug APK | `flutter build apk --debug` 성공 | 컴파일 통과, 실기기 미검증 |
 | Android Release APK | 최신 `flutter build apk --release` 성공, 57.3MB, ARM64 에뮬레이터 재설치·시작 | 컴파일·에뮬레이터 시작 통과, 서명·실기기 미검증 |
 | Android ARM64 API 28 AVD | Release APK 설치·실행, 지도 4/4·4단계 카드·뾰족함 이전·충전·자동 발사·홀 성공·클리어 팝업 실제 입력과 1080×1920 캡처 | 조건부 통과, 에뮬레이터 스모크이며 실기기 대체 아님 |

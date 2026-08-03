@@ -4,9 +4,9 @@
 
 ## 최신 Release·성능 감사 보정
 
-- 최신 `flutter build web --release`는 통과했고 `build/web/main.dart.js` SHA-256은 `7adaeb81babcfb2789021c3cc07452aa59bc2bbd33c095211221c3ae46a382e9`다. 이전 8080 서버를 종료한 뒤 최신 번들을 PID `71544`로 제공 중이다.
-- 최신 `scripts/web_performance_audit.py`는 Pillow 12.3.0 격리 환경에서 5초 워밍업 후 Long Task를 함께 수집했다. 최종 후보의 390×844 발사 평균·p95는 25.419·66.6ms, 768×1024는 42.222·150ms이며 콘솔 오류는 0건이다.
-- 빈 Chromium 기준은 두 해상도 모두 평균 약 16.7ms·p95 18.6ms다. 256px 런타임 자산 디코드·수명 관리는 유지했지만 Picture 캐시는 Golden 또는 성능 회귀로 제거했고 Web 60FPS 게이트는 아직 미통과다. 이 결과는 실기기 성능의 대체 증거가 아니다.
+- 최신 `flutter build web --release`는 통과했고 감사 후보 `build/web/main.dart.js` SHA-256은 `2738b00fae84719864756376ad3179facb03ceaea3c66f91cb031dd0aaa832d1`다. 이전 8080 서버를 종료한 뒤 PID `7795`에서 감사했으며, 감사 후 서버 재시작은 실행 환경 사용 한도로 보류됐다.
+- 최신 `scripts/web_performance_audit.py`는 Pillow 12.3.0 격리 환경에서 5초 워밍업 후 Long Task를 함께 수집했다. 최종 후보의 390×844 발사 평균·p95는 24.195·51.5ms, 768×1024는 38.717·66.6ms이며 콘솔 오류는 0건이다.
+- 빈 Chromium 기준은 두 해상도 모두 평균 약 16.7ms·p95 18.6ms다. 256px 런타임 자산 디코드·수명 관리·정적 물체 Picture 캐시·중간 품질 필터를 유지했지만 Web 60FPS 게이트는 아직 미통과다. 이 결과는 실기기 성능의 대체 증거가 아니다.
 - 따라서 현재 종합 판정은 여전히 `실험 진행 중`이며, 렌더·래스터·Web 합성 비용 프로파일링, iPhone·Android·iPad 실기기 측정, 외부 초보 플레이테스트, Web·모바일 이벤트 지문 비교, 생성 에셋 권리 최종 검토가 남아 있다.
 
 ## 최신 저장·계측·런타임 보강
