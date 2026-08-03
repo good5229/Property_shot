@@ -7,20 +7,24 @@
 | 경로 | 용도 | 권리 상태 |
 |---|---|---|
 | `assets/icons/ball.png` | 레거시 보관 자산, 제품 화면 미사용 | CC0 원본, 권리대장 확인 |
-| `assets/icons/crate.png` | 상자 썸네일·게임 오브젝트 | CC0 원본, 권리대장 확인 |
+| `assets/icons/crate.png` | 섬 지도 상자 단계 카드·레거시 아이콘 | CC0 원본, 권리대장 확인 |
 | `assets/generated/crate-v2.png` | 상자 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
-| `assets/icons/stone_boulder.png` | 돌 썸네일·게임 오브젝트 | CC0 원본, 권리대장 확인 |
+| `assets/icons/stone_boulder.png` | 섬 지도 무거운 돌 단계 카드·레거시 아이콘 | CC0 원본, 권리대장 확인 |
 | `assets/generated/stone-v2.png` | 무거운 돌 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
 | `assets/generated/jelly-bumper-v1.png` | 젤리 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
 | `assets/generated/jelly-bumper-v1-source.png` | 젤리 스프라이트 생성 원본·재현 기록 | 생성 기록 보관용, 상업 화면에는 사용하지 않음 |
 | `assets/icons/property_shot_app_icon_source.png` | 앱 아이콘 원본 | 프로젝트 전용 생성 이미지 |
 | `ios/Runner/Assets.xcassets/AppIcon.appiconset/` | iOS 아이콘 파생 파일 | 원본에서 규격별 생성 |
 | `ios/Runner/Assets.xcassets/LaunchImage.imageset/` | 런치 화면 | 프로젝트 전용 구성 |
+| `assets/fonts/NanumGothic-*.ttf` | 한글 UI 글꼴 | OFL-1.1, `assets/fonts/OFL.txt` 보관 |
 
 ## 재현 명령
 
 ```bash
-find assets/icons ios/Runner/Assets.xcassets -type f -print0 | sort -z | xargs -0 shasum -a 256
+find assets/icons assets/generated assets/fonts ios/Runner/Assets.xcassets -type f -print0 | sort -z | xargs -0 shasum -a 256
+
+# 저장소에 고정한 자산 해시를 검증한다.
+shasum -a 256 -c assets/licenses/asset_hashes.txt
 ```
 
 ## 제출 전 확인
