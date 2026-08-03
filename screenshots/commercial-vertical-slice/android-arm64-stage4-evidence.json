@@ -1,0 +1,40 @@
+{
+  "platform": "Android",
+  "runtime": "PropertyShot_ARM64 / Android API 28 ARM64 에뮬레이터",
+  "build": "build/app/outputs/flutter-apk/app-release.apk",
+  "viewport": {
+    "width": 1080,
+    "height": 1920,
+    "orientation": "portrait"
+  },
+  "flow": [
+    "Debug APK에서 전체 단계 해금 저장",
+    "Release APK로 교체",
+    "섬 지도 4 / 4 확인",
+    "4단계 카드·설명 확인",
+    "뾰족함 원본 팝업 확인",
+    "속성 옮기기 확인",
+    "방향 설정",
+    "45% 힘 충전",
+    "손을 떼어 자동 발사",
+    "문 열림과 홀 진입 성공",
+    "클리어 팝업 확인"
+  ],
+  "screenshots": [
+    "screenshots/commercial-vertical-slice/android-arm64-stage-map-unlocked.png",
+    "screenshots/commercial-vertical-slice/android-arm64-stage4-card.png",
+    "screenshots/commercial-vertical-slice/android-arm64-stage4-start.png",
+    "screenshots/commercial-vertical-slice/android-arm64-stage4-source-popup.png",
+    "screenshots/commercial-vertical-slice/android-arm64-stage4-property-ready.png",
+    "screenshots/commercial-vertical-slice/android-arm64-stage4-aim-charge.png",
+    "screenshots/commercial-vertical-slice/android-arm64-stage4-success-state.png",
+    "screenshots/commercial-vertical-slice/android-arm64-stage4-clear-popup.png"
+  ],
+  "app_fatal_exceptions": 0,
+  "result": "성공",
+  "limitations": [
+    "ARM64 에뮬레이터 입력·화면 재생 증거이며 실제 Android 기기 성능 결과가 아님",
+    "프레임 시간·GPU·메모리·햅틱 체감은 미측정",
+    "Debug APK는 해금 상태 설정에만 사용했고 사용자 흐름 캡처는 Release APK에서 수행"
+  ]
+}

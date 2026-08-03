@@ -19,6 +19,7 @@
 - 실제 iOS·Android 기기와 외부 플레이테스트는 여전히 미검증이다.
 - Android 표준 플랫폼 호스트를 추가한 뒤 `flutter build apk --debug`와 `flutter build apk --release`가 통과했다. Release APK는 57.2MB이며 서명·실기기 설치·입력·성능은 별도 미검증이다.
 - Apple Silicon 호환 Android ARM64 API 28 에뮬레이터에서 Release APK 설치·실행과 홈→1단계→물체 팝업→속성 옮기기 흐름을 실제 입력으로 확인했다. 실행 캡처와 앱 치명적 예외 0건은 `android-arm64-evidence.json`에 보존했지만, 실기기 성능·프레임·햅틱은 여전히 미검증이다.
+- 같은 ARM64 에뮬레이터에서 전체 해금 상태를 저장한 뒤 Release APK로 4단계에 진입해 뾰족함 이전·45% 충전·자동 발사·문 열림·홀 성공·클리어 팝업까지 재생했다. 1080×1920 화면 8장과 오류 0건은 `android-arm64-stage4-evidence.json`에 보존했다.
 - 기존 Pixel 3 API 30 AVD는 x86 이미지라 Apple Silicon Emulator에서 기동하지 못하는 호환성 한계가 남아 있다.
 
 저장 리플레이 검증:

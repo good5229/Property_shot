@@ -33,4 +33,12 @@
 - 앱 프로세스가 실행 중이었고 수집한 로그에서 앱 `FATAL EXCEPTION`은 0건이었다.
 - 이는 Android 에뮬레이터 런타임 스모크 증거이며 실제 Android 기기의 프레임·GPU·메모리·햅틱 결과를 대신하지 않는다.
 
+## 2026-08-03 Android ARM64 단계4 전체 흐름 증거
+
+- Release APK로 교체한 뒤 섬 지도에서 `4 / 4` 해금 상태와 4단계 설명 카드를 확인했다.
+- 4단계에서 뾰족함 원본 팝업, 속성 옮기기, 방향 설정, 45% 충전, 손을 뗀 자동 발사, 문 열림·홀 진입 성공, 클리어 팝업을 실제 좌표 입력으로 재생했다.
+- `android-arm64-stage4-evidence.json`과 1080×1920 캡처 8장을 보존했다.
+- 실행 로그에서 앱 `FATAL EXCEPTION`은 0건이었다.
+- 해당 결과는 Android ARM64 에뮬레이터의 기능·화면 스모크이며 실제 기기 성능·입력 지연·햅틱 증거가 아니다.
+
 원본 파일은 `test/goldens/`와 [screenshot_matrix.md](screenshot_matrix.md)에 둔다.
