@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `55f7129`
+코드 기준 커밋: `0b516ba`
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
@@ -12,11 +12,12 @@
 |---|---|
 | 비다중샷 회귀 | 226개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
+| 저장 다중샷 재생 | 20개 통과 |
 | `flutter analyze` | 통과 |
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 76285 |
+| 데모 서버 | `127.0.0.1:8080`, PID 76285 (코드 변경 없음, 유지 중) |
 
 Web 시각 캡처:
 

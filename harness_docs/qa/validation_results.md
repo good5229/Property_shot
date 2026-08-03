@@ -1,10 +1,11 @@
-# 2026-08-03 저장 리플레이 픽스처 포함 최신 검증
+# 2026-08-03 다중샷 저장 리플레이 포함 최신 검증
 
 | 명령 | 결과 |
 |---|---|
 | `flutter analyze` | 통과, 문제 없음 |
 | 비다중샷 전체 회귀 | 226개 통과 |
 | `test/multi_shot_analyzer_test.dart` | 통과 |
+| `test/multi_replay_fixture_test.dart` | 20개 시퀀스 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
 | `flutter build web --release` | 통과 |
 | 최신 Web `main.dart.js` | `5c34194b76102eff667fa0e01c36ba82b54d222402cb2ec070115ff668d0e2b6` |
@@ -14,6 +15,9 @@
 - `harness_docs/qa/replays/single_shot_fixtures.json`에 1~4단계 성공 2개·실패 2개씩 총 16개를 고정했다.
 - `test/replay_fixture_test.dart`가 각 입력의 예상 종료 단계와 `ShotResult` 안정적 지문을 재생 비교한다.
 - 픽스처 생성은 `dart run tool/generate_replay_fixtures.dart`, 재생은 `flutter test test/replay_fixture_test.dart`로 반복할 수 있다.
+- `harness_docs/qa/replays/multi_shot_fixtures.json`에 4개 단계 × 5개, 총 20개 다중샷 시퀀스를 고정했다.
+- `test/multi_replay_fixture_test.dart`가 이전 샷의 최종 상태를 다음 샷에 전달하면서 발별 물리 지문과 최종 상태를 재생 비교한다.
+- 다중샷 픽스처 재생은 `flutter test --reporter compact test/multi_replay_fixture_test.dart test/multi_shot_analyzer_test.dart`로 반복할 수 있다.
 
 계측 변경은 물체 확인·속성 이전 대상·스위치·문·풍선·점착·홀 이벤트를 상태 전이별로 기록하도록 연결했다. 자동 검증은 통과했지만 실제 iOS·Android 기기와 외부 플레이테스트는 여전히 미검증이다.
 

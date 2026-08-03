@@ -2,7 +2,7 @@
 
 작성 기준: 2026-08-03 KST
 기준 브랜치: `commercial/wall-physics-qa`
-관련 커밋: `55f7129`
+관련 커밋: `0b516ba`
 
 ## 검증 목적
 
@@ -19,9 +19,12 @@
 | 벽 불변성 | 모든 벽의 좌표·속도·이동 가능 여부 확인 |
 | 대상 충돌 행렬 | 벽·상자·돌·젤리·점착판·이전 공·풍선 확인 |
 | 다중 발사 | 기존 공을 유지한 후 새 공과 재충돌 확인 |
-| 실행 결과 | 결정론 3개, 충돌 행렬 1개, 다중샷 1개, 전체 비다중샷 226개 통과 |
+| 저장 다중 발사 재생 | 4개 단계 × 5개, 총 20개 시퀀스 재생 |
+| 실행 결과 | 결정론 3개, 충돌 행렬 1개, 다중샷 분석 1개, 저장 다중샷 재생 1개, 전체 비다중샷 기준선 226개 통과 |
 
 단계별 대표 재생 입력은 `harness_docs/qa/replays/single_shot_fixtures.json`에 저장했다. 1~4단계 각각 성공 2개·실패 2개씩 총 16개이며, 입력 각도·힘·속성, 예상 종료 단계, 물리 결과 지문을 포함한다. `test/replay_fixture_test.dart`는 JSON을 다시 읽어 동일 입력을 `ShotResolver`에 넣고 안정적 지문과 종료 단계를 비교한다.
+
+다중샷 대표 재생 입력은 `harness_docs/qa/replays/multi_shot_fixtures.json`에 저장했다. 각 시퀀스는 최대 2발로 구성되며, 첫 발의 결과 상태를 다음 발의 시작 상태로 전달한다. 직접·복사·대체 경로 태그와 발별 물리 지문을 함께 보존하고 `test/multi_replay_fixture_test.dart`가 20개 시퀀스를 재생 비교한다.
 
 재현 명령:
 
@@ -30,6 +33,7 @@ flutter test --reporter compact test/replay_determinism_test.dart
 flutter test --reporter compact test/physics_collision_matrix_test.dart
 flutter test --reporter compact test/multi_shot_analysis_test.dart
 flutter test --reporter compact test/replay_fixture_test.dart
+flutter test --reporter compact test/multi_replay_fixture_test.dart
 dart run tool/physics_benchmark.dart
 ```
 
