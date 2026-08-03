@@ -20,7 +20,7 @@
 | `flutter build apk --release` | 통과, 57.2MB |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 54628 |
+| 데모 서버 | `127.0.0.1:8080`, PID 91916 |
 
 개발 진단 메뉴:
 
