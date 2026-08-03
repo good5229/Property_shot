@@ -1553,3 +1553,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: 연결된 물리 장치는 없고 Pixel 3 API 30 AVD는 x86 시스템 이미지인데 현재 Apple Silicon Emulator에는 x86 QEMU가 없어 기동되지 않았다. APK 컴파일 성공과 Android 런타임 미검증을 분리해 기록한다.
 2026-08-03: Apple Silicon 호환 ARM64 Android API 28 에뮬레이터에서 Release APK를 설치·실행하고 홈·1단계·무거운 돌 정보 팝업·속성 옮기기 후 공 상태를 실제 입력으로 확인했다. 앱 치명적 예외는 없었으며 화면 증거와 런타임 한계를 별도 QA 문서에 추가한다.
 2026-08-03: 기존 Web 데모 PID 54628을 종료하고 최신 Release를 다시 빌드해 PID 91916으로 8080에 교체했다. 루트와 `main.dart.js` 모두 HTTP 200이며 데모 서버를 유지한다.
+2026-08-03: 원문 요구사항과 Debug 화면을 다시 대조하는 중 `anvil`·`spike_source` 같은 내부 물체 ID가 진단 메뉴에 그대로 노출되는 한글 UX 결함을 확인했다. 물리 식별자는 유지하되 화면 표시명만 한글로 변환하는 공통 라벨러와 회귀를 추가한다.

@@ -22,6 +22,7 @@ import 'game_feedback.dart';
 import 'game_ball_painter.dart';
 import 'bonus_goal.dart';
 import 'debug_menu.dart';
+import 'debug_labels.dart';
 import 'play_telemetry.dart';
 import 'tutorial_experiment.dart';
 
@@ -819,7 +820,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 : entity,
         ],
         clearSelection: true,
-        message: '$sourceId 원본 속성을 제거했습니다.',
+        message: '${debugEntityLabel(sourceId)} 원본 속성을 제거했습니다.',
       ),
     );
   }
@@ -846,7 +847,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 : entity,
         ],
         clearSelection: true,
-        message: '$sourceId 원본 속성을 복원했습니다.',
+        message: '${debugEntityLabel(sourceId)} 원본 속성을 복원했습니다.',
       ),
     );
   }

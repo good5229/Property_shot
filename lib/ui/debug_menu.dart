@@ -6,6 +6,7 @@ import '../game/domain/game_state.dart';
 import '../game/domain/trait.dart';
 import '../game/levels/levels.dart';
 import '../game/simulation/shot_resolver.dart';
+import 'debug_labels.dart';
 import 'tutorial_experiment.dart';
 
 class DebugMenu extends StatefulWidget {
@@ -213,7 +214,8 @@ class _DebugMenuState extends State<DebugMenu> {
                         children: [
                           Expanded(
                             child: Text(
-                              '$sourceId · ${_traitLabel(sourceId, baseState)}',
+                              '${debugEntityLabel(sourceId)} · '
+                              '${_traitLabel(sourceId, baseState)}',
                             ),
                           ),
                           Wrap(
@@ -239,7 +241,7 @@ class _DebugMenuState extends State<DebugMenu> {
                     OutlinedButton.icon(
                       onPressed: () => widget.onForceTrait(source.id),
                       icon: const Icon(Icons.auto_awesome),
-                      label: Text('${source.id} 속성 강제 장착'),
+                      label: Text('${debugEntityLabel(source.id)} 속성 강제 장착'),
                     ),
                   RadioGroup<TutorialExperimentVariant>(
                     groupValue: widget.tutorialVariant,
@@ -400,7 +402,10 @@ class _DebugMenuState extends State<DebugMenu> {
   String _eventLabel(PhysicsEvent event) {
     final normal =
         '(${event.normal.x.toStringAsFixed(2)}, ${event.normal.y.toStringAsFixed(2)})';
-    return '${_kindLabel(event.kind)} · ${event.sourceEntityId} → ${event.targetEntityId} · 법선 $normal · 경로 ${event.pathIndex}';
+    return '${_kindLabel(event.kind)} · '
+        '${debugEntityLabel(event.sourceEntityId)} → '
+        '${debugEntityLabel(event.targetEntityId)} · 법선 $normal · '
+        '경로 ${event.pathIndex}';
   }
 
   String _kindLabel(PhysicsEventKind kind) {

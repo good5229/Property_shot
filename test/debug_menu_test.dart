@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/ui/debug_labels.dart';
 import 'package:property_shot/ui/game_screen.dart';
 
 void main() {
@@ -34,7 +35,17 @@ void main() {
     expect(find.text('햅틱 켜기'), findsOneWidget);
     expect(find.text('상태 JSON 복사'), findsOneWidget);
     expect(find.text('이벤트 복사'), findsOneWidget);
+    expect(find.textContaining('anvil'), findsNothing);
+    expect(find.textContaining('spike_source'), findsNothing);
+    expect(find.textContaining('무거운 돌'), findsWidgets);
 
     expect(find.byKey(const Key('debug_menu_close_button')), findsOneWidget);
+  });
+
+  test('진단용 내부 물체 ID는 한글 표시명으로 변환한다', () {
+    expect(debugEntityLabel('anvil'), '무거운 돌');
+    expect(debugEntityLabel('spike_source'), '뾰족함 원본');
+    expect(debugEntityLabel('spent_ball_2'), '공');
+    expect(debugEntityLabel('알 수 없는 ID'), '물체');
   });
 }
