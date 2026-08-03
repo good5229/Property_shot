@@ -2,13 +2,19 @@
 
 ## 최신 Release 재검증 보정
 
-- 전체 `flutter test`: 244개 통과
+- 전체 `flutter test`: 245개 통과
 - `flutter analyze`: 통과
 - Web Release: 기존 PID 40530 종료 후 PID 95164로 교체, 루트·`main.dart.js` HTTP 200
-- Web `main.dart.js` SHA-256: `403ce16e363bc0e0fa97767d3428217af54fd842c498253f8a8629091ccf70fa`
+- Web `main.dart.js` SHA-256: `8d93ef76caafa5dbe97ce7a70c1f038987fb2ab81f68a89ba201bf5f97bb34ad`
 - Android Release APK: 57.3MB, ARM64 API 28 에뮬레이터 설치·실행 성공, 앱 PID 6769
 - Android 최근 로그: 앱 `FATAL EXCEPTION` 0건
 - 실제 기기 성능·입력 지연·햅틱·외부 사용자 테스트·생성 자산 최종 법적 검토는 미검증
+
+## 저장 동시성 보정
+
+- `ProgressStore` 인스턴스별 쓰기 큐가 클리어·최고 기록·보너스·복제 코어·초기화·전체 해금 작업을 순차 처리한다.
+- 동시 클리어 3건과 최고 기록 2건을 섞은 회귀에서 클리어 집합 `{0, 1, 2}`, 해금 단계 `3`, 최고 기록 `3`, 보너스 기록을 모두 보존했다.
+- 변경 커밋은 `74e86e5`이며 원격 브랜치에 푸시했다.
 
 | 명령 | 결과 |
 |---|---|

@@ -2,6 +2,9 @@
 
 ## 최신 기준 보정 · 2026-08-03 KST
 
+- `ProgressStore` 동일 인스턴스의 영속 작업은 `74e86e5`에서 순차 큐로 보호했고 동시 클리어·최고 기록 회귀를 통과했다. 다만 앱 전체의 여러 `ProgressStore` 인스턴스가 동시에 쓰는 상황과 실제 앱 재실행 중 저장 완료 보장은 실기기 통합 테스트가 남아 있다.
+- 최신 전체 테스트는 245개이며 분석·Web Release·Android Release 빌드가 통과했다. Web `main.dart.js` 해시는 `8d93ef76caafa5dbe97ce7a70c1f038987fb2ab81f68a89ba201bf5f97bb34ad`다.
+
 - Android ARM64 API 28 에뮬레이터에서 Release 단계4 전체 흐름을 실제 입력으로 확인했다. 지도 `4 / 4` 해금, 속성 이전, 충전·자동 발사, 스위치·문, 홀 성공, 클리어 팝업과 앱 치명적 예외 0건을 증거로 보존했다.
 - Web Release 서버는 기존 프로세스를 종료하고 PID 95164로 교체했으며 루트·번들 HTTP 200을 확인했다.
 - 전체 Flutter 테스트 최신 기준은 244개 통과이며 `flutter analyze`, Web Release, Android Release APK 빌드도 통과했다.

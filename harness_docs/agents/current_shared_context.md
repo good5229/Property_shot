@@ -5,8 +5,8 @@
 - 저장소: `Property_shot`, 브랜치 `commercial/wall-physics-qa`
 - 기준 기능: 한글 UI, 공의 속성 이전·복사, 고정 벽, 물체 연쇄 운동량, 홀 성공·결과 팝업, 4개 단계
 - 신규 구현: `TraitType.sharp`, `EntityType.balloon`, `EntityType.spikeSource`, 4단계 `풍선 터뜨리기`
-- 서버 규칙: 기존 서버를 먼저 종료한 뒤 Web release를 띄운다. PID 40530을 종료하고 최신 서버 PID 95164를 실행했으며 루트·번들 HTTP 200을 확인했다. 최신 `main.dart.js` 해시는 `403ce16e...`이다.
-- 최신 회귀 기준: 전체 `flutter test` 244개, `flutter analyze`, Web Release가 통과했다. 단계별 저장 리플레이 16개와 다중샷 20개 모두 결정론 재생을 통과했다. 최신 기능 기준에는 Debug 진단 한글 표시, 좁은 화면 줄바꿈, 재질별 물리 수치 회귀, 클리어 저장 순서 보강이 포함된다.
+- 서버 규칙: 기존 서버를 먼저 종료한 뒤 Web release를 띄운다. 기존 PID 95164를 종료하고 최신 빌드를 PID 31813 유지 세션으로 실행했다. 최신 `main.dart.js` 해시는 `8d93ef76...`이다.
+- 최신 회귀 기준: 전체 `flutter test` 245개, `flutter analyze`, Web·Android Release 빌드가 통과했다. 단계별 저장 리플레이 16개와 다중샷 20개 모두 결정론 재생을 통과했다. 최신 기능 기준에는 Debug 진단 한글 표시, 좁은 화면 줄바꿈, 재질별 물리 수치 회귀, 클리어 저장 순서 보강, `ProgressStore` 인스턴스별 쓰기 큐가 포함된다.
 - 단계4 실제 Web 증거: 390×844에서 시작·속성 팝업·속성 이전·조준·충전·충돌·결과 8장을 캡처했고 콘솔 오류 0건이다. 성공 상태의 `active_ball` 부재 예외는 `07ef7b3`에서 수정했다.
 - 모바일 컴파일: Flutter 표준 Android 호스트를 추가하고 JDK 17·Android SDK/NDK 환경에서 Debug·Release APK 컴파일을 통과했다. Android 실기기 실행·성능은 미검증이다.
 - Android ARM64 API 28 에뮬레이터에서 Release APK를 설치·실행하고 홈·1단계·무거운 돌 팝업·속성 옮기기 후 공 상태를 실제 입력으로 확인했다. 이는 런타임 스모크 증거이며 실기기 성능 검증으로 승격하지 않는다.

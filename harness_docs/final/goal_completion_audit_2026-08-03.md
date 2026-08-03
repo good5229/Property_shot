@@ -2,15 +2,26 @@
 
 기준일: 2026-08-03 KST
 
+## 최신 저장 동시성 보정
+
+- `ProgressStore`의 동일 인스턴스 작업을 `_writeTail` 기반 순차 큐로 묶어 클리어·최고 기록·보너스·복제 코어·초기화·전체 해금의 읽기-수정-쓰기가 서로 덮어쓰지 않게 했다.
+- 동시 클리어 3건, 최고 기록 2건, 보너스 기록을 동시에 요청해 클리어 집합·다음 해금 단계·최고 기록·보너스가 모두 보존되는 회귀를 추가했다.
+- 전체 `flutter test`: 최신 실행 기준 245개 통과
+- `flutter analyze`: 통과
+- `flutter build web --release`: 통과, `main.dart.js` SHA-256 `8d93ef76caafa5dbe97ce7a70c1f038987fb2ab81f68a89ba201bf5f97bb34ad`
+- `flutter build apk --release`: 통과, APK 57.3MB
+- Web 데모: 기존 PID 95164를 종료한 뒤 최신 빌드를 PID 31813 유지 세션에서 제공한다.
+- 변경 커밋: `74e86e5 fix: 동시 저장 순서 보장`, 원격 브랜치 푸시 완료
+
 ## 최신 감사 보정
 
 이 문서는 초기 감사 기록을 보존하면서 최신 실행 증거를 아래와 같이 추가한다.
 
-- 전체 `flutter test`: 최신 실행 기준 244개 통과
+- 전체 `flutter test`: 최신 실행 기준 245개 통과
 - `flutter analyze`: 통과
 - `flutter build web --release`: 통과
 - `flutter build apk --release`: 통과, ARM64 Android 런타임 설치에 사용한 최신 APK 57.3MB
-- Web 데모: 기존 프로세스를 종료한 뒤 `scripts/run_web_demo.sh`로 PID 95164를 8080에 실행하고 루트·`main.dart.js` HTTP 200 확인
+- Web 데모: 기존 프로세스를 종료한 뒤 최신 빌드를 PID 31813 유지 세션에서 8080에 실행. `main.dart.js` SHA-256은 `8d93ef76caafa5dbe97ce7a70c1f038987fb2ab81f68a89ba201bf5f97bb34ad`다.
 - Android ARM64 API 28 에뮬레이터: 지도 `4 / 4`, 4단계 설명, 뾰족함 속성 이전, 충전·자동 발사, 스위치·문, 홀 성공, 클리어 팝업을 실제 입력으로 재생
 - Android 실행 로그: 앱 `FATAL EXCEPTION` 0건. 단, 에뮬레이터는 실기기 성능·GPU·메모리·햅틱 증거가 아님
 - Debug 진단 화면의 내부 영문 ID 노출은 `4b83361`에서 한글 표시명 변환과 회귀 테스트로 수정
