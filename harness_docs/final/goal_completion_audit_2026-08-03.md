@@ -2,11 +2,25 @@
 
 기준일: 2026-08-03 KST
 
+## 최신 레벨·런타임 보정
+
+- 4단계 `balloon_crate`가 논리 보드 밖 `y=640`에 있던 P1 배치 결함을 `y=400`으로 수정했다. 화면 Golden에서 상자 전체가 보이고 하단 조작 패널에 가리지 않는 것을 확인했다.
+- 이동 가능한 초기·연쇄 엔티티의 히트박스가 논리 보드 안에 남는 경계 회귀를 추가했고, 네 단계 16방향·3개 힘 입력 192개에서 안전 중단·비유한 좌표·필드 이탈이 없음을 확인했다.
+- 홈 라우터와 플레이 화면에 동일 `ProgressStore`를 주입해 앱 한 세션의 진행 저장 큐를 공유한다. 실제 클리어 후 주입 저장소 재조회 위젯 회귀도 통과했다.
+- 고정 2발 리플레이 시드를 결정 격자 자동 탐색으로 바꿔 레벨 배치 변경에도 생성기가 검증된 2발 시드를 찾도록 했다.
+- 전체 `flutter test`: 최신 실행 기준 247개 통과
+- `flutter analyze`: 통과
+- `flutter build web --release`: 통과, `main.dart.js` SHA-256 `dd82d9304257e16161a62db9a4f1d72d5721c84903137e60bbfc9ca79cb17bda`
+- `flutter build apk --release`: 통과, APK 57.3MB, SHA-256 `246e6052aa8ab2ca5bcf275ab785c643a7469d0770f964fb7aa7e34a3dd5d854`
+- Web 데모: 이전 PID 31813을 종료한 뒤 최신 빌드를 PID 84934 유지 세션에서 제공한다.
+- Android ARM64 API 28 에뮬레이터: 최신 APK 설치·실행, 앱 PID 3708, 1080×1920 시작 화면 캡처, `FATAL EXCEPTION` 0건.
+- 변경 커밋: `5425dcb fix: 4단계 물체 경계와 저장소 공유 보강`, 원격 브랜치 푸시 완료
+
 ## 최신 저장 동시성 보정
 
 - `ProgressStore`의 동일 인스턴스 작업을 `_writeTail` 기반 순차 큐로 묶어 클리어·최고 기록·보너스·복제 코어·초기화·전체 해금의 읽기-수정-쓰기가 서로 덮어쓰지 않게 했다.
 - 동시 클리어 3건, 최고 기록 2건, 보너스 기록을 동시에 요청해 클리어 집합·다음 해금 단계·최고 기록·보너스가 모두 보존되는 회귀를 추가했다.
-- 전체 `flutter test`: 최신 실행 기준 245개 통과
+- 전체 `flutter test`: 최신 실행 기준 247개 통과
 - `flutter analyze`: 통과
 - `flutter build web --release`: 통과, `main.dart.js` SHA-256 `8d93ef76caafa5dbe97ce7a70c1f038987fb2ab81f68a89ba201bf5f97bb34ad`
 - `flutter build apk --release`: 통과, APK 57.3MB

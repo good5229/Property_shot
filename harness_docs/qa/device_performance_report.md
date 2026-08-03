@@ -5,10 +5,11 @@
 
 ## 최신 Release 빌드 기준 · 2026-08-03 KST
 
-- Web Release는 기존 데모를 종료한 뒤 최신 빌드를 PID 31813 유지 세션으로 교체했다. 최신 `main.dart.js` SHA-256은 `8d93ef76caafa5dbe97ce7a70c1f038987fb2ab81f68a89ba201bf5f97bb34ad`다.
+- Web Release는 기존 데모 PID 31813을 종료한 뒤 최신 빌드를 PID 84934 유지 세션으로 교체했다. 최신 `main.dart.js` SHA-256은 `dd82d9304257e16161a62db9a4f1d72d5721c84903137e60bbfc9ca79cb17bda`다.
 - Android Release APK는 최신 코드로 다시 빌드되어 57.3MB이며 ARM64 API 28 에뮬레이터에 설치·실행됐다.
-- 앱 PID 6769가 실행 중이고 최근 로그에서 앱 `FATAL EXCEPTION` 0건을 확인했다.
-- 전체 Flutter 테스트는 245개 통과했고 `ProgressStore` 동시 저장 회귀를 포함한다.
+- 앱 PID 3708이 실행 중이고 최근 로그에서 앱 `FATAL EXCEPTION` 0건을 확인했다.
+- 전체 Flutter 테스트는 247개 통과했고 저장소 공유·4단계 경계·고속 연쇄 회귀를 포함한다.
+- 최신 APK와 시작 화면 캡처는 `android-arm64-latest-layout-evidence.json` 및 `android-arm64-latest-layout.png`에 보존했다.
 - 실기기 FPS·GPU·메모리·터치 지연·햅틱은 여전히 미측정이다.
 
 ## 측정 원칙

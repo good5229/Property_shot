@@ -4,7 +4,7 @@
 
 ## 최신 기준
 
-작업별 커밋은 모두 원격 브랜치에 Push되어 있다. 최신 원격 HEAD는 `dae9f13`이다.
+작업별 커밋은 모두 원격 브랜치에 Push되어 있다. 최신 원격 HEAD는 `5425dcb`이다.
 
 | Commit | 내용 | Push |
 |---|---|---|
@@ -14,8 +14,9 @@
 | `6f774a1` | Android 단계4 전체 흐름 캡처·로그 증거 | 완료 |
 | `2b430d7` | 최신 Release 빌드·Web 서버 PID·검증 기준 갱신 | 완료 |
 | `74e86e5` | `ProgressStore` 동시 저장 순서 보장 및 회귀 | 완료 |
+| `5425dcb` | 4단계 물체 경계·저장소 공유·고속 회귀·리플레이·Golden 갱신 | 완료 |
 
-최신 검증 기준은 전체 Flutter 테스트 245개, `flutter analyze`, Web Release 빌드, Android Release APK 빌드다. 데모 서버는 기존 프로세스를 먼저 종료한 뒤 PID 31813 유지 세션으로 교체했으며, 최신 `main.dart.js` 해시는 `8d93ef76caafa5dbe97ce7a70c1f038987fb2ab81f68a89ba201bf5f97bb34ad`다. 최신 Android Release APK는 57.3MB이고 ARM64 에뮬레이터 설치·시작 스모크도 통과했다.
+최신 검증 기준은 전체 Flutter 테스트 247개, `flutter analyze`, Web Release 빌드, Android Release APK 빌드다. 데모 서버는 기존 PID 31813을 먼저 종료한 뒤 PID 84934 유지 세션으로 교체했으며, 최신 `main.dart.js` 해시는 `dd82d9304257e16161a62db9a4f1d72d5721c84903137e60bbfc9ca79cb17bda`다. 최신 Android Release APK는 57.3MB이고 ARM64 에뮬레이터 설치·시작 스모크와 한글 시작 화면 캡처를 통과했다.
 
 | Commit | 내용 | Push |
 |---|---|---|

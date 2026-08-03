@@ -1,5 +1,19 @@
 # 2026-08-03 단계4 실제 Web 조작 증거 포함 최신 검증
 
+## 최신 레벨·런타임 재검증
+
+- 전체 `flutter test`: 247개 통과
+- `flutter analyze`: 통과
+- 4단계 상자 `y=400` 배치와 초기·연쇄 이동 엔티티 보드 경계 회귀 통과
+- 네 단계 16방향·3개 힘 입력 192개에서 `chain_safety_stop`·비유한 좌표·히트박스 필드 이탈 없음
+- 실제 클리어 후 주입 `ProgressStore` 재조회 통합 회귀 통과
+- 단일 리플레이 16개·다중 리플레이 20개 생성·재생 통과
+- Web Release: 기존 PID 31813 종료 후 PID 84934 유지 세션으로 교체
+- Web `main.dart.js` SHA-256: `dd82d9304257e16161a62db9a4f1d72d5721c84903137e60bbfc9ca79cb17bda`
+- Android Release APK: 57.3MB, SHA-256 `246e6052aa8ab2ca5bcf275ab785c643a7469d0770f964fb7aa7e34a3dd5d854`
+- ARM64 API 28 에뮬레이터 설치·실행 성공, 앱 PID 3708, 1080×1920 시작 화면 캡처와 치명적 예외 0건 보존
+- 관련 커밋: `5425dcb`, 원격 푸시 완료
+
 ## 최신 Release 재검증 보정
 
 - 전체 `flutter test`: 245개 통과
