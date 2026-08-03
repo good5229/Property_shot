@@ -28,7 +28,7 @@ void main() {
 
   test('세션과 물리 필드를 내부 코드로 내보낸다', () {
     final telemetry = LocalPlayTelemetry(sessionId: '검증 세션');
-    telemetry.sessionStart(stage: 0);
+    telemetry.sessionStart(stage: 0, experimentVariant: 'guided');
     telemetry.record(
       '충돌',
       stage: 0,
@@ -45,6 +45,7 @@ void main() {
       'collision_resolved',
       'session_end',
     ]);
+    expect(telemetry.events.first['결과'], 'guided');
     expect(telemetry.exportJson(), contains('wall_top'));
     expect(telemetry.exportJson(), contains('is_replay'));
   });

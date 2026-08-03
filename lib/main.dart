@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'game/domain/game_state.dart';
@@ -10,6 +11,7 @@ import 'ui/game_feedback.dart';
 import 'ui/game_screen.dart';
 import 'ui/game_ball_painter.dart';
 import 'ui/play_telemetry.dart';
+import 'ui/tutorial_experiment.dart';
 
 String _stageIntroMessage(int levelIndex) {
   return switch (levelIndex) {
@@ -20,7 +22,7 @@ String _stageIntroMessage(int levelIndex) {
 }
 
 void main() {
-  runApp(const PropertyShotApp(showHome: true));
+  runApp(const PropertyShotApp(showHome: true, showDebugControls: kDebugMode));
 }
 
 class PropertyShotApp extends StatelessWidget {
@@ -32,6 +34,8 @@ class PropertyShotApp extends StatelessWidget {
     this.telemetry,
     this.fontFamilyOverride,
     this.loadGameAssets = true,
+    this.showDebugControls = false,
+    this.tutorialVariant = TutorialExperimentVariant.guided,
   });
 
   final GameState? initialState;
@@ -40,6 +44,8 @@ class PropertyShotApp extends StatelessWidget {
   final LocalPlayTelemetry? telemetry;
   final String? fontFamilyOverride;
   final bool loadGameAssets;
+  final bool showDebugControls;
+  final TutorialExperimentVariant tutorialVariant;
 
   @override
   Widget build(BuildContext context) {
@@ -68,19 +74,29 @@ class PropertyShotApp extends StatelessWidget {
         ),
       ),
       home: showHome && initialState == null
-          ? const _PropertyShotRouter()
+          ? _PropertyShotRouter(
+              showDebugControls: showDebugControls,
+              tutorialVariant: tutorialVariant,
+            )
           : GameScreen(
               initialState: initialState,
               showStageSelector: showStageSelector,
               telemetry: telemetry,
               loadGameAssets: loadGameAssets,
+              tutorialVariant: tutorialVariant,
             ),
     );
   }
 }
 
 class _PropertyShotRouter extends StatefulWidget {
-  const _PropertyShotRouter();
+  const _PropertyShotRouter({
+    required this.showDebugControls,
+    required this.tutorialVariant,
+  });
+
+  final bool showDebugControls;
+  final TutorialExperimentVariant tutorialVariant;
 
   @override
   State<_PropertyShotRouter> createState() => _PropertyShotRouterState();
@@ -93,6 +109,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _copyCoreRewarded = false;
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
+  late TutorialExperimentVariant _tutorialVariant = widget.tutorialVariant;
   final _progressStore = ProgressStore(stageCount: levels.length);
 
   @override
@@ -178,6 +195,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onExit: _returnHome,
         onCopyCoreEarned: _earnCopyCore,
         onLevelCleared: _recordLevelClear,
+        tutorialVariant: _tutorialVariant,
       );
     }
     if (_showStageSelect) {
@@ -190,15 +208,29 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return _HomeScreen(
       onStart: () => _startStage(0),
       onStageSelect: () => setState(() => _showStageSelect = true),
+      showDebugControls: widget.showDebugControls,
+      tutorialVariant: _tutorialVariant,
+      onTutorialVariantChanged: (variant) {
+        setState(() => _tutorialVariant = variant);
+      },
     );
   }
 }
 
 class _HomeScreen extends StatelessWidget {
-  const _HomeScreen({required this.onStart, required this.onStageSelect});
+  const _HomeScreen({
+    required this.onStart,
+    required this.onStageSelect,
+    required this.showDebugControls,
+    required this.tutorialVariant,
+    required this.onTutorialVariantChanged,
+  });
 
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
+  final bool showDebugControls;
+  final TutorialExperimentVariant tutorialVariant;
+  final ValueChanged<TutorialExperimentVariant> onTutorialVariantChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -210,6 +242,23 @@ class _HomeScreen extends StatelessWidget {
         child: Stack(
           children: [
             const Positioned.fill(child: _IslandBackdrop()),
+            if (showDebugControls)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: IconButton.filledTonal(
+                  key: const Key('tutorial_experiment_button'),
+                  tooltip: '튜토리얼 실험 조건',
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => _TutorialExperimentDialog(
+                      selected: tutorialVariant,
+                      onSelected: onTutorialVariantChanged,
+                    ),
+                  ),
+                  icon: const Icon(Icons.science_outlined),
+                ),
+              ),
             Positioned(
               top: 8,
               right: 8,
@@ -485,6 +534,62 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
             },
           ),
         ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('닫기'),
+        ),
+      ],
+    );
+  }
+}
+
+class _TutorialExperimentDialog extends StatefulWidget {
+  const _TutorialExperimentDialog({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final TutorialExperimentVariant selected;
+  final ValueChanged<TutorialExperimentVariant> onSelected;
+
+  @override
+  State<_TutorialExperimentDialog> createState() =>
+      _TutorialExperimentDialogState();
+}
+
+class _TutorialExperimentDialogState extends State<_TutorialExperimentDialog> {
+  late TutorialExperimentVariant _selected = widget.selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('tutorial_experiment_dialog'),
+      title: const Text('튜토리얼 실험 조건'),
+      content: RadioGroup<TutorialExperimentVariant>(
+        groupValue: _selected,
+        onChanged: (next) {
+          if (next == null) {
+            return;
+          }
+          setState(() => _selected = next);
+          widget.onSelected(next);
+          Navigator.of(context).pop();
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final variant in TutorialExperimentVariant.values)
+              RadioListTile<TutorialExperimentVariant>(
+                key: Key('tutorial_variant_${variant.code}'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(variant.label),
+                subtitle: Text(variant.description),
+                value: variant,
+              ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

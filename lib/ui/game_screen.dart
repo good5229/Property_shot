@@ -19,6 +19,7 @@ import 'game_feedback.dart';
 import 'game_ball_painter.dart';
 import 'bonus_goal.dart';
 import 'play_telemetry.dart';
+import 'tutorial_experiment.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({
@@ -30,6 +31,7 @@ class GameScreen extends StatefulWidget {
     this.onCopyCoreEarned,
     this.onLevelCleared,
     this.loadGameAssets = true,
+    this.tutorialVariant = TutorialExperimentVariant.guided,
   });
 
   final GameState? initialState;
@@ -39,6 +41,7 @@ class GameScreen extends StatefulWidget {
   final ValueChanged<int>? onCopyCoreEarned;
   final ValueChanged<int>? onLevelCleared;
   final bool loadGameAssets;
+  final TutorialExperimentVariant tutorialVariant;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -90,7 +93,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             .createState(0, productRules: true)
             .copyWith(message: _levelIntroMessage(0));
     _stageCopyCoreAtStart = _state.copyCoreCount;
-    _telemetry.sessionStart(stage: _state.levelIndex);
+    _telemetry.sessionStart(
+      stage: _state.levelIndex,
+      experimentVariant: widget.tutorialVariant.code,
+    );
     if (widget.initialState != null) {
       _unlockedLevel = levels.length - 1;
     }
@@ -1431,6 +1437,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   EntityState? get _tutorialTarget {
+    if (widget.tutorialVariant == TutorialExperimentVariant.silent) {
+      return null;
+    }
     if (_state.levelIndex != 0 ||
         _state.shotCount != 0 ||
         _state.phase != GamePhase.planning ||
@@ -1446,8 +1455,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return _state.activeBall;
   }
 
-  String get _tutorialHint =>
-      _state.equippedTrait == null ? '바위를 눌러 무거움을 골라요' : '공을 길게 눌러 발사해요';
+  String get _tutorialHint {
+    if (widget.tutorialVariant == TutorialExperimentVariant.action) {
+      return _state.equippedTrait == null
+          ? '속성 있는 물체를 눌러 공에 옮겨요'
+          : '공을 길게 눌러 힘을 모으고 손을 떼요';
+    }
+    return _state.equippedTrait == null ? '바위를 눌러 무거움을 골라요' : '공을 길게 눌러 발사해요';
+  }
 }
 
 class _GameplayBackdrop extends StatelessWidget {

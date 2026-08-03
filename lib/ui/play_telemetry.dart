@@ -77,8 +77,13 @@ class LocalPlayTelemetry {
     _events.add(event);
   }
 
-  void sessionStart({required int stage}) {
-    record('세션 시작', stage: stage, eventCode: 'session_start');
+  void sessionStart({required int stage, String? experimentVariant}) {
+    record(
+      '세션 시작',
+      stage: stage,
+      eventCode: 'session_start',
+      result: experimentVariant,
+    );
   }
 
   void sessionEnd({required int stage}) {
