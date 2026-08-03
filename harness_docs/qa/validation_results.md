@@ -1,5 +1,17 @@
 # 2026-08-03 단계4 실제 Web 조작 증거 포함 최신 검증
 
+## 최신 런타임 자산·Web 성능 보정 · 2026-08-03 KST
+
+- `flutter analyze`: 통과
+- `flutter build web --release`: 통과, `main.dart.js` SHA-256 `7adaeb81babcfb2789021c3cc07452aa59bc2bbd33c095211221c3ae46a382e9`
+- Web 데모: 기존 PID `61485` 종료 후 PID `71544`로 8080 교체, 루트·번들 HTTP 200
+- `flutter build apk --release`: 통과, APK 57.3MB, SHA-256 `497370fc5f7d6e325f3a5f7c71064bb13d04b9892eebeab98a995d4559eda09f`
+- Android ARM64 API 28 에뮬레이터: 최종 APK 재설치·실행 성공, 앱 PID `4897`, 최근 `FATAL EXCEPTION` 0건
+- 런타임 물체 이미지 3종은 256px 목표 크기로 병렬 디코드하고 `ui.Codec`와 게임 제거 시 소유 `ui.Image`를 해제한다.
+- 5초 워밍업 Web 감사: 390×844 발사 평균·p95 `25.419·66.6ms`, 768×1024 `42.222·150ms`, 콘솔 오류 0건. 60FPS p95 게이트는 미통과다.
+- 보드·물체 `ui.Picture` 캐시는 Golden 회귀 또는 성능 악화로 제거했으며, 최신 원자료는 [web_performance_latest.json](web_performance_latest.json)이다.
+- Android ARM64 API 28 Release 앱은 앞선 재검증에서 설치·실행·4단계 실제 입력 스모크와 `FATAL EXCEPTION` 0건을 확인했다. 새 Web 최적화가 Android Release에 포함됐는지는 별도 APK 재빌드·재측정 대상이다.
+
 ## 최신 저장·계측·릴리스 재검증
 
 - 안정 단계 ID 키와 기존 인덱스 키의 마이그레이션·배열 순서 변경 회귀 통과
