@@ -26,7 +26,7 @@ class ProgressStore {
             : stageIds,
       );
 
-  static const saveVersion = 1;
+  static const saveVersion = 2;
   static const clearedLevelsKey = 'property_shot_cleared_levels';
   static const clearedStageIdsKey = 'property_shot_cleared_stage_ids';
   static const unlockedLevelKey = 'property_shot_unlocked_level';

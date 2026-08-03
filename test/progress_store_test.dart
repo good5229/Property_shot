@@ -13,7 +13,7 @@ void main() {
 
     expect(snapshot.unlockedLevel, 0);
     expect(snapshot.clearedLevels, isEmpty);
-    expect(preferences.getInt(ProgressStore.saveVersionKey), 1);
+    expect(preferences.getInt(ProgressStore.saveVersionKey), 2);
     expect(preferences.getStringList(ProgressStore.clearedLevelsKey), isEmpty);
   });
 

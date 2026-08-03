@@ -1585,3 +1585,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: 단계 정의에 안정 ID를 추가하고 `ProgressStore`가 단계 ID 키와 기존 인덱스 키를 함께 읽고 쓰도록 보강했다. 앱 저장소 생성 지점 연결과 순서 변경 회귀를 이어서 추가한다.
 2026-08-03: 단계 ID·로컬 계측 변경 후 전체 회귀 251개, Web·Android Release 빌드, 8080 서버 재시작과 Android ARM64 재설치·실행을 완료했다. 최신 Android 시작 화면은 한글 UI·공·돌·상자·홀을 확인했고 치명적 예외는 0건이다.
 2026-08-03: 로컬 계측 저장·안정 단계 ID·마이그레이션 호환 회귀를 `bbd9117`로 commit하고 `commercial/wall-physics-qa` 원격에 push했다. 전체 회귀는 251개다.
+2026-08-03: 안정 단계 ID 저장 키 추가 후 `saveVersion`이 1에 머물러 있던 스키마 표시 불일치를 발견했다. 버전을 2로 올리고 신규·구버전 마이그레이션 회귀를 보강한다.
