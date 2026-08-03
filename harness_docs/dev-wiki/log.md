@@ -1551,3 +1551,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: Android Debug 빌드가 unsupported Gradle project로 중단된 원인을 확인했다. 저장소에 Android 플랫폼 호스트가 없어 Flutter 표준 Android 프로젝트를 추가해 모바일 컴파일 게이트를 복구한다.
 2026-08-03: Android Debug APK와 Release APK 컴파일에 성공했다. Flutter 플랫폼 생성이 `.metadata`의 기존 iOS·Web 항목을 덮어쓴 것을 확인해 기존 플랫폼 이력을 보존하고, APK 컴파일과 실기기 실행 검증을 별도로 기록한다.
 2026-08-03: 연결된 물리 장치는 없고 Pixel 3 API 30 AVD는 x86 시스템 이미지인데 현재 Apple Silicon Emulator에는 x86 QEMU가 없어 기동되지 않았다. APK 컴파일 성공과 Android 런타임 미검증을 분리해 기록한다.
+2026-08-03: Apple Silicon 호환 ARM64 Android API 28 에뮬레이터에서 Release APK를 설치·실행하고 홈·1단계·무거운 돌 정보 팝업·속성 옮기기 후 공 상태를 실제 입력으로 확인했다. 앱 치명적 예외는 없었으며 화면 증거와 런타임 한계를 별도 QA 문서에 추가한다.

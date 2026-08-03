@@ -1,0 +1,28 @@
+{
+  "platform": "Android",
+  "runtime": "ARM64 API 28 에뮬레이터",
+  "device_profile": "PropertyShot_ARM64 / 1080x1920 세로",
+  "build": "build/app/outputs/flutter-apk/app-release.apk",
+  "install": "성공",
+  "launch": "성공",
+  "screenshots": [
+    "screenshots/commercial-vertical-slice/android-arm64-start.png",
+    "screenshots/commercial-vertical-slice/android-arm64-play.png",
+    "screenshots/commercial-vertical-slice/android-arm64-source-popup.png",
+    "screenshots/commercial-vertical-slice/android-arm64-property-transferred.png"
+  ],
+  "interactions": [
+    "홈에서 첫 섬에서 시작하기 선택",
+    "1단계 진입",
+    "무거운 돌 선택",
+    "무거운 돌 정보 팝업 확인",
+    "속성 옮기기 선택",
+    "공 속성 무거움 상태 확인"
+  ],
+  "app_fatal_exceptions": 0,
+  "limitations": [
+    "에뮬레이터 런타임 스모크이며 실제 Android 기기 성능 측정이 아님",
+    "프레임 시간·GPU·메모리·햅틱 체감은 미측정",
+    "AndroidRuntime 로그에는 adb input 명령의 정상 종료 기록이 포함됨"
+  ]
+}

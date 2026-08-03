@@ -15,7 +15,7 @@
 | 한글 UI·화면 배치 | Web 확인 | 실제 기기 Safe Area 추가 필요 |
 | Web Release 빌드 | 통과 | 릴리스 빌드·HTTP 200 |
 | iOS Release 설치 | 미완료 | 서명 팀·프로비저닝 필요 |
-| Android Release | 컴파일 통과 | Debug·Release APK 생성, 서명·실기기 설치는 미검증 |
+| Android Release | 컴파일·ARM64 에뮬레이터 실행 스모크 통과 | Debug·Release APK 생성, 실제 기기 서명·설치·성능은 미검증 |
 | 실제 60FPS | 미검증 | iPhone 12급 실기기 필요 |
 | 초보자 튜토리얼 이해도 | 미검증 | 외부 플레이테스트 필요 |
 | 튜토리얼 조건군 선택·계측 | 자동 통과 | 개발 전용 안내형·행동 유도형·무설명형 선택기와 세션 조건 코드 회귀 |

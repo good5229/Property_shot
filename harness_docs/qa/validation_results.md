@@ -18,7 +18,8 @@
 - 최신 `main.dart.js` 체크섬은 `768617ddd3ac7499e98e7aec3bfa8c7129589039c13edf3c9fb94f891e794666`이다.
 - 실제 iOS·Android 기기와 외부 플레이테스트는 여전히 미검증이다.
 - Android 표준 플랫폼 호스트를 추가한 뒤 `flutter build apk --debug`와 `flutter build apk --release`가 통과했다. Release APK는 57.2MB이며 서명·실기기 설치·입력·성능은 별도 미검증이다.
-- 연결된 물리 장치는 없으며, 기존 Pixel 3 API 30 AVD는 x86 이미지라 Apple Silicon Emulator의 실행 파일 부재로 기동하지 못했다.
+- Apple Silicon 호환 Android ARM64 API 28 에뮬레이터에서 Release APK 설치·실행과 홈→1단계→물체 팝업→속성 옮기기 흐름을 실제 입력으로 확인했다. 실행 캡처와 앱 치명적 예외 0건은 `android-arm64-evidence.json`에 보존했지만, 실기기 성능·프레임·햅틱은 여전히 미검증이다.
+- 기존 Pixel 3 API 30 AVD는 x86 이미지라 Apple Silicon Emulator에서 기동하지 못하는 호환성 한계가 남아 있다.
 
 저장 리플레이 검증:
 
