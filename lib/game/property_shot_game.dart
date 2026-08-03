@@ -65,7 +65,9 @@ class PropertyShotGame extends FlameGame {
   Timer? _animationCompletionTimer;
   final Set<String> _reportedImpactKeys = <String>{};
   final Map<EntityType, ui.Image> _objectImages = {};
+  final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
   static const int _runtimeAssetDecodeSize = 256;
+  static const FilterQuality _runtimeFilterQuality = FilterQuality.medium;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
   static const Offset _lightDirection = Offset(-0.72, -0.69);
@@ -252,6 +254,10 @@ class PropertyShotGame extends FlameGame {
       image.dispose();
     }
     _objectImages.clear();
+    for (final cached in _staticEntityPictures.values) {
+      cached.picture.dispose();
+    }
+    _staticEntityPictures.clear();
     super.onRemove();
   }
 
@@ -289,7 +295,7 @@ class PropertyShotGame extends FlameGame {
       if (animated && entity.id == 'active_ball') {
         continue;
       }
-      _drawEntity(canvas, entity, false);
+      _drawEntityWithCache(canvas, entity, false, animated: animated);
     }
     if (animated) {
       _drawAnimatedBall(canvas);
@@ -1144,6 +1150,81 @@ class PropertyShotGame extends FlameGame {
     _drawEntityIcon(canvas, entity);
   }
 
+  void _drawEntityWithCache(
+    Canvas canvas,
+    EntityState entity,
+    bool highlighted, {
+    required bool animated,
+  }) {
+    if (!_canCacheEntity(
+      entity,
+      highlighted: highlighted,
+      animated: animated,
+    )) {
+      _drawEntity(canvas, entity, highlighted);
+      return;
+    }
+    final signature = _staticEntitySignature(entity);
+    final previous = _staticEntityPictures[entity.id];
+    final _StaticEntityPicture cached;
+    if (previous != null && previous.signature == signature) {
+      cached = previous;
+    } else {
+      cached = _recordStaticEntity(entity, signature, highlighted);
+    }
+    if (previous != null && !identical(previous, cached)) {
+      previous.picture.dispose();
+    }
+    _staticEntityPictures[entity.id] = cached;
+    canvas.drawPicture(cached.picture);
+  }
+
+  bool _canCacheEntity(
+    EntityState entity, {
+    required bool highlighted,
+    required bool animated,
+  }) {
+    if (!loadVisualAssets || highlighted || !entity.active || entity.isCircle) {
+      return false;
+    }
+    if (animated && _animationMoves.any((move) => move.entityId == entity.id)) {
+      return false;
+    }
+    // Trait sources pulse during planning, while an opening gate has a
+    // time-based deformation. Both must keep their live render path.
+    if (entity.traits.isNotEmpty || entity.visualState == 'opening') {
+      return false;
+    }
+    return true;
+  }
+
+  String _staticEntitySignature(EntityState entity) {
+    return [
+      state.phase.name,
+      entity.type.name,
+      entity.position.x,
+      entity.position.y,
+      entity.size.x,
+      entity.size.y,
+      entity.active,
+      entity.solid,
+      entity.open,
+      entity.pressed,
+      entity.visualState,
+    ].join('|');
+  }
+
+  _StaticEntityPicture _recordStaticEntity(
+    EntityState entity,
+    String signature,
+    bool highlighted,
+  ) {
+    final recorder = ui.PictureRecorder();
+    final pictureCanvas = Canvas(recorder);
+    _drawEntity(pictureCanvas, entity, highlighted);
+    return _StaticEntityPicture(signature, recorder.endRecording());
+  }
+
   void _drawBalloon(Canvas canvas, EntityState entity, Offset center) {
     final radius = entity.radius;
     if (entity.visualState == 'popped') {
@@ -1712,7 +1793,7 @@ class PropertyShotGame extends FlameGame {
     };
     final extrusionPaint = Paint()
       ..colorFilter = const ColorFilter.mode(Color(0xFF17231E), BlendMode.srcIn)
-      ..filterQuality = FilterQuality.high;
+      ..filterQuality = _runtimeFilterQuality;
     for (var depth = extrusion; depth >= 2; depth -= 2) {
       canvas.drawImageRect(
         image,
@@ -1723,7 +1804,7 @@ class PropertyShotGame extends FlameGame {
     }
     final outlinePaint = Paint()
       ..colorFilter = const ColorFilter.mode(Color(0xFF24352D), BlendMode.srcIn)
-      ..filterQuality = FilterQuality.high;
+      ..filterQuality = _runtimeFilterQuality;
     for (final offset in const [
       Offset(-1.5, 0),
       Offset(1.5, 0),
@@ -1736,7 +1817,7 @@ class PropertyShotGame extends FlameGame {
       image,
       source,
       target,
-      Paint()..filterQuality = FilterQuality.high,
+      Paint()..filterQuality = _runtimeFilterQuality,
     );
     _drawRasterSurfaceFinish(canvas, entity, target);
     canvas.restore();
@@ -2747,6 +2828,13 @@ class _MotionVisual {
   final double scaleY;
   final double bob;
   final double impact;
+}
+
+class _StaticEntityPicture {
+  const _StaticEntityPicture(this.signature, this.picture);
+
+  final String signature;
+  final ui.Picture picture;
 }
 
 double mathMin(double a, double b) => math.min(a, b);
