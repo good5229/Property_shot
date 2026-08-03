@@ -67,6 +67,25 @@ void main() {
     expect(snapshot.copyCoreRewarded, isTrue);
   });
 
+  test('앱 재실행 뒤 클리어·기록·보너스·복제 코어를 복원한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final firstRun = ProgressStore(stageCount: 4);
+
+    await firstRun.recordStageClear(0);
+    await firstRun.recordBestShot(0, 2);
+    await firstRun.recordBonusGoal(0);
+    await firstRun.recordCopyCore(3, true);
+
+    final afterRestart = await ProgressStore(stageCount: 4).load();
+
+    expect(afterRestart.clearedLevels, contains(0));
+    expect(afterRestart.unlockedLevel, 1);
+    expect(afterRestart.bestShots[0], 2);
+    expect(afterRestart.bonusGoals, contains(0));
+    expect(afterRestart.copyCoreCount, 3);
+    expect(afterRestart.copyCoreRewarded, isTrue);
+  });
+
   test('범위를 벗어난 단계 기록은 저장하지 않는다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 

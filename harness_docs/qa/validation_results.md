@@ -3,7 +3,7 @@
 | 명령 | 결과 |
 |---|---|
 | `flutter analyze` | 통과, 문제 없음 |
-| 전체 `flutter test` | 236개 통과 |
+| 전체 `flutter test` | 237개 통과 |
 | `test/multi_shot_analyzer_test.dart` | 통과 |
 | `test/multi_replay_fixture_test.dart` | 20개 시퀀스 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
