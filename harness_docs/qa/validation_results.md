@@ -680,3 +680,11 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 | 서버 | 기존 PID 44882 종료, PID 67394에서 루트·`main.dart.js` HTTP 200 |
 
 실제 iOS·Android 접근성·프레임·햅틱, 사용자 플레이테스트, 생성 도구 약관의 최종 법무 확인은 아직 제품 증거가 아니다.
+## 2026-08-03 최종 품질 실험 기준선
+
+- 현재 브랜치 `commercial/wall-physics-qa`, 커밋 `e6a6b54` 기준이다.
+- 비다중샷 전체 회귀 215개와 다중샷 물리 분석 1개가 통과했다.
+- `flutter analyze`와 `flutter build web --release`가 통과했다.
+- Web 데모는 기존 서버를 종료한 뒤 PID 85251로 교체했고 루트·`main.dart.js` HTTP 200을 확인했다.
+- 네 단계 초기 상태 재현 명령은 `dart run tool/baseline_snapshot.dart`이며, 저장 키·미검증 범위는 `harness_docs/qa/experiment_baseline_2026-08-03.md`에 기록했다.
+- 실제 iPhone·iPad·사용자 플레이테스트·저장 손상 복구·Web/iOS 결과 동일성은 아직 검증하지 않았다.
