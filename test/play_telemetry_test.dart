@@ -48,4 +48,42 @@ void main() {
     expect(telemetry.exportJson(), contains('wall_top'));
     expect(telemetry.exportJson(), contains('is_replay'));
   });
+
+  test('최종 실험 계획의 필수 이벤트 코드가 한글 유형과 함께 유지된다', () {
+    final telemetry = LocalPlayTelemetry(sessionId: '이벤트 검증');
+    const types = {
+      '단계 시작': 'stage_enter',
+      '속성 확인': 'object_inspected',
+      '속성 이전 열기': 'attribute_transfer_opened',
+      '속성 이전': 'attribute_transferred',
+      '속성 복사': 'attribute_copied',
+      '속성 행동 취소': 'attribute_action_cancelled',
+      '조준 시작': 'aim_started',
+      '조준 방향 변경': 'aim_direction_changed',
+      '충전 시작': 'charge_started',
+      '충전 종료': 'charge_released',
+      '발사': 'shot_fired',
+      '충돌': 'collision_resolved',
+      '연쇄 이동': 'object_started_moving',
+      '물체 정지': 'object_stopped',
+      '속성 소모': 'attribute_consumed',
+      '스위치 작동': 'switch_activated',
+      '문 열림': 'door_opened',
+      '풍선 변형': 'balloon_deformed',
+      '풍선 터짐': 'balloon_popped',
+      '점착 정지': 'ball_stuck',
+      '홀 진입': 'ball_entered_hole',
+      '클리어': 'stage_cleared',
+      '실패': 'stage_failed_or_reset',
+      '힌트 노출': 'hint_exposed',
+      '재시도': 'retry_pressed',
+      '단계 종료': 'stage_exit',
+    };
+
+    for (final type in types.keys) {
+      telemetry.record(type, stage: 0);
+    }
+
+    expect(telemetry.events.map((event) => event['event_code']), types.values);
+  });
 }
