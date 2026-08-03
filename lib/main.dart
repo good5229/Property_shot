@@ -14,6 +14,25 @@ import 'ui/play_telemetry.dart';
 const _copyCoreCountKey = 'property_shot_copy_core_count';
 const _copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
 const _unlockedLevelKey = 'property_shot_unlocked_level';
+const _legacyUnlockedLevelKey = 'unlocked_level';
+const _clearedLevelsKey = 'property_shot_cleared_levels';
+
+Set<int> _readClearedLevels(SharedPreferences preferences) {
+  return (preferences.getStringList(_clearedLevelsKey) ?? const <String>[])
+      .map(int.tryParse)
+      .whereType<int>()
+      .where((index) => index >= 0 && index < levels.length)
+      .toSet();
+}
+
+int _unlockedLevelFromCleared(Set<int> clearedLevels) {
+  var unlockedLevel = 0;
+  while (unlockedLevel < levels.length - 1 &&
+      clearedLevels.contains(unlockedLevel)) {
+    unlockedLevel++;
+  }
+  return unlockedLevel;
+}
 
 String _stageIntroMessage(int levelIndex) {
   return switch (levelIndex) {
@@ -96,6 +115,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int _copyCoreCount = 0;
   bool _copyCoreRewarded = false;
   int _unlockedLevel = 0;
+  Set<int> _clearedLevels = <int>{};
 
   @override
   void initState() {
@@ -110,13 +130,26 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       if (!mounted) {
         return;
       }
+      final clearedLevels = _readClearedLevels(preferences);
+      final storedUnlocked = math.min(
+        levels.length - 1,
+        math.max(
+          preferences.getInt(_unlockedLevelKey) ?? 0,
+          preferences.getInt(_legacyUnlockedLevelKey) ?? 0,
+        ),
+      );
+      for (var index = 0; index < storedUnlocked; index++) {
+        clearedLevels.add(index);
+      }
+      final unlockedLevel = math.max(
+        storedUnlocked,
+        _unlockedLevelFromCleared(clearedLevels),
+      );
       setState(() {
         _copyCoreCount = preferences.getInt(_copyCoreCountKey) ?? 0;
         _copyCoreRewarded = preferences.getBool(_copyCoreRewardedKey) ?? false;
-        _unlockedLevel = (preferences.getInt(_unlockedLevelKey) ?? 0).clamp(
-          0,
-          levels.length - 1,
-        );
+        _clearedLevels = clearedLevels;
+        _unlockedLevel = unlockedLevel;
       });
     } on Exception {
       // 저장소를 사용할 수 없어도 기본 진행 상태로 홈을 표시한다.
@@ -154,15 +187,25 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _saveCopyCore();
   }
 
-  void _unlockLevel(int index) {
-    if (index <= _unlockedLevel) {
+  void _recordLevelClear(int levelIndex) {
+    if (levelIndex < 0 || levelIndex >= levels.length) {
       return;
     }
-    setState(() => _unlockedLevel = index);
+    final clearedLevels = {..._clearedLevels, levelIndex};
+    final unlockedLevel = _unlockedLevelFromCleared(clearedLevels);
+    setState(() {
+      _clearedLevels = clearedLevels;
+      _unlockedLevel = math.max(_unlockedLevel, unlockedLevel);
+    });
     unawaited(
-      SharedPreferences.getInstance().then(
-        (preferences) => preferences.setInt(_unlockedLevelKey, index),
-      ),
+      SharedPreferences.getInstance().then((preferences) async {
+        await preferences.setStringList(
+          _clearedLevelsKey,
+          (clearedLevels.toList()..sort()).map((index) => '$index').toList(),
+        );
+        await preferences.setInt(_unlockedLevelKey, unlockedLevel);
+        await preferences.setInt(_legacyUnlockedLevelKey, unlockedLevel);
+      }),
     );
   }
 
@@ -183,7 +226,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         showStageSelector: false,
         onExit: _returnHome,
         onCopyCoreEarned: _earnCopyCore,
-        onLevelUnlocked: _unlockLevel,
+        onLevelCleared: _recordLevelClear,
       );
     }
     if (_showStageSelect) {

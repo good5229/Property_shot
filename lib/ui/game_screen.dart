@@ -28,7 +28,7 @@ class GameScreen extends StatefulWidget {
     this.telemetry,
     this.onExit,
     this.onCopyCoreEarned,
-    this.onLevelUnlocked,
+    this.onLevelCleared,
     this.loadGameAssets = true,
   });
 
@@ -37,7 +37,7 @@ class GameScreen extends StatefulWidget {
   final LocalPlayTelemetry? telemetry;
   final VoidCallback? onExit;
   final ValueChanged<int>? onCopyCoreEarned;
-  final ValueChanged<int>? onLevelUnlocked;
+  final ValueChanged<int>? onLevelCleared;
   final bool loadGameAssets;
 
   @override
@@ -174,7 +174,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     setState(() => _unlockedLevel = next);
-    widget.onLevelUnlocked?.call(next);
     unawaited(
       SharedPreferences.getInstance().then(
         (preferences) => preferences.setInt(_unlockedLevelKey, next),
@@ -343,6 +342,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       physicsEvents: result.physicsEvents,
     );
     if (result.state.phase == GamePhase.success) {
+      widget.onLevelCleared?.call(result.state.levelIndex);
       if (_bonusGoalReached(result)) {
         unawaited(_recordBonusGoal(result.state.levelIndex));
       }
@@ -1875,7 +1875,7 @@ String _bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
 
 String _bonusGoalKey(int levelIndex) => 'bonus_goal_level_$levelIndex';
 
-const _unlockedLevelKey = 'unlocked_level';
+const _unlockedLevelKey = 'property_shot_unlocked_level';
 
 String _levelObjective(int levelIndex) {
   return switch (levelIndex) {

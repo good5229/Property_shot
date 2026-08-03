@@ -75,6 +75,32 @@ void main() {
     expect(find.text('4. 풍선 터뜨리기'), findsOneWidget);
   });
 
+  testWidgets('단계별 클리어 기록이 섬 지도 해금을 복원한다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'property_shot_cleared_levels': ['0', '1', '2', '3'],
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNothing);
+  });
+
+  testWidgets('기존 게임 화면 해금 기록도 섬 지도에서 호환한다', (tester) async {
+    SharedPreferences.setMockInitialValues({'unlocked_level': 3});
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNothing);
+  });
+
   testWidgets('홈의 첫 섬 시작 버튼은 첫 스테이지 플레이로 이동한다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pump();
