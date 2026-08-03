@@ -88,36 +88,27 @@ class ProgressStore {
     final preferences = await SharedPreferences.getInstance();
     final current = read(preferences);
     final clearedLevels = {...current.clearedLevels, levelIndex};
-    await _write(
-      preferences,
-      ProgressSnapshot(
-        clearedLevels: clearedLevels,
-        unlockedLevel: _maxInt(
-          current.unlockedLevel,
-          _unlockedLevelFromCleared(clearedLevels),
-        ),
-        bestShots: current.bestShots,
-        bonusGoals: current.bonusGoals,
-        copyCoreCount: current.copyCoreCount,
-        copyCoreRewarded: current.copyCoreRewarded,
-      ),
+    final unlockedLevel = _maxInt(
+      current.unlockedLevel,
+      _unlockedLevelFromCleared(clearedLevels),
+    );
+    await _writeVersion(preferences);
+    await preferences.setStringList(
+      clearedLevelsKey,
+      (clearedLevels.toList()..sort()).map((index) => '$index').toList(),
+    );
+    await preferences.setInt(unlockedLevelKey, _clampLevel(unlockedLevel));
+    await preferences.setInt(
+      legacyUnlockedLevelKey,
+      _clampLevel(unlockedLevel),
     );
   }
 
   Future<void> recordCopyCore(int count, bool rewarded) async {
     final preferences = await SharedPreferences.getInstance();
-    final current = read(preferences);
-    await _write(
-      preferences,
-      ProgressSnapshot(
-        clearedLevels: current.clearedLevels,
-        unlockedLevel: current.unlockedLevel,
-        bestShots: current.bestShots,
-        bonusGoals: current.bonusGoals,
-        copyCoreCount: count,
-        copyCoreRewarded: rewarded,
-      ),
-    );
+    await _writeVersion(preferences);
+    await preferences.setInt(copyCoreCountKey, count.clamp(0, 999));
+    await preferences.setBool(copyCoreRewardedKey, rewarded);
   }
 
   Future<void> recordBestShot(int levelIndex, int shotCount) async {
@@ -126,24 +117,13 @@ class ProgressStore {
     }
     final preferences = await SharedPreferences.getInstance();
     final current = read(preferences);
-    final bestShots = {...current.bestShots};
-    final previous = bestShots[levelIndex];
+    final previous = current.bestShots[levelIndex];
     if (previous != null && previous <= shotCount) {
-      await _write(preferences, current);
+      await _writeVersion(preferences);
       return;
     }
-    bestShots[levelIndex] = shotCount;
-    await _write(
-      preferences,
-      ProgressSnapshot(
-        clearedLevels: current.clearedLevels,
-        unlockedLevel: current.unlockedLevel,
-        bestShots: bestShots,
-        bonusGoals: current.bonusGoals,
-        copyCoreCount: current.copyCoreCount,
-        copyCoreRewarded: current.copyCoreRewarded,
-      ),
-    );
+    await _writeVersion(preferences);
+    await preferences.setInt(bestShotKey(levelIndex), shotCount);
   }
 
   Future<void> recordBonusGoal(int levelIndex) async {
@@ -151,19 +131,8 @@ class ProgressStore {
       return;
     }
     final preferences = await SharedPreferences.getInstance();
-    final current = read(preferences);
-    final bonusGoals = {...current.bonusGoals, levelIndex};
-    await _write(
-      preferences,
-      ProgressSnapshot(
-        clearedLevels: current.clearedLevels,
-        unlockedLevel: current.unlockedLevel,
-        bestShots: current.bestShots,
-        bonusGoals: bonusGoals,
-        copyCoreCount: current.copyCoreCount,
-        copyCoreRewarded: current.copyCoreRewarded,
-      ),
-    );
+    await _writeVersion(preferences);
+    await preferences.setBool(bonusGoalKey(levelIndex), true);
   }
 
   String bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
@@ -172,6 +141,10 @@ class ProgressStore {
 
   int unlockedLevelFromCleared(Set<int> clearedLevels) {
     return _unlockedLevelFromCleared(clearedLevels);
+  }
+
+  Future<void> _writeVersion(SharedPreferences preferences) {
+    return preferences.setInt(saveVersionKey, saveVersion);
   }
 
   Future<void> _write(
