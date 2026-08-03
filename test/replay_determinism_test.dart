@@ -82,4 +82,100 @@ void main() {
       }
     }
   });
+
+  test('네 단계의 다방향 고속 입력은 연쇄 안전 중단과 비유한 좌표 없이 끝난다', () {
+    final directions = [
+      for (var index = 0; index < 16; index++)
+        Vec2(math.cos(index * math.pi / 8), math.sin(index * math.pi / 8)),
+    ];
+    const powers = [0.65, 0.85, 1.0];
+
+    for (var levelIndex = 0; levelIndex < levels.length; levelIndex++) {
+      final state = levels[levelIndex].createState(
+        levelIndex,
+        productRules: true,
+        copyCoreCount: 1,
+      );
+      for (final entity in state.entities.where(
+        (entity) => entity.movable && entity.type != EntityType.hole,
+      )) {
+        expect(entity.hitBounds.left, greaterThanOrEqualTo(-0.01));
+        expect(entity.hitBounds.top, greaterThanOrEqualTo(-0.01));
+        expect(entity.hitBounds.right, lessThanOrEqualTo(logicalSize.x + 0.01));
+        expect(
+          entity.hitBounds.bottom,
+          lessThanOrEqualTo(logicalSize.y + 0.01),
+          reason: '단계 ${levelIndex + 1}, 초기 엔티티 ${entity.id}',
+        );
+      }
+      for (final direction in directions) {
+        for (final power in powers) {
+          final result = resolver.resolve(
+            state,
+            ShotInput(direction: direction, power: power),
+          );
+
+          expect(
+            result.chainSafetyDiagnostics,
+            isEmpty,
+            reason: '단계 ${levelIndex + 1}, 방향 $direction, 힘 $power',
+          );
+          expect(
+            result.events,
+            isNot(contains('chain_safety_stop')),
+            reason: '단계 ${levelIndex + 1}, 방향 $direction, 힘 $power',
+          );
+          expect(
+            result.path.every((point) => point.x.isFinite && point.y.isFinite),
+            isTrue,
+          );
+          expect(
+            result.physicsEvents.every(
+              (event) =>
+                  event.position.x.isFinite &&
+                  event.position.y.isFinite &&
+                  event.normal.x.isFinite &&
+                  event.normal.y.isFinite &&
+                  event.resultingVelocity.x.isFinite &&
+                  event.resultingVelocity.y.isFinite,
+            ),
+            isTrue,
+          );
+          expect(
+            result.state.entities.every(
+              (entity) =>
+                  entity.position.x.isFinite && entity.position.y.isFinite,
+            ),
+            isTrue,
+          );
+          for (final entity in result.state.entities.where(
+            (entity) => entity.movable && entity.type != EntityType.hole,
+          )) {
+            final boundaryReason =
+                '단계 ${levelIndex + 1}, 엔티티 ${entity.id}, 방향 $direction, 힘 $power';
+            expect(
+              entity.hitBounds.left,
+              greaterThanOrEqualTo(-0.01),
+              reason: boundaryReason,
+            );
+            expect(
+              entity.hitBounds.top,
+              greaterThanOrEqualTo(-0.01),
+              reason: boundaryReason,
+            );
+            expect(
+              entity.hitBounds.right,
+              lessThanOrEqualTo(logicalSize.x + 0.01),
+              reason: boundaryReason,
+            );
+            expect(
+              entity.hitBounds.bottom,
+              lessThanOrEqualTo(logicalSize.y + 0.01),
+              reason: boundaryReason,
+            );
+          }
+        }
+      }
+    }
+  });
 }

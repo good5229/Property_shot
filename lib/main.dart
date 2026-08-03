@@ -196,6 +196,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onExit: _returnHome,
         onCopyCoreEarned: _earnCopyCore,
         onLevelCleared: _recordLevelClear,
+        progressStore: _progressStore,
         tutorialVariant: _tutorialVariant,
         showDebugControls: widget.showDebugControls,
       );

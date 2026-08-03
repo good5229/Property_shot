@@ -38,6 +38,7 @@ class GameScreen extends StatefulWidget {
     this.loadGameAssets = true,
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.showDebugControls = false,
+    this.progressStore,
   });
 
   final GameState? initialState;
@@ -49,6 +50,7 @@ class GameScreen extends StatefulWidget {
   final bool loadGameAssets;
   final TutorialExperimentVariant tutorialVariant;
   final bool showDebugControls;
+  final ProgressStore? progressStore;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -57,7 +59,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _shotResolver = const ShotResolver();
   final _traitResolver = const TraitResolver();
-  final _progressStore = ProgressStore(stageCount: levels.length);
+  late final ProgressStore _progressStore;
   final _feedback = GameFeedback();
   late final LocalPlayTelemetry _telemetry;
   late GameState _state;
@@ -132,6 +134,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _progressStore =
+        widget.progressStore ?? ProgressStore(stageCount: levels.length);
     WidgetsBinding.instance.addObserver(this);
     _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     _state =

@@ -83,48 +83,50 @@ void main() {
 }
 
 ShotSequencePlan? _validatedTwoShotSeed(int stageIndex) {
-  const seeds = <List<List<double>>>[
-    [
-      [0, 0.10],
-      [65, 0.65],
-    ],
-    [
-      [0, 0.10],
-      [95, 0.85],
-    ],
-    [
-      [0, 0.10],
-      [65, 0.85],
-    ],
-    [
-      [0, 0.10],
-      [40, 0.85],
-    ],
-  ];
-  if (stageIndex < 0 || stageIndex >= seeds.length) {
+  if (stageIndex < 0 || stageIndex >= levels.length) {
     return null;
   }
-  final shots = [
-    for (final item in seeds[stageIndex])
-      ShotInput(
-        direction: Vec2(
-          math.cos(item[0] * math.pi / 180),
-          math.sin(item[0] * math.pi / 180),
-        ),
-        power: item[1],
-      ),
-  ];
-  var state = levels[stageIndex].createState(stageIndex, productRules: true);
-  final first = resolver.resolve(state, shots.first);
-  if (first.state.phase == GamePhase.success) {
-    return null;
+
+  // 레벨 배치가 조금 바뀌어도 고정 좌표 시드가 낡지 않도록,
+  // 결정된 격자에서 첫 발 실패·둘째 발 성공 조합을 찾는다.
+  final initial = levels[stageIndex].createState(
+    stageIndex,
+    productRules: true,
+  );
+  for (var firstDegree = 0; firstDegree < 360; firstDegree += 10) {
+    for (var firstPowerStep = 1; firstPowerStep <= 10; firstPowerStep++) {
+      final firstInput = _gridInput(firstDegree, firstPowerStep);
+      final first = resolver.resolve(initial, firstInput);
+      if (first.state.phase == GamePhase.success) {
+        continue;
+      }
+      for (var secondDegree = 0; secondDegree < 360; secondDegree += 10) {
+        for (
+          var secondPowerStep = 1;
+          secondPowerStep <= 10;
+          secondPowerStep++
+        ) {
+          final secondInput = _gridInput(secondDegree, secondPowerStep);
+          final second = resolver.resolve(first.state, secondInput);
+          if (second.state.phase == GamePhase.success) {
+            return ShotSequencePlan(
+              strategy: '무속성',
+              shots: [firstInput, secondInput],
+            );
+          }
+        }
+      }
+    }
   }
-  state = first.state;
-  final second = resolver.resolve(state, shots.last);
-  if (second.state.phase != GamePhase.success) {
-    throw StateError('단계 ${stageIndex + 1}의 검증된 2발 시드가 성공하지 않았습니다.');
-  }
-  return ShotSequencePlan(strategy: '무속성', shots: shots);
+  throw StateError('단계 ${stageIndex + 1}의 격자에서 검증된 2발 시드를 찾지 못했습니다.');
+}
+
+ShotInput _gridInput(int degree, int powerStep) {
+  final radians = degree * math.pi / 180;
+  return ShotInput(
+    direction: Vec2(math.cos(radians), math.sin(radians)),
+    power: powerStep / 10,
+  );
 }
 
 ReplayFixture _fixture(int stageIndex, ShotSequencePlan plan, int index) {

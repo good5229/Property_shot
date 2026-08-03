@@ -257,7 +257,7 @@ final levels = <LevelDefinition>[
       EntityState(
         id: 'balloon_crate',
         type: EntityType.crate,
-        position: Vec2(98, 640),
+        position: Vec2(98, 400),
         size: Vec2(58, 58),
         movable: true,
       ),

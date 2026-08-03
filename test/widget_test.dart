@@ -5,7 +5,9 @@ import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/main.dart';
+import 'package:property_shot/ui/game_screen.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -582,6 +584,34 @@ void main() {
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
     expect(find.text('클리어!'), findsOneWidget);
+  });
+
+  testWidgets('실제 클리어 결과가 주입된 저장소에 기록되고 다시 읽힌다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = ProgressStore(stageCount: levels.length);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          progressStore: store,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 920));
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 2400));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+
+    final progress = await store.load();
+    expect(progress.clearedLevels, contains(0));
+    expect(progress.unlockedLevel, 1);
+    expect(progress.bestShots[0], 1);
   });
 
   testWidgets('게임은 위에서 내려다보는 보기로 표시된다', (tester) async {
