@@ -11,16 +11,16 @@
 
 | 항목 | 결과 |
 |---|---|
-| 전체 `flutter test` | 237개 통과 |
+| 전체 `flutter test` | 244개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
 | 저장 다중샷 재생 | 20개 통과 |
 | `flutter analyze` | 통과, 문제 없음 |
 | `flutter build web --release` | 통과 |
 | `flutter build apk --debug` | 통과 |
-| `flutter build apk --release` | 통과, 57.2MB |
+| `flutter build apk --release` | 통과, 57.3MB |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 40530 |
+| 데모 서버 | `127.0.0.1:8080`, PID 95164 |
 
 개발 진단 메뉴:
 
@@ -42,7 +42,7 @@ Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-768617ddd3ac7499e98e7aec3bfa8c7129589039c13edf3c9fb94f891e794666
+403ce16e363bc0e0fa97767d3428217af54fd842c498253f8a8629091ccf70fa
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57

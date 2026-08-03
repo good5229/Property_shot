@@ -1,0 +1,20 @@
+{
+  "platform": "Android",
+  "runtime": "PropertyShot_ARM64 / Android API 28 ARM64 에뮬레이터",
+  "device_profile": "emulator-5554 / 1080x1920 세로",
+  "build": "build/app/outputs/flutter-apk/app-release.apk",
+  "apk_size": "57.3MB",
+  "install": "성공",
+  "launch": "성공",
+  "app_pid": "6769",
+  "app_fatal_exceptions": 0,
+  "verification": [
+    "최신 Release APK 설치 후 앱 시작",
+    "앱 프로세스 실행 상태 확인",
+    "adb logcat 최근 400줄에서 FATAL EXCEPTION 0건 확인"
+  ],
+  "limitations": [
+    "이번 반복에서는 새 APK 설치·시작 스모크만 추가하고 단계4 전체 좌표 재생은 기존 증거를 사용함",
+    "에뮬레이터는 실제 Android 기기 FPS·GPU·메모리·터치 지연·햅틱 품질을 대신하지 않음"
+  ]
+}

@@ -2,6 +2,20 @@
 
 브랜치: `commercial/wall-physics-qa`
 
+## 최신 기준
+
+작업별 커밋은 모두 원격 브랜치에 Push되어 있다. 최신 원격 HEAD는 `2b430d7`이다.
+
+| Commit | 내용 | Push |
+|---|---|---|
+| `0552e4d` | Android ARM64 런타임 스모크 증거 및 캡처 | 완료 |
+| `fe86495` | 최신 Web 데모 서버 교체·검증 문서 | 완료 |
+| `4b83361` | Debug 진단 내부 물체 ID의 한글 표시명 변환 | 완료 |
+| `6f774a1` | Android 단계4 전체 흐름 캡처·로그 증거 | 완료 |
+| `2b430d7` | 최신 Release 빌드·Web 서버 PID·검증 기준 갱신 | 완료 |
+
+최신 검증 기준은 전체 Flutter 테스트 244개, `flutter analyze`, Web Release 빌드, Android Release APK 빌드다. 데모 서버는 기존 프로세스를 먼저 종료한 뒤 PID 95164로 교체했으며, 루트와 `main.dart.js` 모두 HTTP 200이다. 최신 Android Release APK는 57.3MB이고 ARM64 에뮬레이터 설치·시작 스모크도 통과했다.
+
 | Commit | 내용 | Push |
 |---|---|---|
 | `70b5f79` | 풍선 뒤 스위치 인과와 우회 풀이 고도화 | 완료 |

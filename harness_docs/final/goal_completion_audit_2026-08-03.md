@@ -2,6 +2,21 @@
 
 기준일: 2026-08-03 KST
 
+## 최신 감사 보정
+
+이 문서는 초기 감사 기록을 보존하면서 최신 실행 증거를 아래와 같이 추가한다.
+
+- 전체 `flutter test`: 최신 실행 기준 244개 통과
+- `flutter analyze`: 통과
+- `flutter build web --release`: 통과
+- `flutter build apk --release`: 통과, ARM64 Android 런타임 설치에 사용한 최신 APK 57.3MB
+- Web 데모: 기존 프로세스를 종료한 뒤 `scripts/run_web_demo.sh`로 PID 95164를 8080에 실행하고 루트·`main.dart.js` HTTP 200 확인
+- Android ARM64 API 28 에뮬레이터: 지도 `4 / 4`, 4단계 설명, 뾰족함 속성 이전, 충전·자동 발사, 스위치·문, 홀 성공, 클리어 팝업을 실제 입력으로 재생
+- Android 실행 로그: 앱 `FATAL EXCEPTION` 0건. 단, 에뮬레이터는 실기기 성능·GPU·메모리·햅틱 증거가 아님
+- Debug 진단 화면의 내부 영문 ID 노출은 `4b83361`에서 한글 표시명 변환과 회귀 테스트로 수정
+
+따라서 현재 종합 판정은 **Conditional Go**다. 자동 검증과 Web·Android 에뮬레이터 기능 흐름은 확인했지만, 실제 iPhone·Android·iPad 성능, 외부 초보 플레이테스트, 생성 에셋의 최종 법적 검토는 완료되지 않았다. 이 세 영역을 통과하기 전에는 최종 Go로 승격하지 않는다.
+
 | 요구 영역 | 현재 증거 | 판정 |
 |---|---|---|
 | 18개 매뉴얼·역할별 업무 | `harness_docs/manuals/00..17` | 저장소 확인 |

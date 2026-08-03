@@ -3,6 +3,13 @@
 작성 기준: 2026-08-03 KST
 기준 브랜치: `commercial/wall-physics-qa`
 
+## 최신 Release 빌드 기준 · 2026-08-03 KST
+
+- Web Release는 기존 PID 40530을 종료한 뒤 PID 95164로 교체했고 루트·번들 HTTP 200을 확인했다.
+- Android Release APK는 최신 코드로 다시 빌드되어 57.3MB이며 ARM64 API 28 에뮬레이터에 설치·실행됐다.
+- 앱 PID 6769가 실행 중이고 최근 로그에서 앱 `FATAL EXCEPTION` 0건을 확인했다.
+- 실기기 FPS·GPU·메모리·터치 지연·햅틱은 여전히 미측정이다.
+
 ## 측정 원칙
 
 성능 결론은 Release 빌드에서만 내린다. 순수 물리 계산 시간, Headless Chromium 프레임 시간, 실제 모바일 기기 프레임 시간을 서로 다른 증거로 기록한다.
@@ -27,7 +34,7 @@ Web 캡처 뷰포트는 `390×844`, `393×852`, `430×932`, `768×1024`, `1024×
 - `flutter analyze`: 통과
 - `flutter build web --release`: 통과
 - `flutter build apk --debug`: 통과, Android 호스트 추가 후 APK 생성
-- `flutter build apk --release`: 통과, `build/app/outputs/flutter-apk/app-release.apk` 57.2MB
+- `flutter build apk --release`: 통과, `build/app/outputs/flutter-apk/app-release.apk` 57.3MB
 - `flutter build ios --no-codesign`: Xcode 컴파일까지 통과
 - iOS 배포 단계: Development Team과 프로비저닝 프로파일 부족으로 미완료
 - iOS Simulator: 설치된 Runtime이 없어 실행 검증 미완료

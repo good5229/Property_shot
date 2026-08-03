@@ -1,14 +1,24 @@
 # 2026-08-03 단계4 실제 Web 조작 증거 포함 최신 검증
 
+## 최신 Release 재검증 보정
+
+- 전체 `flutter test`: 244개 통과
+- `flutter analyze`: 통과
+- Web Release: 기존 PID 40530 종료 후 PID 95164로 교체, 루트·`main.dart.js` HTTP 200
+- Web `main.dart.js` SHA-256: `403ce16e363bc0e0fa97767d3428217af54fd842c498253f8a8629091ccf70fa`
+- Android Release APK: 57.3MB, ARM64 API 28 에뮬레이터 설치·실행 성공, 앱 PID 6769
+- Android 최근 로그: 앱 `FATAL EXCEPTION` 0건
+- 실제 기기 성능·입력 지연·햅틱·외부 사용자 테스트·생성 자산 최종 법적 검토는 미검증
+
 | 명령 | 결과 |
 |---|---|
 | `flutter analyze` | 통과, 문제 없음 |
-| 전체 `flutter test` | 237개 통과 |
+| 전체 `flutter test` | 244개 통과 |
 | `test/multi_shot_analyzer_test.dart` | 통과 |
 | `test/multi_replay_fixture_test.dart` | 20개 시퀀스 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
 | `flutter build web --release` | 통과 |
-| 최신 Web `main.dart.js` | `768617ddd3ac7499e98e7aec3bfa8c7129589039c13edf3c9fb94f891e794666` |
+| 최신 Web `main.dart.js` | `403ce16e363bc0e0fa97767d3428217af54fd842c498253f8a8629091ccf70fa` |
 
 ## 2026-08-03 단계4 실제 Web 재생·예외 수정
 
@@ -65,6 +75,19 @@
 build/web/main.dart.js
 5135a6a01233855c1d01d8281ad28dd96cc87e6ba10942ebf793e6f4b1a65426
 ```
+
+# 최신 검증 기준 · 2026-08-03 KST
+
+- 전체 `flutter test`: 244개 통과
+- `flutter analyze`: 통과
+- `flutter build web --release`: 통과
+- `flutter build apk --release`: 통과, Release APK 57.2MB
+- Web 데모: 기존 프로세스 종료 후 PID 40530으로 교체, 루트·`main.dart.js` HTTP 200
+- Android ARM64 에뮬레이터: 단계4 해금·속성 이전·충전·자동 발사·스위치·문·홀·클리어 팝업 실제 입력 확인
+- Android 앱 로그: `FATAL EXCEPTION` 0건
+- 미검증: 실제 iPhone·Android·iPad의 FPS·GPU·메모리·터치 지연·햅틱·사운드, 외부 플레이테스트, 생성 에셋 최종 법적 검토
+
+---
 
 # 검증 결과
 
