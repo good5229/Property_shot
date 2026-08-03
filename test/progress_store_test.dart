@@ -3,7 +3,7 @@ import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  const store = ProgressStore(stageCount: 4);
+  final store = ProgressStore(stageCount: 4);
 
   test('새 저장소는 기본값을 만들고 버전을 기록한다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -84,6 +84,26 @@ void main() {
     expect(afterRestart.bonusGoals, contains(0));
     expect(afterRestart.copyCoreCount, 3);
     expect(afterRestart.copyCoreRewarded, isTrue);
+  });
+
+  test('동시에 들어온 클리어와 최고 기록을 순서대로 보존한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final concurrentStore = ProgressStore(stageCount: 4);
+
+    await Future.wait([
+      concurrentStore.recordStageClear(0),
+      concurrentStore.recordStageClear(1),
+      concurrentStore.recordStageClear(2),
+      concurrentStore.recordBestShot(0, 6),
+      concurrentStore.recordBestShot(0, 3),
+      concurrentStore.recordBonusGoal(1),
+    ]);
+
+    final snapshot = await concurrentStore.load();
+    expect(snapshot.clearedLevels, {0, 1, 2});
+    expect(snapshot.unlockedLevel, 3);
+    expect(snapshot.bestShots[0], 3);
+    expect(snapshot.bonusGoals, contains(1));
   });
 
   test('범위를 벗어난 단계 기록은 저장하지 않는다', () async {

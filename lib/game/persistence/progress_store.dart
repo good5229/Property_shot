@@ -19,7 +19,7 @@ class ProgressSnapshot {
 }
 
 class ProgressStore {
-  const ProgressStore({required this.stageCount});
+  ProgressStore({required this.stageCount});
 
   static const saveVersion = 1;
   static const clearedLevelsKey = 'property_shot_cleared_levels';
@@ -30,12 +30,24 @@ class ProgressStore {
   static const copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
 
   final int stageCount;
+  Future<void> _writeTail = Future<void>.value();
 
-  Future<ProgressSnapshot> load() async {
-    final preferences = await SharedPreferences.getInstance();
-    final snapshot = read(preferences);
-    await _write(preferences, snapshot);
-    return snapshot;
+  Future<T> _enqueue<T>(Future<T> Function() operation) {
+    final next = _writeTail.then((_) => operation());
+    _writeTail = next.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return next;
+  }
+
+  Future<ProgressSnapshot> load() {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      final snapshot = read(preferences);
+      await _write(preferences, snapshot);
+      return snapshot;
+    });
   }
 
   ProgressSnapshot read(SharedPreferences preferences) {
@@ -81,84 +93,96 @@ class ProgressStore {
     );
   }
 
-  Future<void> recordStageClear(int levelIndex) async {
+  Future<void> recordStageClear(int levelIndex) {
     if (levelIndex < 0 || levelIndex >= stageCount) {
-      return;
+      return Future<void>.value();
     }
-    final preferences = await SharedPreferences.getInstance();
-    final current = read(preferences);
-    final clearedLevels = {...current.clearedLevels, levelIndex};
-    final unlockedLevel = _maxInt(
-      current.unlockedLevel,
-      _unlockedLevelFromCleared(clearedLevels),
-    );
-    await _writeVersion(preferences);
-    await preferences.setStringList(
-      clearedLevelsKey,
-      (clearedLevels.toList()..sort()).map((index) => '$index').toList(),
-    );
-    await preferences.setInt(unlockedLevelKey, _clampLevel(unlockedLevel));
-    await preferences.setInt(
-      legacyUnlockedLevelKey,
-      _clampLevel(unlockedLevel),
-    );
-  }
-
-  Future<void> recordCopyCore(int count, bool rewarded) async {
-    final preferences = await SharedPreferences.getInstance();
-    await _writeVersion(preferences);
-    await preferences.setInt(copyCoreCountKey, count.clamp(0, 999));
-    await preferences.setBool(copyCoreRewardedKey, rewarded);
-  }
-
-  Future<void> recordBestShot(int levelIndex, int shotCount) async {
-    if (levelIndex < 0 || levelIndex >= stageCount || shotCount <= 0) {
-      return;
-    }
-    final preferences = await SharedPreferences.getInstance();
-    final current = read(preferences);
-    final previous = current.bestShots[levelIndex];
-    if (previous != null && previous <= shotCount) {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      final current = read(preferences);
+      final clearedLevels = {...current.clearedLevels, levelIndex};
+      final unlockedLevel = _maxInt(
+        current.unlockedLevel,
+        _unlockedLevelFromCleared(clearedLevels),
+      );
       await _writeVersion(preferences);
-      return;
-    }
-    await _writeVersion(preferences);
-    await preferences.setInt(bestShotKey(levelIndex), shotCount);
+      await preferences.setStringList(
+        clearedLevelsKey,
+        (clearedLevels.toList()..sort()).map((index) => '$index').toList(),
+      );
+      await preferences.setInt(unlockedLevelKey, _clampLevel(unlockedLevel));
+      await preferences.setInt(
+        legacyUnlockedLevelKey,
+        _clampLevel(unlockedLevel),
+      );
+    });
   }
 
-  Future<void> recordBonusGoal(int levelIndex) async {
+  Future<void> recordCopyCore(int count, bool rewarded) {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      await _writeVersion(preferences);
+      await preferences.setInt(copyCoreCountKey, count.clamp(0, 999));
+      await preferences.setBool(copyCoreRewardedKey, rewarded);
+    });
+  }
+
+  Future<void> recordBestShot(int levelIndex, int shotCount) {
+    if (levelIndex < 0 || levelIndex >= stageCount || shotCount <= 0) {
+      return Future<void>.value();
+    }
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      final current = read(preferences);
+      final previous = current.bestShots[levelIndex];
+      if (previous != null && previous <= shotCount) {
+        await _writeVersion(preferences);
+        return;
+      }
+      await _writeVersion(preferences);
+      await preferences.setInt(bestShotKey(levelIndex), shotCount);
+    });
+  }
+
+  Future<void> recordBonusGoal(int levelIndex) {
     if (levelIndex < 0 || levelIndex >= stageCount) {
-      return;
+      return Future<void>.value();
     }
-    final preferences = await SharedPreferences.getInstance();
-    await _writeVersion(preferences);
-    await preferences.setBool(bonusGoalKey(levelIndex), true);
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      await _writeVersion(preferences);
+      await preferences.setBool(bonusGoalKey(levelIndex), true);
+    });
   }
 
-  Future<void> reset() async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.remove(saveVersionKey);
-    await preferences.remove(clearedLevelsKey);
-    await preferences.remove(unlockedLevelKey);
-    await preferences.remove(legacyUnlockedLevelKey);
-    await preferences.remove(copyCoreCountKey);
-    await preferences.remove(copyCoreRewardedKey);
-    for (var index = 0; index < stageCount; index++) {
-      await preferences.remove(bestShotKey(index));
-      await preferences.remove(bonusGoalKey(index));
-    }
+  Future<void> reset() {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.remove(saveVersionKey);
+      await preferences.remove(clearedLevelsKey);
+      await preferences.remove(unlockedLevelKey);
+      await preferences.remove(legacyUnlockedLevelKey);
+      await preferences.remove(copyCoreCountKey);
+      await preferences.remove(copyCoreRewardedKey);
+      for (var index = 0; index < stageCount; index++) {
+        await preferences.remove(bestShotKey(index));
+        await preferences.remove(bonusGoalKey(index));
+      }
+    });
   }
 
-  Future<void> unlockAll() async {
-    final preferences = await SharedPreferences.getInstance();
-    await _writeVersion(preferences);
-    await preferences.setStringList(clearedLevelsKey, [
-      for (var index = 0; index < stageCount; index++) '$index',
-    ]);
-    if (stageCount > 0) {
-      await preferences.setInt(unlockedLevelKey, stageCount - 1);
-      await preferences.setInt(legacyUnlockedLevelKey, stageCount - 1);
-    }
+  Future<void> unlockAll() {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      await _writeVersion(preferences);
+      await preferences.setStringList(clearedLevelsKey, [
+        for (var index = 0; index < stageCount; index++) '$index',
+      ]);
+      if (stageCount > 0) {
+        await preferences.setInt(unlockedLevelKey, stageCount - 1);
+        await preferences.setInt(legacyUnlockedLevelKey, stageCount - 1);
+      }
+    });
   }
 
   String bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
