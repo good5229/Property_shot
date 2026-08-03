@@ -88,6 +88,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             .createState(0, productRules: true)
             .copyWith(message: _levelIntroMessage(0));
     _stageCopyCoreAtStart = _state.copyCoreCount;
+    _telemetry.sessionStart(stage: _state.levelIndex);
     if (widget.initialState != null) {
       _unlockedLevel = levels.length - 1;
     }
@@ -259,6 +260,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       stage: _state.levelIndex,
       trait: next.equippedTrait?.label,
       action: '이전',
+      eventCode: 'attribute_transferred',
+      objectId: _inspectedEntityId,
+      attributeAfter: next.equippedTrait?.label,
     );
     _setState(next);
   }
@@ -282,6 +286,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       stage: _state.levelIndex,
       trait: next.equippedTrait?.label,
       action: '복제 코어',
+      eventCode: 'attribute_copied',
+      objectId: _inspectedEntityId,
+      attributeAfter: next.equippedTrait?.label,
     );
   }
 
@@ -306,6 +313,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       angle: math.atan2(_state.aimDirection.y, _state.aimDirection.x),
       power: _state.aimPower,
       trait: _state.equippedTrait?.label,
+      eventCode: 'shot_fired',
+      shotId: _state.shotCount + 1,
+      objectId: _state.activeBall.id,
+      objectType: _state.activeBall.type.name,
+      speed: 8 + _state.aimPower * 16,
     );
     _feedback.shotLaunched();
     _showBallInfo = false;
@@ -413,6 +425,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       stage: _state.levelIndex,
       target: move.entityId,
       result: move.visualState,
+      eventCode: 'object_started_moving',
+      objectId: move.entityId,
+      position: move.impactPosition,
     );
   }
 
@@ -429,6 +444,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       '충돌',
       stage: _state.levelIndex,
       target: impact.entityType.name,
+      eventCode: 'collision_resolved',
+      shotId: _state.shotCount + 1,
+      objectId: impact.entityId,
+      objectType: impact.entityType.name,
+      position: impact.position,
+      collisionNormal: impact.normal,
+      speed: impact.relativeNormalSpeed,
+      impulse: impact.impulse,
     );
   }
 
@@ -485,6 +508,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     final logical = _toLogicalPosition(localPosition, fieldSize);
     final aim = logical - _state.activeBall.position;
+    _telemetry.record(
+      '조준 방향 변경',
+      stage: _state.levelIndex,
+      eventCode: 'aim_direction_changed',
+      angle: math.atan2(aim.y, aim.x),
+    );
     _setState(
       _state.copyWith(
         aimDirection: aim.normalized(),
@@ -610,6 +639,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     final logical = _toLogicalPosition(localPosition, fieldSize);
+    _telemetry.record(
+      '조준 시작',
+      stage: _state.levelIndex,
+      eventCode: 'aim_started',
+    );
     if (logical.distanceTo(_state.activeBall.position) <= 34) {
       setState(() {
         _showBallInfo = true;
@@ -739,6 +773,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _chargeTimer?.cancel();
     _isCharging = true;
     _feedback.aimChargeStarted();
+    _telemetry.record(
+      '충전 시작',
+      stage: _state.levelIndex,
+      eventCode: 'charge_started',
+      power: _state.aimPower,
+    );
     _setState(
       _state.copyWith(aimPower: 0.12, message: '힘 모으는 중 · 손을 떼면 발사됩니다'),
     );
@@ -761,6 +801,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _isCharging = false;
     _chargeTimer?.cancel();
     _chargeTimer = null;
+    _telemetry.record(
+      '충전 종료',
+      stage: _state.levelIndex,
+      eventCode: 'charge_released',
+      power: _state.aimPower,
+    );
     if (shouldLaunch) {
       _launch();
     }
@@ -791,6 +837,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _telemetry.sessionEnd(stage: _state.levelIndex);
     WidgetsBinding.instance.removeObserver(this);
     _chargeTimer?.cancel();
     _pressActivationTimer?.cancel();
