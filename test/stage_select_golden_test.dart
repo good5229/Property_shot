@@ -53,6 +53,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('stage_route_map')), findsOneWidget);
+      expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
+      expect(find.text('풍선은 밀리고, 뾰족한 공에는 터집니다.'), findsOneWidget);
       expect(find.byKey(const Key('map_hint_card')), findsOneWidget);
       await expectLater(
         find.byKey(const Key('stage_select_golden')),

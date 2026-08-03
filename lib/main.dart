@@ -286,14 +286,6 @@ class _HomeScreen extends StatelessWidget {
                           side: const BorderSide(color: Color(0xFF4D8580)),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Text(
-                        '무거움 · 탄성 · 점착',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: const Color(0xFF397372),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -558,6 +550,11 @@ class _StageSelectScreen extends StatelessWidget {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final cardWidth = constraints.maxWidth * 0.82;
+                      const cardStep = 116.0;
+                      final mapHeight = math.max(
+                        350.0,
+                        8 + levels.length * cardStep,
+                      );
                       return Column(
                         children: [
                           Padding(
@@ -591,7 +588,7 @@ class _StageSelectScreen extends StatelessWidget {
                             ),
                           ),
                           SizedBox(
-                            height: 350,
+                            height: mapHeight,
                             child: Stack(
                               children: [
                                 Positioned.fill(
@@ -603,36 +600,22 @@ class _StageSelectScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                Positioned(
-                                  top: 8,
-                                  left: 0,
-                                  width: cardWidth,
-                                  child: _StageTile(
-                                    index: 0,
-                                    locked: 0 > unlockedLevel,
-                                    onTap: () => onSelectStage(0),
+                                for (
+                                  var index = 0;
+                                  index < levels.length;
+                                  index++
+                                )
+                                  Positioned(
+                                    top: 8 + index * cardStep,
+                                    left: index.isEven ? 0 : null,
+                                    right: index.isOdd ? 0 : null,
+                                    width: cardWidth,
+                                    child: _StageTile(
+                                      index: index,
+                                      locked: index > unlockedLevel,
+                                      onTap: () => onSelectStage(index),
+                                    ),
                                   ),
-                                ),
-                                Positioned(
-                                  top: 124,
-                                  right: 0,
-                                  width: cardWidth,
-                                  child: _StageTile(
-                                    index: 1,
-                                    locked: 1 > unlockedLevel,
-                                    onTap: () => onSelectStage(1),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 240,
-                                  left: 0,
-                                  width: cardWidth,
-                                  child: _StageTile(
-                                    index: 2,
-                                    locked: 2 > unlockedLevel,
-                                    onTap: () => onSelectStage(2),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -917,38 +900,28 @@ class _StageRoutePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final points = [
-      Offset(size.width * 0.22, 58),
-      Offset(size.width * 0.78, 135),
-      Offset(size.width * 0.22, 224),
-      Offset(size.width * 0.78, 292),
-    ];
-    final path = Path()
-      ..moveTo(points.first.dx, points.first.dy)
-      ..cubicTo(
-        size.width * 0.58,
-        64,
-        size.width * 0.58,
-        118,
-        points[1].dx,
-        points[1].dy,
-      )
-      ..cubicTo(
-        size.width * 0.58,
-        154,
-        size.width * 0.58,
-        212,
-        points[2].dx,
-        points[2].dy,
-      )
-      ..cubicTo(
-        size.width * 0.58,
-        236,
-        size.width * 0.58,
-        278,
-        points[3].dx,
-        points[3].dy,
+    final points = List.generate(
+      levels.length,
+      (index) =>
+          Offset(size.width * (index.isEven ? 0.22 : 0.78), 58 + index * 116.0),
+    );
+    if (points.isEmpty) {
+      return;
+    }
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var index = 1; index < points.length; index++) {
+      final previous = points[index - 1];
+      final current = points[index];
+      final midpoint = (previous.dy + current.dy) / 2;
+      path.cubicTo(
+        previous.dx,
+        midpoint - 22,
+        current.dx,
+        midpoint + 22,
+        current.dx,
+        current.dy,
       );
+    }
     final route = Paint()
       ..color = const Color(0x9C6B9D8B)
       ..style = PaintingStyle.stroke

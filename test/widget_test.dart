@@ -16,6 +16,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('속성 한방'), findsOneWidget);
+    expect(find.text('무거움 · 탄성 · 점착'), findsNothing);
     expect(find.byKey(const Key('start_game_button')), findsOneWidget);
     expect(find.byKey(const Key('stage_select_button')), findsOneWidget);
 
@@ -23,7 +24,9 @@ void main() {
     await tester.pump();
     expect(find.text('섬 지도'), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_0')), findsOneWidget);
-    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(2));
+    expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
+    expect(find.text('풍선은 밀리고, 뾰족한 공에는 터집니다.'), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(3));
 
     await tester.tap(find.byKey(const Key('stage_tile_0')));
     await tester.pump();
@@ -44,11 +47,32 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('stage_route_map')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('map_hint_card')),
+      280,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.byKey(const Key('map_hint_card')), findsOneWidget);
     final semantics = tester.getSemantics(
       find.byKey(const Key('stage_tile_0')),
     );
     expect(semantics.getSemanticsData().hint, '한 번 누르면 스테이지를 시작합니다');
+  });
+
+  testWidgets('클리어 진행 상태가 섬 지도에서 4단계를 연다', (tester) async {
+    SharedPreferences.setMockInitialValues({'property_shot_unlocked_level': 3});
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNothing);
+    await tester.tap(find.byKey(const Key('stage_tile_3')));
+    await tester.pump();
+
+    expect(find.text('4. 풍선 터뜨리기'), findsOneWidget);
   });
 
   testWidgets('홈의 첫 섬 시작 버튼은 첫 스테이지 플레이로 이동한다', (tester) async {
@@ -487,8 +511,8 @@ void main() {
   });
 
   testWidgets('마지막 단계 클리어는 처음부터 다시 행동을 표시한다', (tester) async {
-    final clearState = levels[2]
-        .createState(2)
+    final clearState = levels[3]
+        .createState(3)
         .copyWith(phase: GamePhase.success, shotCount: 4, message: '홀 진입 성공!');
     await tester.pumpWidget(PropertyShotApp(initialState: clearState));
     await tester.pump();

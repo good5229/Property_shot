@@ -1167,9 +1167,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   bonusAchieved: _bonusChallengeAchieved,
                   onNext: _goNextLevel,
                   onRetry: () => _selectLevel(_state.levelIndex),
-                  isFinal:
-                      _state.levelIndex >= levels.length - 1 ||
-                      (widget.showStageSelector && _state.levelIndex == 2),
+                  isFinal: _state.levelIndex >= levels.length - 1,
                 ),
             ],
           ),
