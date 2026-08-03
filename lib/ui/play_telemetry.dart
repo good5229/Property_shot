@@ -14,10 +14,18 @@ class LocalPlayTelemetryStore {
   Future<void> _writeTail = Future<void>.value();
 
   Future<void> append(Map<String, Object?> event) {
+    return appendAll([event]);
+  }
+
+  Future<void> appendAll(Iterable<Map<String, Object?>> newEvents) {
+    final batch = newEvents.map(Map<String, Object?>.from).toList();
+    if (batch.isEmpty) {
+      return Future<void>.value();
+    }
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
       final events = await _read(preferences);
-      events.add(Map<String, Object?>.from(event));
+      events.addAll(batch);
       final first = events.length > maxEvents ? events.length - maxEvents : 0;
       await preferences.setString(
         storageKey,
@@ -91,6 +99,8 @@ class LocalPlayTelemetry {
   final bool persistLocally;
   final LocalPlayTelemetryStore _store;
   final List<Map<String, Object?>> _events = [];
+  final List<Map<String, Object?>> _pendingPersistence = [];
+  Timer? _persistTimer;
 
   List<Map<String, Object?>> get events => List.unmodifiable(_events);
 
@@ -155,15 +165,51 @@ class LocalPlayTelemetry {
     if (elapsedMs != null) event['elapsed_ms'] = elapsedMs;
     _events.add(event);
     if (persistLocally) {
-      unawaited(_store.append(event));
+      _pendingPersistence.add(event);
+      _schedulePersistence();
     }
   }
 
-  Future<void> flush() => _store.flush();
+  Future<void> flush() async {
+    _persistTimer?.cancel();
+    _persistTimer = null;
+    await _persistPending();
+    await _store.flush();
+  }
 
-  Future<List<Map<String, Object?>>> loadPersisted() => _store.load();
+  Future<List<Map<String, Object?>>> loadPersisted() async {
+    await flush();
+    return _store.load();
+  }
 
-  Future<void> clearPersisted() => _store.clear();
+  Future<void> clearPersisted() async {
+    _persistTimer?.cancel();
+    _persistTimer = null;
+    _pendingPersistence.clear();
+    await _store.flush();
+    await _store.clear();
+  }
+
+  Future<void> close() => flush();
+
+  void _schedulePersistence() {
+    if (_persistTimer != null) {
+      return;
+    }
+    _persistTimer = Timer(const Duration(milliseconds: 250), () {
+      _persistTimer = null;
+      unawaited(_persistPending());
+    });
+  }
+
+  Future<void> _persistPending() {
+    if (_pendingPersistence.isEmpty || !persistLocally) {
+      return Future<void>.value();
+    }
+    final batch = List<Map<String, Object?>>.from(_pendingPersistence);
+    _pendingPersistence.clear();
+    return _store.appendAll(batch);
+  }
 
   void sessionStart({required int stage, String? experimentVariant}) {
     record(

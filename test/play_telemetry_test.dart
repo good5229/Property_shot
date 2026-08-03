@@ -126,4 +126,15 @@ void main() {
     final restored = await store.load();
     expect(restored.map((event) => event['유형']), ['첫 이벤트', '둘째 이벤트', '셋째 이벤트']);
   });
+
+  test('조회 시 대기 중인 이벤트를 먼저 묶음 저장한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final telemetry = LocalPlayTelemetry();
+
+    telemetry.record('충돌', stage: 0, eventCode: 'collision_resolved');
+
+    final restored = await telemetry.loadPersisted();
+    expect(restored, hasLength(1));
+    expect(restored.single['event_code'], 'collision_resolved');
+  });
 }

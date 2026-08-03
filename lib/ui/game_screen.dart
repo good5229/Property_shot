@@ -1374,6 +1374,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     _telemetry.sessionEnd(stage: _state.levelIndex);
+    unawaited(_telemetry.close());
     WidgetsBinding.instance.removeObserver(this);
     _chargeTimer?.cancel();
     _pressActivationTimer?.cancel();
