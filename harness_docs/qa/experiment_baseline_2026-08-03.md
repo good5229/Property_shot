@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드·문서 기준 커밋: `6c20012`  
+코드 기준 커밋: `21c83f0`  
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
@@ -16,7 +16,7 @@
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 33606 |
+| 데모 서버 | `127.0.0.1:8080`, PID 48075 |
 
 Web 시각 캡처:
 
@@ -30,7 +30,7 @@ Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-0ab29a85ab6e18b51a2fd8e5847c0ae1760d6213900d842c7522cb8c6b1725dd
+5c34194b76102eff667fa0e01c36ba82b54d222402cb2ec070115ff668d0e2b6
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57
