@@ -223,13 +223,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     await _progressStore.recordBestShot(levelIndex, shotCount);
   }
 
-  void _unlockNextLevel(int levelIndex) {
+  Future<void> _unlockNextLevel(int levelIndex) async {
     final next = math.min(levels.length - 1, levelIndex + 1);
-    if (next <= _unlockedLevel) {
-      return;
+    if (next > _unlockedLevel && mounted) {
+      setState(() => _unlockedLevel = next);
     }
-    setState(() => _unlockedLevel = next);
-    unawaited(_progressStore.recordStageClear(levelIndex));
+    await _progressStore.recordStageClear(levelIndex);
   }
 
   void _setState(
@@ -440,14 +439,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       physicsEvents: result.physicsEvents,
     );
     if (result.state.phase == GamePhase.success) {
-      widget.onLevelCleared?.call(result.state.levelIndex);
+      unawaited(_persistClearResult(result));
+    }
+  }
+
+  Future<void> _persistClearResult(ShotResult result) async {
+    final levelIndex = result.state.levelIndex;
+    try {
+      await _unlockNextLevel(levelIndex);
       if (_bonusGoalReached(result)) {
-        unawaited(_recordBonusGoal(result.state.levelIndex));
+        await _recordBonusGoal(levelIndex);
       }
-      _unlockNextLevel(result.state.levelIndex);
-      unawaited(
-        _recordBestShot(result.state.levelIndex, result.state.shotCount),
-      );
+      await _recordBestShot(levelIndex, result.state.shotCount);
+    } on Exception {
+      if (mounted) {
+        setState(() {
+          _state = _state.copyWith(
+            message: '클리어했지만 기록 저장이 지연되고 있어요. 잠시 후 다시 확인해 주세요.',
+          );
+        });
+      }
+    } finally {
+      if (mounted) {
+        widget.onLevelCleared?.call(levelIndex);
+      }
     }
   }
 
@@ -869,7 +884,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void _copyDebugState() {
     final payload = {
       '단계': _state.levelIndex + 1,
-      '상태': _state.phase.name,
+      '상태': debugPhaseLabel(_state.phase.name),
       '발사횟수': _state.shotCount,
       '공': {
         '위치': _state.activeBall.position.toJson(),
@@ -878,11 +893,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       '물체': [
         for (final entity in _state.entities)
           {
-            'id': entity.id,
-            'type': entity.type.name,
-            'position': entity.position.toJson(),
-            'traits': entity.traits.map((trait) => trait.label).toList(),
-            'active': entity.active,
+            '이름': debugEntityLabel(entity.id),
+            '종류': debugEntityTypeLabel(entity.type.name),
+            '위치': entity.position.toJson(),
+            '속성': entity.traits.map((trait) => trait.label).toList(),
+            '활성': entity.active,
           },
       ],
     };
@@ -893,14 +908,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final payload = [
       for (final event in _debugPhysicsEvents)
         {
-          'eventId': event.eventId,
-          'kind': event.kind.name,
-          'source': event.sourceEntityId,
-          'target': event.targetEntityId,
-          'position': event.position.toJson(),
-          'normal': event.normal.toJson(),
-          'pathIndex': event.pathIndex,
-          'impulse': event.impulse,
+          '사건번호': event.eventId,
+          '사건종류': debugPhysicsEventLabel(event.kind.name),
+          '출발물체': debugEntityLabel(event.sourceEntityId),
+          '대상물체': debugEntityLabel(event.targetEntityId),
+          '위치': event.position.toJson(),
+          '충돌방향': event.normal.toJson(),
+          '경로순서': event.pathIndex,
+          '충격량': event.impulse,
         },
     ];
     Clipboard.setData(ClipboardData(text: jsonEncode(payload)));
@@ -1395,7 +1410,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   IconButton(
                     key: const Key('pause_button'),
                     tooltip: _state.phase == GamePhase.paused ? '계속' : '멈춤',
-                    onPressed: _togglePause,
+                    onPressed: popupOpen ? null : _togglePause,
                     icon: Icon(
                       _state.phase == GamePhase.paused
                           ? Icons.play_arrow
@@ -1614,11 +1629,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                           entity.size.y / 2) *
                                                       scale,
                                                   width: math.max(
-                                                    32,
+                                                    44,
                                                     entity.size.x * scale,
                                                   ),
                                                   height: math.max(
-                                                    32,
+                                                    44,
                                                     entity.size.y * scale,
                                                   ),
                                                   child: Semantics(
@@ -2652,8 +2667,8 @@ class _Hud extends StatelessWidget {
                 Expanded(
                   child: Text(
                     state.levelName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    softWrap: true,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -2727,8 +2742,8 @@ class _Hud extends StatelessWidget {
             Text(
               _compactLevelObjective(state.levelIndex),
               key: const Key('compact_objective'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: state.levelIndex == 3 ? 2 : 1,
+              softWrap: true,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
                 fontWeight: FontWeight.w600,
@@ -2738,8 +2753,8 @@ class _Hud extends StatelessWidget {
               Text(
                 compactProgressHint,
                 key: const Key('level_progress'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                softWrap: true,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: const Color(0xFF2F8A62),
                   fontWeight: FontWeight.w700,
@@ -2931,42 +2946,52 @@ class _TutorialCoachMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final maxWidth = math.max(
+      160.0,
+      math.min(MediaQuery.sizeOf(context).width - 24, 300.0),
+    );
     return Semantics(
       liveRegion: true,
       label: '튜토리얼 안내: $text',
-      child: Container(
-        key: const Key('tutorial_coach_mark'),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-        decoration: BoxDecoration(
-          color: const Color(0xF9FFF5D9),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE7B45A), width: 1.5),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x443B2B24),
-              blurRadius: 6,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.touch_app_rounded,
-              size: 17,
-              color: Color(0xFFB56B34),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              text,
-              style: const TextStyle(
-                color: Color(0xFF62462D),
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Container(
+          key: const Key('tutorial_coach_mark'),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xF9FFF5D9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE7B45A), width: 1.5),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x443B2B24),
+                blurRadius: 6,
+                offset: Offset(0, 3),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.touch_app_rounded,
+                size: 17,
+                color: Color(0xFFB56B34),
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  text,
+                  softWrap: true,
+                  style: const TextStyle(
+                    color: Color(0xFF62462D),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3016,8 +3041,8 @@ class _ControlPanel extends StatelessWidget {
                       : state.selectedTrait == null
                       ? '물체를 눌러 속성을 고르세요'
                       : '선택: ${state.selectedTrait!.label}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                  softWrap: true,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               )
@@ -3025,8 +3050,8 @@ class _ControlPanel extends StatelessWidget {
               const Spacer(),
             Text(
               '공 속성: ${state.equippedTrait?.label ?? '없음'}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+              softWrap: true,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),

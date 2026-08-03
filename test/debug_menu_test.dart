@@ -48,4 +48,12 @@ void main() {
     expect(debugEntityLabel('spent_ball_2'), '공');
     expect(debugEntityLabel('알 수 없는 ID'), '물체');
   });
+
+  test('진단용 상태·종류·물리 사건도 한글 표시명으로 변환한다', () {
+    expect(debugEntityTypeLabel('weight'), '무거운 돌');
+    expect(debugEntityTypeLabel('spikeSource'), '뾰족함 원본');
+    expect(debugPhaseLabel('charging'), '힘 모으기');
+    expect(debugPhysicsEventLabel('impact'), '충돌');
+    expect(debugPhysicsEventLabel('stateChange'), '상태 변경');
+  });
 }

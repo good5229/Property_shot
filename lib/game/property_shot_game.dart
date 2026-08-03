@@ -13,6 +13,7 @@ import 'domain/trait.dart';
 import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 import '../ui/game_ball_painter.dart';
+import '../ui/debug_labels.dart';
 
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(
@@ -331,7 +332,7 @@ class PropertyShotGame extends FlameGame {
       for (final entity in entities.where((entity) => entity.active)) {
         final painter = TextPainter(
           text: TextSpan(
-            text: entity.id,
+            text: debugEntityLabel(entity.id),
             style: const TextStyle(
               color: Color(0xFF4A148C),
               fontSize: 7,
