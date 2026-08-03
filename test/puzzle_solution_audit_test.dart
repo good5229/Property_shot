@@ -100,6 +100,64 @@ void main() {
     expect(bypass, isNotNull, reason: '특정 기믹을 수행하지 않아도 물리 경로로 홀에 도달할 수 있어야 한다');
   });
 
+  test('4단계는 풍선 팝·스위치·문 개방을 실제 충돌 순서로 연결한다', () {
+    final state = _transfer(levels[3].createState(3), 'spike_source');
+    ShotResult? solution;
+    for (var degree = 0; degree < 360 && solution == null; degree += 2) {
+      final radians = degree * math.pi / 180;
+      for (var step = 15; step <= 50 && solution == null; step++) {
+        final result = shots.resolve(
+          state,
+          ShotInput(
+            direction: Vec2(math.cos(radians), math.sin(radians)),
+            power: step / 50,
+            equippedTrait: state.equippedTrait,
+          ),
+        );
+        if (result.state.phase == GamePhase.success &&
+            result.events.contains('balloon_popped') &&
+            result.events.contains('balloon_switch_revealed') &&
+            result.events.contains('balloon_switch_pressed')) {
+          solution = result;
+        }
+      }
+    }
+    expect(solution, isNotNull, reason: '팝 후 실제 스위치 충돌로 문을 여는 성공 경로가 필요하다');
+    final events = solution!.events;
+    expect(
+      events.indexOf('balloon_popped'),
+      lessThan(events.indexOf('balloon_switch_revealed')),
+    );
+    expect(
+      events.indexOf('balloon_switch_revealed'),
+      lessThan(events.indexOf('balloon_switch_pressed')),
+    );
+    expect(solution.state.entityById('balloon_gate')!.open, isTrue);
+  });
+
+  test('4단계는 뾰족함 없이도 우회 성공을 허용한다', () {
+    ShotResult? bypass;
+    final state = levels[3].createState(3);
+    for (var degree = 0; degree < 360 && bypass == null; degree += 2) {
+      final radians = degree * math.pi / 180;
+      for (var step = 15; step <= 50 && bypass == null; step++) {
+        final result = shots.resolve(
+          state,
+          ShotInput(
+            direction: Vec2(math.cos(radians), math.sin(radians)),
+            power: step / 50,
+          ),
+        );
+        if (result.state.phase == GamePhase.success &&
+            !result.events.contains('balloon_popped') &&
+            !result.events.contains('balloon_switch_pressed')) {
+          bypass = result;
+        }
+      }
+    }
+    expect(bypass, isNotNull, reason: '4단계는 특정 기믹을 수행하지 않는 성공 경로도 허용해야 한다');
+  });
+
   test('첫 2단계 성공 영역은 연결된 입력 영역으로 측정된다', () {
     final widths = <String, _SuccessWidth>{};
     for (var index = 0; index < 2; index++) {

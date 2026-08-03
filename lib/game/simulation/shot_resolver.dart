@@ -425,21 +425,23 @@ class ShotResolver {
             entities,
             hit.copyWith(active: false, solid: false, visualState: 'popped'),
           );
-          if (hit.linkId != null) {
-            entities = _openLinkedEntity(entities, hit.linkId!);
-            final linked = entities.where((entity) => entity.id == hit.linkId);
-            for (final gate in linked) {
-              moves.add(
-                ShotAnimationMove(
-                  entityId: gate.id,
-                  from: gate.position,
-                  to: gate.position,
-                  triggerPathIndex: path.length + 2,
-                  visualState: 'opening',
-                ),
-              );
-            }
-            events.add('linked_state_changed');
+          final balloonSwitch = _entityById(entities, 'balloon_switch');
+          if (balloonSwitch != null) {
+            entities = _replace(
+              entities,
+              balloonSwitch.copyWith(solid: true, visualState: 'revealed'),
+            );
+            moves.add(
+              ShotAnimationMove(
+                entityId: balloonSwitch.id,
+                from: balloonSwitch.position,
+                to: balloonSwitch.position,
+                triggerPathIndex: path.length,
+                visualState: 'revealed',
+                impactPosition: contactPosition,
+                impactNormal: collision.normal,
+              ),
+            );
           }
           moves.add(
             ShotAnimationMove(
@@ -457,6 +459,9 @@ class ShotResolver {
           );
           events.add('balloon_popped');
           events.add('sharpness_consumed');
+          if (balloonSwitch != null) {
+            events.add('balloon_switch_revealed');
+          }
           speed *= 0.86;
           continue;
         }
@@ -475,6 +480,17 @@ class ShotResolver {
         );
         direction = bouncedVelocity.normalized();
         speed = bouncedVelocity.length;
+        moves.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: path.length - 1,
+            visualState: 'pressed',
+            impactPosition: contactPosition,
+            impactNormal: collision.normal,
+          ),
+        );
         events.add('balloon_bounced');
         continue;
       }
@@ -495,7 +511,8 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.switchPad) {
-        if (!ball.traits.contains(TraitType.heavy)) {
+        final isBalloonSwitch = hit.id == 'balloon_switch';
+        if (!isBalloonSwitch && !ball.traits.contains(TraitType.heavy)) {
           position = _separateFromCollision(
             hit,
             ball,
@@ -519,9 +536,10 @@ class ShotResolver {
             impactNormal: collision.normal,
           ),
         );
-        for (final gate in entities.where(
-          (entity) => entity.type == EntityType.gate,
-        )) {
+        final linkedGates = hit.linkId == null
+            ? entities.where((entity) => entity.type == EntityType.gate)
+            : entities.where((entity) => entity.id == hit.linkId);
+        for (final gate in linkedGates) {
           moves.add(
             ShotAnimationMove(
               entityId: gate.id,
@@ -536,8 +554,13 @@ class ShotResolver {
           entities,
           hit.copyWith(pressed: true, solid: false, visualState: 'pressed'),
         );
-        entities = _openGates(entities);
+        entities = hit.linkId == null
+            ? _openGates(entities)
+            : _openLinkedEntity(entities, hit.linkId!);
         events.add('switch_pressed');
+        if (isBalloonSwitch) {
+          events.add('balloon_switch_pressed');
+        }
         speed *= 0.82;
         continue;
       }
@@ -1446,6 +1469,15 @@ class ShotResolver {
     ];
   }
 
+  EntityState? _entityById(List<EntityState> entities, String id) {
+    for (final entity in entities) {
+      if (entity.id == id) {
+        return entity;
+      }
+    }
+    return null;
+  }
+
   List<EntityState> _openGates(List<EntityState> entities) {
     return [
       for (final entity in entities)
@@ -1479,6 +1511,9 @@ class ShotResolver {
       return '스위치는 무거운 공에 반응합니다. 점착판 없이 다른 경로도 시도해 보세요.';
     }
     if (events.contains('switch_pressed')) {
+      if (events.contains('balloon_switch_pressed')) {
+        return '풍선 뒤 스위치가 눌려 문이 열렸습니다.';
+      }
       return '무거운 공이 스위치를 눌렀습니다. 문이 열렸습니다.';
     }
     if (events.contains('switch_rejected')) {
@@ -1497,13 +1532,13 @@ class ShotResolver {
       return '충격이 다른 물체로 전달되었습니다.';
     }
     if (events.contains('sticky_attached')) {
-      return '접착 속성으로 표면에 붙었습니다.';
+      return '점착 속성으로 표면에 붙었어요.';
     }
     if (events.contains('balloon_popped')) {
-      return '팡! 풍선이 터져 길이 열렸습니다.';
+      return '풍선이 터졌어요. 뒤의 스위치를 눌러 길을 열어 보세요.';
     }
     if (events.contains('balloon_bounced')) {
-      return '풍선은 밀렸지만 터지지 않았습니다.';
+      return '풍선에 맞고 공이 튕겨 나갔어요.';
     }
     return '공이 멈췄습니다. 남은 공을 다음 전략에 활용하세요.';
   }
@@ -1674,21 +1709,23 @@ class ShotResolver {
             entities,
             hit.copyWith(active: false, solid: false, visualState: 'popped'),
           );
-          if (hit.linkId != null) {
-            entities = _openLinkedEntity(entities, hit.linkId!);
-            final linked = entities.where((entity) => entity.id == hit.linkId);
-            for (final gate in linked) {
-              moves?.add(
-                ShotAnimationMove(
-                  entityId: gate.id,
-                  from: gate.position,
-                  to: gate.position,
-                  triggerPathIndex: collisionTrigger + 2,
-                  visualState: 'opening',
-                ),
-              );
-            }
-            events.add('linked_state_changed');
+          final balloonSwitch = _entityById(entities, 'balloon_switch');
+          if (balloonSwitch != null) {
+            entities = _replace(
+              entities,
+              balloonSwitch.copyWith(solid: true, visualState: 'revealed'),
+            );
+            moves?.add(
+              ShotAnimationMove(
+                entityId: balloonSwitch.id,
+                from: balloonSwitch.position,
+                to: balloonSwitch.position,
+                triggerPathIndex: collisionTrigger + 1,
+                visualState: 'revealed',
+                impactPosition: collision.position,
+                impactNormal: normal,
+              ),
+            );
           }
           current = current.copyWith(
             traits: {...current.traits}..remove(TraitType.sharp),
@@ -1707,6 +1744,9 @@ class ShotResolver {
           );
           events.add('balloon_popped');
           events.add('sharpness_consumed');
+          if (balloonSwitch != null) {
+            events.add('balloon_switch_revealed');
+          }
           velocity *= 0.86;
           remaining = velocity.length;
           if (remaining > 0.001) {
@@ -1728,6 +1768,17 @@ class ShotResolver {
         if (remaining > 0.001) {
           impulseDirection = velocity.normalized();
         }
+        moves?.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: collisionTrigger,
+            visualState: 'pressed',
+            impactPosition: collision.position,
+            impactNormal: normal,
+          ),
+        );
         events.add('balloon_bounced');
         continue;
       }
@@ -1749,7 +1800,10 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.switchPad) {
-        if (!carriesHeavy && !current.traits.contains(TraitType.heavy)) {
+        final isBalloonSwitch = hit.id == 'balloon_switch';
+        if (!isBalloonSwitch &&
+            !carriesHeavy &&
+            !current.traits.contains(TraitType.heavy)) {
           events.add('switch_rejected');
           current = current.copyWith(visualState: 'blocked');
           break;
@@ -1769,9 +1823,10 @@ class ShotResolver {
             impactNormal: normal,
           ),
         );
-        for (final gate in entities.where(
-          (entity) => entity.type == EntityType.gate,
-        )) {
+        final linkedGates = hit.linkId == null
+            ? entities.where((entity) => entity.type == EntityType.gate)
+            : entities.where((entity) => entity.id == hit.linkId);
+        for (final gate in linkedGates) {
           moves?.add(
             ShotAnimationMove(
               entityId: gate.id,
@@ -1782,8 +1837,13 @@ class ShotResolver {
             ),
           );
         }
-        entities = _openGates(entities);
+        entities = hit.linkId == null
+            ? _openGates(entities)
+            : _openLinkedEntity(entities, hit.linkId!);
         events.add('switch_pressed');
+        if (isBalloonSwitch) {
+          events.add('balloon_switch_pressed');
+        }
         velocity *= 0.72;
         remaining = velocity.length;
         continue;

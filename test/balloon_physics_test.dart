@@ -80,7 +80,10 @@ void main() {
     expect(result.state.entityById('balloon')!.active, isFalse);
     expect(result.state.equippedTrait, isNull);
     expect(result.state.entityById('balloon')!.visualState, 'popped');
-    expect(result.state.entityById('balloon_gate')!.open, isTrue);
+    // 팝은 문을 직접 열지 않고 뒤의 스위치만 노출한다.
+    expect(result.state.entityById('balloon_switch')!.visualState, 'revealed');
+    expect(result.state.entityById('balloon_switch')!.solid, isTrue);
+    expect(result.state.entityById('balloon_gate')!.open, isFalse);
   });
 
   test('이전에 발사된 뾰족함 공도 풍선을 터뜨린다', () {
