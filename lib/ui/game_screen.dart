@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
 import '../game/domain/game_state.dart';
@@ -12,6 +11,7 @@ import '../game/domain/geometry.dart';
 import '../game/domain/shot_input.dart';
 import '../game/domain/trait.dart';
 import '../game/levels/levels.dart';
+import '../game/persistence/progress_store.dart';
 import '../game/property_shot_game.dart';
 import '../game/simulation/shot_resolver.dart';
 import '../game/simulation/trait_resolver.dart';
@@ -47,6 +47,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _shotResolver = const ShotResolver();
   final _traitResolver = const TraitResolver();
+  final _progressStore = ProgressStore(stageCount: levels.length);
   final _feedback = GameFeedback();
   late final LocalPlayTelemetry _telemetry;
   late GameState _state;
@@ -104,25 +105,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadBestShots() async {
-    final preferences = await SharedPreferences.getInstance();
+    final progress = await _progressStore.load();
     if (!mounted) {
       return;
     }
-    final loaded = <int, int>{};
-    final loadedBonusGoals = <int, bool>{};
-    for (var index = 0; index < levels.length; index++) {
-      final best = preferences.getInt(_bestShotKey(index));
-      if (best != null) {
-        loaded[index] = best;
-      }
-      if (preferences.getBool(_bonusGoalKey(index)) == true) {
-        loadedBonusGoals[index] = true;
-      }
-    }
-    final storedUnlocked = preferences.getInt(_unlockedLevelKey) ?? 0;
-    _unlockedLevel = math
-        .max(_unlockedLevel, storedUnlocked.clamp(0, levels.length - 1).toInt())
-        .toInt();
+    final loaded = progress.bestShots;
+    final loadedBonusGoals = <int, bool>{
+      for (final index in progress.bonusGoals) index: true,
+    };
+    _unlockedLevel = math.max(_unlockedLevel, progress.unlockedLevel).toInt();
     setState(
       () => _bestShots
         ..clear()
@@ -144,8 +135,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       setState(() => _bonusChallengeAchieved = true);
     }
     try {
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setBool(_bonusGoalKey(levelIndex), true);
+      await _progressStore.recordBonusGoal(levelIndex);
     } on Exception {
       // 기록 저장소 실패가 클리어 결과나 다음 단계 이동을 막지 않는다.
     }
@@ -164,8 +154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     setState(() => _bestShots[levelIndex] = shotCount);
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setInt(_bestShotKey(levelIndex), shotCount);
+    await _progressStore.recordBestShot(levelIndex, shotCount);
   }
 
   void _unlockNextLevel(int levelIndex) {
@@ -174,11 +163,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     setState(() => _unlockedLevel = next);
-    unawaited(
-      SharedPreferences.getInstance().then(
-        (preferences) => preferences.setInt(_unlockedLevelKey, next),
-      ),
-    );
+    unawaited(_progressStore.recordStageClear(levelIndex));
   }
 
   void _setState(
@@ -1870,12 +1855,6 @@ class _LeaderboardRow {
   final String name;
   final int shots;
 }
-
-String _bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
-
-String _bonusGoalKey(int levelIndex) => 'bonus_goal_level_$levelIndex';
-
-const _unlockedLevelKey = 'property_shot_unlocked_level';
 
 String _levelObjective(int levelIndex) {
   return switch (levelIndex) {
