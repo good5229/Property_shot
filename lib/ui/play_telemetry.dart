@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/geometry.dart';
+import '../game/levels/levels.dart';
 
 class LocalPlayTelemetryStore {
   LocalPlayTelemetryStore({this.maxEvents = 2000});
@@ -114,6 +115,8 @@ class LocalPlayTelemetry {
     double? power,
     String? target,
     String? result,
+    String? resultCode,
+    String? routeTag,
     String? eventCode,
     int? shotId,
     String? objectId,
@@ -134,6 +137,7 @@ class LocalPlayTelemetry {
       '시간': DateTime.now().toUtc().toIso8601String(),
       '유형': type,
       '단계': stage + 1,
+      'stage_id': _stageId(stage),
       'session_id': sessionId,
       'build_id': buildId,
       'event_code': eventCode ?? _eventCode(type),
@@ -145,6 +149,8 @@ class LocalPlayTelemetry {
     if (power != null) event['힘'] = power;
     if (target != null) event['대상'] = target;
     if (result != null) event['결과'] = result;
+    if (resultCode != null) event['result_code'] = resultCode;
+    if (routeTag != null) event['route_tag'] = routeTag;
     if (shotId != null) event['shot_id'] = shotId;
     if (objectId != null) event['object_id'] = objectId;
     if (objectType != null) event['object_type'] = objectType;
@@ -231,6 +237,7 @@ class LocalPlayTelemetry {
       '시간',
       '유형',
       '단계',
+      'stage_id',
       '시도',
       '행동',
       '속성',
@@ -238,6 +245,8 @@ class LocalPlayTelemetry {
       '힘',
       '대상',
       '결과',
+      'result_code',
+      'route_tag',
       'event_code',
       'session_id',
       'build_id',
@@ -269,6 +278,13 @@ class LocalPlayTelemetry {
       return text;
     }
     return '"${text.replaceAll('"', '""')}"';
+  }
+
+  static String _stageId(int stage) {
+    if (stage >= 0 && stage < levels.length) {
+      return levels[stage].id;
+    }
+    return 'stage_$stage';
   }
 
   static String _eventCode(String type) {

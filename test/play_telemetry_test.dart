@@ -13,6 +13,8 @@ void main() {
       trait: '무거움',
       angle: -1.2,
       power: 0.8,
+      resultCode: 'stage_cleared',
+      routeTag: 'recommended',
     );
     telemetry.record('충돌', stage: 0, target: 'wall', result: '반사');
 
@@ -21,9 +23,16 @@ void main() {
     expect(telemetry.events.first['event_code'], 'shot_fired');
     expect(telemetry.events.first['session_id'], isNotEmpty);
     expect(telemetry.events.first['build_id'], 'property-shot-dev');
+    expect(telemetry.events.first['stage_id'], 'stage_heavy');
+    expect(telemetry.events.first['result_code'], 'stage_cleared');
+    expect(telemetry.events.first['route_tag'], 'recommended');
     expect(telemetry.exportJson(), isNot(contains('사용자')));
     expect(telemetry.exportCsv(), startsWith('시간,유형,단계'));
     expect(telemetry.exportCsv(), contains('event_code'));
+    expect(
+      telemetry.exportCsv(),
+      contains('단계,stage_id,시도,행동,속성,각도,힘,대상,결과,result_code,route_tag'),
+    );
     expect(telemetry.exportCsv(), contains('발사'));
   });
 
