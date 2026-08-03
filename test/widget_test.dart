@@ -433,6 +433,24 @@ void main() {
     expect(find.textContaining('3. 연쇄 문 열기'), findsOneWidget);
   });
 
+  testWidgets('활성 공이 없는 단계4 성공 상태도 축약 HUD 예외 없이 표시된다', (tester) async {
+    final clearState = levels[3]
+        .createState(3)
+        .copyWith(
+          phase: GamePhase.success,
+          entities: [
+            for (final entity in levels[3].createState(3).entities)
+              if (entity.id != 'active_ball') entity,
+          ],
+          message: '홀 진입 성공!',
+        );
+    await tester.pumpWidget(PropertyShotApp(initialState: clearState));
+    await tester.pump();
+
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('클리어 팝업은 로컬에 저장된 추가 도전 달성을 표시한다', (tester) async {
     SharedPreferences.setMockInitialValues({'bonus_goal_level_1': true});
     final clearState = levels[1]

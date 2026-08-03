@@ -115,6 +115,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return null;
   }
 
+  String _currentBallTelemetryId() {
+    final active = _state.entityById('active_ball');
+    if (active != null) {
+      return active.id;
+    }
+    for (final entity in _state.entities.reversed) {
+      if (entity.type == EntityType.ball) {
+        return entity.id;
+      }
+    }
+    return 'active_ball';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -561,7 +574,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         stage: _state.levelIndex,
         target: '뾰족함',
         result: '풍선 충돌로 소모',
-        objectId: _state.activeBall.id,
+        objectId: _currentBallTelemetryId(),
         objectType: EntityType.ball.name,
         attributeBefore: '뾰족함',
       );
@@ -2475,7 +2488,8 @@ String? _levelProgressHint(GameState state) {
   if (!hasAnchor) {
     return '추천 경로: 무거움으로 스위치를 누르는 길을 살펴보세요. 점착은 공을 고정합니다.';
   }
-  final hasHeavy = state.activeBall.traits.contains(TraitType.heavy);
+  final hasHeavy =
+      state.entityById('active_ball')?.traits.contains(TraitType.heavy) == true;
   if (!hasHeavy) {
     return '점착 공이 고정되었습니다. 다음 공에 무거움을 옮기거나 다른 길을 찾아보세요.';
   }
@@ -2506,7 +2520,8 @@ String? _compactLevelProgressHint(GameState state) {
   if (!hasAnchor) {
     return '무거움은 스위치 · 점착은 공 고정';
   }
-  final hasHeavy = state.activeBall.traits.contains(TraitType.heavy);
+  final hasHeavy =
+      state.entityById('active_ball')?.traits.contains(TraitType.heavy) == true;
   if (!hasHeavy) {
     return '고정한 공을 발판으로 무거움 옮기기';
   }
