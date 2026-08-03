@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `21c83f0`  
+코드 기준 커밋: `55f7129`
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
@@ -10,7 +10,7 @@
 
 | 항목 | 결과 |
 |---|---|
-| 비다중샷 회귀 | 225개 통과 |
+| 비다중샷 회귀 | 226개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
 | `flutter analyze` | 통과 |
 | `flutter build web --release` | 통과 |

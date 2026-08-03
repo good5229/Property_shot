@@ -1,13 +1,19 @@
-# 2026-08-03 최신 계측 연결 검증
+# 2026-08-03 저장 리플레이 픽스처 포함 최신 검증
 
 | 명령 | 결과 |
 |---|---|
 | `flutter analyze` | 통과, 문제 없음 |
-| 비다중샷 전체 회귀 | 225개 통과 |
+| 비다중샷 전체 회귀 | 226개 통과 |
 | `test/multi_shot_analyzer_test.dart` | 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
 | `flutter build web --release` | 통과 |
-| 최신 Web `main.dart.js` | `0ab29a85ab6e18b51a2fd8e5847c0ae1760d6213900d842c7522cb8c6b1725dd` |
+| 최신 Web `main.dart.js` | `5c34194b76102eff667fa0e01c36ba82b54d222402cb2ec070115ff668d0e2b6` |
+
+저장 리플레이 검증:
+
+- `harness_docs/qa/replays/single_shot_fixtures.json`에 1~4단계 성공 2개·실패 2개씩 총 16개를 고정했다.
+- `test/replay_fixture_test.dart`가 각 입력의 예상 종료 단계와 `ShotResult` 안정적 지문을 재생 비교한다.
+- 픽스처 생성은 `dart run tool/generate_replay_fixtures.dart`, 재생은 `flutter test test/replay_fixture_test.dart`로 반복할 수 있다.
 
 계측 변경은 물체 확인·속성 이전 대상·스위치·문·풍선·점착·홀 이벤트를 상태 전이별로 기록하도록 연결했다. 자동 검증은 통과했지만 실제 iOS·Android 기기와 외부 플레이테스트는 여전히 미검증이다.
 
@@ -712,7 +718,7 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 ## 2026-08-03 최신 최종 품질 실험 기준선
 
 - 현재 브랜치 `commercial/wall-physics-qa`, 커밋 `20eba94` 기준이다.
-- 비다중샷 전체 회귀 224개와 다중샷 물리 분석 1개가 통과했다.
+- 비다중샷 전체 회귀 226개와 다중샷 물리 분석 1개가 통과했다.
 - `flutter analyze`와 `flutter build web --release`가 통과했다.
 - Web 데모는 기존 서버를 종료한 뒤 PID 96501로 교체했고 루트·`main.dart.js` HTTP 200을 확인했다.
 - 네 단계 초기 상태 재현 명령은 `dart run tool/baseline_snapshot.dart`이며, 저장 키·미검증 범위는 `harness_docs/qa/experiment_baseline_2026-08-03.md`에 기록했다.
