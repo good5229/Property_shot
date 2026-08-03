@@ -13,7 +13,7 @@
 | 신규 에셋·상태·권리 | `art/`, `asset_registry.md`, `attribution.md`, `license_review.md` | 권리 최종 확인 잔여 |
 | 자율 제안 평가 | `proposal_scoreboard.md` | 3건 채택, 2건 거절 |
 | 자동 검증 | 비다중샷 212개 + 다중샷 1개, `flutter analyze` | 통과 |
-| Web release·서버 | `commit_push_summary.md`, PID 44882, HTTP 200 | 확인 |
+| Web release·서버 | `commit_push_summary.md`, PID 67394, HTTP 200 | 확인 |
 | 실기기·사용자 | `remaining_risks.md`, `accessibility_validation.md` | 미검증으로 명시 |
 
 ## 판정 방식

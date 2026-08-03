@@ -677,6 +677,6 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 | 시각 증거 | 기본 Golden 20개와 스테이지4 상태 Golden 25개 통과 |
 | Flutter 회귀 | 비다중샷 212개 + 다중샷 1개 통과 |
 | 분석·Web | `flutter analyze`, `flutter build web --release` 통과 |
-| 서버 | 기존 PID 39167 종료, PID 44882에서 루트·`main.dart.js` HTTP 200 |
+| 서버 | 기존 PID 44882 종료, PID 67394에서 루트·`main.dart.js` HTTP 200 |
 
 실제 iOS·Android 접근성·프레임·햅틱, 사용자 플레이테스트, 생성 도구 약관의 최종 법무 확인은 아직 제품 증거가 아니다.
