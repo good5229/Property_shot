@@ -135,4 +135,49 @@ void main() {
     expect(snapshot.bonusGoals, isEmpty);
     expect(snapshot.copyCoreCount, 0);
   });
+
+  test('스테이지 배열 순서가 바뀌어도 안정 ID로 최고 기록을 유지한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final original = ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_a', 'stage_b'],
+    );
+    await original.recordStageClear(1);
+    await original.recordBestShot(1, 2);
+
+    final reordered = ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_b', 'stage_a'],
+    );
+    final snapshot = await reordered.load();
+
+    expect(snapshot.clearedLevels, contains(0));
+    expect(snapshot.bestShots[0], 2);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getStringList(ProgressStore.clearedStageIdsKey),
+      contains('stage_b'),
+    );
+  });
+
+  test('기존 숫자 저장 키를 안정 ID 저장소로 읽고 다시 보존한다', () async {
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.clearedLevelsKey: ['1'],
+      'best_shots_level_1': 3,
+    });
+
+    final store = ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_a', 'stage_b'],
+    );
+    final snapshot = await store.load();
+
+    expect(snapshot.clearedLevels, contains(1));
+    expect(snapshot.bestShots[1], 3);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getStringList(ProgressStore.clearedStageIdsKey), [
+      'stage_b',
+    ]);
+    expect(preferences.getInt('best_shots_stage_stage_b'), 3);
+  });
 }

@@ -1,16 +1,95 @@
+import 'dart:async';
 import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/geometry.dart';
 
+class LocalPlayTelemetryStore {
+  LocalPlayTelemetryStore({this.maxEvents = 2000});
+
+  static const storageKey = 'property_shot_local_play_log_v1';
+
+  final int maxEvents;
+  Future<void> _writeTail = Future<void>.value();
+
+  Future<void> append(Map<String, Object?> event) {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      final events = await _read(preferences);
+      events.add(Map<String, Object?>.from(event));
+      final first = events.length > maxEvents ? events.length - maxEvents : 0;
+      await preferences.setString(
+        storageKey,
+        jsonEncode(events.sublist(first)),
+      );
+    });
+  }
+
+  Future<List<Map<String, Object?>>> load() {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      return _read(preferences);
+    });
+  }
+
+  Future<void> clear() {
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.remove(storageKey);
+    });
+  }
+
+  Future<void> flush() => _writeTail;
+
+  Future<T> _enqueue<T>(Future<T> Function() operation) {
+    final next = _writeTail.then((_) => operation());
+    _writeTail = next.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return next;
+  }
+
+  Future<List<Map<String, Object?>>> _read(
+    SharedPreferences preferences,
+  ) async {
+    final raw = preferences.getString(storageKey);
+    if (raw == null || raw.isEmpty) {
+      return <Map<String, Object?>>[];
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return <Map<String, Object?>>[];
+      }
+      return decoded
+          .whereType<Map>()
+          .map((event) => Map<String, Object?>.from(event))
+          .toList(growable: true);
+    } on Object {
+      return <Map<String, Object?>>[];
+    }
+  }
+}
+
 /// 실제 사용자 식별 정보 없이 내부 플레이 흐름만 기록하는 로컬 계측기다.
-/// 서버 전송은 하지 않으며, 테스트 빌드에서 JSON/CSV 문자열로 내보낼 수 있다.
+/// 서버 전송은 하지 않으며, 최근 이벤트를 로컬 저장소에만 보관한다.
 class LocalPlayTelemetry {
-  LocalPlayTelemetry({String? sessionId, this.buildId = 'property-shot-dev'})
-    : sessionId =
-          sessionId ?? DateTime.now().toUtc().microsecondsSinceEpoch.toString();
+  LocalPlayTelemetry({
+    String? sessionId,
+    this.buildId = 'property-shot-dev',
+    LocalPlayTelemetryStore? store,
+    this.persistLocally = true,
+  }) : sessionId =
+           sessionId ??
+           DateTime.now().toUtc().microsecondsSinceEpoch.toString(),
+       _store = store ?? LocalPlayTelemetryStore();
 
   final String sessionId;
   final String buildId;
+  final bool persistLocally;
+  final LocalPlayTelemetryStore _store;
   final List<Map<String, Object?>> _events = [];
 
   List<Map<String, Object?>> get events => List.unmodifiable(_events);
@@ -75,7 +154,16 @@ class LocalPlayTelemetry {
     if (fpsBucket != null) event['fps_bucket'] = fpsBucket;
     if (elapsedMs != null) event['elapsed_ms'] = elapsedMs;
     _events.add(event);
+    if (persistLocally) {
+      unawaited(_store.append(event));
+    }
   }
+
+  Future<void> flush() => _store.flush();
+
+  Future<List<Map<String, Object?>>> loadPersisted() => _store.load();
+
+  Future<void> clearPersisted() => _store.clear();
 
   void sessionStart({required int stage, String? experimentVariant}) {
     record(

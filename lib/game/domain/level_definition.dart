@@ -4,6 +4,7 @@ import 'geometry.dart';
 
 class LevelDefinition {
   const LevelDefinition({
+    required this.id,
     required this.name,
     required this.ballSpawn,
     required this.entities,
@@ -15,6 +16,8 @@ class LevelDefinition {
     this.acceptedStrategyIds = const {},
   });
 
+  /// 배열 순서가 바뀌어도 진행 기록을 유지하는 내부 식별자다.
+  final String id;
   final String name;
   final Vec2 ballSpawn;
   final List<EntityState> entities;

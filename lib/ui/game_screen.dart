@@ -135,7 +135,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _progressStore =
-        widget.progressStore ?? ProgressStore(stageCount: levels.length);
+        widget.progressStore ??
+        ProgressStore(
+          stageCount: levels.length,
+          stageIds: levels.map((level) => level.id),
+        );
     WidgetsBinding.instance.addObserver(this);
     _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     _state =

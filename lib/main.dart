@@ -111,7 +111,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
   late TutorialExperimentVariant _tutorialVariant = widget.tutorialVariant;
-  final _progressStore = ProgressStore(stageCount: levels.length);
+  final _progressStore = ProgressStore(
+    stageCount: levels.length,
+    stageIds: levels.map((level) => level.id),
+  );
 
   @override
   void initState() {

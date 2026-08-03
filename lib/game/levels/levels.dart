@@ -7,6 +7,7 @@ const logicalSize = Vec2(360, 560);
 
 final levels = <LevelDefinition>[
   LevelDefinition(
+    id: 'stage_heavy',
     name: '1. 무거움 익히기',
     ballSpawn: const Vec2(56, 456),
     copyCharges: 0,
@@ -59,6 +60,7 @@ final levels = <LevelDefinition>[
     ],
   ),
   LevelDefinition(
+    id: 'stage_bouncy',
     name: '2. 탄성 익히기',
     ballSpawn: const Vec2(58, 462),
     copyCharges: 0,
@@ -116,6 +118,7 @@ final levels = <LevelDefinition>[
     ],
   ),
   LevelDefinition(
+    id: 'stage_chain_gate',
     name: '3. 연쇄 문 열기',
     ballSpawn: const Vec2(56, 466),
     copyCharges: 0,
@@ -187,6 +190,7 @@ final levels = <LevelDefinition>[
     ],
   ),
   LevelDefinition(
+    id: 'stage_balloon',
     name: '4. 풍선 터뜨리기',
     ballSpawn: const Vec2(56, 466),
     copyCharges: 0,

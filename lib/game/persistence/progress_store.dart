@@ -19,10 +19,16 @@ class ProgressSnapshot {
 }
 
 class ProgressStore {
-  ProgressStore({required this.stageCount});
+  ProgressStore({required this.stageCount, Iterable<String>? stageIds})
+    : stageIds = List.unmodifiable(
+        stageIds == null || stageIds.length != stageCount
+            ? [for (var index = 0; index < stageCount; index++) 'stage_$index']
+            : stageIds,
+      );
 
   static const saveVersion = 1;
   static const clearedLevelsKey = 'property_shot_cleared_levels';
+  static const clearedStageIdsKey = 'property_shot_cleared_stage_ids';
   static const unlockedLevelKey = 'property_shot_unlocked_level';
   static const legacyUnlockedLevelKey = 'unlocked_level';
   static const saveVersionKey = 'property_shot_save_version';
@@ -30,6 +36,7 @@ class ProgressStore {
   static const copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
 
   final int stageCount;
+  final List<String> stageIds;
   Future<void> _writeTail = Future<void>.value();
 
   Future<T> _enqueue<T>(Future<T> Function() operation) {
@@ -54,6 +61,14 @@ class ProgressStore {
     final clearedLevels = _readIntSet(
       _safeStringList(preferences, clearedLevelsKey),
     );
+    final clearedStageIds = _readStringSet(
+      _safeStringList(preferences, clearedStageIdsKey),
+    );
+    for (var index = 0; index < stageIds.length; index++) {
+      if (clearedStageIds.contains(stageIds[index])) {
+        clearedLevels.add(index);
+      }
+    }
     final storedUnlocked = _clampLevel(
       _maxInt(
         _safeInt(preferences, unlockedLevelKey) ?? 0,
@@ -71,7 +86,9 @@ class ProgressStore {
     final bestShots = <int, int>{};
     final bonusGoals = <int>{};
     for (var index = 0; index < stageCount; index++) {
-      final best = _safeInt(preferences, bestShotKey(index));
+      final best =
+          _safeInt(preferences, bestShotStageKey(stageIds[index])) ??
+          _safeInt(preferences, bestShotKey(index));
       if (best != null && best > 0) {
         bestShots[index] = best;
       }
@@ -110,6 +127,12 @@ class ProgressStore {
         clearedLevelsKey,
         (clearedLevels.toList()..sort()).map((index) => '$index').toList(),
       );
+      await preferences.setStringList(
+        clearedStageIdsKey,
+        (clearedLevels.toList()..sort())
+            .map((index) => stageIds[index])
+            .toList(),
+      );
       await preferences.setInt(unlockedLevelKey, _clampLevel(unlockedLevel));
       await preferences.setInt(
         legacyUnlockedLevelKey,
@@ -140,6 +163,10 @@ class ProgressStore {
         return;
       }
       await _writeVersion(preferences);
+      await preferences.setInt(
+        bestShotStageKey(stageIds[levelIndex]),
+        shotCount,
+      );
       await preferences.setInt(bestShotKey(levelIndex), shotCount);
     });
   }
@@ -160,12 +187,14 @@ class ProgressStore {
       final preferences = await SharedPreferences.getInstance();
       await preferences.remove(saveVersionKey);
       await preferences.remove(clearedLevelsKey);
+      await preferences.remove(clearedStageIdsKey);
       await preferences.remove(unlockedLevelKey);
       await preferences.remove(legacyUnlockedLevelKey);
       await preferences.remove(copyCoreCountKey);
       await preferences.remove(copyCoreRewardedKey);
       for (var index = 0; index < stageCount; index++) {
         await preferences.remove(bestShotKey(index));
+        await preferences.remove(bestShotStageKey(stageIds[index]));
         await preferences.remove(bonusGoalKey(index));
       }
     });
@@ -178,6 +207,7 @@ class ProgressStore {
       await preferences.setStringList(clearedLevelsKey, [
         for (var index = 0; index < stageCount; index++) '$index',
       ]);
+      await preferences.setStringList(clearedStageIdsKey, stageIds);
       if (stageCount > 0) {
         await preferences.setInt(unlockedLevelKey, stageCount - 1);
         await preferences.setInt(legacyUnlockedLevelKey, stageCount - 1);
@@ -186,6 +216,8 @@ class ProgressStore {
   }
 
   String bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
+
+  String bestShotStageKey(String stageId) => 'best_shots_stage_$stageId';
 
   String bonusGoalKey(int levelIndex) => 'bonus_goal_level_$levelIndex';
 
@@ -211,6 +243,10 @@ class ProgressStore {
       clearedLevelsKey,
       clearedLevels.map((index) => '$index').toList(),
     );
+    await preferences.setStringList(
+      clearedStageIdsKey,
+      clearedLevels.map((index) => stageIds[index]).toList(),
+    );
     await preferences.setInt(
       unlockedLevelKey,
       _clampLevel(snapshot.unlockedLevel),
@@ -228,7 +264,9 @@ class ProgressStore {
       final best = snapshot.bestShots[index];
       if (best == null) {
         await preferences.remove(bestShotKey(index));
+        await preferences.remove(bestShotStageKey(stageIds[index]));
       } else {
+        await preferences.setInt(bestShotStageKey(stageIds[index]), best);
         await preferences.setInt(bestShotKey(index), best);
       }
       await preferences.setBool(
@@ -243,6 +281,12 @@ class ProgressStore {
         .map(int.tryParse)
         .whereType<int>()
         .where((index) => index >= 0 && index < stageCount)
+        .toSet();
+  }
+
+  Set<String> _readStringSet(List<String>? values) {
+    return (values ?? const <String>[])
+        .where((value) => stageIds.contains(value))
         .toSet();
   }
 

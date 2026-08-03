@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/ui/play_telemetry.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('로컬 플레이 계측은 개인정보 없이 JSON과 CSV로 내보낼 수 있다', () {
@@ -86,5 +87,43 @@ void main() {
     }
 
     expect(telemetry.events.map((event) => event['event_code']), types.values);
+  });
+
+  test('플레이 계측은 개인정보 없이 로컬 저장소에 보관되고 복원된다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final telemetry = LocalPlayTelemetry(
+      sessionId: '저장 검증',
+      store: LocalPlayTelemetryStore(maxEvents: 2),
+    );
+
+    telemetry.record('발사', stage: 0, eventCode: 'shot_fired');
+    telemetry.record('충돌', stage: 0, eventCode: 'collision_resolved');
+    telemetry.record('클리어', stage: 0, eventCode: 'stage_cleared');
+    await telemetry.flush();
+
+    final restored = await telemetry.loadPersisted();
+    expect(restored, hasLength(2));
+    expect(restored.map((event) => event['event_code']), [
+      'collision_resolved',
+      'stage_cleared',
+    ]);
+    expect(restored.every((event) => !event.containsKey('사용자')), isTrue);
+
+    await telemetry.clearPersisted();
+    expect(await telemetry.loadPersisted(), isEmpty);
+  });
+
+  test('동시에 기록된 로컬 계측 이벤트의 순서를 보존한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = LocalPlayTelemetryStore();
+    final telemetry = LocalPlayTelemetry(store: store);
+
+    telemetry.record('첫 이벤트', stage: 0);
+    telemetry.record('둘째 이벤트', stage: 0);
+    telemetry.record('셋째 이벤트', stage: 0);
+    await telemetry.flush();
+
+    final restored = await store.load();
+    expect(restored.map((event) => event['유형']), ['첫 이벤트', '둘째 이벤트', '셋째 이벤트']);
   });
 }
