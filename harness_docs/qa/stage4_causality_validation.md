@@ -35,6 +35,7 @@
 | 팝→스위치→문 이벤트 순서 | `test/puzzle_solution_audit_test.dart` | 통과 |
 | 물리 상태 전이 이벤트 순서 | `PhysicsStateTransition`·`PhysicsEventKind.stateChange` | 통과 |
 | 팝→문→홀 종단간 최종 상태 | 같은 테스트의 실제 `levels[3]` 탐색 | 통과 |
+| 실제 홀 포획·포획 후 충돌 없음 | `test/stage4_end_to_end_test.dart` | 통과 |
 | 뾰족함 없는 우회 성공 | `test/puzzle_solution_audit_test.dart` | 통과 |
 | 기본 플레이 화면 20개(4단계×5해상도) | `test/game_screen_golden_test.dart` | 통과 |
 | 시작·팝·스위치/문·홀·결과 25개(5상태×5해상도) | `test/stage4_causality_golden_test.dart` | 통과 |
