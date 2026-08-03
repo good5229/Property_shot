@@ -11,10 +11,10 @@
 
 | 측정 대상 | 결과 | 한계 |
 |---|---|---|
-| `ShotResolver` 1단계 | 평균 360.3µs | 렌더링·GPU·입력 제외 |
-| `ShotResolver` 2단계 | 평균 287.9µs | 렌더링·GPU·입력 제외 |
-| `ShotResolver` 3단계 | 평균 303.5µs | 렌더링·GPU·입력 제외 |
-| `ShotResolver` 4단계 | 평균 330.0µs | 렌더링·GPU·입력 제외 |
+| `ShotResolver` 1단계 | 평균 416.8µs | 렌더링·GPU·입력 제외 |
+| `ShotResolver` 2단계 | 평균 329.8µs | 렌더링·GPU·입력 제외 |
+| `ShotResolver` 3단계 | 평균 338.6µs | 렌더링·GPU·입력 제외 |
+| `ShotResolver` 4단계 | 평균 354.9µs | 렌더링·GPU·입력 제외 |
 | Web 390×844 | 평균·p95 약 16.7ms | Headless Chromium |
 | Web 768×1024 | 평균·p95 약 16.7ms | Headless Chromium |
 | Web 콘솔 | 5개 뷰포트 오류 0건 | 실제 모바일 브라우저 아님 |
