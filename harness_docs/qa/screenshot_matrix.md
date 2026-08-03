@@ -78,6 +78,13 @@
 - `harness_docs/qa/web_performance_latest.json`은 Chromium 390×844·768×1024에서 idle·발사 구간을 측정한 결과로, 콘솔 오류 0건·평균 약 16.67ms·20ms 초과 프레임 0%를 기록한다.
 - 이 자료는 Web 보조 측정이며 실제 iPhone/iPad GPU·메모리·터치·햅틱 결과로 해석하지 않는다.
 
+## 2026-08-03 최신 Web 성능 재측정
+
+- `harness_docs/qa/web_performance_latest.json`을 Pillow 12.3.0 격리 환경에서 5초 페이지·플레이 워밍업으로 다시 생성했다.
+- 콘솔 오류는 390×844·768×1024 모두 0건이지만, 발사 평균·p95는 각각 25.681·66.6ms와 35.953·66.7ms이고 20ms 초과 비율은 각각 26.53%·82.86%였다.
+- 빈 Chromium 기준은 두 해상도 모두 평균 약 16.7ms·p95 18.6ms다. 따라서 최신 게임 번들의 성능 게이트는 통과로 기록하지 않는다.
+- Picture 캐시 최적화는 동적 효과 Golden 회귀로 제거했고, 발사 중 재질·이펙트·래스터·Flutter Web 합성 비용이 남아 있다. 이 증거는 실제 iPhone·iPad 성능을 대신하지 않는다.
+
 ## 2026-08-02 공 화풍 일관성 Golden
 
 - `test/goldens/raster_assets_390x844.png`, `test/goldens/raster_assets_768x1024.png`에 돌·상자·젤리 래스터와 얼굴 공을 함께 캡처했다.

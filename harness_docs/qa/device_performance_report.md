@@ -16,6 +16,17 @@
 
 성능 결론은 Release 빌드에서만 내린다. 순수 물리 계산 시간, Headless Chromium 프레임 시간, 실제 모바일 기기 프레임 시간을 서로 다른 증거로 기록한다.
 
+## 최신 Web 감사 · 2026-08-03 KST
+
+`scripts/web_performance_audit.py`를 Pillow 12.3.0 격리 환경에서 실행하고, 5초 페이지·플레이 워밍업 뒤 1.8초 idle과 2.5초 발사 구간을 측정했다. 빈 Chromium 기준은 390×844 평균 16.8ms·p95 18.6ms, 768×1024 평균 16.6ms·p95 18.6ms였다.
+
+| 뷰포트 | idle | 발사 | 콘솔 | Long Task 관찰 |
+|---|---:|---:|---:|---|
+| 390×844 | 평균 19.5ms, p95 34.7ms | 평균 25.681ms, p95 66.6ms | 0건 | idle 1,399ms, 발사 263ms 등 |
+| 768×1024 | 평균 33.641ms, p95 49.9ms | 평균 35.953ms, p95 66.7ms | 0건 | idle 1,566ms, 발사 357ms 등 |
+
+`ui.Picture` 캐시를 시도했으나 계획 화면·4단계 Golden의 동적 효과 시점이 달라져 회귀를 만들었고 제거했다. 현재 번들은 기존 렌더 경로 기준이며 60FPS 목표인 16.7ms p95를 충족하지 못했다. 이 수치는 Chromium Web 보조 결과이며 실제 iPhone·Android·iPad 성능으로 확대하지 않는다. 현재 성능 게이트는 `미통과`이고, 최신 원자료는 [web_performance_latest.json](web_performance_latest.json)이다.
+
 ## 확보된 측정
 
 | 측정 대상 | 결과 | 한계 |
@@ -24,8 +35,8 @@
 | `ShotResolver` 2단계 | 평균 329.8µs | 렌더링·GPU·입력 제외 |
 | `ShotResolver` 3단계 | 평균 338.6µs | 렌더링·GPU·입력 제외 |
 | `ShotResolver` 4단계 | 평균 354.9µs | 렌더링·GPU·입력 제외 |
-| Web 390×844 | 평균·p95 약 16.7ms | Headless Chromium |
-| Web 768×1024 | 평균·p95 약 16.7ms | Headless Chromium |
+| Web 390×844 | 최신 발사 평균 25.4ms, p95 66.7ms | Headless Chromium, 성능 게이트 미통과 |
+| Web 768×1024 | 최신 발사 평균 39.3ms, p95 67.2ms | Headless Chromium, 성능 게이트 미통과 |
 | Web 콘솔 | 5개 뷰포트 오류 0건 | 실제 모바일 브라우저 아님 |
 | Android ARM64 API 28 AVD | 1080×1920 세로 Release에서 4단계 진입·속성 이전·45% 충전·자동 발사·홀 성공까지 입력 스모크 통과 | 프레임 시간·GPU·메모리·햅틱 미측정 |
 

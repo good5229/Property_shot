@@ -8,6 +8,7 @@
 - 최신 Android ARM64 에뮬레이터 앱 PID는 4503이며 시작 화면 캡처와 `FATAL EXCEPTION` 0건을 `android-arm64-latest-layout-evidence.json`에 보존했다.
 - 계측 이벤트는 `stage_id`, `result_code`, `route_tag`를 포함해 스테이지 순서 변경과 경로별 분석을 지원하지만, 실제 사용자 표본의 경로 태그 품질은 아직 검증하지 않았다.
 - 로컬 계측은 250ms 묶음 저장과 종료 flush로 고빈도 충돌 장면의 저장 호출을 줄였지만, 실제 iPhone·Android에서 계측 포함 프레임 비용은 아직 미측정이다.
+- 최신 Chromium Web Release 감사는 no-cache 번들에서 390×844 발사 평균 25.681ms·p95 66.6ms, 768×1024 평균 35.953ms·p95 66.7ms를 기록했다. 빈 Chromium 기준은 약 16.7ms였고, Picture 캐시는 Golden 동적 효과 회귀로 제거했다. Long Task도 초기 1.4~1.6초, 발사 중 최대 357ms가 관찰되어 실제 렌더·에셋·프레임 프로파일링이 남아 있다.
 
 - Android ARM64 API 28 에뮬레이터에서 Release 단계4 전체 흐름을 실제 입력으로 확인했다. 지도 `4 / 4` 해금, 속성 이전, 충전·자동 발사, 스위치·문, 홀 성공, 클리어 팝업과 앱 치명적 예외 0건을 증거로 보존했다.
 - Web Release 서버는 기존 프로세스를 종료하고 PID 75036으로 교체했으며 루트·번들 HTTP 200을 확인했다.
