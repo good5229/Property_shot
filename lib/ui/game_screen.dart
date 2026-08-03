@@ -65,6 +65,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _isAnimatingShot = false;
   bool _showClearPopup = false;
   bool _showFailurePopup = false;
+  bool _hintWasVisible = false;
   String _failureAdvice = '';
   bool _bestShotsLoaded = false;
   Future<void>? _bestShotsLoadFuture;
@@ -104,6 +105,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
     _telemetry.record('단계 시작', stage: _state.levelIndex);
+    _recordHintExposureIfNeeded();
   }
 
   Future<void> _loadBestShots() async {
@@ -191,6 +193,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         animationTransaction: path.isNotEmpty,
       );
     });
+    _recordHintExposureIfNeeded();
   }
 
   void _selectLevel(int index) {
@@ -207,6 +210,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusSwitchHistory.clear();
     _bonusChallengeAchieved = _bonusGoals[index] ?? false;
     final sameStage = index == _state.levelIndex;
+    if (sameStage && _state.shotCount > 0) {
+      _telemetry.record(
+        '재시도',
+        stage: _state.levelIndex,
+        attempt: _state.shotCount + 1,
+        result: '단계 다시 시작',
+        eventCode: 'retry_pressed',
+      );
+    }
     final availableCores = sameStage
         ? _stageCopyCoreAtStart
         : _state.copyCoreCount;
@@ -224,6 +236,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _goNextLevel() {
+    _telemetry.record(
+      '단계 종료',
+      stage: _state.levelIndex,
+      result: '다음 단계 선택',
+      eventCode: 'stage_exit',
+    );
     if (_state.levelIndex >= levels.length - 1) {
       _selectLevel(0);
       _setState(_state.copyWith(message: '모든 단계를 완료했습니다. 기록을 다시 도전하세요.'));
@@ -598,7 +616,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _showFailurePopup = false;
-    _telemetry.record('되감기', stage: _state.levelIndex);
+    _telemetry.record(
+      '재시도',
+      stage: _state.levelIndex,
+      attempt: _state.shotCount + 1,
+      result: '되감기',
+      eventCode: 'retry_pressed',
+    );
     if (_state.history.isNotEmpty) {
       _bonusBumperHit = _bonusBumperHistory.isEmpty
           ? false
@@ -743,6 +767,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _dismissInfo() {
+    if (_showBallInfo || _inspectedEntityId != null) {
+      _telemetry.record(
+        '속성 행동 취소',
+        stage: _state.levelIndex,
+        target: _inspectedEntityId ?? _state.activeBall.id,
+        result: '정보 팝업 닫기',
+        eventCode: 'attribute_action_cancelled',
+      );
+    }
     setState(() {
       _showBallInfo = false;
       _inspectedEntityId = null;
@@ -766,6 +799,36 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _showFailurePopup = false;
       });
     }
+  }
+
+  void _exitStage() {
+    if (widget.onExit == null) {
+      return;
+    }
+    _telemetry.record(
+      '단계 종료',
+      stage: _state.levelIndex,
+      result: '섬 지도 복귀',
+      eventCode: 'stage_exit',
+    );
+    widget.onExit!();
+  }
+
+  void _recordHintExposureIfNeeded() {
+    final target = _tutorialTarget;
+    final visible = target != null;
+    if (visible && !_hintWasVisible) {
+      _telemetry.record(
+        '힌트 노출',
+        stage: _state.levelIndex,
+        target: target.id,
+        result: _tutorialHint,
+        eventCode: 'hint_exposed',
+        objectId: target.id,
+        objectType: target.type.name,
+      );
+    }
+    _hintWasVisible = visible;
   }
 
   void _handleFieldTap(Offset localPosition, Size fieldSize) {
@@ -1073,7 +1136,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               onSelectLevel: _selectLevel,
                               showStageSelector: widget.showStageSelector,
                               onPause: _togglePause,
-                              onExit: widget.onExit,
+                              onExit: widget.onExit == null ? null : _exitStage,
                             ),
                           if (compactLayout)
                             Padding(
@@ -1086,7 +1149,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 onSelectLevel: _selectLevel,
                                 showStageSelector: widget.showStageSelector,
                                 onPause: _togglePause,
-                                onExit: widget.onExit,
+                                onExit: widget.onExit == null
+                                    ? null
+                                    : _exitStage,
                               ),
                             ),
                           Expanded(
