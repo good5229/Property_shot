@@ -24,7 +24,7 @@
 
 단계별 대표 재생 입력은 `harness_docs/qa/replays/single_shot_fixtures.json`에 저장했다. 1~4단계 각각 성공 2개·실패 2개씩 총 16개이며, 입력 각도·힘·속성, 예상 종료 단계, 물리 결과 지문을 포함한다. `test/replay_fixture_test.dart`는 JSON을 다시 읽어 동일 입력을 `ShotResolver`에 넣고 안정적 지문과 종료 단계를 비교한다.
 
-다중샷 대표 재생 입력은 `harness_docs/qa/replays/multi_shot_fixtures.json`에 저장했다. 각 시퀀스는 최대 2발로 구성되며, 첫 발의 결과 상태를 다음 발의 시작 상태로 전달한다. 직접·복사·대체 경로 태그와 발별 물리 지문을 함께 보존하고 `test/multi_replay_fixture_test.dart`가 20개 시퀀스를 재생 비교한다.
+다중샷 대표 재생 입력은 `harness_docs/qa/replays/multi_shot_fixtures.json`에 저장했다. 각 시퀀스는 최대 2발로 구성되며, 첫 발의 결과 상태를 다음 발의 시작 상태로 전달한다. 네 단계 모두 최소 1개의 2발 시퀀스를 포함하고, 직접·복사·대체 경로 태그와 발별 물리 지문을 함께 보존한다. `test/multi_replay_fixture_test.dart`가 20개 시퀀스와 단계별 2발 조건을 재생 비교한다.
 
 재현 명령:
 

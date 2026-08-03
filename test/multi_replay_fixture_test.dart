@@ -25,7 +25,16 @@ void main() {
     expect(fixtures, hasLength(levels.length * 5));
     expect(fixtures.map((fixture) => fixture.stageIndex).toSet(), {0, 1, 2, 3});
     expect(fixtures.every((fixture) => fixture.shots.isNotEmpty), isTrue);
-    expect(fixtures.any((fixture) => fixture.shots.length == 2), isTrue);
+    for (final stageIndex in {0, 1, 2, 3}) {
+      expect(
+        fixtures.any(
+          (fixture) =>
+              fixture.stageIndex == stageIndex && fixture.shots.length == 2,
+        ),
+        isTrue,
+        reason: '단계 ${stageIndex + 1}에 두 발 상태 전달 시나리오가 없습니다.',
+      );
+    }
 
     for (final fixture in fixtures) {
       var state = levels[fixture.stageIndex].createState(

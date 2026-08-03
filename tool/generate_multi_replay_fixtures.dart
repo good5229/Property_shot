@@ -7,6 +7,8 @@ import 'dart:math' as math;
 import 'package:property_shot/game/analysis/multi_shot_analyzer.dart';
 import 'package:property_shot/game/analysis/replay_fixture.dart';
 import 'package:property_shot/game/analysis/replay_signature.dart';
+import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
@@ -25,18 +27,38 @@ void main() {
     final metrics = analyzer.analyzeLevel(stageIndex);
     final seen = <String>{};
     final plans = <ShotSequencePlan>[];
-    for (final strategy in metrics.strategyMetrics) {
-      for (final plan in strategy.examples) {
-        final key = _sequenceKey(plan.shots);
-        if (seen.add(key)) {
-          plans.add(plan);
+    final seed = _validatedTwoShotSeed(stageIndex);
+    if (seed != null) {
+      plans.add(seed);
+      seen.add(_sequenceKey(seed.shots));
+    }
+    final candidates = [
+      for (final strategy in metrics.strategyMetrics) ...strategy.examples,
+    ]..sort((left, right) => right.shots.length.compareTo(left.shots.length));
+    for (final plan in candidates) {
+      final key = _sequenceKey(plan.shots);
+      if (seen.add(key)) {
+        plans.add(plan);
+      }
+      if (plans.length == 5) {
+        break;
+      }
+    }
+    /* 분석기 결과를 발 수 기준으로 정렬해 실제 상태 전달 시퀀스를 우선 보존한다. */
+    if (plans.length < 5) {
+      for (final strategy in metrics.strategyMetrics) {
+        for (final plan in strategy.examples) {
+          final key = _sequenceKey(plan.shots);
+          if (seen.add(key)) {
+            plans.add(plan);
+          }
+          if (plans.length == 5) {
+            break;
+          }
         }
         if (plans.length == 5) {
           break;
         }
-      }
-      if (plans.length == 5) {
-        break;
       }
     }
     if (plans.length != 5) {
@@ -58,6 +80,51 @@ void main() {
         ),
   );
   print('다중샷 리플레이 픽스처 ${fixtures.length}개 생성: ${file.path}');
+}
+
+ShotSequencePlan? _validatedTwoShotSeed(int stageIndex) {
+  const seeds = <List<List<double>>>[
+    [
+      [0, 0.10],
+      [65, 0.65],
+    ],
+    [
+      [0, 0.10],
+      [95, 0.85],
+    ],
+    [
+      [0, 0.10],
+      [65, 0.85],
+    ],
+    [
+      [0, 0.10],
+      [40, 0.85],
+    ],
+  ];
+  if (stageIndex < 0 || stageIndex >= seeds.length) {
+    return null;
+  }
+  final shots = [
+    for (final item in seeds[stageIndex])
+      ShotInput(
+        direction: Vec2(
+          math.cos(item[0] * math.pi / 180),
+          math.sin(item[0] * math.pi / 180),
+        ),
+        power: item[1],
+      ),
+  ];
+  var state = levels[stageIndex].createState(stageIndex, productRules: true);
+  final first = resolver.resolve(state, shots.first);
+  if (first.state.phase == GamePhase.success) {
+    return null;
+  }
+  state = first.state;
+  final second = resolver.resolve(state, shots.last);
+  if (second.state.phase != GamePhase.success) {
+    throw StateError('단계 ${stageIndex + 1}의 검증된 2발 시드가 성공하지 않았습니다.');
+  }
+  return ShotSequencePlan(strategy: '무속성', shots: shots);
 }
 
 ReplayFixture _fixture(int stageIndex, ShotSequencePlan plan, int index) {
