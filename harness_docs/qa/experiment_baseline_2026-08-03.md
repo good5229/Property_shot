@@ -17,7 +17,7 @@
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 47399 |
+| 데모 서버 | `127.0.0.1:8080`, PID 67695 |
 
 Web 시각 캡처:
 
