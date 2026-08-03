@@ -85,7 +85,7 @@
 lib/
   game/
     domain/       상태, 좌표, 속성, 엔티티, 발사 입력
-    levels/       프로토타입 맵 3종
+    levels/       데이터 기반 테스트 맵 4종
     simulation/   속성 옮기기, 샷 판정, 예상 경로, 되감기
     property_shot_game.dart
   ui/

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
@@ -133,6 +134,59 @@ void main() {
       lessThan(events.indexOf('balloon_switch_pressed')),
     );
     expect(solution.state.entityById('balloon_gate')!.open, isTrue);
+
+    final physicsEvents = solution.physicsEvents;
+    final balloonImpact = physicsEvents.indexWhere(
+      (event) =>
+          event.kind == PhysicsEventKind.impact &&
+          event.targetEntityId == 'balloon',
+    );
+    final balloonPopped = physicsEvents.indexWhere(
+      (event) =>
+          event.kind == PhysicsEventKind.stateChange &&
+          event.targetEntityId == 'balloon' &&
+          event.visualState == 'popped',
+    );
+    final switchRevealed = physicsEvents.indexWhere(
+      (event) =>
+          event.kind == PhysicsEventKind.stateChange &&
+          event.targetEntityId == 'balloon_switch' &&
+          event.visualState == 'revealed',
+    );
+    final switchImpact = physicsEvents.indexWhere(
+      (event) =>
+          event.kind == PhysicsEventKind.impact &&
+          event.targetEntityId == 'balloon_switch',
+    );
+    final gateOpened = physicsEvents.indexWhere(
+      (event) =>
+          event.kind == PhysicsEventKind.stateChange &&
+          event.targetEntityId == 'balloon_gate' &&
+          event.visualState == 'open',
+    );
+    final holeImpact = physicsEvents.indexWhere(
+      (event) =>
+          event.kind == PhysicsEventKind.impact &&
+          event.targetType == EntityType.hole,
+    );
+    expect(balloonImpact, greaterThanOrEqualTo(0));
+    expect(balloonPopped, greaterThan(balloonImpact));
+    expect(switchRevealed, greaterThan(balloonPopped));
+    expect(switchImpact, greaterThan(switchRevealed));
+    expect(gateOpened, greaterThan(switchImpact));
+    expect(holeImpact, greaterThan(gateOpened));
+    expect(
+      physicsEvents
+          .where((event) => event.kind == PhysicsEventKind.stateChange)
+          .map((event) => event.eventId)
+          .toSet()
+          .length,
+      equals(
+        physicsEvents
+            .where((event) => event.kind == PhysicsEventKind.stateChange)
+            .length,
+      ),
+    );
   });
 
   test('4단계는 뾰족함 없이도 우회 성공을 허용한다', () {

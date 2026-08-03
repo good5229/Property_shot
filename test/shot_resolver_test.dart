@@ -65,7 +65,16 @@ void main() {
     final eventIds = result.physicsEvents
         .map((event) => event.eventId)
         .toList();
-    expect(eventIds, hasLength(result.impacts.length + result.moves.length));
+    expect(
+      eventIds,
+      hasLength(
+        result.impacts.length +
+            result.moves.length +
+            result.physicsEvents
+                .where((event) => event.kind == PhysicsEventKind.stateChange)
+                .length,
+      ),
+    );
     expect(eventIds.toSet(), hasLength(eventIds.length));
     expect(
       result.physicsEvents
@@ -78,6 +87,12 @@ void main() {
           .where((event) => event.kind == PhysicsEventKind.move)
           .map((event) => event.move),
       everyElement(isNotNull),
+    );
+    expect(
+      result.physicsEvents
+          .where((event) => event.kind == PhysicsEventKind.stateChange)
+          .map((event) => event.visualState),
+      contains('captured'),
     );
     expect(
       result.physicsEvents.map((event) => event.pathIndex).toList(),

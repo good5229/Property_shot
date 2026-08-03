@@ -28,7 +28,32 @@ class ShotResult {
   final List<ChainSafetyDiagnostic> chainSafetyDiagnostics;
 }
 
-enum PhysicsEventKind { impact, move, chainSafetyStop }
+enum PhysicsEventKind { impact, stateChange, move, chainSafetyStop }
+
+/// 판정 중 실제로 적용된 엔티티 상태 변화를 기록한다.
+/// 문자열 이벤트나 애니메이션 경로를 다시 해석하지 않고도
+/// 충돌 이후의 인과 순서를 재생·검증할 수 있게 한다.
+class PhysicsStateTransition {
+  const PhysicsStateTransition({
+    required this.sourceEntityId,
+    required this.targetEntityId,
+    required this.targetType,
+    required this.pathIndex,
+    required this.previousState,
+    required this.nextState,
+    this.position = Vec2.zero,
+    this.normal = Vec2.zero,
+  });
+
+  final String sourceEntityId;
+  final String targetEntityId;
+  final EntityType targetType;
+  final int pathIndex;
+  final String? previousState;
+  final String nextState;
+  final Vec2 position;
+  final Vec2 normal;
+}
 
 class ChainSafetyDiagnostic {
   const ChainSafetyDiagnostic({
@@ -141,6 +166,7 @@ List<PhysicsEvent> buildPhysicsEvents({
   required List<ShotImpact> impacts,
   required List<ShotAnimationMove> moves,
   required List<ChainSafetyDiagnostic> chainSafetyDiagnostics,
+  List<PhysicsStateTransition> stateTransitions = const [],
 }) {
   final events = <PhysicsEvent>[];
   final impactEventsByTarget = <String, PhysicsEvent>{};
@@ -166,6 +192,41 @@ List<PhysicsEvent> buildPhysicsEvents({
     );
     events.add(event);
     impactEventsByTarget[impact.entityId] = event;
+  }
+
+  for (var index = 0; index < stateTransitions.length; index++) {
+    final transition = stateTransitions[index];
+    final parent = events
+        .where(
+          (event) =>
+              event.pathIndex <= transition.pathIndex &&
+              (event.targetEntityId == transition.sourceEntityId ||
+                  event.targetEntityId == transition.targetEntityId),
+        )
+        .fold<PhysicsEvent?>(
+          null,
+          (latest, event) =>
+              latest == null || event.pathIndex > latest.pathIndex
+              ? event
+              : latest,
+        );
+    events.add(
+      PhysicsEvent(
+        eventId:
+            'state:$index:${transition.targetEntityId}:${transition.pathIndex}:${transition.nextState}',
+        parentEventId: parent?.eventId,
+        kind: PhysicsEventKind.stateChange,
+        pathIndex: transition.pathIndex,
+        sourceEntityId: transition.sourceEntityId,
+        targetEntityId: transition.targetEntityId,
+        targetType: transition.targetType,
+        position: transition.position,
+        normal: transition.normal,
+        impulse: 0,
+        resultingVelocity: Vec2.zero,
+        visualState: transition.nextState,
+      ),
+    );
   }
 
   for (var index = 0; index < moves.length; index++) {
@@ -308,6 +369,7 @@ class ShotResolver {
     final events = <String>[];
     final moves = <ShotAnimationMove>[];
     final impacts = <ShotImpact>[];
+    final stateTransitions = <PhysicsStateTransition>[];
     final chainSafetyDiagnostics = <ChainSafetyDiagnostic>[];
     var success = false;
     var stopped = false;
@@ -374,6 +436,18 @@ class ShotResolver {
             strength: 1,
           ),
         );
+        stateTransitions.add(
+          PhysicsStateTransition(
+            sourceEntityId: ball.id,
+            targetEntityId: hole.id,
+            targetType: hole.type,
+            pathIndex: path.length - 1,
+            previousState: 'approaching',
+            nextState: 'captured',
+            position: position,
+            normal: direction * -1,
+          ),
+        );
         events.add('hole_entered');
         success = true;
         break;
@@ -426,10 +500,34 @@ class ShotResolver {
             hit.copyWith(active: false, solid: false, visualState: 'popped'),
           );
           final balloonSwitch = _entityById(entities, 'balloon_switch');
+          stateTransitions.add(
+            PhysicsStateTransition(
+              sourceEntityId: hit.id,
+              targetEntityId: hit.id,
+              targetType: hit.type,
+              pathIndex: path.length - 1,
+              previousState: hit.visualState,
+              nextState: 'popped',
+              position: contactPosition,
+              normal: collision.normal,
+            ),
+          );
           if (balloonSwitch != null) {
             entities = _replace(
               entities,
               balloonSwitch.copyWith(solid: true, visualState: 'revealed'),
+            );
+            stateTransitions.add(
+              PhysicsStateTransition(
+                sourceEntityId: hit.id,
+                targetEntityId: balloonSwitch.id,
+                targetType: balloonSwitch.type,
+                pathIndex: path.length - 1,
+                previousState: balloonSwitch.visualState,
+                nextState: 'revealed',
+                position: balloonSwitch.position,
+                normal: collision.normal,
+              ),
             );
             moves.add(
               ShotAnimationMove(
@@ -456,6 +554,18 @@ class ShotResolver {
           );
           ball = ball.copyWith(
             traits: {...ball.traits}..remove(TraitType.sharp),
+          );
+          stateTransitions.add(
+            PhysicsStateTransition(
+              sourceEntityId: hit.id,
+              targetEntityId: ball.id,
+              targetType: ball.type,
+              pathIndex: path.length - 1,
+              previousState: TraitType.sharp.name,
+              nextState: 'sharpness_consumed',
+              position: contactPosition,
+              normal: collision.normal,
+            ),
           );
           events.add('balloon_popped');
           events.add('sharpness_consumed');
@@ -505,6 +615,18 @@ class ShotResolver {
           collision.normal,
         );
         path[path.length - 1] = position;
+        stateTransitions.add(
+          PhysicsStateTransition(
+            sourceEntityId: ball.id,
+            targetEntityId: ball.id,
+            targetType: ball.type,
+            pathIndex: path.length - 1,
+            previousState: ball.visualState,
+            nextState: 'stuck',
+            position: position,
+            normal: collision.normal,
+          ),
+        );
         events.add('sticky_attached');
         stopped = true;
         break;
@@ -557,6 +679,32 @@ class ShotResolver {
         entities = hit.linkId == null
             ? _openGates(entities)
             : _openLinkedEntity(entities, hit.linkId!);
+        stateTransitions.add(
+          PhysicsStateTransition(
+            sourceEntityId: ball.id,
+            targetEntityId: hit.id,
+            targetType: hit.type,
+            pathIndex: path.length - 1,
+            previousState: hit.visualState,
+            nextState: 'pressed',
+            position: position,
+            normal: collision.normal,
+          ),
+        );
+        for (final gate in linkedGates) {
+          stateTransitions.add(
+            PhysicsStateTransition(
+              sourceEntityId: hit.id,
+              targetEntityId: gate.id,
+              targetType: gate.type,
+              pathIndex: path.length - 1,
+              previousState: gate.visualState,
+              nextState: 'open',
+              position: gate.position,
+              normal: collision.normal,
+            ),
+          );
+        }
         events.add('switch_pressed');
         if (isBalloonSwitch) {
           events.add('balloon_switch_pressed');
@@ -630,6 +778,7 @@ class ShotResolver {
             const {},
             impacts,
             chainSafetyDiagnostics,
+            stateTransitions,
           );
           final pushedCrate =
               entities
@@ -696,6 +845,7 @@ class ShotResolver {
           const {},
           impacts,
           chainSafetyDiagnostics,
+          stateTransitions,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -779,6 +929,7 @@ class ShotResolver {
           const {},
           impacts,
           chainSafetyDiagnostics,
+          stateTransitions,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -935,6 +1086,7 @@ class ShotResolver {
         impacts: impacts,
         moves: moves,
         chainSafetyDiagnostics: chainSafetyDiagnostics,
+        stateTransitions: stateTransitions,
       ),
       chainSafetyDiagnostics: chainSafetyDiagnostics,
     );
@@ -1557,6 +1709,7 @@ class ShotResolver {
     Set<String> chainIds = const {},
     List<ShotImpact>? impacts,
     List<ChainSafetyDiagnostic>? chainSafetyDiagnostics,
+    List<PhysicsStateTransition>? stateTransitions,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -1662,6 +1815,18 @@ class ShotResolver {
             sourceEntityId: target.id,
           ),
         );
+        stateTransitions?.add(
+          PhysicsStateTransition(
+            sourceEntityId: target.id,
+            targetEntityId: hole.id,
+            targetType: hole.type,
+            pathIndex: triggerPathIndex + iterations,
+            previousState: current.visualState,
+            nextState: 'captured',
+            position: hole.position,
+            normal: stepDirection * -1,
+          ),
+        );
         entities = _replace(entities, current);
         events.add('chain_hole_entered');
         break;
@@ -1709,11 +1874,35 @@ class ShotResolver {
             entities,
             hit.copyWith(active: false, solid: false, visualState: 'popped'),
           );
+          stateTransitions?.add(
+            PhysicsStateTransition(
+              sourceEntityId: target.id,
+              targetEntityId: hit.id,
+              targetType: hit.type,
+              pathIndex: collisionTrigger,
+              previousState: hit.visualState,
+              nextState: 'popped',
+              position: collision.position,
+              normal: normal,
+            ),
+          );
           final balloonSwitch = _entityById(entities, 'balloon_switch');
           if (balloonSwitch != null) {
             entities = _replace(
               entities,
               balloonSwitch.copyWith(solid: true, visualState: 'revealed'),
+            );
+            stateTransitions?.add(
+              PhysicsStateTransition(
+                sourceEntityId: hit.id,
+                targetEntityId: balloonSwitch.id,
+                targetType: balloonSwitch.type,
+                pathIndex: collisionTrigger,
+                previousState: balloonSwitch.visualState,
+                nextState: 'revealed',
+                position: balloonSwitch.position,
+                normal: normal,
+              ),
             );
             moves?.add(
               ShotAnimationMove(
@@ -1730,6 +1919,18 @@ class ShotResolver {
           current = current.copyWith(
             traits: {...current.traits}..remove(TraitType.sharp),
             visualState: 'pushed',
+          );
+          stateTransitions?.add(
+            PhysicsStateTransition(
+              sourceEntityId: hit.id,
+              targetEntityId: current.id,
+              targetType: current.type,
+              pathIndex: collisionTrigger,
+              previousState: TraitType.sharp.name,
+              nextState: 'sharpness_consumed',
+              position: collision.position,
+              normal: normal,
+            ),
           );
           moves?.add(
             ShotAnimationMove(
@@ -1784,6 +1985,18 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.stickySurface) {
+        stateTransitions?.add(
+          PhysicsStateTransition(
+            sourceEntityId: target.id,
+            targetEntityId: current.id,
+            targetType: current.type,
+            pathIndex: collisionTrigger,
+            previousState: current.visualState,
+            nextState: 'stuck',
+            position: collision.position,
+            normal: normal,
+          ),
+        );
         entities = _replace(entities, hit.copyWith(visualState: 'stuck'));
         moves?.add(
           ShotAnimationMove(
@@ -1840,6 +2053,32 @@ class ShotResolver {
         entities = hit.linkId == null
             ? _openGates(entities)
             : _openLinkedEntity(entities, hit.linkId!);
+        stateTransitions?.add(
+          PhysicsStateTransition(
+            sourceEntityId: current.id,
+            targetEntityId: hit.id,
+            targetType: hit.type,
+            pathIndex: collisionTrigger,
+            previousState: hit.visualState,
+            nextState: 'pressed',
+            position: collision.position,
+            normal: normal,
+          ),
+        );
+        for (final gate in linkedGates) {
+          stateTransitions?.add(
+            PhysicsStateTransition(
+              sourceEntityId: hit.id,
+              targetEntityId: gate.id,
+              targetType: gate.type,
+              pathIndex: collisionTrigger,
+              previousState: gate.visualState,
+              nextState: 'open',
+              position: gate.position,
+              normal: normal,
+            ),
+          );
+        }
         events.add('switch_pressed');
         if (isBalloonSwitch) {
           events.add('balloon_switch_pressed');
@@ -1905,6 +2144,7 @@ class ShotResolver {
           {target.id},
           impacts,
           chainSafetyDiagnostics,
+          stateTransitions,
         );
         events.add('chain_push');
         if (_anyBallInHole(entities)) {
