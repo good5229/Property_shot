@@ -52,6 +52,16 @@ String shotResultSignature(ShotResult result) {
   return buffer.toString();
 }
 
+String shotResultFingerprint(ShotResult result) {
+  const offset = '14695981039346656037';
+  final mask = (BigInt.one << 64) - BigInt.one;
+  var hash = BigInt.parse(offset);
+  for (final codeUnit in shotResultSignature(result).codeUnits) {
+    hash = ((hash ^ BigInt.from(codeUnit)) * BigInt.from(1099511628211)) & mask;
+  }
+  return hash.toRadixString(16).padLeft(16, '0');
+}
+
 String _vector(Vec2 vector) => '${_number(vector.x)},${_number(vector.y)}';
 
 String _number(double value) => value.toStringAsFixed(6);
