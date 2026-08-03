@@ -20,6 +20,7 @@
 | `2489b55` | 250ms 로컬 계측 묶음 저장·조회/종료 flush·회귀 테스트 | 완료 |
 | `898afd2` | 안정 stage_id·result_code·route_tag 계측 필드·회귀 테스트 | 완료 |
 | `174be05` | 최신 계측·Web·Android·iOS 검증 증거 문서와 캡처 | 완료 |
+| `a35c373` | 최신 원격 HEAD 표기 보정 | 완료 |
 
 최신 검증 기준은 전체 Flutter 테스트 252개, `flutter analyze`, Web Release 빌드, Android Release APK 빌드다. 데모 서버는 기존 PID 48924를 먼저 종료한 뒤 PID 75036으로 교체했으며, 최신 `main.dart.js` 해시는 `4cdb3941b7d7f4bd91004f49954c8f95cf9dad92e41ccfe88c5f8a431a2bbf42`다. 최신 Android Release APK는 57.3MB이고 ARM64 에뮬레이터 설치·시작 스모크와 로딩 완료 한글 시작 화면 캡처를 통과했다. iOS는 Xcode 컴파일 후 서명 환경 부족으로 배포 단계가 차단됐다.
 `2489b55 perf: 로컬 계측 묶음 저장 보강`을 기능 단위로 별도 commit하고 `commercial/wall-physics-qa` 원격 브랜치에 push했다.
