@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `7b775ab`
+코드 기준 커밋: `9c59cd6`
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
@@ -10,14 +10,19 @@
 
 | 항목 | 결과 |
 |---|---|
-| 전체 `flutter test` | 233개 통과 |
+| 전체 `flutter test` | 235개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
 | 저장 다중샷 재생 | 20개 통과 |
 | `flutter analyze` | 통과, 문제 없음 |
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 67695 |
+| 데모 서버 | `127.0.0.1:8080`, PID 1573 |
+
+개발 진단 메뉴:
+
+- Debug 빌드에서만 단계 이동·진행 초기화·전체 해금·복제 코어 조정·속성 강제 장착·히트박스·충돌 법선·엔티티 ID·프레임 통계·최근 물리 이벤트 복사를 제공한다.
+- Release Web 번들에서는 `개발 진단 메뉴`와 튜토리얼 조건군 문자열이 노출되지 않는다.
 
 Web 시각 캡처:
 
@@ -31,7 +36,7 @@ Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-5135a6a01233855c1d01d8281ad28dd96cc87e6ba10942ebf793e6f4b1a65426
+73d1dba62e7f0674c9d852e4845bb28eb464dec3ccbbbcc6a36d4346b50dd209
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57

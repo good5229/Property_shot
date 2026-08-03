@@ -3,12 +3,12 @@
 | 명령 | 결과 |
 |---|---|
 | `flutter analyze` | 통과, 문제 없음 |
-| 전체 `flutter test` | 233개 통과 |
+| 전체 `flutter test` | 235개 통과 |
 | `test/multi_shot_analyzer_test.dart` | 통과 |
 | `test/multi_replay_fixture_test.dart` | 20개 시퀀스 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
 | `flutter build web --release` | 통과 |
-| 최신 Web `main.dart.js` | `5135a6a01233855c1d01d8281ad28dd96cc87e6ba10942ebf793e6f4b1a65426` |
+| 최신 Web `main.dart.js` | `73d1dba62e7f0674c9d852e4845bb28eb464dec3ccbbbcc6a36d4346b50dd209` |
 
 저장 리플레이 검증:
 
@@ -21,6 +21,14 @@
 
 계측 변경은 물체 확인·속성 이전 대상·스위치·문·풍선·점착·홀 이벤트를 상태 전이별로 기록하도록 연결했다. 자동 검증은 통과했지만 실제 iOS·Android 기기와 외부 플레이테스트는 여전히 미검증이다.
 
+## 2026-08-03 개발 진단 메뉴·최신 Web 교체
+
+- 개발 전용 진단 메뉴를 `9c59cd6`으로 커밋하고 전체 Flutter 테스트 235개와 `flutter analyze`를 통과했다.
+- 메뉴에는 단계 이동·진행 초기화·전체 해금·복제 코어 조정·속성 강제 장착·물리 이벤트 복사·히트박스·충돌 법선·엔티티 ID·프레임 통계가 포함된다.
+- 기존 데모 PID 67695를 종료하고 Web Release를 다시 빌드해 PID 1573으로 교체했다.
+- 루트와 `main.dart.js` HTTP 200을 확인했고 Release 번들에서 개발 메뉴·튜토리얼 조건군 문구가 검색되지 않았다.
+- 최신 `main.dart.js` 체크섬은 `73d1dba62e7f0674c9d852e4845bb28eb464dec3ccbbbcc6a36d4346b50dd209`이다.
+
 ## 2026-08-03 최신 Web 교체·시각 증거
 
 - 기존 `http.server` PID 33606을 종료한 뒤 최신 계측 코드 Release 서버 PID 48075를 8080 포트에 시작했다.
@@ -29,7 +37,7 @@
 - 다섯 뷰포트 모두 Chromium 콘솔 오류 0건이었다.
 - 390×844 지도에서 4단계 설명·잠금 상태·한글 안내를 확인했다.
 - 390×844 플레이에서 입체 물체·벽·홀 깃발·조준 표시·하단 조작 영역의 겹침을 확인했다.
-- 이후 기존 PID 47399를 종료하고 Web Release를 다시 빌드해 PID 67695로 교체했으며, 루트와 `main.dart.js` HTTP 200을 확인했다.
+- 이후 기존 PID 47399를 종료하고 Web Release를 다시 빌드해 PID 67695로 교체했으며, 루트와 `main.dart.js` HTTP 200을 확인했다. 이 기록은 개발 진단 메뉴 반영 전의 역사적 기준이다.
 
 최신 계측 코드 Web 번들 체크섬:
 
