@@ -1548,3 +1548,5 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: 기준선 문서의 마크다운 강제 줄바꿈 공백이 `git diff --check`에 걸려 내용을 유지한 채 공백을 제거한다.
 2026-08-03: 저장 회귀가 같은 `ProgressStore` 인스턴스의 연속 호출만 검증하고 있어 앱 재실행 복원을 직접 고정하는 새 인스턴스 회귀를 추가한다.
 2026-08-03: 새 `ProgressStore` 인스턴스의 앱 재실행 복원 회귀를 추가한 뒤 전체 `flutter test` 237개가 통과했다. 저장·해금·복제 코어 근거와 최신 테스트 수를 QA 문서에 반영한다.
+2026-08-03: Android Debug 빌드가 unsupported Gradle project로 중단된 원인을 확인했다. 저장소에 Android 플랫폼 호스트가 없어 Flutter 표준 Android 프로젝트를 추가해 모바일 컴파일 게이트를 복구한다.
+2026-08-03: Android Debug APK와 Release APK 컴파일에 성공했다. Flutter 플랫폼 생성이 `.metadata`의 기존 iOS·Web 항목을 덮어쓴 것을 확인해 기존 플랫폼 이력을 보존하고, APK 컴파일과 실기기 실행 검증을 별도로 기록한다.

@@ -25,6 +25,8 @@ Web 캡처 뷰포트는 `390×844`, `393×852`, `430×932`, `768×1024`, `1024×
 
 - `flutter analyze`: 통과
 - `flutter build web --release`: 통과
+- `flutter build apk --debug`: 통과, Android 호스트 추가 후 APK 생성
+- `flutter build apk --release`: 통과, `build/app/outputs/flutter-apk/app-release.apk` 57.2MB
 - `flutter build ios --no-codesign`: Xcode 컴파일까지 통과
 - iOS 배포 단계: Development Team과 프로비저닝 프로파일 부족으로 미완료
 - iOS Simulator: 설치된 Runtime이 없어 실행 검증 미완료

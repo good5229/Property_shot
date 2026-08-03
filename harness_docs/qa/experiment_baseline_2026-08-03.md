@@ -16,6 +16,8 @@
 | 저장 다중샷 재생 | 20개 통과 |
 | `flutter analyze` | 통과, 문제 없음 |
 | `flutter build web --release` | 통과 |
+| `flutter build apk --debug` | 통과 |
+| `flutter build apk --release` | 통과, 57.2MB |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
 | 데모 서버 | `127.0.0.1:8080`, PID 54628 |
