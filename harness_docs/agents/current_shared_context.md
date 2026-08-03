@@ -5,7 +5,7 @@
 - 저장소: `Property_shot`, 브랜치 `commercial/wall-physics-qa`
 - 기준 기능: 한글 UI, 공의 속성 이전·복사, 고정 벽, 물체 연쇄 운동량, 홀 성공·결과 팝업, 4개 단계
 - 신규 구현: `TraitType.sharp`, `EntityType.balloon`, `EntityType.spikeSource`, 4단계 `풍선 터뜨리기`
-- 서버 규칙: 기존 서버를 먼저 종료한 뒤 Web release를 띄운다. 현재 최신 서버 PID는 91916이며 루트·번들 HTTP 200을 확인했다.
+- 서버 규칙: 기존 서버를 먼저 종료한 뒤 Web release를 띄운다. 현재 최신 서버 PID는 40530이며 루트·번들 HTTP 200을 확인했다.
 - 최신 회귀 기준: 전체 `flutter test` 237개, `flutter analyze`, Web Release가 통과했다. 단계별 저장 리플레이 16개와 다중샷 20개 모두 결정론 재생을 통과했다. 최신 기능 기준 커밋은 `120742a`이며 개발 진단 메뉴에 원본 속성 조작·물리량·리플레이·사운드·햅틱 제어가 포함된다.
 - 단계4 실제 Web 증거: 390×844에서 시작·속성 팝업·속성 이전·조준·충전·충돌·결과 8장을 캡처했고 콘솔 오류 0건이다. 성공 상태의 `active_ball` 부재 예외는 `07ef7b3`에서 수정했다.
 - 모바일 컴파일: Flutter 표준 Android 호스트를 추가하고 JDK 17·Android SDK/NDK 환경에서 Debug·Release APK 컴파일을 통과했다. Android 실기기 실행·성능은 미검증이다.
