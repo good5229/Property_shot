@@ -1539,3 +1539,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: 최신 Release Web에서 단계4를 실제 좌표로 진입해 속성 팝업·속성 이전·조준·충전·발사 후 충돌 프레임을 재현했다. 동일 흐름을 반복할 수 있도록 390×844 단계4 증거 캡처 스크립트와 콘솔 오류 JSON을 추가한다.
 2026-08-03: 단계4 실제 발사 캡처에서 `Bad state: No element` 콘솔 오류를 발견했다. 성공 시 `active_ball`이 `spent_ball`로 대체된 뒤 축약 HUD가 `state.activeBall`을 강제 조회하는 경로를 확인해 nullable 조회와 성공 상태 렌더 회귀를 추가한다.
 2026-08-03: HUD nullable 수정 후에도 단계4 풍선 팝 애니메이션 콜백에서 같은 예외가 재현됐다. 성공 상태의 지연된 속성 소모 telemetry가 `active_ball`을 강제 조회하는 두 번째 경로를 찾아 보존된 공 식별자로 대체한다.
+2026-08-03: `capture_stage4_web_evidence.py`를 수정된 PID 54628 Release 서버에서 재생해 단계4 시작·팝업·속성 이전·조준·충전·충돌·결과 8장을 생성했고 콘솔 오류 0건을 확인했다. 이전 오류 캡처는 증거로 사용하지 않고 최종 JSON은 빈 오류 목록만 보존한다.

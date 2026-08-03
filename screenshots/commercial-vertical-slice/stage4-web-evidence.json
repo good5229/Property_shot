@@ -1,0 +1,19 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "stage": 4,
+  "screenshots": [
+    "screenshots/commercial-vertical-slice/stage4-start.png",
+    "screenshots/commercial-vertical-slice/stage4-source-popup.png",
+    "screenshots/commercial-vertical-slice/stage4-property-ready.png",
+    "screenshots/commercial-vertical-slice/stage4-aim.png",
+    "screenshots/commercial-vertical-slice/stage4-charge.png",
+    "screenshots/commercial-vertical-slice/stage4-impact-120ms.png",
+    "screenshots/commercial-vertical-slice/stage4-impact-470ms.png",
+    "screenshots/commercial-vertical-slice/stage4-result.png"
+  ],
+  "console_errors": []
+}
