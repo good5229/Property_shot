@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 
 import '../game/domain/entity_state.dart';
 import '../game/domain/game_state.dart';
@@ -18,6 +21,7 @@ import '../game/simulation/trait_resolver.dart';
 import 'game_feedback.dart';
 import 'game_ball_painter.dart';
 import 'bonus_goal.dart';
+import 'debug_menu.dart';
 import 'play_telemetry.dart';
 import 'tutorial_experiment.dart';
 
@@ -32,6 +36,7 @@ class GameScreen extends StatefulWidget {
     this.onLevelCleared,
     this.loadGameAssets = true,
     this.tutorialVariant = TutorialExperimentVariant.guided,
+    this.showDebugControls = false,
   });
 
   final GameState? initialState;
@@ -42,6 +47,7 @@ class GameScreen extends StatefulWidget {
   final ValueChanged<int>? onLevelCleared;
   final bool loadGameAssets;
   final TutorialExperimentVariant tutorialVariant;
+  final bool showDebugControls;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -81,6 +87,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final List<bool> _bonusBumperHistory = [];
   final List<bool> _bonusSwitchHistory = [];
   bool _bonusChallengeAchieved = false;
+  late TutorialExperimentVariant _activeTutorialVariant;
+  final List<PhysicsEvent> _debugPhysicsEvents = [];
+  bool _debugShowHitboxes = false;
+  bool _debugShowNormals = false;
+  bool _debugShowIds = false;
+  bool _debugShowStats = false;
 
   @override
   void initState() {
@@ -93,6 +105,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             .createState(0, productRules: true)
             .copyWith(message: _levelIntroMessage(0));
     _stageCopyCoreAtStart = _state.copyCoreCount;
+    _activeTutorialVariant = widget.tutorialVariant;
     _telemetry.sessionStart(
       stage: _state.levelIndex,
       experimentVariant: widget.tutorialVariant.code,
@@ -109,6 +122,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       loadVisualAssets: widget.loadGameAssets,
       reducedMotion: GameFeedback.reducedMotionEnabled,
       screenShake: GameFeedback.screenShakeEnabled,
+    );
+    _game.setDebugOptions(
+      hitboxes: _debugShowHitboxes,
+      normals: _debugShowNormals,
+      ids: _debugShowIds,
+      stats: _debugShowStats,
     );
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
@@ -605,6 +624,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onPhysicsEvent(PhysicsEvent event) {
+    if (mounted) {
+      _debugPhysicsEvents.add(event);
+      if (_debugPhysicsEvents.length > 100) {
+        _debugPhysicsEvents.removeAt(0);
+      }
+    }
     if (!mounted ||
         !_isAnimatingShot ||
         event.kind != PhysicsEventKind.chainSafetyStop) {
@@ -617,6 +642,148 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       result:
           '반복 ${event.iterations ?? 0}회·잔여 속도 ${(event.remainingSpeed ?? 0).toStringAsFixed(2)}',
     );
+  }
+
+  void _openDebugMenu() {
+    if (!kDebugMode || !widget.showDebugControls) {
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => DebugMenu(
+        state: _state,
+        recentEvents: _debugPhysicsEvents,
+        showHitboxes: _debugShowHitboxes,
+        showNormals: _debugShowNormals,
+        showIds: _debugShowIds,
+        showStats: _debugShowStats,
+        tutorialVariant: _activeTutorialVariant,
+        onSelectStage: _debugSelectStage,
+        onRestartStage: () => _selectLevel(_state.levelIndex),
+        onResetProgress: _debugResetProgress,
+        onUnlockAll: _debugUnlockAll,
+        onSetCopyCore: _debugSetCopyCore,
+        onForceTrait: _debugForceTrait,
+        onToggleHitboxes: (value) {
+          setState(() => _debugShowHitboxes = value);
+          _game.setDebugOptions(hitboxes: value);
+        },
+        onToggleNormals: (value) {
+          setState(() => _debugShowNormals = value);
+          _game.setDebugOptions(normals: value);
+        },
+        onToggleIds: (value) {
+          setState(() => _debugShowIds = value);
+          _game.setDebugOptions(ids: value);
+        },
+        onToggleStats: (value) {
+          setState(() => _debugShowStats = value);
+          _game.setDebugOptions(stats: value);
+        },
+        onTutorialVariantChanged: (value) {
+          setState(() => _activeTutorialVariant = value);
+          _telemetry.record(
+            '튜토리얼 조건 변경',
+            stage: _state.levelIndex,
+            result: value.code,
+          );
+        },
+        onCopyState: _copyDebugState,
+        onCopyEvents: _copyDebugEvents,
+      ),
+    );
+  }
+
+  void _debugSelectStage(int index) {
+    if (_isAnimatingShot || index < 0 || index >= levels.length) {
+      return;
+    }
+    setState(() => _unlockedLevel = levels.length - 1);
+    _selectLevel(index);
+  }
+
+  Future<void> _debugResetProgress() async {
+    await _progressStore.reset();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _unlockedLevel = 0);
+    _selectLevel(0);
+  }
+
+  Future<void> _debugUnlockAll() async {
+    await _progressStore.unlockAll();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _unlockedLevel = levels.length - 1);
+  }
+
+  void _debugSetCopyCore(int count) {
+    final normalized = count.clamp(0, 999);
+    _setState(
+      _state.copyWith(
+        copyCoreCount: normalized,
+        copyCharges: normalized,
+        copyChargeLimit: math.max(_state.copyChargeLimit, normalized),
+        message: '복제 코어 $normalized개를 설정했습니다.',
+      ),
+    );
+    unawaited(_progressStore.recordCopyCore(normalized, normalized > 0));
+  }
+
+  void _debugForceTrait(String sourceId) {
+    if (_isAnimatingShot) {
+      return;
+    }
+    final source = _state.entityById(sourceId);
+    if (source == null || source.traits.isEmpty) {
+      return;
+    }
+    _selectTraitSource(sourceId);
+    _transferTrait();
+  }
+
+  void _copyDebugState() {
+    final payload = {
+      '단계': _state.levelIndex + 1,
+      '상태': _state.phase.name,
+      '발사횟수': _state.shotCount,
+      '공': {
+        '위치': _state.activeBall.position.toJson(),
+        '속성': _state.activeBall.traits.map((trait) => trait.label).toList(),
+      },
+      '물체': [
+        for (final entity in _state.entities)
+          {
+            'id': entity.id,
+            'type': entity.type.name,
+            'position': entity.position.toJson(),
+            'traits': entity.traits.map((trait) => trait.label).toList(),
+            'active': entity.active,
+          },
+      ],
+    };
+    Clipboard.setData(ClipboardData(text: jsonEncode(payload)));
+  }
+
+  void _copyDebugEvents() {
+    final payload = [
+      for (final event in _debugPhysicsEvents)
+        {
+          'eventId': event.eventId,
+          'kind': event.kind.name,
+          'source': event.sourceEntityId,
+          'target': event.targetEntityId,
+          'position': event.position.toJson(),
+          'normal': event.normal.toJson(),
+          'pathIndex': event.pathIndex,
+          'impulse': event.impulse,
+        },
+    ];
+    Clipboard.setData(ClipboardData(text: jsonEncode(payload)));
   }
 
   void _rewind() {
@@ -1145,6 +1312,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               showStageSelector: widget.showStageSelector,
                               onPause: _togglePause,
                               onExit: widget.onExit == null ? null : _exitStage,
+                              onDebug: widget.showDebugControls
+                                  ? _openDebugMenu
+                                  : null,
                             ),
                           if (compactLayout)
                             Padding(
@@ -1160,6 +1330,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 onExit: widget.onExit == null
                                     ? null
                                     : _exitStage,
+                                onDebug: widget.showDebugControls
+                                    ? _openDebugMenu
+                                    : null,
                               ),
                             ),
                           Expanded(
@@ -1437,7 +1610,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   EntityState? get _tutorialTarget {
-    if (widget.tutorialVariant == TutorialExperimentVariant.silent) {
+    if (_activeTutorialVariant == TutorialExperimentVariant.silent) {
       return null;
     }
     if (_state.levelIndex != 0 ||
@@ -1456,7 +1629,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   String get _tutorialHint {
-    if (widget.tutorialVariant == TutorialExperimentVariant.action) {
+    if (_activeTutorialVariant == TutorialExperimentVariant.action) {
       return _state.equippedTrait == null
           ? '속성 있는 물체를 눌러 공에 옮겨요'
           : '공을 길게 눌러 힘을 모으고 손을 떼요';
@@ -2315,6 +2488,7 @@ class _Hud extends StatelessWidget {
     this.showStageSelector = true,
     required this.onPause,
     this.onExit,
+    this.onDebug,
   });
 
   final bool compact;
@@ -2325,6 +2499,7 @@ class _Hud extends StatelessWidget {
   final bool showStageSelector;
   final VoidCallback onPause;
   final VoidCallback? onExit;
+  final VoidCallback? onDebug;
 
   @override
   Widget build(BuildContext context) {
@@ -2384,6 +2559,14 @@ class _Hud extends StatelessWidget {
                           ? Icons.play_arrow
                           : Icons.pause,
                     ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (onDebug != null)
+                  IconButton(
+                    key: const Key('debug_menu_button'),
+                    tooltip: '개발 진단 메뉴',
+                    onPressed: onDebug,
+                    icon: const Icon(Icons.bug_report_outlined),
                     visualDensity: VisualDensity.compact,
                   ),
               ],
@@ -2501,6 +2684,14 @@ class _Hud extends StatelessWidget {
                         ? Icons.play_arrow
                         : Icons.pause,
                   ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              if (onDebug != null)
+                IconButton(
+                  key: const Key('debug_menu_button'),
+                  tooltip: '개발 진단 메뉴',
+                  onPressed: onDebug,
+                  icon: const Icon(Icons.bug_report_outlined),
                   visualDensity: VisualDensity.compact,
                 ),
             ],

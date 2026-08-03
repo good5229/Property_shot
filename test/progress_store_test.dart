@@ -77,4 +77,23 @@ void main() {
     expect(snapshot.clearedLevels, isEmpty);
     expect(snapshot.unlockedLevel, 0);
   });
+
+  test('개발용 전체 해금과 진행 초기화는 저장 키를 함께 정리한다', () async {
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.copyCoreCountKey: 3,
+      'best_shots_level_0': 2,
+      'bonus_goal_level_0': true,
+    });
+
+    await store.unlockAll();
+    expect((await store.load()).unlockedLevel, 3);
+
+    await store.reset();
+    final snapshot = await store.load();
+    expect(snapshot.unlockedLevel, 0);
+    expect(snapshot.clearedLevels, isEmpty);
+    expect(snapshot.bestShots, isEmpty);
+    expect(snapshot.bonusGoals, isEmpty);
+    expect(snapshot.copyCoreCount, 0);
+  });
 }

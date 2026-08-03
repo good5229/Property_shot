@@ -84,6 +84,7 @@ class PropertyShotApp extends StatelessWidget {
               telemetry: telemetry,
               loadGameAssets: loadGameAssets,
               tutorialVariant: tutorialVariant,
+              showDebugControls: showDebugControls,
             ),
     );
   }
@@ -196,6 +197,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onCopyCoreEarned: _earnCopyCore,
         onLevelCleared: _recordLevelClear,
         tutorialVariant: _tutorialVariant,
+        showDebugControls: widget.showDebugControls,
       );
     }
     if (_showStageSelect) {

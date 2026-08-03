@@ -135,6 +135,32 @@ class ProgressStore {
     await preferences.setBool(bonusGoalKey(levelIndex), true);
   }
 
+  Future<void> reset() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(saveVersionKey);
+    await preferences.remove(clearedLevelsKey);
+    await preferences.remove(unlockedLevelKey);
+    await preferences.remove(legacyUnlockedLevelKey);
+    await preferences.remove(copyCoreCountKey);
+    await preferences.remove(copyCoreRewardedKey);
+    for (var index = 0; index < stageCount; index++) {
+      await preferences.remove(bestShotKey(index));
+      await preferences.remove(bonusGoalKey(index));
+    }
+  }
+
+  Future<void> unlockAll() async {
+    final preferences = await SharedPreferences.getInstance();
+    await _writeVersion(preferences);
+    await preferences.setStringList(clearedLevelsKey, [
+      for (var index = 0; index < stageCount; index++) '$index',
+    ]);
+    if (stageCount > 0) {
+      await preferences.setInt(unlockedLevelKey, stageCount - 1);
+      await preferences.setInt(legacyUnlockedLevelKey, stageCount - 1);
+    }
+  }
+
   String bestShotKey(int levelIndex) => 'best_shots_level_$levelIndex';
 
   String bonusGoalKey(int levelIndex) => 'bonus_goal_level_$levelIndex';

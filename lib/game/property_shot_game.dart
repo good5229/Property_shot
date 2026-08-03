@@ -34,6 +34,24 @@ class PropertyShotGame extends FlameGame {
   final bool loadVisualAssets;
   final bool reducedMotion;
   final bool screenShake;
+  bool debugHitboxes = false;
+  bool debugNormals = false;
+  bool debugIds = false;
+  bool debugStats = false;
+  double lastFrameTimeMs = 0;
+
+  void setDebugOptions({
+    bool? hitboxes,
+    bool? normals,
+    bool? ids,
+    bool? stats,
+  }) {
+    debugHitboxes = hitboxes ?? debugHitboxes;
+    debugNormals = normals ?? debugNormals;
+    debugIds = ids ?? debugIds;
+    debugStats = stats ?? debugStats;
+  }
+
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   List<ShotImpact> _animationImpacts = const [];
@@ -118,6 +136,7 @@ class PropertyShotGame extends FlameGame {
   @override
   void update(double dt) {
     super.update(dt);
+    lastFrameTimeMs = dt * 1000;
     if (_animationPath.isNotEmpty) {
       _animationUpdateCount += 1;
       // A background-resume frame must not skip an entire collision beat.
@@ -264,7 +283,82 @@ class PropertyShotGame extends FlameGame {
       _drawImpactFeedback(canvas);
       _drawDirectImpactFeedback(canvas);
     }
+    if (debugHitboxes || debugNormals || debugIds || debugStats) {
+      _drawDebugOverlay(canvas, renderEntities);
+    }
     canvas.restore();
+  }
+
+  void _drawDebugOverlay(Canvas canvas, List<EntityState> entities) {
+    if (debugHitboxes) {
+      final hitboxPaint = Paint()
+        ..color = const Color(0xCCF44336)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2;
+      for (final entity in entities.where((entity) => entity.active)) {
+        final hitBounds = entity.hitBounds;
+        final rect = Rect.fromLTRB(
+          hitBounds.left,
+          hitBounds.top,
+          hitBounds.right,
+          hitBounds.bottom,
+        );
+        if (entity.isCircle) {
+          canvas.drawOval(rect, hitboxPaint);
+        } else {
+          canvas.drawRect(rect, hitboxPaint);
+        }
+      }
+    }
+    if (debugNormals) {
+      final normalPaint = Paint()
+        ..color = const Color(0xFF0D47A1)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round;
+      for (final event in _animationPhysicsEvents) {
+        if (event.pathIndex > _animationCursor ||
+            event.kind != PhysicsEventKind.impact) {
+          continue;
+        }
+        final from = _project(event.position);
+        final normal = event.normal.normalized();
+        final to = from + Offset(normal.x, normal.y) * 18;
+        canvas.drawLine(from, to, normalPaint);
+        canvas.drawCircle(to, 2.5, normalPaint);
+      }
+    }
+    if (debugIds) {
+      for (final entity in entities.where((entity) => entity.active)) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: entity.id,
+            style: const TextStyle(
+              color: Color(0xFF4A148C),
+              fontSize: 7,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: 90);
+        painter.paint(canvas, _project(entity.position) + const Offset(4, -5));
+      }
+    }
+    if (debugStats) {
+      final stats = TextPainter(
+        text: TextSpan(
+          text:
+              '프레임 ${lastFrameTimeMs.toStringAsFixed(2)}ms\n물리 이벤트 ${_animationPhysicsEvents.length}개',
+          style: const TextStyle(
+            color: Color(0xFF263238),
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            backgroundColor: Color(0xCCFFFFFF),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: 130);
+      stats.paint(canvas, const Offset(6, 6));
+    }
   }
 
   void _drawScreenShake(Canvas canvas) {
