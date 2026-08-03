@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `0b516ba`
+코드 기준 커밋: `d9c8fc7`
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
@@ -10,14 +10,14 @@
 
 | 항목 | 결과 |
 |---|---|
-| 비다중샷 회귀 | 226개 통과 |
+| 전체 `flutter test` | 231개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
 | 저장 다중샷 재생 | 20개 통과 |
-| `flutter analyze` | 통과 |
+| `flutter analyze` | 통과, 문제 없음 |
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 76285 (코드 변경 없음, 유지 중) |
+| 데모 서버 | `127.0.0.1:8080`, PID 28891 |
 
 Web 시각 캡처:
 
@@ -31,7 +31,7 @@ Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-5c34194b76102eff667fa0e01c36ba82b54d222402cb2ec070115ff668d0e2b6
+921b453c63df4206018f21c3d1dd517ce07286d6a5bb709a5c3a1da805155d7f
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57

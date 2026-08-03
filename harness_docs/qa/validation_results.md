@@ -3,12 +3,12 @@
 | 명령 | 결과 |
 |---|---|
 | `flutter analyze` | 통과, 문제 없음 |
-| 비다중샷 전체 회귀 | 226개 통과 |
+| 전체 `flutter test` | 231개 통과 |
 | `test/multi_shot_analyzer_test.dart` | 통과 |
 | `test/multi_replay_fixture_test.dart` | 20개 시퀀스 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
 | `flutter build web --release` | 통과 |
-| 최신 Web `main.dart.js` | `5c34194b76102eff667fa0e01c36ba82b54d222402cb2ec070115ff668d0e2b6` |
+| 최신 Web `main.dart.js` | `921b453c63df4206018f21c3d1dd517ce07286d6a5bb709a5c3a1da805155d7f` |
 
 저장 리플레이 검증:
 
@@ -29,13 +29,13 @@
 - 다섯 뷰포트 모두 Chromium 콘솔 오류 0건이었다.
 - 390×844 지도에서 4단계 설명·잠금 상태·한글 안내를 확인했다.
 - 390×844 플레이에서 입체 물체·벽·홀 깃발·조준 표시·하단 조작 영역의 겹침을 확인했다.
-- 이후 기존 PID 48075를 종료하고 Web Release를 다시 빌드해 PID 76285로 교체했으며, 루트와 `main.dart.js` HTTP 200을 확인했다.
+- 이후 기존 PID 76285를 종료하고 Web Release를 다시 빌드해 PID 28891로 교체했으며, 루트와 `main.dart.js` HTTP 200을 확인했다.
 
 최신 계측 코드 Web 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-5c34194b76102eff667fa0e01c36ba82b54d222402cb2ec070115ff668d0e2b6
+921b453c63df4206018f21c3d1dd517ce07286d6a5bb709a5c3a1da805155d7f
 ```
 
 # 검증 결과
