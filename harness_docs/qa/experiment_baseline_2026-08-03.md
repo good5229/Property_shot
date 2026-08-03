@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-커밋: `e6a6b544482dfbead73de64e12ba44fa9ed24189`  
+커밋: `7779043`  
 원격: `origin/commercial/wall-physics-qa`와 일치  
 작업 트리: 기준선 확인 시 깨끗함
 
@@ -10,19 +10,19 @@
 
 | 항목 | 결과 |
 |---|---|
-| 비다중샷 회귀 | 215개 통과 |
+| 비다중샷 회귀 | 224개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
 | `flutter analyze` | 통과 |
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 85251 |
+| 데모 서버 | `127.0.0.1:8080`, PID 96501 |
 
 Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-7234b437e9ed81b9d8f45a934c177328f20e6108a7f8836060ee0f07a40db6ee
+f53395257468da36de105fa3b4ebf53d31a42bfac07cae615034681061b40e54
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57
