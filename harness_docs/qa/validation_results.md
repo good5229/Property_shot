@@ -682,7 +682,7 @@ Kant 독립 QA는 최종 두 해상도에서 오브젝트·홀·깃발·한글·
 실제 iOS·Android 접근성·프레임·햅틱, 사용자 플레이테스트, 생성 도구 약관의 최종 법무 확인은 아직 제품 증거가 아니다.
 ## 2026-08-03 최신 최종 품질 실험 기준선
 
-- 현재 브랜치 `commercial/wall-physics-qa`, 커밋 `7779043` 기준이다.
+- 현재 브랜치 `commercial/wall-physics-qa`, 커밋 `20eba94` 기준이다.
 - 비다중샷 전체 회귀 224개와 다중샷 물리 분석 1개가 통과했다.
 - `flutter analyze`와 `flutter build web --release`가 통과했다.
 - Web 데모는 기존 서버를 종료한 뒤 PID 96501로 교체했고 루트·`main.dart.js` HTTP 200을 확인했다.

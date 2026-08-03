@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-커밋: `7779043`  
+커밋: `20eba94`  
 원격: `origin/commercial/wall-physics-qa`와 일치  
 작업 트리: 기준선 확인 시 깨끗함
 
@@ -17,6 +17,13 @@
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
 | 데모 서버 | `127.0.0.1:8080`, PID 96501 |
+
+Web 시각 캡처:
+
+- `390x844`, `393x852`, `430x932`, `768x1024`, `1024x1366`
+- 홈·섬 지도·플레이 상태 각 캡처
+- 다섯 해상도 Chromium 콘솔 오류 0건
+- 390×844 지도에서 4단계 카드·설명·잠금·안내 카드 시각 확인
 
 Web 기준 번들 체크섬:
 
@@ -83,5 +90,7 @@ dart run tool/baseline_snapshot.dart
 - 4단계 세 경로의 실제 사용자 발견률
 - Web과 iOS Release의 실행 결과 비교
 - 저장 버전 도입 전 손상 데이터 복구
+- iOS `--no-codesign`은 Xcode 컴파일 후 Development Team·프로비저닝 프로파일 부족으로 배포 단계 실패
+- `physics_benchmark.dart` 최신 순수 판정 평균: 1단계 360.3µs, 2단계 287.9µs, 3단계 303.5µs, 4단계 330.0µs
 
 이 항목들은 자동 테스트 통과로 완료 처리하지 않는다.
