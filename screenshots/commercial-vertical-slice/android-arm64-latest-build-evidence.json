@@ -6,11 +6,11 @@
   "apk_size": "57.3MB",
   "install": "성공",
   "launch": "성공",
-  "app_pid": "4012",
+  "app_pid": "4167",
   "app_fatal_exceptions": 0,
-  "apk_sha256": "546be5692ab2d5b861c35ef7c1d9cf14b0d59a14efa1a7979a729e6eacafc9f6",
+  "apk_sha256": "b8552526ddf24547f30d832791073ad319fa556884d895d6a6bdffeae7625214",
   "verification": [
-    "최신 안정 단계 ID·로컬 계측 저장을 포함한 Release APK 설치 후 앱 시작",
+    "저장 스키마 버전 2·안정 단계 ID·로컬 계측 저장을 포함한 Release APK 설치 후 앱 시작",
     "앱 프로세스 실행 상태 확인",
     "adb logcat 최근 400줄에서 FATAL EXCEPTION 0건 확인"
   ],

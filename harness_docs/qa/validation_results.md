@@ -13,6 +13,17 @@
 - 최신 Android 시작 화면 캡처: `android-arm64-storage-latest-layout.png`, SHA-256 `281daca02f798c35d77b8caefccbfbb357a5cd74a24dfa266420084b02466486`
 - 기능 commit `bbd9117` 원격 push 완료
 
+## 최신 저장 스키마 2 재검증
+
+- `ProgressStore.saveVersion`을 `2`로 갱신하고 안정 단계 ID 키 마이그레이션 회귀 통과
+- 전체 `flutter test`: 251개 통과, `flutter analyze`: 통과
+- Web Release `main.dart.js` SHA-256: `194b9635968c62249d50d7195379eaecb6637517b6ed73be8f3edd53b8369f36`
+- Android Release APK SHA-256: `b8552526ddf24547f30d832791073ad319fa556884d895d6a6bdffeae7625214`
+- Web 데모: 기존 PID 18121 종료 후 PID 30256으로 8080 재시작, 루트·번들 HTTP 200
+- Android ARM64 API 28 에뮬레이터: 설치 직후 시작 화면 이후 앱 PID 4167에서 한글 홈·이미지 표시 확인, `FATAL EXCEPTION` 0건
+- 로딩 완료 화면: `android-arm64-schema2-latest-layout.png`, SHA-256 `16cd6fb99dbc740ac0799bec0aaa6048a0138150b3642ad669870210bc98cb00`
+- 저장 스키마 변경 commit `5dda324` 원격 push 완료
+
 ## 최신 레벨·런타임 재검증
 
 - 전체 `flutter test`: 247개 통과

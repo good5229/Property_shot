@@ -16,8 +16,9 @@
 | `74e86e5` | `ProgressStore` 동시 저장 순서 보장 및 회귀 | 완료 |
 | `5425dcb` | 4단계 물체 경계·저장소 공유·고속 회귀·리플레이·Golden 갱신 | 완료 |
 | `bbd9117` | 로컬 계측 저장·안정 단계 ID·구버전 저장 호환·회귀 테스트 | 완료 |
+| `5dda324` | 저장 스키마 버전 2와 마이그레이션 회귀 | 완료 |
 
-최신 검증 기준은 전체 Flutter 테스트 251개, `flutter analyze`, Web Release 빌드, Android Release APK 빌드다. 데모 서버는 기존 PID 84934를 먼저 종료한 뒤 PID 18121로 교체했으며, 최신 `main.dart.js` 해시는 `f22d8e7bd9e3f4156a5220eb0d37de7db8722fee1cb7095b18faa483e12bfaa8`다. 최신 Android Release APK는 57.3MB이고 ARM64 에뮬레이터 설치·시작 스모크와 한글 시작 화면 캡처를 통과했다.
+최신 검증 기준은 전체 Flutter 테스트 251개, `flutter analyze`, Web Release 빌드, Android Release APK 빌드다. 데모 서버는 기존 PID 18121을 먼저 종료한 뒤 PID 30256으로 교체했으며, 최신 `main.dart.js` 해시는 `194b9635968c62249d50d7195379eaecb6637517b6ed73be8f3edd53b8369f36`다. 최신 Android Release APK는 57.3MB이고 ARM64 에뮬레이터 설치·시작 스모크와 로딩 완료 한글 시작 화면 캡처를 통과했다.
 
 | Commit | 내용 | Push |
 |---|---|---|

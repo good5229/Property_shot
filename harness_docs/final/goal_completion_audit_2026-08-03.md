@@ -14,6 +14,16 @@
 - Android ARM64 API 28 에뮬레이터에 최신 APK를 재설치·실행했고 앱 PID `4012`, `FATAL EXCEPTION` 0건을 확인했다. 최신 시작 화면 해시는 `281daca02f798c35d77b8caefccbfbb357a5cd74a24dfa266420084b02466486`이다.
 - 기능 commit `bbd9117 feat: 로컬 계측과 안정 단계 저장 보강`을 원격에 push했다.
 
+## 최신 저장 스키마·릴리스 재검증
+
+- 저장 스키마 버전을 `1`에서 `2`로 갱신하고 안정 단계 ID 키 마이그레이션 회귀를 통과시켰다. 기능 commit `5dda324 fix: 저장 스키마 버전 갱신`을 원격에 push했다.
+- 저장 스키마 2를 포함한 전체 `flutter test`: 251개 통과, `flutter analyze`: 통과
+- 최신 Web Release `main.dart.js` SHA-256: `194b9635968c62249d50d7195379eaecb6637517b6ed73be8f3edd53b8369f36`
+- 최신 Android Release APK SHA-256: `b8552526ddf24547f30d832791073ad319fa556884d895d6a6bdffeae7625214`
+- 기존 Web 서버를 종료한 뒤 PID `30256`으로 8080 서버를 교체했고 루트·번들 HTTP 200을 확인했다.
+- Android ARM64 에뮬레이터에 APK를 재설치·실행했다. 설치 직후 약 5.8초의 시작 화면 이후 앱 PID `4167`에서 한글 홈·공·돌·상자·홀 이미지를 확인했으며 `FATAL EXCEPTION`은 0건이다.
+- 로딩 완료 캡처 `android-arm64-schema2-latest-layout.png` SHA-256: `16cd6fb99dbc740ac0799bec0aaa6048a0138150b3642ad669870210bc98cb00`
+
 ## 최신 레벨·런타임 보정
 
 - 4단계 `balloon_crate`가 논리 보드 밖 `y=640`에 있던 P1 배치 결함을 `y=400`으로 수정했다. 화면 Golden에서 상자 전체가 보이고 하단 조작 패널에 가리지 않는 것을 확인했다.
