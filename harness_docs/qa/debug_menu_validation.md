@@ -10,9 +10,13 @@
 - 모든 단계 해금·진행 기록 초기화
 - 복제 코어 수량 설정
 - 현재 단계의 속성 강제 장착
+- 원본 속성 제거·복원
 - 히트박스·충돌 법선·물체 ID·프레임 시간 표시
+- 공 질량·속도·운동량·샷·충돌 식별자 표시
 - 최근 물리 이벤트 최대 100개 확인
 - 상태 JSON·물리 이벤트 JSON 클립보드 복사
+- 마지막 발사 리플레이 녹화·재생
+- 사운드·햅틱 개별 토글
 - 안내형·행동 유도형·무설명형 조건 전환
 
 물리 오버레이는 `PropertyShotGame`의 현재 확정 상태와 이벤트를 그릴 뿐이며, `ShotResolver` 입력이나 결과를 변경하지 않는다. 진행 초기화·전체 해금은 `ProgressStore`의 실제 저장 키를 사용한다.
@@ -21,6 +25,7 @@
 
 - `test/debug_menu_test.dart`: 개발 메뉴의 한글 항목과 닫기 구조
 - `test/progress_store_test.dart`: 전체 해금·저장 키 초기화
+- `test/debug_menu_test.dart`: 원본 조작·물리량·리플레이·사운드·햅틱 메뉴 항목
 - `test/tutorial_experiment_test.dart`: 튜토리얼 조건 선택기
 - `flutter analyze`: 통과
 - Release Web 번들 문자열 검사: 개발 진단 라벨 미포함

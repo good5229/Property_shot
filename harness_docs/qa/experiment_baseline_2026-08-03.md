@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `9c59cd6`
+코드 기준 커밋: `beaece2`
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
@@ -17,11 +17,12 @@
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 1573 |
+| 데모 서버 | `127.0.0.1:8080`, PID 29875 |
 
 개발 진단 메뉴:
 
 - Debug 빌드에서만 단계 이동·진행 초기화·전체 해금·복제 코어 조정·속성 강제 장착·히트박스·충돌 법선·엔티티 ID·프레임 통계·최근 물리 이벤트 복사를 제공한다.
+- 원본 속성 제거·복원, 공 질량·속도·운동량·샷·충돌 식별자 표시, 리플레이 녹화·재생, 사운드·햅틱 토글을 추가했다.
 - Release Web 번들에서는 `개발 진단 메뉴`와 튜토리얼 조건군 문자열이 노출되지 않는다.
 
 Web 시각 캡처:
@@ -36,7 +37,7 @@ Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-73d1dba62e7f0674c9d852e4845bb28eb464dec3ccbbbcc6a36d4346b50dd209
+19afb4a6fb0130cf7efd970f30c104770de2f86f0dbcea22131d90ee4623838d
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57

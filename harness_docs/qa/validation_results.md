@@ -8,7 +8,7 @@
 | `test/multi_replay_fixture_test.dart` | 20개 시퀀스 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
 | `flutter build web --release` | 통과 |
-| 최신 Web `main.dart.js` | `73d1dba62e7f0674c9d852e4845bb28eb464dec3ccbbbcc6a36d4346b50dd209` |
+| 최신 Web `main.dart.js` | `19afb4a6fb0130cf7efd970f30c104770de2f86f0dbcea22131d90ee4623838d` |
 
 저장 리플레이 검증:
 
@@ -27,7 +27,15 @@
 - 메뉴에는 단계 이동·진행 초기화·전체 해금·복제 코어 조정·속성 강제 장착·물리 이벤트 복사·히트박스·충돌 법선·엔티티 ID·프레임 통계가 포함된다.
 - 기존 데모 PID 67695를 종료하고 Web Release를 다시 빌드해 PID 1573으로 교체했다.
 - 루트와 `main.dart.js` HTTP 200을 확인했고 Release 번들에서 개발 메뉴·튜토리얼 조건군 문구가 검색되지 않았다.
-- 최신 `main.dart.js` 체크섬은 `73d1dba62e7f0674c9d852e4845bb28eb464dec3ccbbbcc6a36d4346b50dd209`이다.
+- 당시 `main.dart.js` 체크섬은 `73d1dba62e7f0674c9d852e4845bb28eb464dec3ccbbbcc6a36d4346b50dd209`였다. 현재 기준은 아래 개발 진단 보강 기록이다.
+
+## 2026-08-03 개발 진단 보강·최신 Web 교체
+
+- 원본 속성 제거·복원, 공 질량·속도·운동량·샷·충돌 식별자 표시, 리플레이 녹화·재생, 사운드·햅틱 토글을 `beaece2`에 추가했다.
+- 전체 `flutter test` 235개, `flutter analyze`, `flutter build web --release`가 통과했다.
+- 기존 데모 PID 1573을 종료하고 최신 Web Release 서버 PID 29875로 교체했다. 루트와 `main.dart.js` HTTP 200을 확인했다.
+- Release 번들에서 `개발 진단 메뉴`, `리플레이 녹화`, `원본 제거` 문구가 검색되지 않았다.
+- 최신 `main.dart.js` 체크섬은 `19afb4a6fb0130cf7efd970f30c104770de2f86f0dbcea22131d90ee4623838d`이다.
 
 ## 2026-08-03 최신 Web 교체·시각 증거
 
@@ -39,7 +47,7 @@
 - 390×844 플레이에서 입체 물체·벽·홀 깃발·조준 표시·하단 조작 영역의 겹침을 확인했다.
 - 이후 기존 PID 47399를 종료하고 Web Release를 다시 빌드해 PID 67695로 교체했으며, 루트와 `main.dart.js` HTTP 200을 확인했다. 이 기록은 개발 진단 메뉴 반영 전의 역사적 기준이다.
 
-최신 계측 코드 Web 번들 체크섬:
+당시 계측 코드 Web 번들 체크섬:
 
 ```text
 build/web/main.dart.js
