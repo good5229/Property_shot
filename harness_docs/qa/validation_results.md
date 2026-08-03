@@ -1,14 +1,22 @@
-# 2026-08-03 다중샷 저장 리플레이 포함 최신 검증
+# 2026-08-03 단계4 실제 Web 조작 증거 포함 최신 검증
 
 | 명령 | 결과 |
 |---|---|
 | `flutter analyze` | 통과, 문제 없음 |
-| 전체 `flutter test` | 235개 통과 |
+| 전체 `flutter test` | 236개 통과 |
 | `test/multi_shot_analyzer_test.dart` | 통과 |
 | `test/multi_replay_fixture_test.dart` | 20개 시퀀스 통과 |
 | `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
 | `flutter build web --release` | 통과 |
-| 최신 Web `main.dart.js` | `19afb4a6fb0130cf7efd970f30c104770de2f86f0dbcea22131d90ee4623838d` |
+| 최신 Web `main.dart.js` | `768617ddd3ac7499e98e7aec3bfa8c7129589039c13edf3c9fb94f891e794666` |
+
+## 2026-08-03 단계4 실제 Web 재생·예외 수정
+
+- 성공 상태에서 `active_ball`이 `spent_ball`로 전환된 뒤 발생하던 `Bad state: No element` 경로를 수정하고 성공 상태 렌더 회귀를 추가했다(`07ef7b3`).
+- 수정된 Release Web에서 390×844 실제 조작을 재생해 단계4 시작·속성 팝업·속성 이전·조준·충전·충돌 2시점·결과를 8장 캡처했다(`120742a`).
+- 캡처 JSON의 브라우저 콘솔 오류는 0건이며, 최신 서버는 기존 프로세스를 종료한 뒤 `127.0.0.1:8080`, PID 54628으로 교체했다.
+- 최신 `main.dart.js` 체크섬은 `768617ddd3ac7499e98e7aec3bfa8c7129589039c13edf3c9fb94f891e794666`이다.
+- 실제 iOS·Android 기기와 외부 플레이테스트는 여전히 미검증이다.
 
 저장 리플레이 검증:
 

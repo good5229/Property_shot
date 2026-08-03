@@ -2,7 +2,7 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `beaece2`
+코드 기준 커밋: `120742a`
 원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
 작업 트리: QA 산출물·시각 캡처 커밋 전
 
@@ -10,14 +10,14 @@
 
 | 항목 | 결과 |
 |---|---|
-| 전체 `flutter test` | 235개 통과 |
+| 전체 `flutter test` | 236개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
 | 저장 다중샷 재생 | 20개 통과 |
 | `flutter analyze` | 통과, 문제 없음 |
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 29875 |
+| 데모 서버 | `127.0.0.1:8080`, PID 54628 |
 
 개발 진단 메뉴:
 
@@ -32,12 +32,14 @@ Web 시각 캡처:
 - 다섯 해상도 Chromium 콘솔 오류 0건
 - 390×844 지도에서 4단계 카드·설명·잠금·안내 카드 시각 확인
 - 최신 캡처에서 390×844 지도·플레이의 한글 문구와 보드·팝업 비겹침 확인
+- 390×844에서 단계4 시작·속성 팝업·속성 이전·조준·충전·충돌 진행·결과를 실제 조작으로 8장 캡처
+- 단계4 실제 조작 캡처의 브라우저 콘솔 오류 0건
 
 Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-19afb4a6fb0130cf7efd970f30c104770de2f86f0dbcea22131d90ee4623838d
+768617ddd3ac7499e98e7aec3bfa8c7129589039c13edf3c9fb94f891e794666
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57
