@@ -2,9 +2,10 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-코드 기준 커밋: `120742a`
-원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
-작업 트리: QA 산출물·시각 캡처 커밋 전
+기능 기준 커밋: `120742a`
+문서 기준 커밋: `701705b`
+원격: `origin/commercial/wall-physics-qa`와 로컬 HEAD 일치
+작업 트리: clean
 
 ## 현재 자동 검증 기준
 
