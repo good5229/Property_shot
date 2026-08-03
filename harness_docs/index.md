@@ -64,5 +64,6 @@ copied here.
 - [Object Quality Audit](art/object_quality_audit.md)
 - [Asset Registry](assets/asset_registry.md)
 - [Manual Cross Review](agents/manual_cross_review_2026-08-03.md)
+- [Stage4 Causality Validation](qa/stage4_causality_validation.md)
 
 각 역할 매뉴얼은 `manuals/01_*.md`부터 `manuals/17_*.md`까지 이어진다. 역할 활성화 전 공통 표준과 활성화 게이트, 참고자료 색인을 먼저 읽는다.

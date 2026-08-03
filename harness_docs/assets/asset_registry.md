@@ -11,6 +11,7 @@
 | `stone-v2` | `assets/generated/stone-v2.png` | 무거운 돌 게임 화면·팝업 | 기본→피격 압축→구름→정지 | 바닥 중심 `(0.5, 0.88)` | `EntityType.weight` 외곽 | 조건부 승인: 생성 기록·약관 재확인 필요 | `asset_rights_ledger.md`, 2026-08-03 |
 | `jelly-bumper-v1` | `assets/generated/jelly-bumper-v1.png` | 젤리 게임 화면·팝업 | 기본→눌림→복원 | 바닥 중심 `(0.5, 0.9)` | `EntityType.bumper` 외곽 | 조건부 승인: 생성 기록·약관 재확인 필요 | `asset_rights_ledger.md`, 2026-08-03 |
 | `balloon-canvas` | Canvas 풍선 렌더러 | 4단계 풍선 | 기본→눌림→반사 또는 팝→비활성 | 중심 `(0.5, 0.56)` | `EntityType.balloon` 타원 | 승인: 자체 코드 | 코드·Golden 검토 필요, 2026-08-03 |
+| `balloon-switch-canvas` | Canvas 스위치 렌더러 | 4단계 풍선 뒤 스위치 | 숨김→노출→눌림 | 바닥 중심 `(0.5, 0.86)` | 노출 전 비고체, 노출 후 `EntityType.switchPad` | 승인: 자체 코드 | 코드·Golden 검토 필요, 2026-08-03 |
 | `spike-canvas` | Canvas 가시 렌더러 | 4단계 속성 source | 기본→선택→소모 | 중심 `(0.5, 0.7)` | `EntityType.spikeSource` 외곽 | 승인: 자체 코드 | 코드·Golden 검토 필요, 2026-08-03 |
 | `hole-flag-canvas` | Canvas 홀·깃발 | 모든 단계 목표 | 기본→접근→포획→성공 | 홀 중심, 깃발은 시각 앵커 | 홀 원형 포획 영역 | 승인: 자체 코드 | 코드·Golden 검토 필요, 2026-08-03 |
 

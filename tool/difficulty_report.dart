@@ -5,7 +5,10 @@ import 'package:property_shot/game/analysis/difficulty_analyzer.dart';
 
 void main() {
   const analyzer = DifficultyAnalyzer();
-  for (final metrics in analyzer.analyzeAll(includeMultiShot: true)) {
+  for (final metrics in analyzer.analyzeAll(
+    includeNewStages: true,
+    includeMultiShot: true,
+  )) {
     print('단계: ${metrics.levelName}');
     print('전체 입력: ${metrics.totalInputs}');
     print('성공 입력: ${metrics.successInputs}');
@@ -84,6 +87,17 @@ void main() {
   final thirdStage = highResolution.analyzeLevel(2);
   print('3단계 고해상도 대체 풀이: ${thirdStage.successfulStrategies.join(', ')}');
   for (final strategy in thirdStage.strategyMetrics) {
+    print(
+      '  ${strategy.label}: ${strategy.successInputs}/${strategy.totalInputs} '
+      '(${(strategy.successRate * 100).toStringAsFixed(2)}%), '
+      '각도 ${strategy.widestAngleDegrees.toStringAsFixed(0)}도, '
+      '힘 ${(strategy.widestPowerRange * 100).toStringAsFixed(0)}%, '
+      '연결 ${strategy.largestConnectedRegion}셀',
+    );
+  }
+  final fourthStage = highResolution.analyzeLevel(3);
+  print('4단계 고해상도 대체 풀이: ${fourthStage.successfulStrategies.join(', ')}');
+  for (final strategy in fourthStage.strategyMetrics) {
     print(
       '  ${strategy.label}: ${strategy.successInputs}/${strategy.totalInputs} '
       '(${(strategy.successRate * 100).toStringAsFixed(2)}%), '
