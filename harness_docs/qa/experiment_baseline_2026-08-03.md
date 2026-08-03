@@ -2,21 +2,21 @@
 
 기준 시각: 2026-08-03 KST  
 브랜치: `commercial/wall-physics-qa`  
-커밋: `20eba94`  
-원격: `origin/commercial/wall-physics-qa`와 일치  
-작업 트리: 기준선 확인 시 깨끗함
+코드 기준 커밋: `e78b9be`  
+원격: `origin/commercial/wall-physics-qa`에 코드 커밋 Push 완료  
+작업 트리: QA 산출물·시각 캡처 커밋 전
 
 ## 현재 자동 검증 기준
 
 | 항목 | 결과 |
 |---|---|
-| 비다중샷 회귀 | 224개 통과 |
+| 비다중샷 회귀 | 225개 통과 |
 | 다중샷 물리 분석 | 1개 통과 |
 | `flutter analyze` | 통과 |
 | `flutter build web --release` | 통과 |
 | Web 루트 | HTTP 200 |
 | Web `main.dart.js` | HTTP 200 |
-| 데모 서버 | `127.0.0.1:8080`, PID 96501 |
+| 데모 서버 | `127.0.0.1:8080`, PID 96501 (최신 Web 교체 전) |
 
 Web 시각 캡처:
 
@@ -29,7 +29,7 @@ Web 기준 번들 체크섬:
 
 ```text
 build/web/main.dart.js
-f53395257468da36de105fa3b4ebf53d31a42bfac07cae615034681061b40e54
+0ab29a85ab6e18b51a2fd8e5847c0ae1760d6213900d842c7522cb8c6b1725dd
 
 build/web/index.html
 8ee95f8e449a4c7187b68651f03bf7678f67e08a1d68029cc31b140e9f20ed57
@@ -91,6 +91,6 @@ dart run tool/baseline_snapshot.dart
 - Web과 iOS Release의 실행 결과 비교
 - 저장 버전 도입 전 손상 데이터 복구
 - iOS `--no-codesign`은 Xcode 컴파일 후 Development Team·프로비저닝 프로파일 부족으로 배포 단계 실패
-- `physics_benchmark.dart` 최신 순수 판정 평균: 1단계 360.3µs, 2단계 287.9µs, 3단계 303.5µs, 4단계 330.0µs
+- `physics_benchmark.dart` 최신 순수 판정 평균: 1단계 416.8µs, 2단계 329.8µs, 3단계 338.6µs, 4단계 354.9µs
 
 이 항목들은 자동 테스트 통과로 완료 처리하지 않는다.

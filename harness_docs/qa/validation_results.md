@@ -1,3 +1,16 @@
+# 2026-08-03 최신 계측 연결 검증
+
+| 명령 | 결과 |
+|---|---|
+| `flutter analyze` | 통과, 문제 없음 |
+| 비다중샷 전체 회귀 | 225개 통과 |
+| `test/multi_shot_analyzer_test.dart` | 통과 |
+| `dart run tool/physics_benchmark.dart` | 단계별 평균 416.8/329.8/338.6/354.9µs |
+| `flutter build web --release` | 통과 |
+| 최신 Web `main.dart.js` | `0ab29a85ab6e18b51a2fd8e5847c0ae1760d6213900d842c7522cb8c6b1725dd` |
+
+계측 변경은 물체 확인·속성 이전 대상·스위치·문·풍선·점착·홀 이벤트를 상태 전이별로 기록하도록 연결했다. 자동 검증은 통과했지만 실제 iOS·Android 기기와 외부 플레이테스트는 여전히 미검증이다.
+
 # 검증 결과
 
 실행 일시: 2026-08-01 KST
