@@ -1595,3 +1595,4 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: 새 계측 필드 회귀에서 CSV 열 순서 기대값만 실제 헤더와 달라 실패했다. 구현은 정상이며 테스트 기대 문자열을 실제 스키마 순서로 맞춘다.
 2026-08-03: 계측 이벤트에 안정 `stage_id`, `result_code`, `route_tag`를 추가한 `898afd2`를 push했다. Web·Android Release 재빌드, Android ARM64 실행 PID 4503, iOS 무서명 Xcode 컴파일·서명 차단 결과를 최신 증거에 반영한다.
 2026-08-03: 최신 Web 성능 감사 스크립트는 전역 Pillow `_imaging`의 JPEG ABI 불일치로 시작 전에 실패했다. 기존 Chromium 증거는 역사값으로 유지하고 새 측정 성공으로 오인하지 않는다.
+2026-08-03: 최신 기능·증거 커밋 `898afd2`와 `174be05`가 원격 HEAD에 반영됐고, PID 75036 Web 데모의 루트·번들 HTTP 200을 최종 확인했다.
