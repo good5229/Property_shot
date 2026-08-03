@@ -26,6 +26,12 @@ void main() {
     expect(find.text('히트박스 표시'), findsOneWidget);
     expect(find.text('충돌 법선 표시'), findsOneWidget);
     expect(find.text('프레임 통계 표시'), findsOneWidget);
+    expect(find.text('원본 제거'), findsWidgets);
+    expect(find.text('원본 복원'), findsWidgets);
+    expect(find.byKey(const Key('debug_physics_metrics')), findsOneWidget);
+    expect(find.text('리플레이 녹화'), findsOneWidget);
+    expect(find.text('사운드 켜기'), findsOneWidget);
+    expect(find.text('햅틱 켜기'), findsOneWidget);
     expect(find.text('상태 JSON 복사'), findsOneWidget);
     expect(find.text('이벤트 복사'), findsOneWidget);
 

@@ -1550,7 +1550,11 @@ class ShotResolver {
         .toDouble();
   }
 
-  double _massOf(EntityState entity) {
+  double _massOf(EntityState entity) => massOf(entity);
+
+  /// 진단·벤치마크에서 판정과 같은 질량 표를 읽을 수 있게 공개한다.
+  /// 실제 충돌 계산은 계속 이 표를 통해서만 수행한다.
+  static double massOf(EntityState entity) {
     if (entity.traits.contains(TraitType.heavy)) {
       return 4.4;
     }

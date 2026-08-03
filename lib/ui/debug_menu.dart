@@ -17,6 +17,14 @@ class DebugMenu extends StatefulWidget {
     required this.showNormals,
     required this.showIds,
     required this.showStats,
+    required this.activeMass,
+    required this.activeSpeed,
+    required this.activeMomentum,
+    required this.lastCollisionId,
+    required this.recordingReplay,
+    required this.hasReplay,
+    required this.soundEnabled,
+    required this.hapticsEnabled,
     required this.tutorialVariant,
     required this.onSelectStage,
     required this.onRestartStage,
@@ -24,6 +32,8 @@ class DebugMenu extends StatefulWidget {
     required this.onUnlockAll,
     required this.onSetCopyCore,
     required this.onForceTrait,
+    required this.onRemoveTrait,
+    required this.onRestoreTrait,
     required this.onToggleHitboxes,
     required this.onToggleNormals,
     required this.onToggleIds,
@@ -31,6 +41,10 @@ class DebugMenu extends StatefulWidget {
     required this.onTutorialVariantChanged,
     required this.onCopyState,
     required this.onCopyEvents,
+    required this.onToggleReplayRecording,
+    required this.onPlayReplay,
+    required this.onToggleSound,
+    required this.onToggleHaptics,
   });
 
   final GameState state;
@@ -39,6 +53,14 @@ class DebugMenu extends StatefulWidget {
   final bool showNormals;
   final bool showIds;
   final bool showStats;
+  final double activeMass;
+  final double activeSpeed;
+  final double activeMomentum;
+  final String? lastCollisionId;
+  final bool recordingReplay;
+  final bool hasReplay;
+  final bool soundEnabled;
+  final bool hapticsEnabled;
   final TutorialExperimentVariant tutorialVariant;
   final ValueChanged<int> onSelectStage;
   final VoidCallback onRestartStage;
@@ -46,6 +68,8 @@ class DebugMenu extends StatefulWidget {
   final VoidCallback onUnlockAll;
   final ValueChanged<int> onSetCopyCore;
   final ValueChanged<String> onForceTrait;
+  final ValueChanged<String> onRemoveTrait;
+  final ValueChanged<String> onRestoreTrait;
   final ValueChanged<bool> onToggleHitboxes;
   final ValueChanged<bool> onToggleNormals;
   final ValueChanged<bool> onToggleIds;
@@ -53,6 +77,10 @@ class DebugMenu extends StatefulWidget {
   final ValueChanged<TutorialExperimentVariant> onTutorialVariantChanged;
   final VoidCallback onCopyState;
   final VoidCallback onCopyEvents;
+  final ValueChanged<bool> onToggleReplayRecording;
+  final VoidCallback onPlayReplay;
+  final ValueChanged<bool> onToggleSound;
+  final ValueChanged<bool> onToggleHaptics;
 
   @override
   State<DebugMenu> createState() => _DebugMenuState();
@@ -62,6 +90,9 @@ class _DebugMenuState extends State<DebugMenu> {
   late final TextEditingController _copyCoreController = TextEditingController(
     text: '${widget.state.copyCoreCount}',
   );
+  late bool _recordingReplay = widget.recordingReplay;
+  late bool _soundEnabled = widget.soundEnabled;
+  late bool _hapticsEnabled = widget.hapticsEnabled;
 
   @override
   void dispose() {
@@ -72,6 +103,13 @@ class _DebugMenuState extends State<DebugMenu> {
   @override
   Widget build(BuildContext context) {
     final traitSources = widget.state.traitSources.toList();
+    final baseState = levels[widget.state.levelIndex].createState(
+      widget.state.levelIndex,
+    );
+    final sourceIds = {
+      ...baseState.traitSources.map((source) => source.id),
+      ...traitSources.map((source) => source.id),
+    }.toList()..sort();
     final eventLines = widget.recentEvents.reversed
         .take(100)
         .map(_eventLabel)
@@ -168,6 +206,35 @@ class _DebugMenuState extends State<DebugMenu> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  for (final sourceId in sourceIds)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '$sourceId · ${_traitLabel(sourceId, baseState)}',
+                            ),
+                          ),
+                          Wrap(
+                            spacing: 4,
+                            children: [
+                              OutlinedButton(
+                                key: Key('debug_remove_trait_$sourceId'),
+                                onPressed: () => widget.onRemoveTrait(sourceId),
+                                child: const Text('원본 제거'),
+                              ),
+                              OutlinedButton(
+                                key: Key('debug_restore_trait_$sourceId'),
+                                onPressed: () =>
+                                    widget.onRestoreTrait(sourceId),
+                                child: const Text('원본 복원'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   for (final source in traitSources)
                     OutlinedButton.icon(
                       onPressed: () => widget.onForceTrait(source.id),
@@ -223,6 +290,16 @@ class _DebugMenuState extends State<DebugMenu> {
                     value: widget.showStats,
                     onChanged: widget.onToggleStats,
                   ),
+                  const Divider(),
+                  SelectableText(
+                    '공 질량 ${widget.activeMass.toStringAsFixed(2)} · '
+                    '속도 ${widget.activeSpeed.toStringAsFixed(2)} · '
+                    '운동량 ${widget.activeMomentum.toStringAsFixed(2)}\n'
+                    '샷 식별자 ${widget.state.shotCount} · '
+                    '충돌 식별자 ${widget.lastCollisionId ?? '없음'}',
+                    key: const Key('debug_physics_metrics'),
+                    style: const TextStyle(fontSize: 12, height: 1.35),
+                  ),
                 ],
               ),
             ),
@@ -250,6 +327,40 @@ class _DebugMenuState extends State<DebugMenu> {
                       ),
                     ],
                   ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('리플레이 녹화'),
+                    value: _recordingReplay,
+                    onChanged: (value) {
+                      setState(() => _recordingReplay = value);
+                      widget.onToggleReplayRecording(value);
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: widget.hasReplay ? widget.onPlayReplay : null,
+                    icon: const Icon(Icons.replay),
+                    label: Text(
+                      widget.hasReplay ? '마지막 리플레이 재생' : '저장된 리플레이 없음',
+                    ),
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('사운드 켜기'),
+                    value: _soundEnabled,
+                    onChanged: (value) {
+                      setState(() => _soundEnabled = value);
+                      widget.onToggleSound(value);
+                    },
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('햅틱 켜기'),
+                    value: _hapticsEnabled,
+                    onChanged: (value) {
+                      setState(() => _hapticsEnabled = value);
+                      widget.onToggleHaptics(value);
+                    },
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     '최근 이벤트 ${eventLines.length}개',
@@ -271,7 +382,7 @@ class _DebugMenuState extends State<DebugMenu> {
               child: SelectableText(
                 const JsonEncoder.withIndent('  ').convert({
                   '단계': widget.state.levelIndex + 1,
-                  '단계상태': widget.state.phase.name,
+                  '단계상태': _phaseLabel(widget.state.phase),
                   '발사횟수': widget.state.shotCount,
                   '공속성': widget.state.equippedTrait?.label ?? '없음',
                   '복제코어': widget.state.copyCoreCount,
@@ -289,7 +400,34 @@ class _DebugMenuState extends State<DebugMenu> {
   String _eventLabel(PhysicsEvent event) {
     final normal =
         '(${event.normal.x.toStringAsFixed(2)}, ${event.normal.y.toStringAsFixed(2)})';
-    return '${event.kind.name} · ${event.sourceEntityId} → ${event.targetEntityId} · 법선 $normal · 경로 ${event.pathIndex}';
+    return '${_kindLabel(event.kind)} · ${event.sourceEntityId} → ${event.targetEntityId} · 법선 $normal · 경로 ${event.pathIndex}';
+  }
+
+  String _kindLabel(PhysicsEventKind kind) {
+    return switch (kind) {
+      PhysicsEventKind.impact => '충돌',
+      PhysicsEventKind.stateChange => '상태 변경',
+      PhysicsEventKind.move => '이동',
+      PhysicsEventKind.chainSafetyStop => '연쇄 안전 중단',
+    };
+  }
+
+  String _phaseLabel(GamePhase phase) {
+    return switch (phase) {
+      GamePhase.planning => '준비',
+      GamePhase.resolving => '판정 중',
+      GamePhase.success => '성공',
+      GamePhase.paused => '일시정지',
+    };
+  }
+
+  String _traitLabel(String sourceId, GameState baseState) {
+    final current = widget.state.entityById(sourceId);
+    final base = baseState.entityById(sourceId);
+    final traits = current?.traits.isNotEmpty == true
+        ? current!.traits
+        : base?.traits ?? const {};
+    return traits.isEmpty ? '속성 없음' : traits.first.label;
   }
 }
 

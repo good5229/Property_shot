@@ -93,6 +93,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _debugShowNormals = false;
   bool _debugShowIds = false;
   bool _debugShowStats = false;
+  bool _debugRecordReplay = false;
+  GameState? _debugReplayStartState;
+  ShotInput? _debugReplayInput;
+
+  double get _lastDebugSpeed {
+    for (final event in _debugPhysicsEvents.reversed) {
+      if (event.kind == PhysicsEventKind.impact) {
+        return event.resultingVelocity.length;
+      }
+    }
+    return 0;
+  }
+
+  String? get _lastDebugCollisionId {
+    for (final event in _debugPhysicsEvents.reversed) {
+      if (event.kind == PhysicsEventKind.impact) {
+        return event.eventId;
+      }
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -352,20 +373,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _launch() {
+  void _launch({ShotInput? inputOverride, bool isReplay = false}) {
     if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
     }
     _bonusBumperHistory.insert(0, _bonusBumperHit);
     _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
-    final result = _shotResolver.resolve(
-      _state,
-      ShotInput(
-        direction: _state.aimDirection,
-        power: _state.aimPower,
-        equippedTrait: _state.equippedTrait,
-      ),
-    );
+    final input =
+        inputOverride ??
+        ShotInput(
+          direction: _state.aimDirection,
+          power: _state.aimPower,
+          equippedTrait: _state.equippedTrait,
+        );
+    if (widget.showDebugControls && _debugRecordReplay && !isReplay) {
+      _debugReplayStartState = _state;
+      _debugReplayInput = input;
+    }
+    final result = _shotResolver.resolve(_state, input);
     _telemetry.record(
       '발사',
       stage: _state.levelIndex,
@@ -378,6 +403,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       objectId: _state.activeBall.id,
       objectType: _state.activeBall.type.name,
       speed: 8 + _state.aimPower * 16,
+      isReplay: isReplay,
     );
     _feedback.shotLaunched();
     _showBallInfo = false;
@@ -659,6 +685,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         showNormals: _debugShowNormals,
         showIds: _debugShowIds,
         showStats: _debugShowStats,
+        activeMass: ShotResolver.massOf(_state.activeBall),
+        activeSpeed: _lastDebugSpeed,
+        activeMomentum:
+            ShotResolver.massOf(_state.activeBall) * _lastDebugSpeed,
+        lastCollisionId: _lastDebugCollisionId,
+        recordingReplay: _debugRecordReplay,
+        hasReplay: _debugReplayInput != null && _debugReplayStartState != null,
+        soundEnabled: GameFeedback.soundEnabled,
+        hapticsEnabled: GameFeedback.hapticsEnabled,
         tutorialVariant: _activeTutorialVariant,
         onSelectStage: _debugSelectStage,
         onRestartStage: () => _selectLevel(_state.levelIndex),
@@ -666,6 +701,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         onUnlockAll: _debugUnlockAll,
         onSetCopyCore: _debugSetCopyCore,
         onForceTrait: _debugForceTrait,
+        onRemoveTrait: _debugRemoveTrait,
+        onRestoreTrait: _debugRestoreTrait,
         onToggleHitboxes: (value) {
           setState(() => _debugShowHitboxes = value);
           _game.setDebugOptions(hitboxes: value);
@@ -692,6 +729,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         },
         onCopyState: _copyDebugState,
         onCopyEvents: _copyDebugEvents,
+        onToggleReplayRecording: (value) {
+          setState(() => _debugRecordReplay = value);
+        },
+        onPlayReplay: _debugPlayReplay,
+        onToggleSound: (value) {
+          unawaited(GameFeedback.setSoundEnabled(value));
+        },
+        onToggleHaptics: (value) {
+          unawaited(GameFeedback.setHapticsEnabled(value));
+        },
       ),
     );
   }
@@ -744,6 +791,65 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _selectTraitSource(sourceId);
     _transferTrait();
+  }
+
+  void _debugRemoveTrait(String sourceId) {
+    if (_isAnimatingShot || _state.entityById(sourceId) == null) {
+      return;
+    }
+    _setState(
+      _state.copyWith(
+        entities: [
+          for (final entity in _state.entities)
+            entity.id == sourceId
+                ? entity.copyWith(traits: const {}, visualState: 'drained')
+                : entity,
+        ],
+        clearSelection: true,
+        message: '$sourceId 원본 속성을 제거했습니다.',
+      ),
+    );
+  }
+
+  void _debugRestoreTrait(String sourceId) {
+    if (_isAnimatingShot) {
+      return;
+    }
+    final base = levels[_state.levelIndex]
+        .createState(_state.levelIndex)
+        .entityById(sourceId);
+    if (base == null) {
+      return;
+    }
+    _setState(
+      _state.copyWith(
+        entities: [
+          for (final entity in _state.entities)
+            entity.id == sourceId
+                ? entity.copyWith(
+                    traits: base.traits,
+                    visualState: base.visualState,
+                  )
+                : entity,
+        ],
+        clearSelection: true,
+        message: '$sourceId 원본 속성을 복원했습니다.',
+      ),
+    );
+  }
+
+  void _debugPlayReplay() {
+    final start = _debugReplayStartState;
+    final input = _debugReplayInput;
+    if (_isAnimatingShot || start == null || input == null) {
+      return;
+    }
+    _setState(start.copyWith(message: '저장한 리플레이를 재생합니다.'));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _launch(inputOverride: input, isReplay: true);
+      }
+    });
   }
 
   void _copyDebugState() {
