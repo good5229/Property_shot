@@ -463,6 +463,27 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
               await GameFeedback.setHapticsEnabled(enabled);
             },
           ),
+          SwitchListTile.adaptive(
+            key: const Key('screen_shake_toggle'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('화면 흔들림'),
+            value: GameFeedback.screenShakeEnabled,
+            onChanged: (enabled) async {
+              setState(() => GameFeedback.screenShakeEnabled = enabled);
+              await GameFeedback.setScreenShakeEnabled(enabled);
+            },
+          ),
+          SwitchListTile.adaptive(
+            key: const Key('reduced_motion_toggle'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('저모션 효과'),
+            subtitle: const Text('충돌 인과는 유지하고 흔들림과 반복 효과를 줄입니다.'),
+            value: GameFeedback.reducedMotionEnabled,
+            onChanged: (enabled) async {
+              setState(() => GameFeedback.reducedMotionEnabled = enabled);
+              await GameFeedback.setReducedMotionEnabled(enabled);
+            },
+          ),
         ],
       ),
       actions: [

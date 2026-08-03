@@ -18,8 +18,13 @@ class GameFeedback {
 
   static const soundPreferenceKey = 'property_shot_sound_enabled';
   static const hapticsPreferenceKey = 'property_shot_haptics_enabled';
+  static const reducedMotionPreferenceKey =
+      'property_shot_reduced_motion_enabled';
+  static const screenShakePreferenceKey = 'property_shot_screen_shake_enabled';
   static bool soundEnabled = true;
   static bool hapticsEnabled = true;
+  static bool reducedMotionEnabled = false;
+  static bool screenShakeEnabled = true;
 
   final SoundPlayer _soundPlayer;
   final SoundCuePlayer _cuePlayer;
@@ -35,6 +40,10 @@ class GameFeedback {
       final preferences = await SharedPreferences.getInstance();
       soundEnabled = preferences.getBool(soundPreferenceKey) ?? true;
       hapticsEnabled = preferences.getBool(hapticsPreferenceKey) ?? true;
+      reducedMotionEnabled =
+          preferences.getBool(reducedMotionPreferenceKey) ?? false;
+      screenShakeEnabled =
+          preferences.getBool(screenShakePreferenceKey) ?? true;
     } on Exception {
       // 설정 저장소를 사용할 수 없는 환경에서도 기본값으로 계속 실행한다.
     }
@@ -48,6 +57,16 @@ class GameFeedback {
   static Future<void> setHapticsEnabled(bool enabled) async {
     hapticsEnabled = enabled;
     await _savePreference(hapticsPreferenceKey, enabled);
+  }
+
+  static Future<void> setReducedMotionEnabled(bool enabled) async {
+    reducedMotionEnabled = enabled;
+    await _savePreference(reducedMotionPreferenceKey, enabled);
+  }
+
+  static Future<void> setScreenShakeEnabled(bool enabled) async {
+    screenShakeEnabled = enabled;
+    await _savePreference(screenShakePreferenceKey, enabled);
   }
 
   static Future<void> _savePreference(String key, bool value) async {
@@ -128,9 +147,10 @@ class GameFeedback {
       EntityType.bumper => HapticFeedback.lightImpact,
       EntityType.stickySurface => HapticFeedback.selectionClick,
       EntityType.hole => HapticFeedback.heavyImpact,
-      EntityType.balloon => impactStrength >= 0.78
-          ? HapticFeedback.heavyImpact
-          : HapticFeedback.mediumImpact,
+      EntityType.balloon =>
+        impactStrength >= 0.78
+            ? HapticFeedback.heavyImpact
+            : HapticFeedback.mediumImpact,
       EntityType.spikeSource => HapticFeedback.lightImpact,
     };
     _emit(

@@ -22,6 +22,8 @@ class PropertyShotGame extends FlameGame {
     this.onShotImpact,
     this.onPhysicsEvent,
     this.loadVisualAssets = true,
+    this.reducedMotion = false,
+    this.screenShake = true,
   });
 
   GameState state;
@@ -30,6 +32,8 @@ class PropertyShotGame extends FlameGame {
   final ValueChanged<ShotImpact>? onShotImpact;
   final ValueChanged<PhysicsEvent>? onPhysicsEvent;
   final bool loadVisualAssets;
+  final bool reducedMotion;
+  final bool screenShake;
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   List<ShotImpact> _animationImpacts = const [];
@@ -232,6 +236,9 @@ class PropertyShotGame extends FlameGame {
       (size.y - logicalSize.y * scale) / 2,
     );
     canvas.scale(scale);
+    if (_animationPath.isNotEmpty) {
+      _drawScreenShake(canvas);
+    }
     _drawBoard(canvas);
     final animated = _animationPath.isNotEmpty;
     final renderEntities =
@@ -258,6 +265,36 @@ class PropertyShotGame extends FlameGame {
       _drawDirectImpactFeedback(canvas);
     }
     canvas.restore();
+  }
+
+  void _drawScreenShake(Canvas canvas) {
+    if (!screenShake || reducedMotion || _animationPhysicsEvents.isEmpty) {
+      return;
+    }
+    PhysicsEvent? latestImpact;
+    for (final event in _animationPhysicsEvents) {
+      if (event.kind != PhysicsEventKind.impact ||
+          event.pathIndex > _animationCursor) {
+        continue;
+      }
+      if (latestImpact == null || event.pathIndex > latestImpact.pathIndex) {
+        latestImpact = event;
+      }
+    }
+    if (latestImpact == null) {
+      return;
+    }
+    final elapsed = _animationCursor - latestImpact.pathIndex;
+    if (elapsed < 0 || elapsed > 5) {
+      return;
+    }
+    final strength = (latestImpact.impulse / 2.4).clamp(0.0, 1.0);
+    final fade = 1 - (elapsed / 5).clamp(0.0, 1.0);
+    final amplitude = 0.9 + strength * 1.8;
+    canvas.translate(
+      math.sin(elapsed * 5.6) * amplitude * fade,
+      math.cos(elapsed * 6.4) * amplitude * fade,
+    );
   }
 
   void _drawStage4Relations(Canvas canvas, List<EntityState> entities) {
@@ -335,7 +372,7 @@ class PropertyShotGame extends FlameGame {
       if (elapsed < 0 || elapsed > 16) {
         continue;
       }
-      final progress = (elapsed / 16).clamp(0.0, 1.0);
+      final progress = reducedMotion ? 0.55 : (elapsed / 16).clamp(0.0, 1.0);
       final center = _project(move.impactPosition ?? move.from);
       final target = _animationStartState?.entities.where(
         (entity) => entity.id == move.entityId,
@@ -422,7 +459,7 @@ class PropertyShotGame extends FlameGame {
       if (elapsed < 0 || elapsed > 14) {
         continue;
       }
-      final progress = (elapsed / 14).clamp(0.0, 1.0);
+      final progress = reducedMotion ? 0.55 : (elapsed / 14).clamp(0.0, 1.0);
       final center = _project(impact.position);
       final accent = switch (impact.entityType) {
         EntityType.hole => const Color(0xFFFFD76A),

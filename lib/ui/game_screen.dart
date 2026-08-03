@@ -101,6 +101,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       onShotImpact: _onShotImpact,
       onPhysicsEvent: _onPhysicsEvent,
       loadVisualAssets: widget.loadGameAssets,
+      reducedMotion: GameFeedback.reducedMotionEnabled,
+      screenShake: GameFeedback.screenShakeEnabled,
     );
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();

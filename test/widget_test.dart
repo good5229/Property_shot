@@ -118,6 +118,8 @@ void main() {
     addTearDown(() {
       GameFeedback.soundEnabled = true;
       GameFeedback.hapticsEnabled = true;
+      GameFeedback.screenShakeEnabled = true;
+      GameFeedback.reducedMotionEnabled = false;
     });
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pumpAndSettle();
@@ -128,10 +130,14 @@ void main() {
 
     await tester.tap(find.byKey(const Key('sound_toggle')));
     await tester.tap(find.byKey(const Key('haptics_toggle')));
+    await tester.tap(find.byKey(const Key('screen_shake_toggle')));
+    await tester.tap(find.byKey(const Key('reduced_motion_toggle')));
     await tester.pump();
 
     expect(GameFeedback.soundEnabled, isFalse);
     expect(GameFeedback.hapticsEnabled, isFalse);
+    expect(GameFeedback.screenShakeEnabled, isFalse);
+    expect(GameFeedback.reducedMotionEnabled, isTrue);
     expect(find.text('닫기'), findsOneWidget);
   });
 

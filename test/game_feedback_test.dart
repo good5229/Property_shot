@@ -116,14 +116,20 @@ void main() {
     SharedPreferences.setMockInitialValues({
       GameFeedback.soundPreferenceKey: false,
       GameFeedback.hapticsPreferenceKey: false,
+      GameFeedback.screenShakePreferenceKey: false,
+      GameFeedback.reducedMotionPreferenceKey: true,
     });
     GameFeedback.soundEnabled = true;
     GameFeedback.hapticsEnabled = true;
+    GameFeedback.screenShakeEnabled = true;
+    GameFeedback.reducedMotionEnabled = false;
 
     await GameFeedback.loadPreferences();
 
     expect(GameFeedback.soundEnabled, isFalse);
     expect(GameFeedback.hapticsEnabled, isFalse);
+    expect(GameFeedback.screenShakeEnabled, isFalse);
+    expect(GameFeedback.reducedMotionEnabled, isTrue);
   });
 
   test('소리와 진동 설정 변경을 로컬 저장소에 기록한다', () async {
@@ -131,12 +137,21 @@ void main() {
 
     await GameFeedback.setSoundEnabled(false);
     await GameFeedback.setHapticsEnabled(false);
+    await GameFeedback.setScreenShakeEnabled(false);
+    await GameFeedback.setReducedMotionEnabled(true);
     final preferences = await SharedPreferences.getInstance();
 
     expect(preferences.getBool(GameFeedback.soundPreferenceKey), isFalse);
     expect(preferences.getBool(GameFeedback.hapticsPreferenceKey), isFalse);
+    expect(preferences.getBool(GameFeedback.screenShakePreferenceKey), isFalse);
+    expect(
+      preferences.getBool(GameFeedback.reducedMotionPreferenceKey),
+      isTrue,
+    );
     GameFeedback.soundEnabled = true;
     GameFeedback.hapticsEnabled = true;
+    GameFeedback.screenShakeEnabled = true;
+    GameFeedback.reducedMotionEnabled = false;
   });
 }
 
