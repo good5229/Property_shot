@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:property_shot/game/analysis/difficulty_analyzer.dart';
 import 'package:property_shot/game/analysis/multi_shot_analyzer.dart';
 import 'package:property_shot/game/analysis/replay_fixture.dart';
 import 'package:property_shot/game/analysis/replay_signature.dart';

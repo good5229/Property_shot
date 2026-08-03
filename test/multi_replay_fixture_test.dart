@@ -24,7 +24,7 @@ void main() {
     expect(json['schemaVersion'], 1);
     expect(fixtures, hasLength(levels.length * 5));
     expect(fixtures.map((fixture) => fixture.stageIndex).toSet(), {0, 1, 2, 3});
-    expect(fixtures.every((fixture) => fixture.shots.length >= 1), isTrue);
+    expect(fixtures.every((fixture) => fixture.shots.isNotEmpty), isTrue);
     expect(fixtures.any((fixture) => fixture.shots.length == 2), isTrue);
 
     for (final fixture in fixtures) {
