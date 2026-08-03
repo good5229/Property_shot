@@ -156,7 +156,7 @@ void main() {
     await tester.tap(find.byKey(const Key('transfer_button')));
     await tester.pump();
 
-    expect(find.textContaining('공: 무거움'), findsOneWidget);
+    expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
     expect(find.textContaining('추천 경로를 준비했습니다'), findsOneWidget);
     expect(find.text('공을 길게 눌러 발사해요'), findsOneWidget);
     expect(find.text('공을 길게 눌러 힘을 모으세요'), findsOneWidget);
@@ -177,7 +177,7 @@ void main() {
     await tester.tap(find.byKey(const Key('copy_button')));
     await tester.pump();
 
-    expect(find.textContaining('공: 무거움'), findsOneWidget);
+    expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
     expect(find.textContaining('복사했습니다'), findsOneWidget);
     expect(find.textContaining('복제 코어 0개 남음'), findsOneWidget);
     expect(find.textContaining('선택:'), findsNothing);
@@ -195,7 +195,7 @@ void main() {
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
 
-    expect(find.text('떼어 공에 옮기기'), findsOneWidget);
+    expect(find.text('속성 옮기기'), findsOneWidget);
     expect(find.text('복제 코어로 공에 담기'), findsOneWidget);
     expect(find.textContaining('원본에서 사라짐'), findsOneWidget);
     expect(find.textContaining('원본에 유지됨'), findsOneWidget);
@@ -343,7 +343,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('ball_info_panel')), findsOneWidget);
-    expect(find.textContaining('공 속성'), findsOneWidget);
+    expect(find.text('공 속성 없음'), findsOneWidget);
   });
 
   testWidgets('물체를 누르면 물체 속성 설명이 표시된다', (tester) async {

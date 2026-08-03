@@ -1127,11 +1127,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
               if (_showBallInfo)
                 _InfoPopup(
+                  semanticLabel: '공 정보',
                   onClose: _dismissInfo,
                   child: _BallInfoPanel(state: _state),
                 ),
               if (!_showBallInfo && inspectedEntity != null)
                 _InfoPopup(
+                  semanticLabel: '${_entityName(inspectedEntity)} 정보',
                   onClose: _dismissInfo,
                   child: _EntityInfoPanel(
                     entity: inspectedEntity,
@@ -1882,7 +1884,7 @@ String _levelObjective(int levelIndex) {
     0 => '추천: 무거움을 옮겨 상자를 밀어 보세요. 다른 충돌 경로도 홀에 닿으면 성공합니다.',
     1 => '추천: 탄성을 옮겨 벽에 반사시켜 보세요. 다른 각도와 경로도 시도할 수 있습니다.',
     2 => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
-    _ => '풍선은 일반 공에 밀리고 뾰족한 공에 터집니다. 어느 경로로도 홀에 도착할 수 있습니다.',
+    _ => '풍선을 밀거나 터뜨린 뒤 여러 경로로 홀에 가 보세요. 터뜨리면 뒤의 스위치가 보여요.',
   };
 }
 
@@ -1891,7 +1893,7 @@ String _compactLevelObjective(int levelIndex) {
     0 => '무거움으로 상자를 밀어 홀로 보내기',
     1 => '탄성으로 벽에 반사해 홀로 보내기',
     2 => '스위치와 문을 열어 홀로 가기',
-    _ => '풍선을 밀거나 터뜨려 홀로 가기',
+    _ => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
   };
 }
 
@@ -1908,14 +1910,18 @@ int _starsForShot(int shotCount, int parShots) {
 String? _levelProgressHint(GameState state) {
   if (state.levelIndex == 3) {
     final balloon = state.entityById('balloon');
+    final balloonSwitch = state.entityById('balloon_switch');
+    if (balloonSwitch?.pressed == true) {
+      return '문이 열렸어요. 열린 길을 지나 홀에 들어가 보세요.';
+    }
     if (balloon?.active == false) {
-      return '풍선이 터졌습니다. 열린 문을 지나 홀로 가 보세요.';
+      return '풍선이 터졌어요. 드러난 스위치를 맞혀 문을 열어 보세요.';
     }
     final activeBall = state.entityById('active_ball');
     if (activeBall?.traits.contains(TraitType.sharp) == true) {
-      return '뾰족한 공입니다. 풍선에 닿으면 팡! 하고 터집니다.';
+      return '뾰족한 공으로 풍선을 터뜨리면 뒤의 스위치가 보여요.';
     }
-    return '풍선은 밀리지만 일반 공으로는 터지지 않습니다. 우회도 가능합니다.';
+    return '일반 공은 풍선을 튕겨 냅니다. 밀기와 우회 모두 시도할 수 있어요.';
   }
   if (state.levelIndex != 2) {
     return null;
@@ -1938,12 +1944,15 @@ String? _levelProgressHint(GameState state) {
 
 String? _compactLevelProgressHint(GameState state) {
   if (state.levelIndex == 3) {
-    return state.entityById('balloon')?.active == false
-        ? '팝 완료 · 열린 문 → 홀'
+    final balloonSwitch = state.entityById('balloon_switch');
+    return balloonSwitch?.pressed == true
+        ? '문 열림 · 열린 길 → 홀'
+        : state.entityById('balloon')?.active == false
+        ? '풍선 터짐 · 스위치 → 문'
         : state.entityById('active_ball')?.traits.contains(TraitType.sharp) ==
               true
-        ? '뾰족함 장착 · 풍선에 닿기'
-        : '풍선 밀기 또는 우회하기';
+        ? '뾰족함 장착 · 풍선 → 스위치'
+        : '풍선 밀기 · 우회하기';
   }
   if (state.levelIndex != 2) {
     return null;
@@ -1969,7 +1978,7 @@ String _levelIntroMessage(int levelIndex) {
     0 => '방향 조정 · 길게 누르기 · 손 떼기',
     1 => '방향 조정 · 길게 누르기 · 손 떼기',
     2 => '스위치 살피기 · 여러 경로로 도전',
-    _ => '풍선 관찰하기 · 속성 옮기기 · 여러 경로로 도전',
+    _ => '풍선 확인 · 여러 경로로 도전',
   };
 }
 
@@ -2441,7 +2450,7 @@ class _ControlPanel extends StatelessWidget {
             else
               const Spacer(),
             Text(
-              '공: ${state.equippedTrait?.label ?? '없음'}',
+              '공 속성: ${state.equippedTrait?.label ?? '없음'}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
@@ -2457,7 +2466,7 @@ class _ControlPanel extends StatelessWidget {
             ),
             IconButton(
               key: const Key('reset_button'),
-              tooltip: '다시',
+              tooltip: '단계 다시 시작',
               visualDensity: VisualDensity.compact,
               onPressed: onReset,
               icon: const Icon(Icons.refresh, size: 20),
@@ -2475,7 +2484,9 @@ class _ControlPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  state.selectedTrait == null
+                  state.equippedTrait != null
+                      ? '공을 길게 눌러 힘을 모으세요'
+                      : state.selectedTrait == null
                       ? '물체를 눌러 속성을 고르세요'
                       : '선택: ${state.selectedTrait!.label}',
                 ),
@@ -2485,7 +2496,9 @@ class _ControlPanel extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: Text('공: ${state.equippedTrait?.label ?? '없음'}')),
+              Expanded(
+                child: Text('공 속성: ${state.equippedTrait?.label ?? '없음'}'),
+              ),
               IconButton(
                 key: const Key('rewind_button'),
                 tooltip: '되감기',
@@ -2494,7 +2507,7 @@ class _ControlPanel extends StatelessWidget {
               ),
               IconButton(
                 key: const Key('reset_button'),
-                tooltip: '다시',
+                tooltip: '단계 다시 시작',
                 onPressed: onReset,
                 icon: const Icon(Icons.refresh),
               ),
@@ -2507,10 +2520,15 @@ class _ControlPanel extends StatelessWidget {
 }
 
 class _InfoPopup extends StatelessWidget {
-  const _InfoPopup({required this.child, required this.onClose});
+  const _InfoPopup({
+    required this.child,
+    required this.onClose,
+    required this.semanticLabel,
+  });
 
   final Widget child;
   final VoidCallback onClose;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -2542,7 +2560,7 @@ class _InfoPopup extends StatelessWidget {
                           Semantics(
                             container: true,
                             namesRoute: true,
-                            label: '정보 팝업',
+                            label: semanticLabel,
                             child: Material(
                               color: Colors.transparent,
                               child: child,
@@ -2658,7 +2676,7 @@ class _EntityInfoPanel extends StatelessWidget {
                           key: const Key('transfer_button'),
                           onPressed: onTransfer,
                           icon: const Icon(Icons.arrow_downward, size: 16),
-                          label: const Text('떼어 공에 옮기기'),
+                          label: const Text('속성 옮기기'),
                           style: FilledButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                           ),

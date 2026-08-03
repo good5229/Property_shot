@@ -58,7 +58,7 @@ class TraitResolver {
     }
     if (state.copyCharges <= 0) {
       return state.copyWith(
-        message: '이번 단계의 복사 횟수를 모두 사용했습니다. 속성을 옮기거나 되감아 다시 시도하세요.',
+        message: '복사 횟수를 모두 사용했습니다. 속성 옮기기 또는 되감기를 선택하세요.',
       );
     }
 

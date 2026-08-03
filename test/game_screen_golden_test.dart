@@ -22,7 +22,10 @@ void main() {
   for (var stageIndex = 0; stageIndex < 4; stageIndex++) {
     for (final fixture in const [
       (name: '390x844', width: 390.0, height: 844.0),
+      (name: '393x852', width: 393.0, height: 852.0),
+      (name: '430x932', width: 430.0, height: 932.0),
       (name: '768x1024', width: 768.0, height: 1024.0),
+      (name: '1024x1366', width: 1024.0, height: 1366.0),
     ]) {
       testWidgets('전체 플레이 화면 Golden ${stageIndex + 1}단계 ${fixture.name}', (
         tester,
@@ -40,7 +43,7 @@ void main() {
               initialState: levels[stageIndex]
                   .createState(stageIndex, productRules: true)
                   .copyWith(message: stageIndex == 3
-                      ? '풍선 관찰하기 · 속성 옮기기 · 여러 경로로 도전'
+                      ? '풍선 확인 · 여러 경로로 도전'
                       : '방향 조정 · 길게 누르기 · 손 떼기'),
               showStageSelector: false,
               fontFamilyOverride: 'GoldenNanumGothic',
@@ -52,7 +55,7 @@ void main() {
 
         final context = tester.element(find.byKey(const Key('aim_area')));
         await tester.runAsync(() async {
-          for (final asset in const [
+        for (final asset in const [
             'assets/generated/stone-v2.png',
             'assets/generated/crate-v2.png',
             'assets/generated/jelly-bumper-v1.png',

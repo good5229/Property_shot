@@ -233,10 +233,20 @@ class PropertyShotGame extends FlameGame {
     );
     canvas.scale(scale);
     _drawBoard(canvas);
-    if (state.phase == GamePhase.planning) _drawAimArrow(canvas);
     final animated = _animationPath.isNotEmpty;
-    final entities = animated ? _animatedEntities() : state.entities;
-    for (final entity in entities) {
+    final renderEntities =
+        [...(animated ? _animatedEntities() : state.entities)]
+          ..sort((first, second) {
+            final firstIsHole = first.type == EntityType.hole;
+            final secondIsHole = second.type == EntityType.hole;
+            if (firstIsHole == secondIsHole) {
+              return 0;
+            }
+            return firstIsHole ? -1 : 1;
+          });
+    _drawStage4Relations(canvas, renderEntities);
+    if (state.phase == GamePhase.planning) _drawAimArrow(canvas);
+    for (final entity in renderEntities) {
       if (animated && entity.id == 'active_ball') {
         continue;
       }
@@ -248,6 +258,75 @@ class PropertyShotGame extends FlameGame {
       _drawDirectImpactFeedback(canvas);
     }
     canvas.restore();
+  }
+
+  void _drawStage4Relations(Canvas canvas, List<EntityState> entities) {
+    if (state.levelIndex != 3) {
+      return;
+    }
+    EntityState? balloon;
+    EntityState? balloonSwitch;
+    EntityState? gate;
+    for (final entity in entities) {
+      if (entity.id == 'balloon') balloon = entity;
+      if (entity.id == 'balloon_switch') balloonSwitch = entity;
+      if (entity.id == 'balloon_gate') gate = entity;
+    }
+    if (balloon == null || balloonSwitch == null || gate == null) {
+      return;
+    }
+    if (balloonSwitch.visualState != 'revealed' &&
+        balloonSwitch.visualState != 'pressed') {
+      return;
+    }
+    final paint = Paint()
+      ..color = const Color(0xB8FFF0B0)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    final balloonEdge = _project(
+      Vec2(balloon.position.x, balloon.position.y - balloon.size.y / 2),
+    );
+    final switchEdge = _project(
+      Vec2(
+        balloonSwitch.position.x,
+        balloonSwitch.position.y + balloonSwitch.size.y / 2,
+      ),
+    );
+    final gateEdge = _project(
+      Vec2(gate.position.x, gate.position.y + gate.size.y / 2),
+    );
+    _drawDashedRelation(canvas, balloonEdge, switchEdge, paint);
+    _drawDashedRelation(canvas, switchEdge, gateEdge, paint);
+    canvas.drawCircle(switchEdge, 4, Paint()..color = const Color(0xFFFFF2A8));
+  }
+
+  void _drawDashedRelation(Canvas canvas, Offset from, Offset to, Paint paint) {
+    final delta = to - from;
+    final distance = delta.distance;
+    if (distance <= 1) {
+      return;
+    }
+    final direction = delta / distance;
+    for (double traveled = 0; traveled < distance; traveled += 10) {
+      final start = from + direction * traveled;
+      final end = from + direction * math.min(traveled + 5, distance);
+      canvas.drawLine(start, end, paint);
+    }
+  }
+
+  void _drawBalloonBurst(Canvas canvas, Offset center, double progress) {
+    final paint = Paint()
+      ..color = const Color(0xFFFFB45E).withValues(alpha: 0.9 * (1 - progress))
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    for (var index = 0; index < 8; index++) {
+      final angle = index * math.pi / 4;
+      final from = center + Offset(math.cos(angle), math.sin(angle)) * 7;
+      final to =
+          center +
+          Offset(math.cos(angle), math.sin(angle)) * (20 + progress * 8);
+      canvas.drawLine(from, to, paint);
+    }
   }
 
   void _drawImpactFeedback(Canvas canvas) {
@@ -271,6 +350,7 @@ class PropertyShotGame extends FlameGame {
         EntityType.weight => const Color(0xFF6E8794),
         EntityType.switchPad => const Color(0xFFE2C044),
         EntityType.gate => const Color(0xFFE36B5D),
+        EntityType.balloon => const Color(0xFFF28A78),
         EntityType.wall => const Color(0xFF7A9693),
         _ => const Color(0xFFFFF2A8),
       };
@@ -329,6 +409,9 @@ class PropertyShotGame extends FlameGame {
             shard,
           );
         }
+      }
+      if (move.visualState == 'popped') {
+        _drawBalloonBurst(canvas, center, progress);
       }
     }
   }
@@ -807,7 +890,10 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawEntity(Canvas canvas, EntityState entity, bool highlighted) {
-    if (!entity.active) {
+    if (!entity.active ||
+        entity.id == 'balloon_switch' &&
+            !entity.pressed &&
+            entity.visualState != 'revealed') {
       return;
     }
     final stroke = Paint()
@@ -839,7 +925,6 @@ class PropertyShotGame extends FlameGame {
       }
       if (entity.type == EntityType.hole) {
         _drawGoalBeacon(canvas, entity);
-        _drawHoleFlag(canvas, entity);
         canvas.drawOval(
           Rect.fromCenter(
             center: center,
@@ -864,6 +949,7 @@ class PropertyShotGame extends FlameGame {
       }
       if (entity.type == EntityType.hole) {
         _drawHoleSurface(canvas, entity, stroke);
+        _drawHoleFlag(canvas, entity);
       } else {
         GameBallIconPainter.drawBall(
           canvas,
@@ -916,40 +1002,55 @@ class PropertyShotGame extends FlameGame {
 
   void _drawBalloon(Canvas canvas, EntityState entity, Offset center) {
     final radius = entity.radius;
+    if (entity.visualState == 'popped') {
+      final burst = Paint()
+        ..color = const Color(0xFFFFB45E)
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round;
+      for (var index = 0; index < 8; index++) {
+        final angle = index * math.pi / 4;
+        final from = center + Offset(math.cos(angle), math.sin(angle)) * 5;
+        final to = center + Offset(math.cos(angle), math.sin(angle)) * 18;
+        canvas.drawLine(from, to, burst);
+      }
+      canvas.drawCircle(
+        center.translate(0, 7),
+        4,
+        Paint()..color = const Color(0xFFC75A62),
+      );
+      return;
+    }
+    final pressed = entity.visualState == 'pressed';
+    final widthScale = pressed ? 1.12 : 1.0;
+    final heightScale = pressed ? 0.78 : 1.0;
+    final bodyCenter = center.translate(0, pressed ? 3 : -2);
     canvas.drawOval(
       Rect.fromCenter(
-        center: center.translate(0, -2),
-        width: radius * 1.75,
-        height: radius * 2.05,
+        center: bodyCenter.translate(0, 5),
+        width: radius * 1.75 * widthScale,
+        height: radius * 2.05 * heightScale,
       ),
       Paint()..color = const Color(0x33414B40),
     );
     final body = Paint()
-      ..shader =
-          RadialGradient(
-            center: const Alignment(-0.35, -0.42),
-            radius: 1.0,
-            colors: const [
-              Color(0xFFFFD0A2),
-              Color(0xFFF28A78),
-              Color(0xFFC75A62),
-            ],
-          ).createShader(
-            Rect.fromCircle(center: center.translate(0, -2), radius: radius),
-          );
+      ..shader = RadialGradient(
+        center: const Alignment(-0.35, -0.42),
+        radius: 1.0,
+        colors: const [Color(0xFFFFD0A2), Color(0xFFF28A78), Color(0xFFC75A62)],
+      ).createShader(Rect.fromCircle(center: bodyCenter, radius: radius));
     canvas.drawOval(
       Rect.fromCenter(
-        center: center.translate(0, -2),
-        width: radius * 1.7,
-        height: radius * 1.95,
+        center: bodyCenter,
+        width: radius * 1.7 * widthScale,
+        height: radius * 1.95 * heightScale,
       ),
       body,
     );
     canvas.drawOval(
       Rect.fromCenter(
-        center: center.translate(0, -2),
-        width: radius * 1.7,
-        height: radius * 1.95,
+        center: bodyCenter,
+        width: radius * 1.7 * widthScale,
+        height: radius * 1.95 * heightScale,
       ),
       Paint()
         ..color = const Color(0xFF24352D)
@@ -1932,8 +2033,8 @@ class PropertyShotGame extends FlameGame {
   void _drawCapturedBall(Canvas canvas, EntityState entity, double progress) {
     final center = _project(entity.position);
     final eased = Curves.easeInCubic.transform(progress);
-    final scale = 1 - eased * 0.78;
-    final opacity = 1 - eased * 0.62;
+    final scale = 1 - eased * 0.58;
+    final opacity = 1 - eased * 0.44;
     final bounds = Rect.fromCircle(center: center, radius: entity.radius + 20);
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -2031,11 +2132,11 @@ class PropertyShotGame extends FlameGame {
       ..lineTo(center.dx + 25 + flutter, center.dy - 27)
       ..lineTo(center.dx + 6, center.dy - 20)
       ..close();
-    canvas.drawPath(flag, Paint()..color = const Color(0xFFFF6B6B));
+    canvas.drawPath(flag, Paint()..color = const Color(0xFFFFD76A));
     canvas.drawPath(
       flag,
       Paint()
-        ..color = const Color(0xFF7A3E33)
+        ..color = const Color(0xFF8F6A2E)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
