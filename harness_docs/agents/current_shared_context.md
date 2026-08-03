@@ -5,12 +5,12 @@
 - 저장소: `Property_shot`, 브랜치 `commercial/wall-physics-qa`
 - 기준 기능: 한글 UI, 공의 속성 이전·복사, 고정 벽, 물체 연쇄 운동량, 홀 성공·결과 팝업, 4개 단계
 - 신규 구현: `TraitType.sharp`, `EntityType.balloon`, `EntityType.spikeSource`, 4단계 `풍선 터뜨리기`
-- 서버 규칙: 기존 서버를 먼저 종료한 뒤 Web release를 띄운다. 기존 PID 18121을 종료하고 최신 빌드를 PID 30256으로 실행했다. 최신 `main.dart.js` 해시는 `194b9635...`이다.
-- 최신 회귀 기준: 전체 `flutter test` 251개, `flutter analyze`, Web·Android Release 빌드가 통과했다. 단계별 저장 리플레이 16개와 다중샷 20개 모두 결정론 재생을 통과했다. 최신 기능 기준에는 저장 스키마 2, 안정 단계 ID 저장·구버전 키 호환, 개인정보 없는 로컬 계측 저장·복원, Debug 진단 한글 표시, 좁은 화면 줄바꿈, 재질별 물리 수치 회귀, 클리어 저장 순서 보강, `ProgressStore` 공유 주입, 4단계 상자 경계 수정, 192개 고속 경계 입력 회귀가 포함된다.
+- 서버 규칙: 기존 서버를 먼저 종료한 뒤 Web release를 띄운다. 기존 PID 30256을 종료하고 최신 빌드를 PID 81320으로 실행했다. 최신 `main.dart.js` 해시는 `1fe40c32...`이다.
+- 최신 회귀 기준: 전체 `flutter test` 252개, `flutter analyze`, Web·Android Release 빌드가 통과했다. 단계별 저장 리플레이 16개와 다중샷 20개 모두 결정론 재생을 통과했다. 최신 기능 기준에는 저장 스키마 2, 안정 단계 ID 저장·구버전 키 호환, 250ms 묶음 로컬 계측 저장·종료 flush, Debug 진단 한글 표시, 좁은 화면 줄바꿈, 재질별 물리 수치 회귀, 클리어 저장 순서 보강, `ProgressStore` 공유 주입, 4단계 상자 경계 수정, 192개 고속 경계 입력 회귀가 포함된다.
 - 단계4 실제 Web 증거: 390×844에서 시작·속성 팝업·속성 이전·조준·충전·충돌·결과 8장을 캡처했고 콘솔 오류 0건이다. 성공 상태의 `active_ball` 부재 예외는 `07ef7b3`에서 수정했다.
 - 모바일 컴파일: Flutter 표준 Android 호스트를 추가하고 JDK 17·Android SDK/NDK 환경에서 Debug·Release APK 컴파일을 통과했다. Android 실기기 실행·성능은 미검증이다.
 - Android ARM64 API 28 에뮬레이터에서 Release APK를 설치·실행하고 홈·1단계·무거운 돌 팝업·속성 옮기기 후 공 상태를 실제 입력으로 확인했다. 이는 런타임 스모크 증거이며 실기기 성능 검증으로 승격하지 않는다.
-- 최신 Release APK 57.3MB를 같은 에뮬레이터에 재설치하고 앱 PID 4167로 시작했으며, 최근 로그의 앱 `FATAL EXCEPTION`은 0건이었다. 설치 직후 시작 화면을 기다린 뒤 확인한 최신 한글 시작 화면은 `android-arm64-latest-layout-evidence.json`에 보존한다.
+- 최신 Release APK 57.3MB를 같은 에뮬레이터에 재설치하고 앱 PID 4338로 시작했으며, 최근 로그의 앱 `FATAL EXCEPTION`은 0건이었다. 최신 한글 시작 화면은 `android-arm64-latest-layout-evidence.json`에 보존한다.
 - `bbd9117`에서 플레이 계측을 최근 2,000개까지 개인정보 없이 로컬 저장하고, 단계 배열 순서 변경에도 안정 ID로 최고 기록·클리어 기록을 복원하도록 보강했다.
 - 같은 ARM64 에뮬레이터에서 전체 해금 상태를 저장한 뒤 Release APK로 4단계의 뾰족함 이전·충전·자동 발사·문·홀·클리어 팝업까지 확인했다. 1080×1920 캡처와 앱 치명적 예외 0건을 별도 JSON으로 보존했으며 실기기 성능으로 승격하지 않는다.
 - 최신 추가: `PhysicsStateTransition` 직접 기록, 실제 4단계 풍선→문→홀 종단간 회귀, 화면 흔들림·저모션 설정 저장·복원.

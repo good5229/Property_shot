@@ -24,6 +24,18 @@
 - Android ARM64 에뮬레이터에 APK를 재설치·실행했다. 설치 직후 약 5.8초의 시작 화면 이후 앱 PID `4167`에서 한글 홈·공·돌·상자·홀 이미지를 확인했으며 `FATAL EXCEPTION`은 0건이다.
 - 로딩 완료 캡처 `android-arm64-schema2-latest-layout.png` SHA-256: `16cd6fb99dbc740ac0799bec0aaa6048a0138150b3642ad669870210bc98cb00`
 
+## 최신 계측 비용·릴리스 재검증
+
+- 기능 commit `2489b55 perf: 로컬 계측 묶음 저장 보강`을 원격 브랜치에 push했다.
+- 플레이 계측 저장을 이벤트별 쓰기에서 250ms 묶음 저장으로 바꾸고, 조회·화면 종료 시 대기 이벤트 flush를 보장했다.
+- 전체 `flutter test`: 최신 실행 기준 252개 통과
+- `flutter analyze`: 통과
+- 물리 벤치마크: 1단계 381.1µs, 2단계 290.0µs, 3단계 302.2µs, 4단계 350.1µs
+- 최신 Web Release `main.dart.js` SHA-256: `1fe40c3251534312926e5a93f41b409bbb95711d29ad01295d06da93ed904b88`
+- 최신 Android Release APK SHA-256: `f914baa8786d339cf1abddbc18b4b4ef69c68f876e783fdb4555940c1c32f37f`
+- 기존 Web 서버를 종료한 뒤 PID `81320`으로 8080 서버를 교체했고 새 루트·번들 HTTP 200을 확인했다.
+- Android ARM64 에뮬레이터 최신 앱 PID `4338`, `FATAL EXCEPTION` 0건, 로딩 완료 한글 홈 화면 캡처 해시 `f10c347539533e3eb572be2b44d893b3ac4efad9c8caed983ed946d5913f4d23`
+
 ## 최신 레벨·런타임 보정
 
 - 4단계 `balloon_crate`가 논리 보드 밖 `y=640`에 있던 P1 배치 결함을 `y=400`으로 수정했다. 화면 Golden에서 상자 전체가 보이고 하단 조작 패널에 가리지 않는 것을 확인했다.

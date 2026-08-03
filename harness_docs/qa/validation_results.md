@@ -24,6 +24,17 @@
 - 로딩 완료 화면: `android-arm64-schema2-latest-layout.png`, SHA-256 `16cd6fb99dbc740ac0799bec0aaa6048a0138150b3642ad669870210bc98cb00`
 - 저장 스키마 변경 commit `5dda324` 원격 push 완료
 
+## 최신 계측 묶음 저장 재검증
+
+- 고빈도 이벤트를 250ms 단위로 묶어 저장하고 조회·종료 시 flush하는 회귀 통과
+- 전체 `flutter test`: 252개 통과, `flutter analyze`: 통과
+- 물리 벤치마크: 단계별 381.1/290.0/302.2/350.1µs
+- Web Release `main.dart.js` SHA-256: `1fe40c3251534312926e5a93f41b409bbb95711d29ad01295d06da93ed904b88`
+- Android Release APK SHA-256: `f914baa8786d339cf1abddbc18b4b4ef69c68f876e783fdb4555940c1c32f37f`
+- Web 데모: 기존 PID 30256 종료 후 PID 81320으로 8080 재시작, 루트·번들 HTTP 200
+- Android ARM64 에뮬레이터: 최신 APK 실행 PID 4338, `FATAL EXCEPTION` 0건
+- 최신 로딩 완료 캡처: `android-arm64-batched-telemetry-layout.png`, SHA-256 `f10c347539533e3eb572be2b44d893b3ac4efad9c8caed983ed946d5913f4d23`
+
 ## 최신 레벨·런타임 재검증
 
 - 전체 `flutter test`: 247개 통과

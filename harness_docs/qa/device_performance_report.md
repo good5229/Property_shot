@@ -5,11 +5,11 @@
 
 ## 최신 Release 빌드 기준 · 2026-08-03 KST
 
-- Web Release는 기존 데모 PID 18121을 종료한 뒤 저장 스키마 2를 포함한 최신 빌드를 PID 30256으로 교체했다. 최신 `main.dart.js` SHA-256은 `194b9635968c62249d50d7195379eaecb6637517b6ed73be8f3edd53b8369f36`다.
-- Android Release APK는 저장 스키마 2·안정 단계 ID·로컬 계측 저장을 포함해 다시 빌드되어 57.3MB이며 ARM64 API 28 에뮬레이터에 설치·실행됐다.
-- 앱 PID 4167이 실행 중이고 최근 로그에서 앱 `FATAL EXCEPTION` 0건을 확인했다. 설치 직후 약 5.8초의 시작 화면 이후 한글 홈을 캡처했다.
-- 전체 Flutter 테스트는 251개 통과했고 안정 단계 ID·계측 저장·저장소 공유·4단계 경계·고속 연쇄 회귀를 포함한다.
-- 최신 APK와 로딩 완료 시작 화면 캡처는 `android-arm64-latest-layout-evidence.json` 및 `android-arm64-schema2-latest-layout.png`에 보존했다.
+- Web Release는 기존 데모 PID 30256을 종료한 뒤 묶음 계측 저장을 포함한 최신 빌드를 PID 81320으로 교체했다. 최신 `main.dart.js` SHA-256은 `1fe40c3251534312926e5a93f41b409bbb95711d29ad01295d06da93ed904b88`다.
+- Android Release APK는 저장 스키마 2·안정 단계 ID·묶음 로컬 계측 저장을 포함해 다시 빌드되어 57.3MB이며 ARM64 API 28 에뮬레이터에 설치·실행됐다.
+- 앱 PID 4338이 실행 중이고 최근 로그에서 앱 `FATAL EXCEPTION` 0건을 확인했다.
+- 전체 Flutter 테스트는 252개 통과했고 묶음 계측 저장·저장소 공유·4단계 경계·고속 연쇄 회귀를 포함한다.
+- 최신 APK와 로딩 완료 시작 화면 캡처는 `android-arm64-latest-layout-evidence.json` 및 `android-arm64-batched-telemetry-layout.png`에 보존했다.
 - 실기기 FPS·GPU·메모리·터치 지연·햅틱은 여전히 미측정이다.
 
 ## 측정 원칙
