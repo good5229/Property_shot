@@ -1,0 +1,791 @@
+import 'dart:collection';
+import 'dart:math' as math;
+
+import '../domain/entity_state.dart';
+import '../domain/game_state.dart';
+import '../domain/geometry.dart';
+import '../domain/shot_input.dart';
+import '../domain/stage_pattern.dart';
+import '../simulation/shot_resolver.dart';
+
+/// 정적 패턴 검증으로 증명할 수 없는 런타임 사실을 주입하는 경계다.
+///
+/// 실제 게임 물리를 대체하는 인터페이스가 아니다. 생산 probe는 제한된
+/// 대표 입력으로 관찰한 사실만 보고하고, 테스트 probe는 후속 기믹 구현의
+/// evidence 계약을 검증하기 위해 명시적인 사실을 주입한다.
+abstract interface class PatternRuntimeProbe {
+  PatternRuntimeEvidence probe({
+    required StageDefinition stage,
+    required StagePattern pattern,
+  });
+}
+
+/// 패턴 실행 검증에서 관찰된 사실이다.
+///
+/// `definitiveNoRoute`와 신규 기물 적용 여부는 반드시 probe가 명시적으로
+/// 보고해야 한다. metadata 문자열만으로 이 값을 만들지 않는다.
+class PatternRuntimeEvidence {
+  const PatternRuntimeEvidence({
+    this.probeCount = 0,
+    this.maxProbeCount = 0,
+    this.shotCount = 0,
+    this.maxShots = 0,
+    this.routeObserved = false,
+    this.definitiveNoRoute = false,
+    this.observedSolutionFamilies = const {},
+    this.safetyStop = false,
+    this.infiniteBounce = false,
+    this.finiteCoordinates = true,
+    this.finiteTime = true,
+    this.negativeTime = false,
+    this.wallMoved = false,
+    this.holePassThrough = false,
+    this.nonDeterministic = false,
+    this.sliderApplicable = false,
+    this.sliderTunneling = false,
+    this.rotatorApplicable = false,
+    this.rotatorOrderViolation = false,
+    this.allRepresentativeInputsNoMovement = false,
+    this.launchUnavailable = false,
+    this.autoClearDetected = false,
+  });
+
+  /// 서로 다른 대표 입력을 실행한 횟수다.
+  final int probeCount;
+  final int maxProbeCount;
+
+  /// ShotResolver를 실제 호출한 횟수다. 결정론 검증 때문에 한 입력을 두 번
+  /// 실행할 수 있으므로 [probeCount]보다 클 수 있다.
+  final int shotCount;
+  final int maxShots;
+
+  final bool routeObserved;
+  final bool definitiveNoRoute;
+  final Set<String> observedSolutionFamilies;
+  final bool safetyStop;
+  final bool infiniteBounce;
+
+  /// 좌표뿐 아니라 현재 결과 모델이 가진 모든 물리 실수값의 유한성을 뜻한다.
+  final bool finiteCoordinates;
+
+  /// 기존 evidence 계약을 위한 필드다. 현재 ShotResolver 결과 모델에는
+  /// 명시적인 시간 double 필드가 없으므로 실제 probe에서는 항상 true다.
+  final bool finiteTime;
+
+  /// 실제 시간 필드가 생기기 전까지 음수 이벤트 순서와 반복 횟수를 나타낸다.
+  final bool negativeTime;
+  final bool wallMoved;
+  final bool holePassThrough;
+  final bool nonDeterministic;
+
+  /// 현재 EntityType에 없는 신규 기물은 적용 여부를 먼저 보고해야 한다.
+  final bool sliderApplicable;
+  final bool sliderTunneling;
+  final bool rotatorApplicable;
+  final bool rotatorOrderViolation;
+
+  final bool allRepresentativeInputsNoMovement;
+  final bool launchUnavailable;
+  final bool autoClearDetected;
+
+  bool get withinBudget =>
+      probeCount >= 0 &&
+      shotCount >= 0 &&
+      maxProbeCount >= 0 &&
+      maxShots >= 0 &&
+      probeCount <= maxProbeCount &&
+      shotCount <= maxShots;
+
+  PatternRuntimeEvidence copyWith({
+    int? probeCount,
+    int? maxProbeCount,
+    int? shotCount,
+    int? maxShots,
+    bool? routeObserved,
+    bool? definitiveNoRoute,
+    Set<String>? observedSolutionFamilies,
+    bool? safetyStop,
+    bool? infiniteBounce,
+    bool? finiteCoordinates,
+    bool? finiteTime,
+    bool? negativeTime,
+    bool? wallMoved,
+    bool? holePassThrough,
+    bool? nonDeterministic,
+    bool? sliderApplicable,
+    bool? sliderTunneling,
+    bool? rotatorApplicable,
+    bool? rotatorOrderViolation,
+    bool? allRepresentativeInputsNoMovement,
+    bool? launchUnavailable,
+    bool? autoClearDetected,
+  }) {
+    return PatternRuntimeEvidence(
+      probeCount: probeCount ?? this.probeCount,
+      maxProbeCount: maxProbeCount ?? this.maxProbeCount,
+      shotCount: shotCount ?? this.shotCount,
+      maxShots: maxShots ?? this.maxShots,
+      routeObserved: routeObserved ?? this.routeObserved,
+      definitiveNoRoute: definitiveNoRoute ?? this.definitiveNoRoute,
+      observedSolutionFamilies:
+          observedSolutionFamilies ?? this.observedSolutionFamilies,
+      safetyStop: safetyStop ?? this.safetyStop,
+      infiniteBounce: infiniteBounce ?? this.infiniteBounce,
+      finiteCoordinates: finiteCoordinates ?? this.finiteCoordinates,
+      finiteTime: finiteTime ?? this.finiteTime,
+      negativeTime: negativeTime ?? this.negativeTime,
+      wallMoved: wallMoved ?? this.wallMoved,
+      holePassThrough: holePassThrough ?? this.holePassThrough,
+      nonDeterministic: nonDeterministic ?? this.nonDeterministic,
+      sliderApplicable: sliderApplicable ?? this.sliderApplicable,
+      sliderTunneling: sliderTunneling ?? this.sliderTunneling,
+      rotatorApplicable: rotatorApplicable ?? this.rotatorApplicable,
+      rotatorOrderViolation:
+          rotatorOrderViolation ?? this.rotatorOrderViolation,
+      allRepresentativeInputsNoMovement:
+          allRepresentativeInputsNoMovement ??
+          this.allRepresentativeInputsNoMovement,
+      launchUnavailable: launchUnavailable ?? this.launchUnavailable,
+      autoClearDetected: autoClearDetected ?? this.autoClearDetected,
+    );
+  }
+}
+
+/// 테스트에서 실제 기물 구현과 무관하게 동적 evidence 계약을 검증한다.
+class ScriptedPatternRuntimeProbe implements PatternRuntimeProbe {
+  ScriptedPatternRuntimeProbe(this.evidenceByPatternId);
+
+  final Map<String, PatternRuntimeEvidence> evidenceByPatternId;
+  final List<String> requestedPatternIds = <String>[];
+
+  @override
+  PatternRuntimeEvidence probe({
+    required StageDefinition stage,
+    required StagePattern pattern,
+  }) {
+    requestedPatternIds.add(pattern.patternId);
+    return evidenceByPatternId[pattern.patternId] ??
+        const PatternRuntimeEvidence();
+  }
+}
+
+/// 기존 ShotResolver를 제한된 입력 집합으로 관찰하는 생산용 probe다.
+class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
+  ShotResolverPatternRuntimeProbe({
+    this.shotResolver = const ShotResolver(),
+    this.representativeInputs = defaultRepresentativeInputs,
+    this.boardSize = const Vec2(360, 560),
+    this.maxProbeCount = 24,
+    this.maxShots = 48,
+  }) : assert(boardSize.x > 0 && boardSize.y > 0),
+       assert(maxProbeCount >= 1),
+       assert(maxShots >= 2);
+
+  static const defaultRepresentativeInputs = <ShotInput>[
+    ShotInput(direction: Vec2(1, 0), power: 0.45),
+    ShotInput(direction: Vec2(0.7071, 0.7071), power: 0.45),
+    ShotInput(direction: Vec2(0, 1), power: 0.45),
+    ShotInput(direction: Vec2(-0.7071, 0.7071), power: 0.45),
+    ShotInput(direction: Vec2(-1, 0), power: 0.45),
+    ShotInput(direction: Vec2(-0.7071, -0.7071), power: 0.45),
+    ShotInput(direction: Vec2(0, -1), power: 0.45),
+    ShotInput(direction: Vec2(0.7071, -0.7071), power: 0.45),
+    ShotInput(direction: Vec2(1, 0), power: 1),
+    ShotInput(direction: Vec2(0, 1), power: 1),
+    ShotInput(direction: Vec2(-1, 0), power: 1),
+    ShotInput(direction: Vec2(0, -1), power: 1),
+  ];
+
+  final ShotResolver shotResolver;
+  final List<ShotInput> representativeInputs;
+  final Vec2 boardSize;
+  final int maxProbeCount;
+  final int maxShots;
+
+  @override
+  PatternRuntimeEvidence probe({
+    required StageDefinition stage,
+    required StagePattern pattern,
+  }) {
+    final inputCount = math.min(
+      math.min(representativeInputs.length, maxProbeCount),
+      maxShots ~/ 2,
+    );
+    final inputs = representativeInputs.take(inputCount).toList();
+    if (inputs.isEmpty) {
+      return PatternRuntimeEvidence(
+        maxProbeCount: maxProbeCount,
+        maxShots: maxShots,
+        allRepresentativeInputsNoMovement: true,
+      );
+    }
+
+    final level = pattern.toLevelDefinition(
+      stageId: stage.stageId,
+      stageTitle: stage.title,
+    );
+    final initial = level.createState(0);
+    final results = <ShotResult>[];
+    var nonDeterministic = false;
+    var finiteCoordinates = true;
+    final finiteTime = true;
+    var negativeTime = false;
+    var safetyStop = false;
+    var infiniteBounce = false;
+    var wallMoved = false;
+    var holePassThrough = false;
+    var routeObserved = false;
+    final autoClearDetected = _initialBallOverlapsHole(initial);
+    final definitiveNoRoute = !_hasStaticWallRoute(initial, boardSize);
+    final families = <String>{};
+
+    for (final input in inputs) {
+      final first = shotResolver.resolve(initial, input);
+      final second = shotResolver.resolve(initial, input);
+      results.add(first);
+      results.add(second);
+      if (_fingerprint(first) != _fingerprint(second)) {
+        nonDeterministic = true;
+      }
+      for (final result in [first, second]) {
+        finiteCoordinates = finiteCoordinates && _hasFiniteCoordinates(result);
+        negativeTime = negativeTime || _hasNegativeEventOrder(result);
+        safetyStop =
+            safetyStop ||
+            result.chainSafetyDiagnostics.isNotEmpty ||
+            result.events.contains('chain_safety_stop');
+        infiniteBounce =
+            infiniteBounce ||
+            result.chainSafetyDiagnostics.isNotEmpty ||
+            result.events.contains('chain_safety_stop');
+        routeObserved =
+            routeObserved || result.state.phase == GamePhase.success;
+        families.addAll(_familiesFor(result));
+        wallMoved = wallMoved || _wallMoved(initial, result.state);
+        holePassThrough =
+            holePassThrough || _holeWasPassedWithoutCapture(initial, result);
+      }
+    }
+
+    final allNoMovement = results.every((result) => !_pathMoved(result));
+    return PatternRuntimeEvidence(
+      probeCount: inputs.length,
+      maxProbeCount: maxProbeCount,
+      shotCount: inputs.length * 2,
+      maxShots: maxShots,
+      routeObserved: routeObserved,
+      definitiveNoRoute: definitiveNoRoute,
+      observedSolutionFamilies: Set.unmodifiable(families),
+      safetyStop: safetyStop,
+      infiniteBounce: infiniteBounce,
+      finiteCoordinates: finiteCoordinates,
+      finiteTime: finiteTime,
+      negativeTime: negativeTime,
+      wallMoved: wallMoved,
+      holePassThrough: holePassThrough,
+      nonDeterministic: nonDeterministic,
+      allRepresentativeInputsNoMovement: allNoMovement,
+      autoClearDetected: autoClearDetected,
+    );
+  }
+}
+
+Set<String> _familiesFor(ShotResult result) {
+  if (result.state.phase != GamePhase.success) {
+    return const {};
+  }
+  final families = <String>{};
+  if (result.impacts.isEmpty) {
+    families.add('직접 진입');
+  }
+  if (result.events.contains('bounced')) {
+    families.add('벽 또는 탄성 반사');
+  }
+  if (result.events.any(
+    (event) =>
+        event.contains('pushed') ||
+        event.contains('momentum') ||
+        event.contains('switch'),
+  )) {
+    families.add('물체 연쇄');
+  }
+  if (result.events.any((event) => event.contains('sticky'))) {
+    families.add('점착 활용');
+  }
+  return families;
+}
+
+bool _pathMoved(ShotResult result) {
+  if (result.path.length < 2) return false;
+  for (var index = 1; index < result.path.length; index++) {
+    if (result.path[index].distanceTo(result.path[index - 1]) > 0.001) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _hasFiniteCoordinates(ShotResult result) {
+  bool finiteVec(Vec2 value) => value.x.isFinite && value.y.isFinite;
+  if (!result.path.every(finiteVec)) return false;
+  if (!_hasFiniteGameState(result.state, Set<GameState>.identity())) {
+    return false;
+  }
+  bool finiteImpact(ShotImpact impact) {
+    return finiteVec(impact.position) &&
+        finiteVec(impact.normal) &&
+        impact.strength.isFinite &&
+        impact.relativeNormalSpeed.isFinite &&
+        impact.impulse.isFinite;
+  }
+
+  bool finiteMove(ShotAnimationMove move) {
+    return finiteVec(move.from) &&
+        finiteVec(move.to) &&
+        move.path.every(finiteVec) &&
+        (move.impactPosition == null || finiteVec(move.impactPosition!)) &&
+        (move.impactNormal == null || finiteVec(move.impactNormal!));
+  }
+
+  if (!result.moves.every(finiteMove)) {
+    return false;
+  }
+  if (!result.impacts.every(finiteImpact)) {
+    return false;
+  }
+  bool finitePhysicsEvent(PhysicsEvent event) {
+    return finiteVec(event.position) &&
+        finiteVec(event.normal) &&
+        event.impulse.isFinite &&
+        finiteVec(event.resultingVelocity) &&
+        (event.remainingDistance == null ||
+            event.remainingDistance!.isFinite) &&
+        (event.remainingSpeed == null || event.remainingSpeed!.isFinite) &&
+        (event.impact == null || finiteImpact(event.impact!)) &&
+        (event.move == null || finiteMove(event.move!));
+  }
+
+  if (!result.physicsEvents.every(finitePhysicsEvent)) {
+    return false;
+  }
+  return result.chainSafetyDiagnostics.every(
+    (diagnostic) =>
+        diagnostic.remainingDistance.isFinite &&
+        diagnostic.remainingSpeed.isFinite,
+  );
+}
+
+bool _hasFiniteGameState(GameState state, Set<GameState> activeStates) {
+  if (!activeStates.add(state)) return true;
+  bool finiteVec(Vec2 value) => value.x.isFinite && value.y.isFinite;
+  final finite =
+      finiteVec(state.ballSpawn) &&
+      finiteVec(state.aimDirection) &&
+      state.aimPower.isFinite &&
+      state.entities.every(
+        (entity) =>
+            finiteVec(entity.position) &&
+            finiteVec(entity.size) &&
+            entity.hitboxScale.isFinite &&
+            entity.restitution.isFinite,
+      ) &&
+      state.history.every(
+        (historyState) => _hasFiniteGameState(historyState, activeStates),
+      );
+  activeStates.remove(state);
+  return finite;
+}
+
+bool _hasNegativeEventOrder(ShotResult result) {
+  return result.impacts.any((impact) => impact.pathIndex < 0) ||
+      result.moves.any((move) => move.triggerPathIndex < 0) ||
+      result.physicsEvents.any(
+        (event) =>
+            event.pathIndex < 0 ||
+            (event.iterations != null && event.iterations! < 0),
+      ) ||
+      result.chainSafetyDiagnostics.any(
+        (diagnostic) =>
+            diagnostic.pathIndex < 0 ||
+            diagnostic.depth < 0 ||
+            diagnostic.iterations < 0,
+      );
+}
+
+bool _wallMoved(GameState before, GameState after) {
+  final beforeWalls = before.entities.where(
+    (entity) => entity.type == EntityType.wall,
+  );
+  final afterWalls = after.entities.where(
+    (entity) => entity.type == EntityType.wall,
+  );
+  for (final wall in beforeWalls) {
+    final next = after.entityById(wall.id);
+    if (next == null || !_sameWallPhysics(wall, next)) {
+      return true;
+    }
+  }
+  for (final wall in afterWalls) {
+    final previous = before.entityById(wall.id);
+    if (previous == null || previous.type != EntityType.wall) return true;
+  }
+  return false;
+}
+
+bool _sameWallPhysics(EntityState before, EntityState after) {
+  final sameVec =
+      before.position.x == after.position.x &&
+      before.position.y == after.position.y &&
+      before.size.x == after.size.x &&
+      before.size.y == after.size.y;
+  final beforeTraits = before.traits.map((trait) => trait.name).toList()
+    ..sort();
+  final afterTraits = after.traits.map((trait) => trait.name).toList()..sort();
+  final sameTraits =
+      beforeTraits.length == afterTraits.length &&
+      beforeTraits.asMap().entries.every(
+        (entry) => entry.value == afterTraits[entry.key],
+      );
+  return sameVec &&
+      before.type == after.type &&
+      sameTraits &&
+      before.movable == after.movable &&
+      before.solid == after.solid &&
+      before.active == after.active &&
+      before.open == after.open &&
+      before.pressed == after.pressed &&
+      before.hitboxScale == after.hitboxScale &&
+      before.restitution == after.restitution &&
+      before.linkId == after.linkId;
+}
+
+bool _initialBallOverlapsHole(GameState state) {
+  final hole = state.entities
+      .where((entity) => entity.type == EntityType.hole)
+      .firstOrNull;
+  if (hole == null) return false;
+  return hole.position.distanceTo(state.activeBall.position) <=
+      hole.radius + state.activeBall.hitRadius;
+}
+
+bool _holeWasPassedWithoutCapture(GameState initial, ShotResult result) {
+  if (result.events.contains('hole_entered')) {
+    return false;
+  }
+  final hole = initial.entities
+      .where((entity) => entity.type == EntityType.hole)
+      .firstOrNull;
+  if (hole == null || result.path.length < 2) return false;
+  final radius = hole.radius + initial.activeBall.hitRadius;
+  for (var index = 1; index < result.path.length; index++) {
+    if (_segmentDistanceToPoint(
+          result.path[index - 1],
+          result.path[index],
+          hole.position,
+        ) <=
+        radius) {
+      return true;
+    }
+  }
+  return false;
+}
+
+double _segmentDistanceToPoint(Vec2 start, Vec2 end, Vec2 point) {
+  final delta = end - start;
+  final lengthSquared = delta.dot(delta);
+  if (lengthSquared == 0) return start.distanceTo(point);
+  final t = ((point - start).dot(delta) / lengthSquared).clamp(0.0, 1.0);
+  return (start + delta * t).distanceTo(point);
+}
+
+String _fingerprint(ShotResult result) {
+  final buffer = StringBuffer()..write('shot{');
+  final activeStates = Set<GameState>.identity();
+  _appendGameStateFingerprint(buffer, result.state, activeStates);
+  buffer.write('}');
+  buffer.write('|events[');
+  for (final event in result.events) {
+    _writeText(buffer, 'event', event);
+  }
+  buffer.write(']|path[');
+  for (final point in result.path) {
+    buffer.write('|${_vecFingerprint(point)}');
+  }
+  buffer.write(']');
+
+  buffer.write('|impacts[');
+  for (final impact in result.impacts) {
+    _appendImpactFingerprint(buffer, impact);
+  }
+  buffer.write(']|moves[');
+  for (final move in result.moves) {
+    _appendMoveFingerprint(buffer, move);
+  }
+  buffer.write(']|physics[');
+  for (final event in result.physicsEvents) {
+    _appendPhysicsEventFingerprint(buffer, event);
+  }
+  buffer.write(']|diagnostics[');
+  for (final diagnostic in result.chainSafetyDiagnostics) {
+    buffer
+      ..write('|target=${_stableText(diagnostic.targetEntityId)}')
+      ..write(
+        ':${diagnostic.pathIndex}:${diagnostic.depth}:${diagnostic.iterations}',
+      )
+      ..write(':${_number(diagnostic.remainingDistance)}')
+      ..write(':${_number(diagnostic.remainingSpeed)}');
+  }
+  buffer.write(']');
+  return buffer.toString();
+}
+
+String _stableText(String? value) {
+  if (value == null) return '<null>';
+  return '${value.length}:$value';
+}
+
+void _writeText(StringBuffer buffer, String label, String? value) {
+  buffer.write('|$label=${_stableText(value)}');
+}
+
+void _appendGameStateFingerprint(
+  StringBuffer buffer,
+  GameState state,
+  Set<GameState> activeStates,
+) {
+  if (!activeStates.add(state)) {
+    buffer.write('|state_cycle');
+    return;
+  }
+  buffer
+    ..write('|state{')
+    ..write('|levelIndex=${state.levelIndex}')
+    ..write('|phase=${state.phase.name}')
+    ..write('|shotCount=${state.shotCount}')
+    ..write('|score=${state.score}')
+    ..write('|ballSpawn=${_vecFingerprint(state.ballSpawn)}')
+    ..write('|aimDirection=${_vecFingerprint(state.aimDirection)}')
+    ..write('|aimPower=${_number(state.aimPower)}')
+    ..write('|copyCharges=${state.copyCharges}')
+    ..write('|copyChargeLimit=${state.copyChargeLimit}')
+    ..write('|copyCoreCount=${state.copyCoreCount}')
+    ..write('|copyCoreRewarded=${state.copyCoreRewarded}');
+  _writeText(buffer, 'levelName', state.levelName);
+  _writeText(buffer, 'selectedSourceId', state.selectedSourceId);
+  _writeText(buffer, 'selectedTrait', state.selectedTrait?.name);
+  _writeText(buffer, 'equippedTrait', state.equippedTrait?.name);
+  _writeText(buffer, 'message', state.message);
+  buffer.write('|entities[');
+  for (final entity in state.entities) {
+    _appendEntityFingerprint(buffer, entity);
+  }
+  buffer.write(']|history[');
+  for (final historyState in state.history) {
+    _appendGameStateFingerprint(buffer, historyState, activeStates);
+  }
+  buffer.write(']}');
+  activeStates.remove(state);
+}
+
+void _appendEntityFingerprint(StringBuffer buffer, EntityState entity) {
+  final traits = entity.traits.map((trait) => trait.name).toList()..sort();
+  buffer
+    ..write('|entity{')
+    ..write('|type=${entity.type.name}')
+    ..write('|position=${_vecFingerprint(entity.position)}')
+    ..write('|size=${_vecFingerprint(entity.size)}')
+    ..write('|traits=${traits.join(',')}')
+    ..write('|movable=${entity.movable}')
+    ..write('|solid=${entity.solid}')
+    ..write('|active=${entity.active}')
+    ..write('|open=${entity.open}')
+    ..write('|pressed=${entity.pressed}')
+    ..write('|hitboxScale=${_number(entity.hitboxScale)}')
+    ..write('|restitution=${_number(entity.restitution)}');
+  _writeText(buffer, 'id', entity.id);
+  _writeText(buffer, 'visualState', entity.visualState);
+  _writeText(buffer, 'linkId', entity.linkId);
+  buffer.write('}');
+}
+
+void _appendImpactFingerprint(StringBuffer buffer, ShotImpact impact) {
+  buffer
+    ..write('|impact{')
+    ..write('|entityType=${impact.entityType.name}')
+    ..write('|pathIndex=${impact.pathIndex}')
+    ..write('|position=${_vecFingerprint(impact.position)}')
+    ..write('|normal=${_vecFingerprint(impact.normal)}')
+    ..write('|strength=${_number(impact.strength)}')
+    ..write('|relativeNormalSpeed=${_number(impact.relativeNormalSpeed)}')
+    ..write('|impulse=${_number(impact.impulse)}')
+    ..write('|impactTier=${impact.impactTier.name}');
+  _writeText(buffer, 'sourceEntityId', impact.sourceEntityId);
+  _writeText(buffer, 'entityId', impact.entityId);
+  buffer.write('}');
+}
+
+void _appendMoveFingerprint(StringBuffer buffer, ShotAnimationMove move) {
+  buffer
+    ..write('|move{')
+    ..write('|from=${_vecFingerprint(move.from)}')
+    ..write('|to=${_vecFingerprint(move.to)}')
+    ..write('|triggerPathIndex=${move.triggerPathIndex}')
+    ..write('|path=${move.path.map(_vecFingerprint).join(';')}')
+    ..write(
+      '|impactPosition=${move.impactPosition == null ? '' : _vecFingerprint(move.impactPosition!)}',
+    )
+    ..write(
+      '|impactNormal=${move.impactNormal == null ? '' : _vecFingerprint(move.impactNormal!)}',
+    );
+  _writeText(buffer, 'entityId', move.entityId);
+  _writeText(buffer, 'visualState', move.visualState);
+  buffer.write('}');
+}
+
+void _appendPhysicsEventFingerprint(StringBuffer buffer, PhysicsEvent event) {
+  buffer
+    ..write('|event{')
+    ..write('|kind=${event.kind.name}')
+    ..write('|pathIndex=${event.pathIndex}')
+    ..write('|targetType=${event.targetType.name}')
+    ..write('|position=${_vecFingerprint(event.position)}')
+    ..write('|normal=${_vecFingerprint(event.normal)}')
+    ..write('|impulse=${_number(event.impulse)}')
+    ..write('|resultingVelocity=${_vecFingerprint(event.resultingVelocity)}')
+    ..write('|remainingDistance=${_nullableNumber(event.remainingDistance)}')
+    ..write('|remainingSpeed=${_nullableNumber(event.remainingSpeed)}')
+    ..write('|iterations=${event.iterations ?? ''}');
+  _writeText(buffer, 'eventId', event.eventId);
+  _writeText(buffer, 'parentEventId', event.parentEventId);
+  _writeText(buffer, 'sourceEntityId', event.sourceEntityId);
+  _writeText(buffer, 'targetEntityId', event.targetEntityId);
+  _writeText(buffer, 'visualState', event.visualState);
+  if (event.impact == null) {
+    buffer.write('|impact=null');
+  } else {
+    buffer.write('|impact=');
+    _appendImpactFingerprint(buffer, event.impact!);
+  }
+  if (event.move == null) {
+    buffer.write('|move=null');
+  } else {
+    buffer.write('|move=');
+    _appendMoveFingerprint(buffer, event.move!);
+  }
+  buffer.write('}');
+}
+
+String _number(double value) => value.toStringAsPrecision(17);
+
+String _nullableNumber(double? value) => value == null ? '' : _number(value);
+
+String _vecFingerprint(Vec2 value) => '${_number(value.x)},${_number(value.y)}';
+
+bool _hasStaticWallRoute(GameState state, Vec2 boardSize) {
+  final hole = state.entities
+      .where((entity) => entity.type == EntityType.hole)
+      .firstOrNull;
+  if (hole == null) return true;
+
+  final ball = state.activeBall;
+  final radius = ball.hitRadius;
+  final minX = radius;
+  final minY = radius;
+  final maxX = boardSize.x - radius;
+  final maxY = boardSize.y - radius;
+  if (maxX < minX || maxY < minY) return false;
+
+  const spacing = 4.0;
+  final columns = ((maxX - minX) / spacing).ceil();
+  final rows = ((maxY - minY) / spacing).ceil();
+  if (columns <= 0 || rows <= 0) return false;
+
+  final walls = state.entities
+      .where((entity) => entity.active && entity.type == EntityType.wall)
+      .toList();
+
+  Bounds cellBounds(int column, int row) {
+    final left = minX + column * spacing;
+    final top = minY + row * spacing;
+    final right = math.min(left + spacing, maxX);
+    final bottom = math.min(top + spacing, maxY);
+    return Bounds(
+      left: left,
+      top: top,
+      width: right - left,
+      height: bottom - top,
+    );
+  }
+
+  // 셀 전체가 하나의 벽에 덮일 때만 막힌 셀로 처리한다.
+  // 일부만 겹친 셀은 연속 자유 공간의 보수적 상위 근사를 유지하도록 통과시킨다.
+  bool blocked(int column, int row) {
+    final cell = cellBounds(column, row);
+    for (final wall in walls) {
+      final bounds = wall.hitBounds;
+      final expanded = Bounds(
+        left: bounds.left - radius,
+        top: bounds.top - radius,
+        width: bounds.width + radius * 2,
+        height: bounds.height + radius * 2,
+      );
+      if (cell.left >= expanded.left &&
+          cell.right <= expanded.right &&
+          cell.top >= expanded.top &&
+          cell.bottom <= expanded.bottom) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  int nearestColumn(double x) =>
+      ((x.clamp(minX, maxX) - minX) / spacing).floor().clamp(0, columns - 1);
+  int nearestRow(double y) =>
+      ((y.clamp(minY, maxY) - minY) / spacing).floor().clamp(0, rows - 1);
+  int keyFor(int column, int row) => row * columns + column;
+
+  final startColumn = nearestColumn(ball.position.x);
+  final startRow = nearestRow(ball.position.y);
+  if (blocked(startColumn, startRow)) return false;
+
+  final targetRadius = hole.radius + radius;
+  final queue = Queue<(int, int)>()..add((startColumn, startRow));
+  final visited = <int>{keyFor(startColumn, startRow)};
+  const directions = <(int, int)>[
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (-1, 0),
+    (1, 0),
+    (-1, 1),
+    (0, 1),
+    (1, 1),
+  ];
+
+  while (queue.isNotEmpty) {
+    final current = queue.removeFirst();
+    final cell = cellBounds(current.$1, current.$2);
+    if (cell.intersectsCircle(hole.position, targetRadius)) return true;
+    for (final direction in directions) {
+      final nextColumn = current.$1 + direction.$1;
+      final nextRow = current.$2 + direction.$2;
+      if (nextColumn < 0 ||
+          nextColumn >= columns ||
+          nextRow < 0 ||
+          nextRow >= rows) {
+        continue;
+      }
+      final key = keyFor(nextColumn, nextRow);
+      if (visited.contains(key)) continue;
+      if (blocked(nextColumn, nextRow)) continue;
+      visited.add(key);
+      queue.add((nextColumn, nextRow));
+    }
+  }
+  return false;
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
+}

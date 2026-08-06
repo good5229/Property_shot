@@ -4,6 +4,7 @@ import '../domain/geometry.dart';
 import '../domain/level_definition.dart';
 import '../domain/stage_pattern.dart';
 import '../domain/entity_state.dart';
+import 'stage_pattern_runtime_probe.dart';
 
 const _activeBallHitRadius = 12 * 0.88;
 
@@ -46,6 +47,18 @@ enum ValidationIssueCode {
   linkedStateMismatch,
   objectCountExceeded,
   requiredReward,
+  runtimeAutoClear,
+  runtimeNoRoute,
+  runtimeWallMoved,
+  runtimeInfiniteBounce,
+  runtimeSliderTunneling,
+  runtimeNonDeterministic,
+  runtimeHolePassThrough,
+  runtimeRotatorOrder,
+  runtimeSoftLock,
+  runtimeNonFinite,
+  runtimeNegativeTime,
+  runtimeProbeBudget,
 }
 
 extension ValidationIssueCodeSchema on ValidationIssueCode {
@@ -120,6 +133,30 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'object_count_exceeded';
       case ValidationIssueCode.requiredReward:
         return 'required_reward';
+      case ValidationIssueCode.runtimeAutoClear:
+        return 'invalid_auto_clear';
+      case ValidationIssueCode.runtimeNoRoute:
+        return 'invalid_no_route';
+      case ValidationIssueCode.runtimeWallMoved:
+        return 'invalid_wall_moves';
+      case ValidationIssueCode.runtimeInfiniteBounce:
+        return 'invalid_infinite_bounce';
+      case ValidationIssueCode.runtimeSliderTunneling:
+        return 'invalid_slider_tunneling';
+      case ValidationIssueCode.runtimeNonDeterministic:
+        return 'invalid_non_deterministic';
+      case ValidationIssueCode.runtimeHolePassThrough:
+        return 'invalid_hole_pass_through';
+      case ValidationIssueCode.runtimeRotatorOrder:
+        return 'invalid_rotator_order';
+      case ValidationIssueCode.runtimeSoftLock:
+        return 'invalid_soft_lock';
+      case ValidationIssueCode.runtimeNonFinite:
+        return 'invalid_non_finite_runtime';
+      case ValidationIssueCode.runtimeNegativeTime:
+        return 'invalid_negative_time';
+      case ValidationIssueCode.runtimeProbeBudget:
+        return 'invalid_probe_budget';
     }
   }
 }
@@ -214,6 +251,41 @@ class StagePatternValidator {
       issues.addAll(validate(stage).issues);
     }
     return ValidationReport(issues);
+  }
+
+  /// 정적 검사 결과에 제한된 런타임 probe evidence를 합친다.
+  ///
+  /// 대표 입력에서 성공이 관찰되지 않은 것만으로는 no-route 오류를 만들지
+  /// 않는다. 완전 탐색을 증명한 probe가 [definitiveNoRoute]를 보고할 때만
+  /// 해당 오류를 추가한다.
+  ValidationReport validateWithRuntimeProbe(
+    StageDefinition stage, {
+    required PatternRuntimeProbe probe,
+  }) {
+    final issues = <ValidationIssue>[...validate(stage).issues];
+    for (final pattern in stage.patterns) {
+      final evidence = probe.probe(stage: stage, pattern: pattern);
+      _validateRuntimeEvidence(stage, pattern, evidence, issues);
+    }
+    return ValidationReport(_sortIssues(issues));
+  }
+
+  /// 하나의 패턴과 scripted evidence를 검증하는 메타 테스트용 API다.
+  ValidationReport validatePatternWithRuntimeEvidence(
+    StageDefinition stage,
+    StagePattern pattern,
+    PatternRuntimeEvidence evidence, {
+    bool enforceProductionPolicy = true,
+  }) {
+    final issues = <ValidationIssue>[
+      ...validatePattern(
+        stage,
+        pattern,
+        enforceProductionPolicy: enforceProductionPolicy,
+      ).issues,
+    ];
+    _validateRuntimeEvidence(stage, pattern, evidence, issues);
+    return ValidationReport(_sortIssues(issues));
   }
 
   /// 1~4단계처럼 패턴 하나만 가진 기존 레벨을 검사한다.
@@ -901,6 +973,88 @@ class StagePatternValidator {
       objectIds: List.unmodifiable(objectIds),
     );
   }
+
+  void _validateRuntimeEvidence(
+    StageDefinition stage,
+    StagePattern pattern,
+    PatternRuntimeEvidence evidence,
+    List<ValidationIssue> issues,
+  ) {
+    void add(ValidationIssueCode code, String message) {
+      issues.add(
+        _issue(
+          code,
+          stage.stageId,
+          patternId: pattern.patternId,
+          message: message,
+        ),
+      );
+    }
+
+    if (evidence.autoClearDetected) {
+      add(ValidationIssueCode.runtimeAutoClear, '실행 시작 시 공이 자동으로 홀에 들어갑니다.');
+    }
+    if (evidence.definitiveNoRoute) {
+      add(
+        ValidationIssueCode.runtimeNoRoute,
+        '완전 탐색 probe가 홀에 도달하는 경로가 없음을 증명했습니다.',
+      );
+    }
+    if (evidence.wallMoved) {
+      add(ValidationIssueCode.runtimeWallMoved, '실행 중 벽의 위치가 바뀌었습니다.');
+    }
+    if (evidence.safetyStop || evidence.infiniteBounce) {
+      add(
+        ValidationIssueCode.runtimeInfiniteBounce,
+        '실행이 안전 중단되었거나 무한 반사 상태에 빠졌습니다.',
+      );
+    }
+    if (evidence.sliderApplicable && evidence.sliderTunneling) {
+      add(
+        ValidationIssueCode.runtimeSliderTunneling,
+        '파워 슬라이더 충돌을 한 프레임에 통과했습니다.',
+      );
+    }
+    if (evidence.nonDeterministic) {
+      add(
+        ValidationIssueCode.runtimeNonDeterministic,
+        '같은 시드와 입력의 실행 결과가 서로 다릅니다.',
+      );
+    }
+    if (evidence.holePassThrough) {
+      add(
+        ValidationIssueCode.runtimeHolePassThrough,
+        '공이 홀 포획 범위를 통과했지만 멈추지 않았습니다.',
+      );
+    }
+    if (evidence.rotatorApplicable && evidence.rotatorOrderViolation) {
+      add(
+        ValidationIssueCode.runtimeRotatorOrder,
+        '회전 반사판의 충돌 순서가 결정론적이지 않습니다.',
+      );
+    }
+    if (evidence.launchUnavailable) {
+      add(ValidationIssueCode.runtimeSoftLock, '발사할 수 없어 진행이 막혔습니다.');
+    }
+    if (!evidence.finiteCoordinates || !evidence.finiteTime) {
+      add(
+        ValidationIssueCode.runtimeNonFinite,
+        '실행 결과에 유한하지 않은 좌표 또는 물리 수치가 포함되었습니다.',
+      );
+    }
+    if (evidence.negativeTime) {
+      add(
+        ValidationIssueCode.runtimeNegativeTime,
+        '실행 결과에 음수 이벤트 순서 또는 반복 횟수가 포함되었습니다.',
+      );
+    }
+    if (!evidence.withinBudget) {
+      add(
+        ValidationIssueCode.runtimeProbeBudget,
+        '실행 검증이 공개된 입력 또는 샷 상한을 초과했습니다.',
+      );
+    }
+  }
 }
 
 String _defaultMessage(ValidationIssueCode code) {
@@ -973,6 +1127,30 @@ String _defaultMessage(ValidationIssueCode code) {
       return '기물 수가 성능 예산을 초과했습니다.';
     case ValidationIssueCode.requiredReward:
       return '특정 보상 없이는 클리어해야 하는 패턴을 허용하지 않습니다.';
+    case ValidationIssueCode.runtimeAutoClear:
+      return '실행 시작 시 자동 클리어됩니다.';
+    case ValidationIssueCode.runtimeNoRoute:
+      return '홀에 도달할 수 있는 경로가 없습니다.';
+    case ValidationIssueCode.runtimeWallMoved:
+      return '벽이 물리 계산 중 이동했습니다.';
+    case ValidationIssueCode.runtimeInfiniteBounce:
+      return '무한 반사 또는 안전 중단이 감지되었습니다.';
+    case ValidationIssueCode.runtimeSliderTunneling:
+      return '파워 슬라이더 충돌을 통과했습니다.';
+    case ValidationIssueCode.runtimeNonDeterministic:
+      return '동일 입력 재실행 결과가 달라졌습니다.';
+    case ValidationIssueCode.runtimeHolePassThrough:
+      return '홀을 통과했지만 포획되지 않았습니다.';
+    case ValidationIssueCode.runtimeRotatorOrder:
+      return '회전 반사판 충돌 순서가 불안정합니다.';
+    case ValidationIssueCode.runtimeSoftLock:
+      return '발사할 수 없어 진행이 막혔습니다.';
+    case ValidationIssueCode.runtimeNonFinite:
+      return '실행 중 유한하지 않은 좌표 또는 물리 수치가 발생했습니다.';
+    case ValidationIssueCode.runtimeNegativeTime:
+      return '실행 중 음수 이벤트 순서 또는 반복 횟수가 발생했습니다.';
+    case ValidationIssueCode.runtimeProbeBudget:
+      return '실행 검증 상한을 초과했습니다.';
   }
 }
 
