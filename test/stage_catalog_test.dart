@@ -54,9 +54,15 @@ void main() {
                 stage.stageId == 'stage_chain_gate' ||
                 stage.stageId == 'stage_balloon',
           )
-          .map((stage) => stage.patterns.single.patternId)
+          .expand((stage) => stage.patterns.map((pattern) => pattern.patternId))
           .toList(),
-      ['stage_chain_gate_01', 'stage_balloon_01'],
+      [
+        'stage_chain_gate_01',
+        'stage_chain_gate_02',
+        'stage_chain_gate_03',
+        'stage_chain_gate_04',
+        'stage_balloon_01',
+      ],
     );
     expect(sourceCatalog.validate(), isEmpty);
     for (final stage in sourceCatalog.stages) {

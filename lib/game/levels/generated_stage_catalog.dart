@@ -1686,11 +1686,715 @@ const generatedStageCatalogJson = r'''
             "none",
             "steel"
           ],
-          "solutionFamilies": [],
-          "optionalChallenges": [],
+          "solutionFamilies": [
+            "none_direct",
+            "steel_switch"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "switch_and_hole"
+          ],
           "metadata": {
             "baseline": "true"
           }
+        },
+        {
+          "patternId": "stage_chain_gate_02",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 300.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 80.0,
+                "y": 120.0
+              },
+              "size": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "gate",
+              "type": "gate",
+              "position": {
+                "x": 238.0,
+                "y": 226.0
+              },
+              "size": {
+                "x": 44.0,
+                "y": 118.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 260.0,
+                "y": 352.0
+              },
+              "size": {
+                "x": 100.0,
+                "y": 22.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "steel",
+              "type": "weight",
+              "position": {
+                "x": 260.0,
+                "y": 146.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 38.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "glue",
+              "type": "sticky_surface",
+              "position": {
+                "x": 50.0,
+                "y": 210.0
+              },
+              "size": {
+                "x": 50.0,
+                "y": 86.0
+              },
+              "traits": [
+                "sticky"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "crate_b",
+              "type": "crate",
+              "position": {
+                "x": 180.0,
+                "y": 310.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "스위치를 눌러 문을 열고 홀에 넣어 보세요.",
+          "copyCoreReward": 1,
+          "intendedStrategyId": "steel",
+          "acceptedStrategyIds": [
+            "glue",
+            "none",
+            "steel"
+          ],
+          "solutionFamilies": [
+            "glue_preparation",
+            "none_direct",
+            "steel_switch"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "prepare_with_glue",
+            "switch_and_hole"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_chain_gate_03",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 56.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 100.0
+              },
+              "size": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "gate",
+              "type": "gate",
+              "position": {
+                "x": 238.0,
+                "y": 226.0
+              },
+              "size": {
+                "x": 44.0,
+                "y": 118.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 100.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 100.0,
+                "y": 22.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "steel",
+              "type": "weight",
+              "position": {
+                "x": 80.0,
+                "y": 146.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 38.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "glue",
+              "type": "sticky_surface",
+              "position": {
+                "x": 300.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 50.0,
+                "y": 86.0
+              },
+              "traits": [
+                "sticky"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "crate_b",
+              "type": "crate",
+              "position": {
+                "x": 210.0,
+                "y": 430.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "스위치를 누르는 길과 벽을 이용하는 길을 모두 찾아보세요.",
+          "copyCoreReward": 1,
+          "intendedStrategyId": "steel",
+          "acceptedStrategyIds": [
+            "glue",
+            "none",
+            "steel"
+          ],
+          "solutionFamilies": [
+            "none_direct",
+            "steel_switch"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "switch_and_hole"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_chain_gate_04",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 300.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 100.0
+              },
+              "size": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "gate",
+              "type": "gate",
+              "position": {
+                "x": 238.0,
+                "y": 226.0
+              },
+              "size": {
+                "x": 44.0,
+                "y": 118.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 260.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 100.0,
+                "y": 22.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "steel",
+              "type": "weight",
+              "position": {
+                "x": 80.0,
+                "y": 146.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 38.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "glue",
+              "type": "sticky_surface",
+              "position": {
+                "x": 70.0,
+                "y": 260.0
+              },
+              "size": {
+                "x": 50.0,
+                "y": 86.0
+              },
+              "traits": [
+                "sticky"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "crate_b",
+              "type": "crate",
+              "position": {
+                "x": 180.0,
+                "y": 430.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "문을 여는 길과 문을 피해 가는 길을 모두 찾아보세요.",
+          "copyCoreReward": 1,
+          "intendedStrategyId": "steel",
+          "acceptedStrategyIds": [
+            "glue",
+            "none",
+            "steel"
+          ],
+          "solutionFamilies": [
+            "none_direct",
+            "steel_switch"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "switch_and_hole"
+          ],
+          "metadata": {}
         }
       ]
     },
