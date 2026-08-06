@@ -2621,11 +2621,728 @@ const generatedStageCatalogJson = r'''
             "none",
             "spike_source"
           ],
-          "solutionFamilies": [],
-          "optionalChallenges": [],
+          "solutionFamilies": [
+            "none_bypass",
+            "sharp_pop_chain"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "sharp_pop_chain"
+          ],
           "metadata": {
             "baseline": "true"
           }
+        },
+        {
+          "patternId": "stage_balloon_02",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 56.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 100.0
+              },
+              "size": {
+                "x": 76.0,
+                "y": 76.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "balloon_gate",
+              "type": "gate",
+              "position": {
+                "x": 270.0,
+                "y": 176.0
+              },
+              "size": {
+                "x": 38.0,
+                "y": 74.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "balloon_gate"
+            },
+            {
+              "id": "balloon_switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 214.0,
+                "y": 214.0
+              },
+              "size": {
+                "x": 62.0,
+                "y": 40.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "hidden",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "balloon_gate"
+            },
+            {
+              "id": "balloon",
+              "type": "balloon",
+              "position": {
+                "x": 160.0,
+                "y": 260.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.91,
+              "linkId": null
+            },
+            {
+              "id": "spike_source",
+              "type": "spike_source",
+              "position": {
+                "x": 78.0,
+                "y": 142.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 50.0
+              },
+              "traits": [
+                "sharp"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "balloon_crate",
+              "type": "crate",
+              "position": {
+                "x": 120.0,
+                "y": 400.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "spike_source",
+          "acceptedStrategyIds": [
+            "none",
+            "spike_source"
+          ],
+          "solutionFamilies": [
+            "balloon_bounce",
+            "sharp_pop_chain"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "ordinary_balloon_bounce",
+            "sharp_pop_chain"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_balloon_03",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 56.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 80.0,
+                "y": 128.0
+              },
+              "size": {
+                "x": 76.0,
+                "y": 76.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "balloon_gate",
+              "type": "gate",
+              "position": {
+                "x": 270.0,
+                "y": 176.0
+              },
+              "size": {
+                "x": 38.0,
+                "y": 74.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "balloon_gate"
+            },
+            {
+              "id": "balloon_switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 214.0,
+                "y": 214.0
+              },
+              "size": {
+                "x": 62.0,
+                "y": 40.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "hidden",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "balloon_gate"
+            },
+            {
+              "id": "balloon",
+              "type": "balloon",
+              "position": {
+                "x": 220.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.91,
+              "linkId": null
+            },
+            {
+              "id": "spike_source",
+              "type": "spike_source",
+              "position": {
+                "x": 78.0,
+                "y": 142.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 50.0
+              },
+              "traits": [
+                "sharp"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "balloon_crate",
+              "type": "crate",
+              "position": {
+                "x": 220.0,
+                "y": 410.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "spike_source",
+          "acceptedStrategyIds": [
+            "none",
+            "spike_source"
+          ],
+          "solutionFamilies": [
+            "none_bypass",
+            "sharp_pop_direct"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "sharp_pop_without_switch"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_balloon_04",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 56.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 128.0
+              },
+              "size": {
+                "x": 76.0,
+                "y": 76.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "balloon_gate",
+              "type": "gate",
+              "position": {
+                "x": 270.0,
+                "y": 176.0
+              },
+              "size": {
+                "x": 38.0,
+                "y": 74.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "balloon_gate"
+            },
+            {
+              "id": "balloon_switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 214.0,
+                "y": 214.0
+              },
+              "size": {
+                "x": 62.0,
+                "y": 40.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "hidden",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "balloon_gate"
+            },
+            {
+              "id": "balloon",
+              "type": "balloon",
+              "position": {
+                "x": 150.0,
+                "y": 260.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.91,
+              "linkId": null
+            },
+            {
+              "id": "spike_source",
+              "type": "spike_source",
+              "position": {
+                "x": 78.0,
+                "y": 142.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 50.0
+              },
+              "traits": [
+                "sharp"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "balloon_crate",
+              "type": "crate",
+              "position": {
+                "x": 98.0,
+                "y": 340.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "balloon_b",
+              "type": "balloon",
+              "position": {
+                "x": 250.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.91,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "spike_source",
+          "acceptedStrategyIds": [
+            "none",
+            "spike_source"
+          ],
+          "solutionFamilies": [
+            "balloon_bounce",
+            "sharp_single_use"
+          ],
+          "optionalChallenges": [
+            "one_shot",
+            "ordinary_balloon_bounce",
+            "two_balloons_one_sharp"
+          ],
+          "metadata": {}
         }
       ]
     }

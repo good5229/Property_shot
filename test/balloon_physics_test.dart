@@ -27,7 +27,7 @@ void main() {
     );
   }
 
-  test('일반 공은 풍선을 밀지만 터뜨리지 않는다', () {
+  test('일반 공은 풍선을 움직이지 않고 튕겨 나오며 터뜨리지 않는다', () {
     final result = resolver.resolve(
       stateWithBalloon(),
       const ShotInput(direction: Vec2(1, 0), power: 0.75),

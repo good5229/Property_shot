@@ -62,6 +62,9 @@ void main() {
         'stage_chain_gate_03',
         'stage_chain_gate_04',
         'stage_balloon_01',
+        'stage_balloon_02',
+        'stage_balloon_03',
+        'stage_balloon_04',
       ],
     );
     expect(sourceCatalog.validate(), isEmpty);
