@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
@@ -24,6 +25,7 @@ import 'bonus_goal.dart';
 import 'debug_menu.dart';
 import 'debug_labels.dart';
 import 'play_telemetry.dart';
+import 'launch_input_session.dart';
 import 'tutorial_experiment.dart';
 
 class GameScreen extends StatefulWidget {
@@ -61,6 +63,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _traitResolver = const TraitResolver();
   late final ProgressStore _progressStore;
   final _feedback = GameFeedback();
+  final _launchInputSession = LaunchInputSession();
   late final LocalPlayTelemetry _telemetry;
   late GameState _state;
   late PropertyShotGame _game;
@@ -68,12 +71,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _inspectedEntityId;
   Timer? _chargeTimer;
   Timer? _pressActivationTimer;
-  Offset? _pointerDownPosition;
-  int? _activePointer;
-  bool _pointerOnBall = false;
-  bool _pointerMoved = false;
   bool _aimStartedForShot = false;
   bool _isCharging = false;
+  bool _chargeStartRecorded = false;
+  Duration? _lastPointerTimeStamp;
   bool _isAnimatingShot = false;
   bool _showClearPopup = false;
   bool _showFailurePopup = false;
@@ -407,23 +408,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           power: _state.aimPower,
           equippedTrait: _state.equippedTrait,
         );
+    final normalizedInput = input.normalized();
     if (widget.showDebugControls && _debugRecordReplay && !isReplay) {
       _debugReplayStartState = _state;
       _debugReplayInput = input;
     }
-    final result = _shotResolver.resolve(_state, input);
+    final result = _shotResolver.resolve(_state, normalizedInput);
     _telemetry.record(
       '발사',
       stage: _state.levelIndex,
       attempt: _state.shotCount + 1,
-      angle: math.atan2(_state.aimDirection.y, _state.aimDirection.x),
-      power: _state.aimPower,
-      trait: _state.equippedTrait?.label,
+      angle: math.atan2(
+        normalizedInput.direction.y,
+        normalizedInput.direction.x,
+      ),
+      power: normalizedInput.power,
+      trait: normalizedInput.equippedTrait?.label,
       eventCode: 'shot_fired',
       shotId: _state.shotCount + 1,
       objectId: _state.activeBall.id,
       objectType: _state.activeBall.type.name,
-      speed: 8 + _state.aimPower * 16,
+      speed: 8 + normalizedInput.power * 16,
       isReplay: isReplay,
     );
     _feedback.shotLaunched();
@@ -967,11 +972,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _updateAim(Offset localPosition, Size fieldSize) {
+  void _updateAim(Vec2 logical) {
     if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
     }
-    final logical = _toLogicalPosition(localPosition, fieldSize);
     final aim = logical - _state.activeBall.position;
     if (!_aimStartedForShot) {
       _aimStartedForShot = true;
@@ -1211,86 +1215,169 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _handlePointerDown(int pointer, Offset localPosition, Size fieldSize) {
+  Duration _currentMonotonicTimeStamp() {
+    final frameTimeStamp =
+        SchedulerBinding.instance.currentSystemFrameTimeStamp;
+    final lastPointerTimeStamp = _lastPointerTimeStamp;
+    if (lastPointerTimeStamp == null ||
+        frameTimeStamp >= lastPointerTimeStamp) {
+      return frameTimeStamp;
+    }
+    return lastPointerTimeStamp;
+  }
+
+  Duration _effectivePointerTimeStamp(Duration eventTimeStamp) {
+    final lastPointerTimeStamp = _lastPointerTimeStamp;
+    if (lastPointerTimeStamp != null && eventTimeStamp < lastPointerTimeStamp) {
+      return lastPointerTimeStamp;
+    }
+    return eventTimeStamp;
+  }
+
+  void _handlePointerDown(
+    int pointer,
+    Offset localPosition,
+    Size fieldSize,
+    Duration timeStamp,
+  ) {
     if (_state.phase != GamePhase.planning || _isAnimatingShot) {
       return;
     }
-    if (_activePointer != null) {
+    timeStamp = _effectivePointerTimeStamp(timeStamp);
+    final logical = _toLogicalPosition(localPosition, fieldSize);
+    final onBall = logical.distanceTo(_state.activeBall.position) <= 42;
+    if (!_launchInputSession.begin(
+      pointer: pointer,
+      logicalPosition: logical,
+      timeStamp: timeStamp,
+      onBall: onBall,
+    )) {
       return;
     }
-    _activePointer = pointer;
+    _lastPointerTimeStamp = timeStamp;
     _pressActivationTimer?.cancel();
-    _pointerDownPosition = localPosition;
-    _pointerMoved = false;
-    final logical = _toLogicalPosition(localPosition, fieldSize);
-    _pointerOnBall = logical.distanceTo(_state.activeBall.position) <= 42;
-    if (_pointerOnBall) {
+    _chargeStartRecorded = false;
+    if (onBall) {
       _setState(_state.copyWith(message: '공을 길게 눌러 힘을 모으세요'));
       _pressActivationTimer = Timer(const Duration(milliseconds: 450), () {
-        if (!mounted || _pointerDownPosition == null || !_pointerOnBall) {
+        if (!mounted || !_launchInputSession.isActive) {
           return;
         }
-        _startPowerCharge(_pointerDownPosition!, fieldSize);
+        _startPowerCharge();
       });
     }
   }
 
-  void _handlePointerMove(int pointer, Offset localPosition, Size fieldSize) {
-    if (pointer != _activePointer) {
+  void _handlePointerMove(
+    int pointer,
+    Offset localPosition,
+    Size fieldSize,
+    Duration timeStamp,
+  ) {
+    if (pointer != _launchInputSession.activePointer) {
       return;
     }
-    final down = _pointerDownPosition;
-    if (down == null || _isAnimatingShot) {
+    if (_isAnimatingShot) {
       return;
     }
-    if ((down - localPosition).distance >= 8) {
-      _pointerMoved = true;
-      if (_pointerOnBall) {
-        _pointerOnBall = false;
-        _pressActivationTimer?.cancel();
-        _pressActivationTimer = null;
+    timeStamp = _effectivePointerTimeStamp(timeStamp);
+    final logical = _toLogicalPosition(localPosition, fieldSize);
+    _lastPointerTimeStamp = timeStamp;
+    if (!_launchInputSession.move(
+      pointer: pointer,
+      logicalPosition: logical,
+      timeStamp: timeStamp,
+    )) {
+      return;
+    }
+    if (_launchInputSession.isChargingAt(timeStamp)) {
+      if (!_isCharging) {
+        _startPowerCharge();
       }
-      _updateAim(localPosition, fieldSize);
+    } else if (!_isCharging && _launchInputSession.chargeCancelled) {
+      _pressActivationTimer?.cancel();
+      _pressActivationTimer = null;
     }
+    _updateAim(logical);
   }
 
-  void _handlePointerUp(int pointer, Offset localPosition, Size fieldSize) {
-    if (pointer != _activePointer) {
+  void _handlePointerUp(
+    int pointer,
+    Offset localPosition,
+    Size fieldSize,
+    Duration timeStamp,
+  ) {
+    if (pointer != _launchInputSession.activePointer) {
       return;
     }
-    final down = _pointerDownPosition;
-    final wasCharging = _isCharging;
+    timeStamp = _effectivePointerTimeStamp(timeStamp);
+    _lastPointerTimeStamp = timeStamp;
+    final logical = _toLogicalPosition(localPosition, fieldSize);
+    final release = _launchInputSession.release(
+      pointer: pointer,
+      logicalPosition: logical,
+      timeStamp: timeStamp,
+    );
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
-    _pointerDownPosition = null;
-    _activePointer = null;
-    _pointerOnBall = false;
-    if (wasCharging) {
-      _stopPowerCharge();
-      _pointerMoved = false;
+    _chargeTimer?.cancel();
+    _chargeTimer = null;
+    _isCharging = false;
+    if (release.shouldLaunch) {
+      final power = release.power ?? LaunchInputSession.minimumPower;
+      if (!_chargeStartRecorded && release.chargeStartedAt != null) {
+        _recordChargeStarted(release.chargeStartedAt!);
+      }
+      _telemetry.record(
+        '충전 종료',
+        stage: _state.levelIndex,
+        eventCode: 'charge_released',
+        power: power,
+      );
+      _chargeStartRecorded = false;
+      final lastPosition = release.lastLogicalPosition;
+      final aim = lastPosition == null
+          ? _state.aimDirection
+          : lastPosition - _state.activeBall.position;
+      final direction = aim.length == 0
+          ? _state.aimDirection
+          : aim.normalized();
+      _launch(
+        inputOverride: ShotInput(
+          direction: direction,
+          power: power,
+          equippedTrait: _state.equippedTrait,
+        ),
+      );
       return;
     }
-    if (down != null && !_pointerMoved) {
+    if (release.kind == LaunchInputReleaseKind.tap) {
       _handleFieldTap(localPosition, fieldSize);
     } else if (_state.phase == GamePhase.planning && !_isAnimatingShot) {
       _setState(_state.copyWith(message: '조준 고정'));
     }
-    _pointerMoved = false;
   }
 
   void _handlePointerCancel({bool showCancellation = true, int? pointer}) {
-    if (pointer != null && pointer != _activePointer) {
+    if (pointer != null && pointer != _launchInputSession.activePointer) {
       return;
     }
-    final hadPointer = _pointerDownPosition != null;
+    final hadPointer = _launchInputSession.isActive;
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
-    _pointerDownPosition = null;
-    _activePointer = null;
-    _pointerOnBall = false;
-    _pointerMoved = false;
-    if (_isCharging) {
-      _cancelPowerCharge(showMessage: showCancellation);
+    _chargeTimer?.cancel();
+    _chargeTimer = null;
+    _launchInputSession.cancel(pointer: pointer);
+    final wasCharging = _isCharging;
+    _isCharging = false;
+    _chargeStartRecorded = false;
+    if (wasCharging) {
+      if (showCancellation) {
+        _feedback.cancelled();
+      }
+      if (mounted && showCancellation && _state.phase == GamePhase.planning) {
+        _setState(_state.copyWith(message: '발사를 취소했습니다'));
+      }
     } else if (hadPointer &&
         showCancellation &&
         _state.phase == GamePhase.planning) {
@@ -1298,31 +1385,56 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _startPowerCharge(Offset localPosition, Size fieldSize) {
-    if (_state.phase != GamePhase.planning || _isAnimatingShot) {
+  void _recordChargeStarted(Duration timeStamp) {
+    if (_chargeStartRecorded) {
       return;
     }
-    final logical = _toLogicalPosition(localPosition, fieldSize);
-    if (logical.distanceTo(_state.activeBall.position) > 42) {
-      return;
-    }
-    _chargeTimer?.cancel();
-    _isCharging = true;
+    _chargeStartRecorded = true;
     _feedback.aimChargeStarted();
     _telemetry.record(
       '충전 시작',
       stage: _state.levelIndex,
       eventCode: 'charge_started',
-      power: _state.aimPower,
+      power: LaunchInputSession.minimumPower,
     );
+  }
+
+  void _startPowerCharge() {
+    if (_state.phase != GamePhase.planning ||
+        _isAnimatingShot ||
+        !_launchInputSession.isActive) {
+      return;
+    }
+    final chargeStartedAt = _launchInputSession.chargeStartedAt;
+    if (chargeStartedAt == null) {
+      return;
+    }
+    final timeStamp =
+        _currentMonotonicTimeStamp().compareTo(chargeStartedAt) < 0
+        ? chargeStartedAt
+        : _currentMonotonicTimeStamp();
+    if (!_launchInputSession.isChargingAt(timeStamp)) {
+      return;
+    }
+    _pressActivationTimer?.cancel();
+    _pressActivationTimer = null;
+    _isCharging = true;
+    _recordChargeStarted(chargeStartedAt);
     _setState(
-      _state.copyWith(aimPower: 0.12, message: '힘 모으는 중 · 손을 떼면 발사됩니다'),
+      _state.copyWith(
+        aimPower: _launchInputSession.powerAt(timeStamp),
+        message: '힘 모으는 중 · 손을 떼면 발사됩니다',
+      ),
     );
     _chargeTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
-      if (!mounted) {
+      if (!mounted ||
+          !_isCharging ||
+          !_launchInputSession.isActive ||
+          _launchInputSession.chargeStartedAt == null) {
         return;
       }
-      final nextPower = (_state.aimPower + 0.055).clamp(0.12, 1.0);
+      final displayTimeStamp = _currentMonotonicTimeStamp();
+      final nextPower = _launchInputSession.powerAt(displayTimeStamp);
       _setState(
         _state.copyWith(
           aimPower: nextPower,
@@ -1332,33 +1444,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _stopPowerCharge() {
-    final shouldLaunch = _isCharging && _state.phase == GamePhase.planning;
-    _isCharging = false;
-    _chargeTimer?.cancel();
-    _chargeTimer = null;
-    _telemetry.record(
-      '충전 종료',
-      stage: _state.levelIndex,
-      eventCode: 'charge_released',
-      power: _state.aimPower,
-    );
-    if (shouldLaunch) {
-      _launch();
-    }
-  }
-
-  void _cancelPowerCharge({bool showMessage = true}) {
-    _isCharging = false;
-    _chargeTimer?.cancel();
-    _chargeTimer = null;
-    _pressActivationTimer?.cancel();
-    _pressActivationTimer = null;
-    if (showMessage) {
-      _feedback.cancelled();
-    }
-    if (mounted && showMessage && _state.phase == GamePhase.planning) {
-      _setState(_state.copyWith(message: '발사를 취소했습니다'));
+  @override
+  void didChangeMetrics() {
+    if (_launchInputSession.isActive) {
+      _handlePointerCancel(showCancellation: false);
     }
   }
 
@@ -1378,6 +1467,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _chargeTimer?.cancel();
     _pressActivationTimer?.cancel();
+    _launchInputSession.reset();
     super.dispose();
   }
 
@@ -1534,18 +1624,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                       event.pointer,
                                                       event.localPosition,
                                                       boardSize,
+                                                      event.timeStamp,
                                                     ),
                                                 onPointerMove: (event) =>
                                                     _handlePointerMove(
                                                       event.pointer,
                                                       event.localPosition,
                                                       boardSize,
+                                                      event.timeStamp,
                                                     ),
                                                 onPointerUp: (event) =>
                                                     _handlePointerUp(
                                                       event.pointer,
                                                       event.localPosition,
                                                       boardSize,
+                                                      event.timeStamp,
                                                     ),
                                                 onPointerCancel: (event) =>
                                                     _handlePointerCancel(

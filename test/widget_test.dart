@@ -275,26 +275,59 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
-    await gesture.up();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump();
 
     expect(find.textContaining('시도 1'), findsOneWidget);
+  });
+
+  testWidgets('멀티터치는 첫 포인터만 발사 입력으로 인정한다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final first = await tester.createGesture(pointer: 41);
+    await first.down(
+      _logicalOffset(tester, 56, 456),
+      timeStamp: _testPointerDownAt,
+    );
+    final second = await tester.createGesture(pointer: 42);
+    await second.down(
+      _logicalOffset(tester, 120, 400),
+      timeStamp: const Duration(milliseconds: 1100),
+    );
+    await second.up(timeStamp: const Duration(milliseconds: 1200));
+
+    await tester.pump(const Duration(milliseconds: 760));
+    await _releaseTimedGesture(first, const Duration(milliseconds: 760));
+    await tester.pump();
+
+    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(find.textContaining('시도 2'), findsNothing);
   });
 
   testWidgets('발사 애니메이션 중에는 두 번째 샷을 만들지 않는다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    final first = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final first = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
-    await first.up();
+    await _releaseTimedGesture(first, const Duration(milliseconds: 760));
     await tester.pump(const Duration(milliseconds: 80));
 
-    final second = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final second = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
-    await second.up();
+    await _releaseTimedGesture(second, const Duration(milliseconds: 760));
     await tester.pump(const Duration(milliseconds: 80));
 
     expect(find.textContaining('시도 1'), findsOneWidget);
@@ -305,9 +338,12 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
-    await gesture.up();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump(const Duration(milliseconds: 80));
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
@@ -320,9 +356,12 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
-    await gesture.up();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump(const Duration(milliseconds: 6500));
 
     expect(find.byKey(const Key('failure_popup')), findsOneWidget);
@@ -342,9 +381,12 @@ void main() {
     await tester.tap(find.byKey(const Key('pause_button')));
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
-    await gesture.up();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump();
 
     expect(find.textContaining('시도 0'), findsOneWidget);
@@ -354,7 +396,10 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
     await gesture.cancel();
     await tester.pump();
@@ -367,7 +412,10 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 120));
     await gesture.cancel();
     await tester.pump();
@@ -379,17 +427,58 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 760));
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
-    await gesture.up();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump();
 
     expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('화면 크기 변경 중 활성 포인터는 취소되고 복귀 후 발사되지 않는다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    tester.binding.handleMetricsChanged();
+    await tester.pump();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
+    await tester.pump();
+
+    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('화면 밖으로 이동한 포인터도 Listener의 종료 경로로 정리된다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    await gesture.moveTo(
+      const Offset(-20, -20),
+      timeStamp: const Duration(milliseconds: 1760),
+    );
+    await gesture.up(timeStamp: const Duration(milliseconds: 1761));
+    await tester.pump();
+
+    expect(find.textContaining('시도 1'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -577,9 +666,12 @@ void main() {
     await tester.pumpWidget(PropertyShotApp(initialState: _directClearState()));
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 920));
-    await gesture.up();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
     await tester.pump(const Duration(milliseconds: 2400));
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
@@ -600,9 +692,12 @@ void main() {
     );
     await tester.pump();
 
-    final gesture = await tester.startGesture(_logicalOffset(tester, 56, 456));
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
     await tester.pump(const Duration(milliseconds: 920));
-    await gesture.up();
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
     await tester.pump(const Duration(milliseconds: 2400));
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 20)),
@@ -935,6 +1030,20 @@ GameState _directClearState() {
     ],
   );
 }
+
+const _testPointerDownAt = Duration(seconds: 1);
+
+Future<TestGesture> _startTimedGesture(
+  WidgetTester tester,
+  Offset position,
+) async {
+  final gesture = await tester.createGesture();
+  await gesture.down(position, timeStamp: _testPointerDownAt);
+  return gesture;
+}
+
+Future<void> _releaseTimedGesture(TestGesture gesture, Duration heldFor) =>
+    gesture.up(timeStamp: _testPointerDownAt + heldFor);
 
 Offset _logicalOffset(WidgetTester tester, double x, double y) {
   final rect = tester.getRect(find.byKey(const Key('aim_area')));
