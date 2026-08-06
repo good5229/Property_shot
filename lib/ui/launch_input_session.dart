@@ -1,6 +1,8 @@
 import '../game/domain/geometry.dart';
 
-enum LaunchInputReleaseKind { ignored, tap, aimed, launch }
+enum ChargeGaugeState { green, yellow, red, warningRed, cancelledGray }
+
+enum LaunchInputReleaseKind { ignored, tap, aimed, launch, overchargeCancelled }
 
 class LaunchInputRelease {
   const LaunchInputRelease({
@@ -8,12 +10,14 @@ class LaunchInputRelease {
     this.power,
     this.lastLogicalPosition,
     this.chargeStartedAt,
+    this.gaugeState = ChargeGaugeState.green,
   });
 
   final LaunchInputReleaseKind kind;
   final double? power;
   final Vec2? lastLogicalPosition;
   final Duration? chargeStartedAt;
+  final ChargeGaugeState gaugeState;
 
   bool get shouldLaunch => kind == LaunchInputReleaseKind.launch;
 }
@@ -26,6 +30,10 @@ class LaunchInputSession {
   static const maximumPower = 1.0;
   static const powerPerChargePeriod = 0.055;
   static const chargePeriod = Duration(milliseconds: 80);
+  static const yellowPower = 0.40;
+  static const redPower = 0.70;
+  static const warningRedPower = 0.90;
+  static const cancelledGrayChargeElapsed = Duration(milliseconds: 1680);
 
   int? get activePointer => _activePointer;
   bool get isActive => _activePointer != null;
@@ -45,6 +53,8 @@ class LaunchInputSession {
   bool _onBall = false;
   bool _hasMoved = false;
   bool _chargeCancelled = false;
+  bool _overchargeLatched = false;
+  ChargeGaugeState _gaugeState = ChargeGaugeState.green;
 
   bool begin({
     required int pointer,
@@ -63,6 +73,8 @@ class LaunchInputSession {
     _onBall = onBall;
     _hasMoved = false;
     _chargeCancelled = false;
+    _overchargeLatched = false;
+    _gaugeState = ChargeGaugeState.green;
     return true;
   }
 
@@ -112,6 +124,37 @@ class LaunchInputSession {
         .toDouble();
   }
 
+  ChargeGaugeState gaugeStateAt(Duration timeStamp) {
+    if (!_onBall || !isActive || _chargeCancelled) {
+      return ChargeGaugeState.green;
+    }
+    if (_overchargeLatched) {
+      return ChargeGaugeState.cancelledGray;
+    }
+    final startedAt = chargeStartedAt;
+    if (startedAt == null || timeStamp < startedAt) {
+      return _gaugeState;
+    }
+    final chargeElapsed = timeStamp - startedAt;
+    if (chargeElapsed > cancelledGrayChargeElapsed) {
+      _overchargeLatched = true;
+      _gaugeState = ChargeGaugeState.cancelledGray;
+      return _gaugeState;
+    }
+    final power = powerAt(timeStamp);
+    final next = power >= warningRedPower
+        ? ChargeGaugeState.warningRed
+        : power >= redPower
+        ? ChargeGaugeState.red
+        : power >= yellowPower
+        ? ChargeGaugeState.yellow
+        : ChargeGaugeState.green;
+    if (next.index > _gaugeState.index) {
+      _gaugeState = next;
+    }
+    return _gaugeState;
+  }
+
   LaunchInputRelease release({
     required int pointer,
     required Vec2 logicalPosition,
@@ -124,14 +167,23 @@ class LaunchInputSession {
     if (_hasMoved) {
       _lastLogicalPosition = logicalPosition;
     }
+    final gaugeState = gaugeStateAt(timeStamp);
     final lastPosition = _lastLogicalPosition;
     final startedAt = chargeStartedAt;
-    final result = isChargingAt(timeStamp)
+    final result = gaugeState == ChargeGaugeState.cancelledGray
+        ? LaunchInputRelease(
+            kind: LaunchInputReleaseKind.overchargeCancelled,
+            lastLogicalPosition: lastPosition,
+            chargeStartedAt: startedAt,
+            gaugeState: gaugeState,
+          )
+        : isChargingAt(timeStamp)
         ? LaunchInputRelease(
             kind: LaunchInputReleaseKind.launch,
             power: powerAt(timeStamp),
             lastLogicalPosition: lastPosition,
             chargeStartedAt: startedAt,
+            gaugeState: gaugeState,
           )
         : LaunchInputRelease(
             kind: _hasMoved
@@ -139,6 +191,7 @@ class LaunchInputSession {
                 : LaunchInputReleaseKind.tap,
             lastLogicalPosition: lastPosition,
             chargeStartedAt: startedAt,
+            gaugeState: gaugeState,
           );
     reset();
     return result;
@@ -162,5 +215,7 @@ class LaunchInputSession {
     _onBall = false;
     _hasMoved = false;
     _chargeCancelled = false;
+    _overchargeLatched = false;
+    _gaugeState = ChargeGaugeState.green;
   }
 }

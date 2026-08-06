@@ -253,6 +253,23 @@ class GameFeedback {
     );
   }
 
+  void overchargeCancelled() {
+    // 과충전은 짧은 이중 신호로 상태를 확실히 알린다.
+    _emit(
+      'overcharge_cancelled',
+      minimumInterval: const Duration(milliseconds: 250),
+      haptic: _playOverchargeHaptic,
+      cue: FeedbackCue.fail,
+      alert: true,
+    );
+  }
+
+  static Future<void> _playOverchargeHaptic() async {
+    await HapticFeedback.mediumImpact();
+    await Future<void>.delayed(const Duration(milliseconds: 70));
+    await HapticFeedback.lightImpact();
+  }
+
   void _emit(
     String key, {
     Duration minimumInterval = const Duration(milliseconds: 120),

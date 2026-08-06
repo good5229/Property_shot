@@ -57,6 +57,19 @@ void main() {
     expect(cues, [FeedbackCue.aimCharge, FeedbackCue.copyCoreAwarded]);
   });
 
+  test('과충전 취소는 짧은 이중 피드백을 낸다', () async {
+    final cues = <FeedbackCue>[];
+    final feedback = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+
+    feedback.overchargeCancelled();
+    await _flushFeedback();
+
+    expect(cues, [FeedbackCue.fail]);
+  });
+
   test('클리어 보상은 별도 메달 피드백 큐를 낸다', () async {
     final cues = <FeedbackCue>[];
     final feedback = GameFeedback(

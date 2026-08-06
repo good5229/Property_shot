@@ -161,6 +161,187 @@ void main() {
     expect(release.shouldLaunch, isFalse);
     expect(release.kind, LaunchInputReleaseKind.aimed);
   });
+
+  test('게이지 경계는 힘 기준으로 초록·노랑·빨강·경고 빨강으로 전환된다', () {
+    final session = LaunchInputSession();
+    session.begin(
+      pointer: 1,
+      logicalPosition: const Vec2(56, 456),
+      timeStamp: Duration.zero,
+      onBall: true,
+    );
+
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 450)),
+      ChargeGaugeState.green,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 857)),
+      ChargeGaugeState.green,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 858)),
+      ChargeGaugeState.yellow,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 1293)),
+      ChargeGaugeState.yellow,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 1295)),
+      ChargeGaugeState.red,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 1584)),
+      ChargeGaugeState.red,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 1585)),
+      ChargeGaugeState.warningRed,
+    );
+  });
+
+  test('경고 빨강은 pointer-down 2130ms까지 유지되고 이후 회색으로 래치된다', () {
+    final session = LaunchInputSession();
+    session.begin(
+      pointer: 1,
+      logicalPosition: const Vec2(56, 456),
+      timeStamp: Duration.zero,
+      onBall: true,
+    );
+
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 2130)),
+      ChargeGaugeState.warningRed,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 2131)),
+      ChargeGaugeState.cancelledGray,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 1200)),
+      ChargeGaugeState.cancelledGray,
+    );
+  });
+
+  test('같은 포인터를 누르는 동안 게이지 상태는 과거 시각 조회에도 뒤로 가지 않는다', () {
+    final session = LaunchInputSession();
+    session.begin(
+      pointer: 1,
+      logicalPosition: const Vec2(56, 456),
+      timeStamp: Duration.zero,
+      onBall: true,
+    );
+
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 1585)),
+      ChargeGaugeState.warningRed,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 700)),
+      ChargeGaugeState.warningRed,
+    );
+  });
+
+  test('회색 release는 발사하지 않고 새 pointer down에서 초록으로 초기화된다', () {
+    final session = LaunchInputSession();
+    session.begin(
+      pointer: 1,
+      logicalPosition: const Vec2(56, 456),
+      timeStamp: Duration.zero,
+      onBall: true,
+    );
+
+    final release = session.release(
+      pointer: 1,
+      logicalPosition: const Vec2(56, 456),
+      timeStamp: const Duration(milliseconds: 2131),
+    );
+    expect(release.kind, LaunchInputReleaseKind.overchargeCancelled);
+    expect(release.shouldLaunch, isFalse);
+    expect(release.gaugeState, ChargeGaugeState.cancelledGray);
+    expect(session.isActive, isFalse);
+
+    expect(
+      session.begin(
+        pointer: 2,
+        logicalPosition: const Vec2(56, 456),
+        timeStamp: const Duration(milliseconds: 2200),
+        onBall: true,
+      ),
+      isTrue,
+    );
+    expect(
+      session.gaugeStateAt(const Duration(milliseconds: 2200)),
+      ChargeGaugeState.green,
+    );
+  });
+
+  test('최대 힘에 도달한 직후의 경고 빨강 release는 정상 발사한다', () {
+    final session = LaunchInputSession();
+    session.begin(
+      pointer: 1,
+      logicalPosition: const Vec2(56, 456),
+      timeStamp: Duration.zero,
+      onBall: true,
+    );
+
+    final release = session.release(
+      pointer: 1,
+      logicalPosition: const Vec2(56, 456),
+      timeStamp: const Duration(milliseconds: 1730),
+    );
+    expect(release.kind, LaunchInputReleaseKind.launch);
+    expect(release.gaugeState, ChargeGaugeState.warningRed);
+    expect(release.power, closeTo(1.0, 0.0000001));
+  });
+
+  test('최대 안전 경계에서는 발사하고 1ms 뒤에는 과충전 취소한다', () {
+    LaunchInputRelease releaseAt(int milliseconds) {
+      final session = LaunchInputSession();
+      session.begin(
+        pointer: 1,
+        logicalPosition: const Vec2(56, 456),
+        timeStamp: Duration.zero,
+        onBall: true,
+      );
+      return session.release(
+        pointer: 1,
+        logicalPosition: const Vec2(56, 456),
+        timeStamp: Duration(milliseconds: milliseconds),
+      );
+    }
+
+    expect(releaseAt(2130).kind, LaunchInputReleaseKind.launch);
+    expect(releaseAt(2131).kind, LaunchInputReleaseKind.overchargeCancelled);
+  });
+
+  test('30·60·120Hz 표시 샘플링에서도 과충전 release 결과가 같다', () {
+    for (final frequency in const [30, 60, 120]) {
+      final session = LaunchInputSession();
+      session.begin(
+        pointer: 1,
+        logicalPosition: const Vec2(56, 456),
+        timeStamp: Duration.zero,
+        onBall: true,
+      );
+      final intervalMicros = (Duration.microsecondsPerSecond / frequency)
+          .round();
+      for (var micros = 0; micros <= 2200000; micros += intervalMicros) {
+        session.gaugeStateAt(Duration(microseconds: micros));
+      }
+      final release = session.release(
+        pointer: 1,
+        logicalPosition: const Vec2(56, 456),
+        timeStamp: const Duration(milliseconds: 2200),
+      );
+      expect(
+        release.kind,
+        LaunchInputReleaseKind.overchargeCancelled,
+        reason: '${frequency}Hz 표시 샘플링',
+      );
+    }
+  });
 }
 
 class _ReplayResult {

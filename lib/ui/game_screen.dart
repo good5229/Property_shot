@@ -74,7 +74,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _aimStartedForShot = false;
   bool _isCharging = false;
   bool _chargeStartRecorded = false;
+  ChargeGaugeState _chargeGaugeState = ChargeGaugeState.green;
+  bool _chargeGaugeActive = false;
+  bool _overchargeFeedbackRecorded = false;
   Duration? _lastPointerTimeStamp;
+  Duration? _frameTimeStampAtLastPointer;
   bool _isAnimatingShot = false;
   bool _showClearPopup = false;
   bool _showFailurePopup = false;
@@ -274,6 +278,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _inspectedEntityId = null;
     _showClearPopup = false;
     _showFailurePopup = false;
+    _resetChargeGauge();
     _bonusBumperHit = false;
     _bonusSwitchPressed = false;
     _bonusBumperHistory.clear();
@@ -1219,11 +1224,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final frameTimeStamp =
         SchedulerBinding.instance.currentSystemFrameTimeStamp;
     final lastPointerTimeStamp = _lastPointerTimeStamp;
-    if (lastPointerTimeStamp == null ||
-        frameTimeStamp >= lastPointerTimeStamp) {
+    final frameAtPointer = _frameTimeStampAtLastPointer;
+    if (lastPointerTimeStamp == null || frameAtPointer == null) {
       return frameTimeStamp;
     }
-    return lastPointerTimeStamp;
+    final frameElapsed = frameTimeStamp - frameAtPointer;
+    if (frameElapsed.isNegative) {
+      return lastPointerTimeStamp;
+    }
+    return lastPointerTimeStamp + frameElapsed;
   }
 
   Duration _effectivePointerTimeStamp(Duration eventTimeStamp) {
@@ -1255,8 +1264,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _lastPointerTimeStamp = timeStamp;
+    _frameTimeStampAtLastPointer =
+        SchedulerBinding.instance.currentSystemFrameTimeStamp;
     _pressActivationTimer?.cancel();
     _chargeStartRecorded = false;
+    _overchargeFeedbackRecorded = false;
+    _setChargeGauge(ChargeGaugeState.green, active: onBall);
     if (onBall) {
       _setState(_state.copyWith(message: '공을 길게 눌러 힘을 모으세요'));
       _pressActivationTimer = Timer(const Duration(milliseconds: 450), () {
@@ -1283,6 +1296,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     timeStamp = _effectivePointerTimeStamp(timeStamp);
     final logical = _toLogicalPosition(localPosition, fieldSize);
     _lastPointerTimeStamp = timeStamp;
+    _frameTimeStampAtLastPointer =
+        SchedulerBinding.instance.currentSystemFrameTimeStamp;
     if (!_launchInputSession.move(
       pointer: pointer,
       logicalPosition: logical,
@@ -1294,9 +1309,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (!_isCharging) {
         _startPowerCharge();
       }
+      _setChargeGauge(
+        _launchInputSession.gaugeStateAt(timeStamp),
+        active: true,
+      );
     } else if (!_isCharging && _launchInputSession.chargeCancelled) {
       _pressActivationTimer?.cancel();
       _pressActivationTimer = null;
+      _setChargeGauge(ChargeGaugeState.green, active: false);
     }
     _updateAim(logical);
   }
@@ -1318,11 +1338,33 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       logicalPosition: logical,
       timeStamp: timeStamp,
     );
+    if (release.gaugeState == ChargeGaugeState.cancelledGray) {
+      _setChargeGauge(ChargeGaugeState.cancelledGray, active: true);
+    }
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
     _chargeTimer?.cancel();
     _chargeTimer = null;
     _isCharging = false;
+    final overchargeCancelled =
+        release.kind == LaunchInputReleaseKind.overchargeCancelled;
+    if (overchargeCancelled) {
+      _setChargeGauge(ChargeGaugeState.green, active: false);
+      _chargeStartRecorded = false;
+      _telemetry.record(
+        '과충전 취소',
+        stage: _state.levelIndex,
+        eventCode: 'charge_cancelled_overcharge',
+        power: LaunchInputSession.maximumPower,
+      );
+      if (mounted && _state.phase == GamePhase.planning) {
+        _setState(
+          _state.copyWith(message: '과충전되어 발사를 취소했습니다. 새로 눌러 다시 시작하세요.'),
+        );
+      }
+      return;
+    }
+    _setChargeGauge(ChargeGaugeState.green, active: false);
     if (release.shouldLaunch) {
       final power = release.power ?? LaunchInputSession.minimumPower;
       if (!_chargeStartRecorded && release.chargeStartedAt != null) {
@@ -1371,6 +1413,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final wasCharging = _isCharging;
     _isCharging = false;
     _chargeStartRecorded = false;
+    _setChargeGauge(ChargeGaugeState.green, active: false);
     if (wasCharging) {
       if (showCancellation) {
         _feedback.cancelled();
@@ -1420,10 +1463,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _pressActivationTimer = null;
     _isCharging = true;
     _recordChargeStarted(chargeStartedAt);
+    final initialGaugeState = _launchInputSession.gaugeStateAt(timeStamp);
+    _setChargeGauge(initialGaugeState, active: true);
     _setState(
       _state.copyWith(
         aimPower: _launchInputSession.powerAt(timeStamp),
-        message: '힘 모으는 중 · 손을 떼면 발사됩니다',
+        message: _chargeGaugeMessage(initialGaugeState),
       ),
     );
     _chargeTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
@@ -1435,10 +1480,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       }
       final displayTimeStamp = _currentMonotonicTimeStamp();
       final nextPower = _launchInputSession.powerAt(displayTimeStamp);
+      final nextGaugeState = _launchInputSession.gaugeStateAt(displayTimeStamp);
+      _setChargeGauge(nextGaugeState, active: true);
       _setState(
         _state.copyWith(
           aimPower: nextPower,
-          message: '힘 ${(nextPower * 100).round()}% · 손을 떼면 발사됩니다',
+          message: _chargeGaugeMessage(nextGaugeState),
         ),
       );
     });
@@ -1469,6 +1516,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _pressActivationTimer?.cancel();
     _launchInputSession.reset();
     super.dispose();
+  }
+
+  void _resetChargeGauge() {
+    _chargeGaugeState = ChargeGaugeState.green;
+    _chargeGaugeActive = false;
+    _overchargeFeedbackRecorded = false;
+    _game.setChargeGaugeState(_chargeGaugeState, active: false);
+  }
+
+  void _setChargeGauge(ChargeGaugeState next, {required bool active}) {
+    final changed = _chargeGaugeState != next || _chargeGaugeActive != active;
+    _chargeGaugeState = next;
+    _chargeGaugeActive = active;
+    _game.setChargeGaugeState(next, active: active);
+    if (next == ChargeGaugeState.cancelledGray &&
+        !_overchargeFeedbackRecorded) {
+      _overchargeFeedbackRecorded = true;
+      _feedback.overchargeCancelled();
+    }
+    if (changed && mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -1647,14 +1716,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                 child: Semantics(
                                                   container: true,
                                                   label: '공을 조준하는 게임 화면',
-                                                  value:
-                                                      '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                                  value: _chargeGaugeActive
+                                                      ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                      : '힘 ${(_state.aimPower * 100).round()}퍼센트',
                                                   increasedValue:
-                                                      '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                      _chargeGaugeActive
+                                                      ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                      : '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
                                                   decreasedValue:
-                                                      '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                                  hint:
-                                                      '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
+                                                      _chargeGaugeActive
+                                                      ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                      : '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                  hint: _chargeGaugeActive
+                                                      ? '현재 ${_chargeGaugeStateLabel(_chargeGaugeState)}. 손을 떼면 발사하거나 과충전 시 취소됩니다.'
+                                                      : '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
                                                   onIncrease: () =>
                                                       _adjustPower(0.055),
                                                   onDecrease: () =>
@@ -2692,6 +2767,23 @@ String _failureAdviceFor(List<String> events) {
     return '남은 공도 다음 발사의 충돌 재료로 활용할 수 있습니다.';
   }
   return '남은 공의 위치를 살펴보고 힘과 방향을 다시 정해 보세요.';
+}
+
+String _chargeGaugeStateLabel(ChargeGaugeState state) {
+  return switch (state) {
+    ChargeGaugeState.green => '초록 · 약한 힘',
+    ChargeGaugeState.yellow => '노랑 · 보통 힘',
+    ChargeGaugeState.red => '빨강 · 강한 힘',
+    ChargeGaugeState.warningRed => '경고 빨강 · 과충전 직전',
+    ChargeGaugeState.cancelledGray => '회색 · 발사 취소',
+  };
+}
+
+String _chargeGaugeMessage(ChargeGaugeState state) {
+  if (state == ChargeGaugeState.cancelledGray) {
+    return '${_chargeGaugeStateLabel(state)} · 손을 떼고 새로 누르세요';
+  }
+  return '${_chargeGaugeStateLabel(state)} · 손을 떼면 발사됩니다';
 }
 
 List<_LeaderboardRow> _leaderboardRows(GameState state) {

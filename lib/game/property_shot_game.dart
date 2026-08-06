@@ -14,6 +14,7 @@ import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 import '../ui/game_ball_painter.dart';
 import '../ui/debug_labels.dart';
+import '../ui/launch_input_session.dart';
 
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(
@@ -40,6 +41,8 @@ class PropertyShotGame extends FlameGame {
   bool debugIds = false;
   bool debugStats = false;
   double lastFrameTimeMs = 0;
+  ChargeGaugeState chargeGaugeState = ChargeGaugeState.green;
+  bool chargeGaugeActive = false;
 
   void setDebugOptions({
     bool? hitboxes,
@@ -51,6 +54,11 @@ class PropertyShotGame extends FlameGame {
     debugNormals = normals ?? debugNormals;
     debugIds = ids ?? debugIds;
     debugStats = stats ?? debugStats;
+  }
+
+  void setChargeGaugeState(ChargeGaugeState next, {required bool active}) {
+    chargeGaugeState = next;
+    chargeGaugeActive = active;
   }
 
   List<Vec2> _animationPath = const [];
@@ -1011,31 +1019,113 @@ class PropertyShotGame extends FlameGame {
         ..strokeWidth = 1.2,
     );
 
-    final gaugeTrack = Paint()
-      ..color = const Color(0x553B2B24)
-      ..strokeWidth = 7
+    if (chargeGaugeActive) {
+      _drawChargeGauge(canvas, ball, center);
+    } else {
+      final gaugeTrack = Paint()
+        ..color = const Color(0x553B2B24)
+        ..strokeWidth = 7
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      final gaugePaint = Paint()
+        ..color = accent
+        ..strokeWidth = 5
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      final gaugeRect = Rect.fromCircle(
+        center: center,
+        radius: ball.radius + 12,
+      );
+      canvas.drawArc(gaugeRect, -math.pi / 2, math.pi * 2, false, gaugeTrack);
+      canvas.drawArc(
+        gaugeRect,
+        -math.pi / 2,
+        state.aimPower * math.pi * 2,
+        false,
+        gaugePaint,
+      );
+      for (final fraction in const [0.33, 0.66]) {
+        final angle = -math.pi / 2 + fraction * math.pi * 2;
+        final marker =
+            _project(start) +
+            Offset(math.cos(angle), math.sin(angle)) * (ball.radius + 12);
+        canvas.drawCircle(
+          marker,
+          2.2,
+          Paint()..color = const Color(0xCCFFF4D6),
+        );
+      }
+    }
+  }
+
+  void _drawChargeGauge(Canvas canvas, EntityState ball, Offset center) {
+    final (color, strokeWidth, tickCount) = switch (chargeGaugeState) {
+      ChargeGaugeState.green => (const Color(0xFF43B978), 2.4, 1),
+      ChargeGaugeState.yellow => (const Color(0xFFE3B93F), 4.2, 2),
+      ChargeGaugeState.red => (const Color(0xFFD95050), 6.2, 3),
+      ChargeGaugeState.warningRed => (const Color(0xFFE34843), 5.2, 0),
+      ChargeGaugeState.cancelledGray => (const Color(0xFF7C8582), 4.6, 0),
+    };
+    final baseRadius = ball.radius + 12;
+    final ringRect = Rect.fromCircle(center: center, radius: baseRadius);
+    final ring = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    final gaugePaint = Paint()
-      ..color = accent
-      ..strokeWidth = 5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final gaugeRect = Rect.fromCircle(center: center, radius: ball.radius + 12);
-    canvas.drawArc(gaugeRect, -math.pi / 2, math.pi * 2, false, gaugeTrack);
+    final track = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    if (chargeGaugeState == ChargeGaugeState.cancelledGray) {
+      canvas.drawCircle(center, baseRadius, track);
+      canvas.drawCircle(center, baseRadius, ring);
+      final iconCenter = center + Offset(0, -baseRadius - 3);
+      final cancelPaint = Paint()
+        ..color = color
+        ..strokeWidth = 3.2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        iconCenter + const Offset(-5, -5),
+        iconCenter + const Offset(5, 5),
+        cancelPaint,
+      );
+      canvas.drawLine(
+        iconCenter + const Offset(5, -5),
+        iconCenter + const Offset(-5, 5),
+        cancelPaint,
+      );
+      return;
+    }
+
+    canvas.drawCircle(center, baseRadius, track);
     canvas.drawArc(
-      gaugeRect,
+      ringRect,
       -math.pi / 2,
-      state.aimPower * math.pi * 2,
+      state.aimPower.clamp(0.0, 1.0) * math.pi * 2,
       false,
-      gaugePaint,
+      ring,
     );
-    for (final fraction in const [0.33, 0.66]) {
-      final angle = -math.pi / 2 + fraction * math.pi * 2;
+    if (chargeGaugeState == ChargeGaugeState.warningRed) {
+      final pulse = reducedMotion
+          ? 0.0
+          : (math.sin(_pulseClock * math.pi * 1.2) + 1) / 2;
+      final warningRing = Paint()
+        ..color = color.withValues(alpha: 0.26 + pulse * 0.26)
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke;
+      canvas.drawCircle(center, baseRadius + 7 + pulse * 2, warningRing);
+    }
+    for (var index = 0; index < tickCount; index++) {
+      final angle = -math.pi / 2 + (index + 1) * math.pi * 2 / (tickCount + 1);
       final marker =
-          _project(start) +
-          Offset(math.cos(angle), math.sin(angle)) * (ball.radius + 12);
-      canvas.drawCircle(marker, 2.2, Paint()..color = const Color(0xCCFFF4D6));
+          center + Offset(math.cos(angle), math.sin(angle)) * (baseRadius + 1);
+      canvas.drawCircle(
+        marker,
+        2.1 + strokeWidth * 0.12,
+        Paint()..color = color,
+      );
     }
   }
 
