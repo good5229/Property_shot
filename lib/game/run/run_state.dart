@@ -70,6 +70,16 @@ class PatternDrawRecord {
   final int cycle;
   final int drawIndex;
 
+  factory PatternDrawRecord.fromDraw(StagePatternDraw draw) {
+    return PatternDrawRecord(
+      stageId: draw.stageId,
+      patternId: draw.patternId,
+      patternSeed: draw.patternSeed,
+      cycle: draw.cycle,
+      drawIndex: draw.drawIndex,
+    );
+  }
+
   factory PatternDrawRecord.fromJson(Map<String, dynamic> json) {
     return PatternDrawRecord(
       stageId: _requiredString(json, 'stageId', 'pattern draw'),
@@ -227,24 +237,35 @@ class RunState {
     required String runId,
     required int rootSeed,
     required String resolverVersion,
-    required String currentStageId,
-    required String currentPatternId,
-    required int currentPatternSeed,
+    required StagePatternDraw currentDraw,
+    StagePatternDraw? nextDraw,
     DateTime? now,
   }) {
     final timestamp = (now ?? DateTime.now()).toUtc();
+    final drawHistory = <PatternDrawRecord>[
+      PatternDrawRecord.fromDraw(currentDraw),
+    ];
+    final stageShuffleBags = <String, StageShuffleBagState>{
+      currentDraw.stageId: currentDraw.nextState,
+    };
+    if (nextDraw != null) {
+      drawHistory.add(PatternDrawRecord.fromDraw(nextDraw));
+      stageShuffleBags[nextDraw.stageId] = nextDraw.nextState;
+    }
     return RunState(
       schemaVersion: currentRunStateSchemaVersion,
       runId: runId,
       rootSeed: rootSeed,
       resolverVersion: resolverVersion,
       phase: RunPhase.playing,
-      currentStageId: currentStageId,
-      currentPatternId: currentPatternId,
-      currentPatternSeed: currentPatternSeed,
-      stageShuffleBags: {
-        currentStageId: StageShuffleBagState.initial(currentStageId),
-      },
+      currentStageId: currentDraw.stageId,
+      currentPatternId: currentDraw.patternId,
+      currentPatternSeed: currentDraw.patternSeed,
+      nextStageId: nextDraw?.stageId,
+      nextStagePatternId: nextDraw?.patternId,
+      nextStagePatternSeed: nextDraw?.patternSeed,
+      patternDrawHistory: drawHistory,
+      stageShuffleBags: stageShuffleBags,
       cloneCoreCount: 0,
       totalScore: 0,
       startedAt: timestamp,
@@ -448,11 +469,38 @@ void _validateRunState(RunState state) {
       throw ArgumentError('플레이·단계 완료 단계에는 보상 후보가 없어야 합니다.');
     }
   }
+  if (state.currentStageId != null &&
+      state.nextStageId != null &&
+      state.currentStageId == state.nextStageId) {
+    throw ArgumentError('current와 next pattern은 같은 stage를 공유할 수 없습니다.');
+  }
+  _validatePatternTriplet(
+    stageId: state.currentStageId,
+    patternId: state.currentPatternId,
+    patternSeed: state.currentPatternSeed,
+    history: state.patternDrawHistory,
+    stageShuffleBags: state.stageShuffleBags,
+    label: 'current pattern',
+    required:
+        state.phase != RunPhase.runCompleted || state.currentStageId != null,
+  );
+  _validatePatternTriplet(
+    stageId: state.nextStageId,
+    patternId: state.nextStagePatternId,
+    patternSeed: state.nextStagePatternSeed,
+    history: state.patternDrawHistory,
+    stageShuffleBags: state.stageShuffleBags,
+    label: 'next pattern',
+    required: state.nextStageId != null,
+  );
   if (state.rewardCandidateIds.isEmpty) {
     if (state.rewardCandidateSeed != null || state.selectedRewardId != null) {
       throw ArgumentError('보상 후보가 없을 때 seed 또는 선택 보상을 저장할 수 없습니다.');
     }
   } else {
+    if (state.rewardCandidateIds.length != 3) {
+      throw ArgumentError('보상 후보는 정확히 3개여야 합니다.');
+    }
     if (state.rewardCandidateSeed == null) {
       throw ArgumentError('보상 후보가 있으면 rewardCandidateSeed가 필요합니다.');
     }
@@ -473,6 +521,10 @@ void _validateRunState(RunState state) {
             state.phase == RunPhase.runCompleted) &&
         state.selectedRewardId == null) {
       throw ArgumentError('보상 선택 완료 단계에는 selectedRewardId가 필요합니다.');
+    }
+    if (state.phase == RunPhase.rewardSelectionCompleted &&
+        !state.acquiredRewards.contains(state.selectedRewardId)) {
+      throw ArgumentError('선택한 보상은 acquiredRewards에 포함되어야 합니다.');
     }
   }
   if (state.phase == RunPhase.rewardSelectionPending &&
@@ -509,6 +561,57 @@ void _validateRunState(RunState state) {
   }
   if (state.updatedAt.isBefore(state.startedAt)) {
     throw ArgumentError('updatedAt은 startedAt보다 빠를 수 없습니다.');
+  }
+}
+
+void _validatePatternTriplet({
+  required String? stageId,
+  required String? patternId,
+  required int? patternSeed,
+  required List<PatternDrawRecord> history,
+  required Map<String, StageShuffleBagState> stageShuffleBags,
+  required String label,
+  bool required = true,
+}) {
+  final present = [
+    stageId,
+    patternId,
+    patternSeed,
+  ].where((value) => value != null).length;
+  if (!required && present == 0) {
+    return;
+  }
+  if (present != 3) {
+    throw ArgumentError('$label triplet은 함께 저장되어야 합니다.');
+  }
+
+  final stage = stageId!;
+  final pattern = patternId!;
+  final seed = patternSeed!;
+  final matches = history
+      .where(
+        (record) =>
+            record.stageId == stage &&
+            record.patternId == pattern &&
+            record.patternSeed == seed,
+      )
+      .toList();
+  if (matches.length != 1) {
+    throw ArgumentError('$label triplet이 patternDrawHistory와 일치하지 않습니다.');
+  }
+
+  final bag = stageShuffleBags[stage];
+  if (bag == null) {
+    throw ArgumentError('$label triplet의 stageShuffleBagState가 없습니다.');
+  }
+  final record = matches.single;
+  final expectedCycle =
+      record.cycle + (bag.remainingPatternIds.isEmpty ? 1 : 0);
+  if (bag.stageId != stage ||
+      bag.lastPatternId != pattern ||
+      bag.drawIndex != record.drawIndex + 1 ||
+      bag.cycle != expectedCycle) {
+    throw ArgumentError('$label triplet이 소비된 stageShuffleBagState와 일치하지 않습니다.');
   }
 }
 

@@ -75,11 +75,11 @@ class RunStateStore {
   /// 진단·테스트용으로만 사용하고, 재개 기준은 항상 load 결과로 삼는다.
   Future<int> save(RunState state) {
     return _enqueue(() async {
-      final candidates = await _readCandidates();
-      final pointer = await _readPointer();
+      final candidates = await _readCandidates(tolerateReadErrors: false);
+      final pointer = await _readPointer(tolerateReadErrors: false);
       final selected = _selectCandidate(candidates, pointer);
       final nextRevision = _maxRevision(candidates) + 1;
-      final targetSlot = _targetSlot(candidates, selected);
+      final targetSlot = _targetSlot(selected);
       final payload = canonicalJson(state.toJson());
       final envelope = _encodeEnvelope(
         revision: nextRevision,
@@ -87,7 +87,10 @@ class RunStateStore {
       );
 
       await backend.write(_keyFor(targetSlot), envelope);
-      final verified = await _readCandidate(targetSlot);
+      final verified = await _readCandidate(
+        targetSlot,
+        tolerateReadErrors: false,
+      );
       if (verified == null ||
           verified.revision != nextRevision ||
           verified.payload != payload) {
@@ -112,22 +115,36 @@ class RunStateStore {
   }
 
   Future<RunState?> _loadUnqueued() async {
-    final candidates = await _readCandidates();
-    final pointer = await _readPointer();
+    final candidates = await _readCandidates(tolerateReadErrors: true);
+    final pointer = await _readPointer(tolerateReadErrors: true);
     final selected = _selectCandidate(candidates, pointer);
     _lastRevision = selected?.revision;
     return selected?.state;
   }
 
-  Future<Map<_RunStateSlot, _RunStateEnvelope?>> _readCandidates() async {
+  Future<Map<_RunStateSlot, _RunStateEnvelope?>> _readCandidates({
+    required bool tolerateReadErrors,
+  }) async {
     return {
-      _RunStateSlot.a: await _readCandidate(_RunStateSlot.a),
-      _RunStateSlot.b: await _readCandidate(_RunStateSlot.b),
+      _RunStateSlot.a: await _readCandidate(
+        _RunStateSlot.a,
+        tolerateReadErrors: tolerateReadErrors,
+      ),
+      _RunStateSlot.b: await _readCandidate(
+        _RunStateSlot.b,
+        tolerateReadErrors: tolerateReadErrors,
+      ),
     };
   }
 
-  Future<_RunStateEnvelope?> _readCandidate(_RunStateSlot slot) async {
-    final raw = await _readSafely(_keyFor(slot));
+  Future<_RunStateEnvelope?> _readCandidate(
+    _RunStateSlot slot, {
+    required bool tolerateReadErrors,
+  }) async {
+    final raw = await _readRaw(
+      _keyFor(slot),
+      tolerateReadErrors: tolerateReadErrors,
+    );
     if (raw == null || raw.isEmpty) {
       return null;
     }
@@ -163,7 +180,13 @@ class RunStateStore {
     }
   }
 
-  Future<String?> _readSafely(String key) async {
+  Future<String?> _readRaw(
+    String key, {
+    required bool tolerateReadErrors,
+  }) async {
+    if (!tolerateReadErrors) {
+      return backend.read(key);
+    }
     try {
       return await backend.read(key);
     } on Object {
@@ -171,8 +194,11 @@ class RunStateStore {
     }
   }
 
-  Future<String?> _readPointer() async {
-    final value = await _readSafely(activePointerKey);
+  Future<String?> _readPointer({required bool tolerateReadErrors}) async {
+    final value = await _readRaw(
+      activePointerKey,
+      tolerateReadErrors: tolerateReadErrors,
+    );
     if (value == 'a' || value == 'b') {
       return value;
     }
@@ -204,10 +230,7 @@ class RunStateStore {
     return maximum;
   }
 
-  _RunStateSlot _targetSlot(
-    Map<_RunStateSlot, _RunStateEnvelope?> candidates,
-    _RunStateEnvelope? selected,
-  ) {
+  _RunStateSlot _targetSlot(_RunStateEnvelope? selected) {
     if (selected == null) return _RunStateSlot.a;
     return selected.slot == _RunStateSlot.a ? _RunStateSlot.b : _RunStateSlot.a;
   }

@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/stage_pattern.dart';
 import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
 import 'package:property_shot/game/run/run_state.dart';
@@ -53,6 +55,21 @@ void main() {
     await expectLater(store.save(_state(2)), throwsA(isA<StateError>()));
 
     expect((await store.load())?.rootSeed, 1);
+  });
+
+  test('두 revision 상태에서 후보 슬롯 read 장애가 나면 새 save를 중단한다', () async {
+    final backend = MemoryRunStateBackend();
+    final store = RunStateStore(backend: backend);
+    await store.save(_state(1));
+    await store.save(_state(2));
+
+    backend.failBeforeReadFor(RunStateStore.slotAKey);
+    await expectLater(store.save(_state(3)), throwsA(isA<StateError>()));
+    expect((await store.load())?.rootSeed, 2);
+
+    backend.failBeforeReadFor(RunStateStore.activePointerKey);
+    await expectLater(store.save(_state(3)), throwsA(isA<StateError>()));
+    expect((await store.load())?.rootSeed, 2);
   });
 
   test('pointer를 기록한 뒤 장애가 나도 완결 후보가 다음 load에서 선택된다', () async {
@@ -150,13 +167,13 @@ void main() {
     expect(preferences.getInt(ProgressStore.saveVersionKey), isNull);
   });
 
-  test('삭제 중단 시 남은 유효 슬롯을 다음 load에서 복구한다', () async {
+  test('첫 슬롯 삭제 후 두 번째 슬롯 직전 중단 시 남은 유효 슬롯을 복구한다', () async {
     final backend = MemoryRunStateBackend();
     final store = RunStateStore(backend: backend);
     await store.save(_state(1));
     await store.save(_state(2));
 
-    backend.failBeforeRemoveFor(RunStateStore.slotAKey);
+    backend.failBeforeRemoveFor(RunStateStore.slotBKey);
     await expectLater(store.reset(), throwsA(isA<StateError>()));
 
     expect((await store.load())?.rootSeed, 2);
@@ -167,6 +184,7 @@ class MemoryRunStateBackend implements RunStateKeyValueBackend {
   final values = <String, String>{};
   final _failBeforeWrite = <String>{};
   final _failAfterWrite = <String>{};
+  final _failBeforeRead = <String>{};
   final _failBeforeRemove = <String>{};
   final _corruptNextRead = <String>{};
 
@@ -174,12 +192,17 @@ class MemoryRunStateBackend implements RunStateKeyValueBackend {
 
   void failAfterWriteFor(String key) => _failAfterWrite.add(key);
 
+  void failBeforeReadFor(String key) => _failBeforeRead.add(key);
+
   void failBeforeRemoveFor(String key) => _failBeforeRemove.add(key);
 
   void corruptNextReadFor(String key) => _corruptNextRead.add(key);
 
   @override
   Future<String?> read(String key) async {
+    if (_failBeforeRead.remove(key)) {
+      throw StateError('주입된 read 전 장애: $key');
+    }
     final value = values[key];
     if (value != null && _corruptNextRead.remove(key)) {
       values[key] = '{"broken":true}';
@@ -209,19 +232,41 @@ class MemoryRunStateBackend implements RunStateKeyValueBackend {
 }
 
 RunState _state(int seed) {
-  return RunState(
-    schemaVersion: currentRunStateSchemaVersion,
+  return RunState.initial(
     runId: 'run_$seed',
     rootSeed: seed,
     resolverVersion: 'resolver-1',
-    phase: RunPhase.playing,
-    currentStageId: 'stage_1',
-    currentPatternId: 'pattern_a',
-    currentPatternSeed: seed,
-    stageShuffleBags: {'stage_1': StageShuffleBagState.initial('stage_1')},
-    cloneCoreCount: 0,
-    totalScore: 0,
-    startedAt: DateTime.utc(2026, 8, 6, 0, 0),
-    updatedAt: DateTime.utc(2026, 8, 6, 0, seed),
+    currentDraw: _draw(
+      stageId: 'stage_1',
+      patternId: 'pattern_a',
+      rootSeed: seed,
+    ),
+    now: DateTime.utc(2026, 8, 6),
+  );
+}
+
+StagePatternDraw _draw({
+  required String stageId,
+  required String patternId,
+  required int rootSeed,
+}) {
+  final stage = StageDefinition(
+    stageId: stageId,
+    title: '테스트 스테이지',
+    patterns: [
+      StagePattern(
+        patternId: patternId,
+        weight: 1,
+        parShots: 1,
+        difficultyBand: '테스트',
+        ballSpawn: const Vec2(24, 520),
+        objects: const [],
+      ),
+    ],
+  );
+  return StageShuffleBag.draw(
+    stage: stage,
+    state: StageShuffleBagState.initial(stageId),
+    rootSeed: rootSeed,
   );
 }

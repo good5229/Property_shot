@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/stage_pattern.dart';
 import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/run/run_state.dart';
 import 'package:property_shot/game/run/stage_shuffle_bag.dart';
@@ -19,18 +20,17 @@ void main() {
   });
 
   test('컬렉션은 생성자 입력과 외부 수정으로부터 방어된다', () {
+    final currentDraw = _draw(
+      stageId: 'stage_1',
+      patternId: 'pattern_a',
+      rootSeed: 7,
+    );
     final history = <PatternDrawRecord>[
-      PatternDrawRecord(
-        stageId: 'stage_1',
-        patternId: 'pattern_a',
-        patternSeed: 1,
-        cycle: 0,
-        drawIndex: 0,
-      ),
+      PatternDrawRecord.fromDraw(currentDraw),
     ];
-    final rewards = <String>['reward_a'];
+    final rewards = <String>['reward_a', 'reward_b', 'reward_c'];
     final bags = <String, StageShuffleBagState>{
-      'stage_1': StageShuffleBagState.initial('stage_1'),
+      'stage_1': currentDraw.nextState,
     };
     final state = _state(
       phase: RunPhase.rewardSelectionPending,
@@ -45,7 +45,7 @@ void main() {
     bags.clear();
 
     expect(state.patternDrawHistory, hasLength(1));
-    expect(state.rewardCandidateIds, ['reward_a']);
+    expect(state.rewardCandidateIds, ['reward_a', 'reward_b', 'reward_c']);
     expect(state.stageShuffleBags.keys, ['stage_1']);
     expect(
       () => state.rewardCandidateIds[0] = 'changed again',
@@ -110,7 +110,7 @@ void main() {
       ...base,
       'phase': 'reward_selection_pending',
       'rewardCandidateSeed': 42,
-      'rewardCandidateIds': ['reward_a', 'reward_b'],
+      'rewardCandidateIds': ['reward_a', 'reward_b', 'reward_c'],
       'selectedRewardId': null,
     };
     expect(RunState.fromJson(pending).phase, RunPhase.rewardSelectionPending);
@@ -120,6 +120,84 @@ void main() {
     );
     expect(
       () => RunState.fromJson({...pending, 'rewardCandidateIds': []}),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => RunState.fromJson({
+        ...pending,
+        'rewardCandidateIds': ['reward_a', 'reward_b'],
+      }),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => RunState.fromJson({
+        ...pending,
+        'rewardCandidateIds': ['reward_a', 'reward_b', 'reward_c', 'reward_d'],
+      }),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => RunState.fromJson({
+        ...pending,
+        'phase': 'reward_selection_completed',
+        'selectedRewardId': 'reward_a',
+      }),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('RunState.initial은 소비된 current draw와 다음 bag을 함께 저장한다', () {
+    final currentDraw = _draw(
+      stageId: 'stage_1',
+      patternId: 'pattern_a',
+      rootSeed: 7,
+    );
+    final state = RunState.initial(
+      runId: 'run_initial',
+      rootSeed: 7,
+      resolverVersion: 'resolver-1',
+      currentDraw: currentDraw,
+      now: DateTime.utc(2026, 8, 6),
+    );
+
+    expect(state.currentPatternId, currentDraw.patternId);
+    expect(state.currentPatternSeed, currentDraw.patternSeed);
+    expect(state.patternDrawHistory, hasLength(1));
+    expect(
+      state.stageShuffleBags[currentDraw.stageId]!.toJson(),
+      currentDraw.nextState.toJson(),
+    );
+  });
+
+  test('current 또는 next가 history·소비 bag과 불일치하면 거부한다', () {
+    final base = _state().toJson();
+    expect(
+      () => RunState.fromJson({...base, 'currentPatternId': 'pattern_other'}),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => RunState.fromJson({
+        ...base,
+        'stageShuffleBags': {
+          'stage_1': {
+            ...(base['stageShuffleBags'] as Map)['stage_1'] as Map,
+            'lastPatternId': 'pattern_other',
+          },
+        },
+      }),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => RunState.fromJson({...base, 'patternDrawHistory': const []}),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => RunState.fromJson({
+        ...base,
+        'nextStageId': 'stage_1',
+        'nextStagePatternId': 'pattern_a',
+        'nextStagePatternSeed': base['currentPatternSeed'],
+      }),
       throwsA(isA<FormatException>()),
     );
   });
@@ -143,20 +221,9 @@ void main() {
 RunState _fullState() {
   return _state(
     phase: RunPhase.rewardSelectionCompleted,
-    nextStageId: 'stage_2',
-    nextStagePatternId: 'pattern_b',
-    nextStagePatternSeed: 12,
-    patternDrawHistory: [
-      PatternDrawRecord(
-        stageId: 'stage_1',
-        patternId: 'pattern_a',
-        patternSeed: 11,
-        cycle: 0,
-        drawIndex: 0,
-      ),
-    ],
+    nextDraw: _draw(stageId: 'stage_2', patternId: 'pattern_b', rootSeed: 7),
     rewardCandidateSeed: 42,
-    rewardCandidateIds: ['reward_a', 'reward_b'],
+    rewardCandidateIds: ['reward_a', 'reward_b', 'reward_c'],
     selectedRewardId: 'reward_b',
     acquiredRewards: ['reward_b'],
     cloneCoreCount: 2,
@@ -179,11 +246,10 @@ RunState _fullState() {
 }
 
 RunState _state({
+  int rootSeed = 7,
   RunPhase phase = RunPhase.playing,
-  String? nextStageId,
-  String? nextStagePatternId,
-  int? nextStagePatternSeed,
-  Iterable<PatternDrawRecord> patternDrawHistory = const [],
+  StagePatternDraw? nextDraw,
+  Iterable<PatternDrawRecord>? patternDrawHistory,
   Map<String, StageShuffleBagState>? stageShuffleBags,
   int? rewardCandidateSeed,
   Iterable<String> rewardCandidateIds = const [],
@@ -197,22 +263,41 @@ RunState _state({
   Map<String, String> replayReferences = const {},
   Iterable<RunShotInput> shotInputLog = const [],
 }) {
+  final currentDraw = _draw(
+    stageId: 'stage_1',
+    patternId: 'pattern_a',
+    rootSeed: rootSeed,
+  );
+  final history =
+      patternDrawHistory?.toList() ??
+      <PatternDrawRecord>[PatternDrawRecord.fromDraw(currentDraw)];
+  if (patternDrawHistory == null) {
+    if (nextDraw != null) {
+      history.add(PatternDrawRecord.fromDraw(nextDraw));
+    }
+  }
+  final bags = <String, StageShuffleBagState>{'stage_1': currentDraw.nextState};
+  if (stageShuffleBags != null) {
+    bags
+      ..clear()
+      ..addAll(stageShuffleBags);
+  } else if (nextDraw != null) {
+    bags[nextDraw.stageId] = nextDraw.nextState;
+  }
   return RunState(
     schemaVersion: currentRunStateSchemaVersion,
     runId: 'run_1',
-    rootSeed: 7,
+    rootSeed: rootSeed,
     resolverVersion: 'resolver-1',
     phase: phase,
     currentStageId: 'stage_1',
-    currentPatternId: 'pattern_a',
-    currentPatternSeed: 11,
-    nextStageId: nextStageId,
-    nextStagePatternId: nextStagePatternId,
-    nextStagePatternSeed: nextStagePatternSeed,
-    patternDrawHistory: patternDrawHistory,
-    stageShuffleBags:
-        stageShuffleBags ??
-        {'stage_1': StageShuffleBagState.initial('stage_1')},
+    currentPatternId: currentDraw.patternId,
+    currentPatternSeed: currentDraw.patternSeed,
+    nextStageId: nextDraw?.stageId,
+    nextStagePatternId: nextDraw?.patternId,
+    nextStagePatternSeed: nextDraw?.patternSeed,
+    patternDrawHistory: history,
+    stageShuffleBags: bags,
     rewardCandidateSeed: rewardCandidateSeed,
     rewardCandidateIds: rewardCandidateIds,
     selectedRewardId: selectedRewardId,
@@ -226,5 +311,31 @@ RunState _state({
     shotInputLog: shotInputLog,
     startedAt: DateTime.utc(2026, 8, 6, 0, 0),
     updatedAt: DateTime.utc(2026, 8, 6, 0, 1),
+  );
+}
+
+StagePatternDraw _draw({
+  required String stageId,
+  required String patternId,
+  required int rootSeed,
+}) {
+  final stage = StageDefinition(
+    stageId: stageId,
+    title: '테스트 스테이지',
+    patterns: [
+      StagePattern(
+        patternId: patternId,
+        weight: 1,
+        parShots: 1,
+        difficultyBand: '테스트',
+        ballSpawn: const Vec2(24, 520),
+        objects: const [],
+      ),
+    ],
+  );
+  return StageShuffleBag.draw(
+    stage: stage,
+    state: StageShuffleBagState.initial(stageId),
+    rootSeed: rootSeed,
   );
 }
