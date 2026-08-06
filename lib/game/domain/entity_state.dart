@@ -15,6 +15,7 @@ enum EntityType {
   gate,
   balloon,
   spikeSource,
+  powerSlider,
 }
 
 class EntityState {
@@ -33,6 +34,9 @@ class EntityState {
     this.hitboxScale = 0.88,
     this.restitution = 0.72,
     this.linkId,
+    this.direction = const Vec2(1, 0),
+    this.referenceSpeed = 0,
+    this.allowedTargets = const {},
   });
 
   final String id;
@@ -50,10 +54,16 @@ class EntityState {
   final double restitution;
   final String? linkId;
 
+  /// 파워 슬라이더의 배치·시각 방향이다. 물리 이동 방향과 분리한다.
+  final Vec2 direction;
+  final double referenceSpeed;
+  final Set<EntityType> allowedTargets;
+
   bool get isCircle =>
       type == EntityType.ball ||
       type == EntityType.hole ||
       type == EntityType.balloon;
+  bool get isPowerSlider => type == EntityType.powerSlider;
   double get radius => math.min(size.x, size.y) / 2;
   double get hitRadius => radius * hitboxScale;
   Bounds get bounds => Bounds(
@@ -79,6 +89,9 @@ class EntityState {
     double? hitboxScale,
     double? restitution,
     String? linkId,
+    Vec2? direction,
+    double? referenceSpeed,
+    Set<EntityType>? allowedTargets,
   }) {
     return EntityState(
       id: id ?? this.id,
@@ -95,6 +108,9 @@ class EntityState {
       hitboxScale: hitboxScale ?? this.hitboxScale,
       restitution: restitution ?? this.restitution,
       linkId: linkId ?? this.linkId,
+      direction: direction ?? this.direction,
+      referenceSpeed: referenceSpeed ?? this.referenceSpeed,
+      allowedTargets: allowedTargets ?? this.allowedTargets,
     );
   }
 }

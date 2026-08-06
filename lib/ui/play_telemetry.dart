@@ -121,12 +121,16 @@ class LocalPlayTelemetry {
     int? shotId,
     String? objectId,
     String? objectType,
+    String? contactId,
     String? attributeBefore,
     String? attributeAfter,
     Vec2? position,
     Vec2? velocity,
     Vec2? collisionNormal,
     double? speed,
+    double? speedBefore,
+    double? speedAfter,
+    double? referenceSpeed,
     double? mass,
     double? impulse,
     bool? isReplay,
@@ -154,6 +158,7 @@ class LocalPlayTelemetry {
     if (shotId != null) event['shot_id'] = shotId;
     if (objectId != null) event['object_id'] = objectId;
     if (objectType != null) event['object_type'] = objectType;
+    if (contactId != null) event['contact_id'] = contactId;
     if (attributeBefore != null) {
       event['attribute_before'] = attributeBefore;
     }
@@ -164,6 +169,9 @@ class LocalPlayTelemetry {
       event['collision_normal'] = collisionNormal.toJson();
     }
     if (speed != null) event['speed'] = speed;
+    if (speedBefore != null) event['speed_before'] = speedBefore;
+    if (speedAfter != null) event['speed_after'] = speedAfter;
+    if (referenceSpeed != null) event['reference_speed'] = referenceSpeed;
     if (mass != null) event['mass'] = mass;
     if (impulse != null) event['impulse'] = impulse;
     if (isReplay != null) event['is_replay'] = isReplay;
@@ -253,12 +261,16 @@ class LocalPlayTelemetry {
       'shot_id',
       'object_id',
       'object_type',
+      'contact_id',
       'attribute_before',
       'attribute_after',
       'position',
       'velocity',
       'collision_normal',
       'speed',
+      'speed_before',
+      'speed_after',
+      'reference_speed',
       'mass',
       'impulse',
       'is_replay',

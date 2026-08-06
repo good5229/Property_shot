@@ -411,6 +411,7 @@ class _DebugMenuState extends State<DebugMenu> {
   String _kindLabel(PhysicsEventKind kind) {
     return switch (kind) {
       PhysicsEventKind.impact => '충돌',
+      PhysicsEventKind.powerSliderActivation => '파워 슬라이더 작동',
       PhysicsEventKind.stateChange => '상태 변경',
       PhysicsEventKind.move => '이동',
       PhysicsEventKind.chainSafetyStop => '연쇄 안전 중단',

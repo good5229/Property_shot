@@ -31,6 +31,8 @@ String entityTypeToSchemaName(EntityType type) {
       return 'balloon';
     case EntityType.spikeSource:
       return 'spike_source';
+    case EntityType.powerSlider:
+      return 'power_slider';
   }
 }
 
@@ -58,6 +60,8 @@ EntityType entityTypeFromSchemaName(String value) {
       return EntityType.balloon;
     case 'spike_source':
       return EntityType.spikeSource;
+    case 'power_slider':
+      return EntityType.powerSlider;
     default:
       throw FormatException('entity type: 알 수 없는 enum 이름 "$value"');
   }
@@ -296,6 +300,9 @@ class PatternObjectDefinition {
     this.hitboxScale = 0.88,
     this.restitution = 0.72,
     this.linkId,
+    this.direction = const Vec2(1, 0),
+    this.referenceSpeed = 0,
+    this.allowedTargets = const {},
   });
 
   final String id;
@@ -312,6 +319,9 @@ class PatternObjectDefinition {
   final double hitboxScale;
   final double restitution;
   final String? linkId;
+  final Vec2 direction;
+  final double referenceSpeed;
+  final Set<EntityType> allowedTargets;
 
   factory PatternObjectDefinition.fromEntityState(EntityState entity) {
     return PatternObjectDefinition(
@@ -329,6 +339,9 @@ class PatternObjectDefinition {
       hitboxScale: entity.hitboxScale,
       restitution: entity.restitution,
       linkId: entity.linkId,
+      direction: entity.direction,
+      referenceSpeed: entity.referenceSpeed,
+      allowedTargets: Set.unmodifiable(entity.allowedTargets),
     );
   }
 
@@ -352,6 +365,13 @@ class PatternObjectDefinition {
       hitboxScale: reader.optionalDouble('hitboxScale', 0.88),
       restitution: reader.optionalDouble('restitution', 0.72),
       linkId: reader.optionalNullableString('linkId'),
+      direction: reader.optionalVec2('direction', const Vec2(1, 0)),
+      referenceSpeed: reader.optionalDouble('referenceSpeed', 0),
+      allowedTargets: Set.unmodifiable(
+        reader
+            .optionalStringSet('allowedTargets')
+            .map(entityTypeFromSchemaName),
+      ),
     );
   }
 
@@ -371,11 +391,14 @@ class PatternObjectDefinition {
       hitboxScale: hitboxScale,
       restitution: restitution,
       linkId: linkId,
+      direction: direction,
+      referenceSpeed: referenceSpeed,
+      allowedTargets: Set.unmodifiable(allowedTargets),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
       'id': id,
       'type': entityTypeToSchemaName(type),
       'position': position.toJson(),
@@ -391,6 +414,12 @@ class PatternObjectDefinition {
       'restitution': restitution,
       'linkId': linkId,
     };
+    if (type == EntityType.powerSlider) {
+      json['direction'] = direction.toJson();
+      json['referenceSpeed'] = referenceSpeed;
+      json['allowedTargets'] = _sortedEntityTypeNames(allowedTargets);
+    }
+    return json;
   }
 }
 
@@ -407,6 +436,29 @@ List<String> _sortedStrings(Iterable<String> values) {
   final result = values.toList()..sort();
   return result;
 }
+
+List<String> _sortedEntityTypeNames(Iterable<EntityType> values) {
+  final selected = values.toSet();
+  return [
+    for (final type in _stableEntityTypeOrder)
+      if (selected.contains(type)) entityTypeToSchemaName(type),
+  ];
+}
+
+const _stableEntityTypeOrder = <EntityType>[
+  EntityType.ball,
+  EntityType.hole,
+  EntityType.wall,
+  EntityType.crate,
+  EntityType.bumper,
+  EntityType.stickySurface,
+  EntityType.weight,
+  EntityType.switchPad,
+  EntityType.gate,
+  EntityType.balloon,
+  EntityType.spikeSource,
+  EntityType.powerSlider,
+];
 
 Map<String, String> _sortedMap(Map<String, String> values) {
   final keys = values.keys.toList()..sort();
@@ -507,6 +559,15 @@ class _JsonReader {
 
   Vec2 requiredVec2(String key) {
     final map = _mapValue(_required(key), '$path.$key');
+    final reader = _JsonReader(map, '$path.$key');
+    return Vec2(reader.requiredDouble('x'), reader.requiredDouble('y'));
+  }
+
+  Vec2 optionalVec2(String key, Vec2 fallback) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return fallback;
+    }
+    final map = _mapValue(json[key], '$path.$key');
     final reader = _JsonReader(map, '$path.$key');
     return Vec2(reader.requiredDouble('x'), reader.requiredDouble('y'));
   }

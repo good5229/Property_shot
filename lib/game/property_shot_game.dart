@@ -309,6 +309,7 @@ class PropertyShotGame extends FlameGame {
       _drawAnimatedBall(canvas);
       _drawImpactFeedback(canvas);
       _drawDirectImpactFeedback(canvas);
+      _drawPowerSliderFeedback(canvas);
     }
     if (debugHitboxes || debugNormals || debugIds || debugStats) {
       _drawDebugOverlay(canvas, renderEntities);
@@ -593,6 +594,7 @@ class PropertyShotGame extends FlameGame {
         EntityType.ball => const Color(0xFFFFF7D1),
         EntityType.balloon => const Color(0xFFFF9A87),
         EntityType.spikeSource => const Color(0xFFFFE49B),
+        EntityType.powerSlider => const Color(0xFF4E8FD6),
       };
       final ring = Paint()
         ..color = accent.withValues(alpha: 0.82 * (1 - progress))
@@ -1215,7 +1217,9 @@ class PropertyShotGame extends FlameGame {
       } else {
         _drawContactShadow(canvas, entity, rect);
         _drawDepthFaces(canvas, entity, topPoints);
-        if (entity.type == EntityType.bumper) {
+        if (entity.type == EntityType.powerSlider) {
+          _drawPowerSlider(canvas, entity, stroke);
+        } else if (entity.type == EntityType.bumper) {
           _drawJellyBody(canvas, entity, litPaint, stroke);
         } else if (entity.type == EntityType.stickySurface) {
           _drawStickySurface(canvas, entity, topPath, litPaint, stroke);
@@ -1238,6 +1242,77 @@ class PropertyShotGame extends FlameGame {
     }
 
     _drawEntityIcon(canvas, entity);
+  }
+
+  void _drawPowerSlider(Canvas canvas, EntityState entity, Paint stroke) {
+    final center = _project(entity.position);
+    final visualDirection = entity.direction.length <= 0.0001
+        ? const Vec2(1, 0)
+        : entity.direction.normalized();
+    final angle = math.atan2(visualDirection.y, visualDirection.x);
+    final rect = _projectedRect(entity);
+    final base = RRect.fromRectAndRadius(rect, const Radius.circular(10));
+    canvas.drawRRect(base, Paint()..color = const Color(0xFF28527A));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(8)),
+      Paint()..color = const Color(0xFF6EA8E0),
+    );
+    canvas.drawRRect(base, stroke);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angle);
+    final arrowPaint = Paint()
+      ..color = const Color(0xFFEAF6FF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final arrow = Path()
+      ..moveTo(-rect.width * 0.25, 0)
+      ..lineTo(rect.width * 0.18, 0)
+      ..moveTo(rect.width * 0.03, -rect.height * 0.2)
+      ..lineTo(rect.width * 0.22, 0)
+      ..lineTo(rect.width * 0.03, rect.height * 0.2);
+    canvas.drawPath(arrow, arrowPaint);
+    canvas.restore();
+  }
+
+  void _drawPowerSliderFeedback(Canvas canvas) {
+    for (final event in _animationPhysicsEvents) {
+      if (event.kind != PhysicsEventKind.powerSliderActivation ||
+          event.powerSlider == null ||
+          event.pathIndex > _animationCursor) {
+        continue;
+      }
+      final activation = event.powerSlider!;
+      final elapsed = _animationCursor - event.pathIndex;
+      final progress = reducedMotion ? 0.45 : (elapsed / 14).clamp(0.0, 1.0);
+      final center = _project(activation.position);
+      final paint = Paint()
+        ..color = const Color(
+          0xFFBDE2FF,
+        ).withValues(alpha: 0.72 * (1 - progress))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = reducedMotion ? 3 : 2.4;
+      canvas.drawCircle(center, 12 + progress * 18, paint);
+      if (reducedMotion) continue;
+      final direction = activation.direction.length <= 0.0001
+          ? const Vec2(1, 0)
+          : activation.direction.normalized();
+      final tangent = Offset(-direction.y, direction.x);
+      final forward = Offset(direction.x, direction.y);
+      final flash = Paint()
+        ..color = const Color(
+          0xFFF4FBFF,
+        ).withValues(alpha: 0.8 * (1 - progress))
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        center + tangent * (8 + progress * 8) - forward * progress * 6,
+        center - tangent * (8 + progress * 8) - forward * progress * 6,
+        flash,
+      );
+    }
   }
 
   void _drawEntityWithCache(
@@ -1301,6 +1376,9 @@ class PropertyShotGame extends FlameGame {
       entity.open,
       entity.pressed,
       entity.visualState,
+      entity.direction.x,
+      entity.direction.y,
+      // 기준 속력은 물리 데이터이며 정적 그림에는 영향을 주지 않는다.
     ].join('|');
   }
 
@@ -2487,6 +2565,8 @@ class PropertyShotGame extends FlameGame {
         );
       case EntityType.spikeSource:
         return;
+      case EntityType.powerSlider:
+        return;
       case EntityType.crate:
         if (_objectImages.containsKey(EntityType.crate)) {
           return;
@@ -2715,6 +2795,8 @@ class PropertyShotGame extends FlameGame {
         return const Color(0xFFF28A78);
       case EntityType.spikeSource:
         return const Color(0xFFF08B78);
+      case EntityType.powerSlider:
+        return const Color(0xFF4E8FD6);
     }
   }
 

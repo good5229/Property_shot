@@ -8,6 +8,10 @@ import 'stage_pattern_runtime_probe.dart';
 
 const _activeBallHitRadius = 12 * 0.88;
 
+/// 기본 발사 속력(약 24)과 연쇄 이동 단위(약 4)를 고려해 반복 안전성을
+/// 보수적으로 확보하는 파워 슬라이더 기준 속력 상한이다.
+const maxPowerSliderReferenceSpeed = 48.0;
+
 /// 패턴 검증 결과의 안정적인 심각도다.
 enum ValidationSeverity { error, warning }
 
@@ -39,6 +43,12 @@ enum ValidationIssueCode {
   holeIsSolid,
   holeIsMovable,
   wallIsMovable,
+  invalidSliderDirection,
+  invalidSliderReferenceSpeed,
+  invalidSliderTargets,
+  sliderMustBeStatic,
+  sliderMustBeNonSolid,
+  sliderOverlapsSolid,
   ballSpawnOverlapsHole,
   existingBallOverlapsHole,
   ballSpawnInsideSolid,
@@ -117,6 +127,18 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'hole_is_movable';
       case ValidationIssueCode.wallIsMovable:
         return 'wall_is_movable';
+      case ValidationIssueCode.invalidSliderDirection:
+        return 'invalid_slider_direction';
+      case ValidationIssueCode.invalidSliderReferenceSpeed:
+        return 'invalid_slider_reference_speed';
+      case ValidationIssueCode.invalidSliderTargets:
+        return 'invalid_slider_targets';
+      case ValidationIssueCode.sliderMustBeStatic:
+        return 'slider_must_be_static';
+      case ValidationIssueCode.sliderMustBeNonSolid:
+        return 'slider_must_be_non_solid';
+      case ValidationIssueCode.sliderOverlapsSolid:
+        return 'slider_overlaps_solid';
       case ValidationIssueCode.ballSpawnOverlapsHole:
         return 'ball_spawn_overlaps_hole';
       case ValidationIssueCode.existingBallOverlapsHole:
@@ -618,6 +640,64 @@ class StagePatternValidator {
         ),
       );
     }
+    if (object.type == EntityType.powerSlider) {
+      if (!_isFiniteVec(object.direction) ||
+          object.direction.length <= 0.0001) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.invalidSliderDirection,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+      if (!object.referenceSpeed.isFinite ||
+          object.referenceSpeed <= 0 ||
+          object.referenceSpeed > maxPowerSliderReferenceSpeed) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.invalidSliderReferenceSpeed,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+      if (object.allowedTargets.isEmpty ||
+          object.allowedTargets.any(
+            (type) => !_validPowerSliderTargetTypes.contains(type),
+          )) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.invalidSliderTargets,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+      if (!object.active || object.movable) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.sliderMustBeStatic,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+      if (object.solid) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.sliderMustBeNonSolid,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+    }
 
     final shape = _shapeFor(object);
     if (shape != null &&
@@ -765,6 +845,31 @@ class StagePatternValidator {
       }
     }
 
+    final sliders = pattern.objects.where(
+      (object) => object.type == EntityType.powerSlider && object.active,
+    );
+    for (final slider in sliders) {
+      final sliderShape = _shapeFor(slider);
+      if (sliderShape == null) continue;
+      for (final object in pattern.objects) {
+        if (object.id == slider.id ||
+            !object.active ||
+            object.type == EntityType.powerSlider) {
+          continue;
+        }
+        final shape = _shapeFor(object);
+        if (shape == null || !_overlaps(sliderShape, shape)) continue;
+        _addIssueForObjectPair(
+          stage,
+          pattern,
+          issues,
+          ValidationIssueCode.sliderOverlapsSolid,
+          slider,
+          object,
+        );
+      }
+    }
+
     PatternObjectDefinition? hole;
     for (final object in pattern.objects) {
       if (object.type == EntityType.hole) {
@@ -798,6 +903,21 @@ class StagePatternValidator {
         }
       }
     }
+  }
+
+  void _addIssueForObjectPair(
+    StageDefinition stage,
+    StagePattern pattern,
+    List<ValidationIssue> issues,
+    ValidationIssueCode code,
+    PatternObjectDefinition first,
+    PatternObjectDefinition second,
+  ) {
+    final ids = [first.id, second.id].where((id) => id.isNotEmpty).toList()
+      ..sort();
+    issues.add(
+      _issue(code, stage.stageId, patternId: pattern.patternId, objectIds: ids),
+    );
   }
 
   void _validateLinks(
@@ -1111,6 +1231,18 @@ String _defaultMessage(ValidationIssueCode code) {
       return '홀은 움직일 수 없습니다.';
     case ValidationIssueCode.wallIsMovable:
       return '벽은 움직일 수 없습니다.';
+    case ValidationIssueCode.invalidSliderDirection:
+      return '파워 슬라이더 방향은 유한하고 0이 아닌 벡터여야 합니다.';
+    case ValidationIssueCode.invalidSliderReferenceSpeed:
+      return '파워 슬라이더 기준 속력은 0보다 크고 ${maxPowerSliderReferenceSpeed.toStringAsFixed(0)} 이하여야 합니다.';
+    case ValidationIssueCode.invalidSliderTargets:
+      return '파워 슬라이더 대상에는 허용된 이동 기물만 안정적인 순서로 지정해야 합니다.';
+    case ValidationIssueCode.sliderMustBeStatic:
+      return '파워 슬라이더는 활성 정적 영역이어야 합니다.';
+    case ValidationIssueCode.sliderMustBeNonSolid:
+      return '파워 슬라이더는 비고체 영역이어야 합니다.';
+    case ValidationIssueCode.sliderOverlapsSolid:
+      return '파워 슬라이더 영역은 초기 고체 기물과 겹칠 수 없습니다.';
     case ValidationIssueCode.ballSpawnOverlapsHole:
       return '공 시작점이 홀에 걸쳐 자동 클리어됩니다.';
     case ValidationIssueCode.existingBallOverlapsHole:
@@ -1167,6 +1299,9 @@ bool _sameObjectIds(List<String> first, List<String> second) {
 }
 
 bool _isSolidForValidation(PatternObjectDefinition object) {
+  if (object.type == EntityType.powerSlider) {
+    return false;
+  }
   if (object.type == EntityType.wall) {
     return true;
   }
@@ -1175,6 +1310,16 @@ bool _isSolidForValidation(PatternObjectDefinition object) {
   }
   return object.solid;
 }
+
+const _validPowerSliderTargetTypes = <EntityType>{
+  EntityType.ball,
+  EntityType.crate,
+  EntityType.bumper,
+  EntityType.stickySurface,
+  EntityType.weight,
+  EntityType.balloon,
+  EntityType.spikeSource,
+};
 
 bool _isInsideActiveBallCaptureRadius(
   Vec2 ballSpawn,

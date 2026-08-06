@@ -15,6 +15,12 @@ String debugEntityLabel(String id) {
   if (id == 'gate' || id == 'balloon_gate') return '문';
   if (id == 'balloon') return '풍선';
   if (id == 'spike_source') return '뾰족함 원본';
+  if (id == 'power_slider' ||
+      id.startsWith('power_slider_') ||
+      id == 'slider' ||
+      id.startsWith('slider_')) {
+    return '파워 슬라이더';
+  }
   return '물체';
 }
 
@@ -31,6 +37,7 @@ String debugEntityTypeLabel(String type) {
     'gate' => '문',
     'balloon' => '풍선',
     'spikeSource' => '뾰족함 원본',
+    'powerSlider' => '파워 슬라이더',
     _ => '물체',
   };
 }
@@ -55,6 +62,7 @@ String debugPhysicsEventLabel(String kind) {
     'capture' => '홀 포획',
     'stateChange' => '상태 변경',
     'traitTransfer' => '속성 이전',
+    'powerSliderActivation' => '파워 슬라이더 작동',
     _ => '물리 사건',
   };
 }

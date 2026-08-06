@@ -703,6 +703,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _debugPhysicsEvents.removeAt(0);
       }
     }
+    if (mounted &&
+        _isAnimatingShot &&
+        event.kind == PhysicsEventKind.powerSliderActivation &&
+        event.powerSlider != null) {
+      final activation = event.powerSlider!;
+      _feedback.powerSliderActivated();
+      _telemetry.record(
+        '파워 슬라이더 작동',
+        stage: _state.levelIndex,
+        target: activation.sliderEntityId,
+        result: '진행 방향 유지',
+        eventCode: 'power_slider_activated',
+        shotId: _state.shotCount + 1,
+        objectId: activation.sourceEntityId,
+        objectType: EntityType.powerSlider.name,
+        contactId: activation.contactId,
+        position: activation.position,
+        velocity: activation.velocityAfter,
+        speed: activation.speedAfter,
+        speedBefore: activation.speedBefore,
+        speedAfter: activation.speedAfter,
+        referenceSpeed: activation.referenceSpeed,
+      );
+    }
     if (!mounted ||
         !_isAnimatingShot ||
         event.kind != PhysicsEventKind.chainSafetyStop) {
@@ -1070,6 +1094,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       EntityType.gate => entity.open ? '열림' : '닫힘',
       EntityType.balloon => entity.visualState == 'popped' ? '터짐' : '풍선',
       EntityType.spikeSource => '뾰족함 공급 물체',
+      EntityType.powerSlider => '기준 속력 · 진행 방향 유지 · 접촉 중 한 번',
       EntityType.wall => '움직이지 않는 장애물',
       _ =>
         entity.traits.isEmpty
@@ -2634,6 +2659,13 @@ String _levelObjective(int levelIndex) {
   };
 }
 
+String _objectiveForState(GameState state) {
+  if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
+    return '파워 슬라이더로 공의 속력을 높여 여러 경로로 홀에 도전해 보세요.';
+  }
+  return _levelObjective(state.levelIndex);
+}
+
 String _compactLevelObjective(int levelIndex) {
   return switch (levelIndex) {
     0 => '무거움으로 상자를 밀어 홀로 보내기',
@@ -2641,6 +2673,13 @@ String _compactLevelObjective(int levelIndex) {
     2 => '스위치와 문을 열어 홀로 가기',
     _ => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
   };
+}
+
+String _compactObjectiveForState(GameState state) {
+  if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
+    return '파워 슬라이더 · 속력 높이기';
+  }
+  return _compactLevelObjective(state.levelIndex);
 }
 
 int _starsForShot(int shotCount, int parShots) {
@@ -2934,7 +2973,7 @@ class _Hud extends StatelessWidget {
                 ),
               ),
             Text(
-              _compactLevelObjective(state.levelIndex),
+              _compactObjectiveForState(state),
               key: const Key('compact_objective'),
               maxLines: state.levelIndex == 3 ? 2 : 1,
               softWrap: true,
@@ -3031,7 +3070,7 @@ class _Hud extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              _levelObjective(state.levelIndex),
+              _objectiveForState(state),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
                 fontWeight: FontWeight.w600,
@@ -3777,6 +3816,25 @@ class _EntityIconPainter extends CustomPainter {
               ..strokeWidth = 2.5,
           );
         }
+      case EntityType.powerSlider:
+        final visualDirection =
+            entity.direction.x.isFinite &&
+                entity.direction.y.isFinite &&
+                entity.direction.length > 0.0001
+            ? entity.direction.normalized()
+            : const Vec2(1, 0);
+        canvas.save();
+        canvas.translate(center.dx, center.dy);
+        canvas.rotate(math.atan2(visualDirection.y, visualDirection.x));
+        final slider = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset.zero, width: 28, height: 18),
+          const Radius.circular(6),
+        );
+        canvas.drawRRect(slider, Paint()..color = const Color(0xFF6EA8E0));
+        canvas.drawLine(const Offset(-8, 0), const Offset(8, 0), outline);
+        canvas.drawLine(const Offset(3, -4), const Offset(8, 0), outline);
+        canvas.drawLine(const Offset(3, 4), const Offset(8, 0), outline);
+        canvas.restore();
       case EntityType.ball:
       case EntityType.crate:
       case EntityType.weight:
@@ -3788,7 +3846,8 @@ class _EntityIconPainter extends CustomPainter {
   bool shouldRepaint(covariant _EntityIconPainter oldDelegate) =>
       oldDelegate.entity.type != entity.type ||
       oldDelegate.entity.open != entity.open ||
-      oldDelegate.entity.pressed != entity.pressed;
+      oldDelegate.entity.pressed != entity.pressed ||
+      oldDelegate.entity.direction != entity.direction;
 }
 
 String? _assetPath(EntityState entity) {
@@ -3824,6 +3883,8 @@ String _entityName(EntityState entity) {
       return '풍선';
     case EntityType.spikeSource:
       return '가시 성게';
+    case EntityType.powerSlider:
+      return '파워 슬라이더';
   }
 }
 
@@ -3851,6 +3912,8 @@ String _entityDescription(EntityState entity) {
       return '일반 공에는 밀리고 뾰족한 공에는 터지는 풍선입니다.';
     case EntityType.spikeSource:
       return '공에 옮기면 풍선을 터뜨릴 수 있는 뾰족함을 줍니다.';
+    case EntityType.powerSlider:
+      return '기물을 기준 속력까지 올립니다. 진행 방향은 유지되고 같은 접촉에는 한 번만 적용됩니다.';
   }
 }
 

@@ -152,6 +152,7 @@ class GameFeedback {
             ? HapticFeedback.heavyImpact
             : HapticFeedback.mediumImpact,
       EntityType.spikeSource => HapticFeedback.lightImpact,
+      EntityType.powerSlider => HapticFeedback.lightImpact,
     };
     _emit(
       'collision_${type.name}',
@@ -176,6 +177,16 @@ class GameFeedback {
           type == EntityType.gate ||
           type == EntityType.weight ||
           type == EntityType.hole,
+    );
+  }
+
+  void powerSliderActivated() {
+    _emit(
+      'power_slider_activated',
+      minimumInterval: const Duration(milliseconds: 70),
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.bouncyCollision,
+      alert: true,
     );
   }
 

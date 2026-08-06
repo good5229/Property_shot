@@ -14,6 +14,7 @@
 | `balloon-switch-canvas` | Canvas 스위치 렌더러 | 4단계 풍선 뒤 스위치 | 숨김→노출→눌림 | 바닥 중심 `(0.5, 0.86)` | 노출 전 비고체, 노출 후 `EntityType.switchPad` | 승인: 자체 코드 | 코드·Golden 검토 필요, 2026-08-03 |
 | `spike-canvas` | Canvas 가시 렌더러 | 4단계 속성 source | 기본→선택→소모 | 중심 `(0.5, 0.7)` | `EntityType.spikeSource` 외곽 | 승인: 자체 코드 | 코드·Golden 검토 필요, 2026-08-03 |
 | `hole-flag-canvas` | Canvas 홀·깃발 | 모든 단계 목표 | 기본→접근→포획→성공 | 홀 중심, 깃발은 시각 앵커 | 홀 원형 포획 영역 | 승인: 자체 코드 | 코드·Golden 검토 필요, 2026-08-03 |
+| `power-slider-canvas` | `lib/game/property_shot_game.dart` Canvas 발판 | PS-OBJ-01 파워 슬라이더 게임 화면·정보 팝업 | 비활성 대기→이벤트 도달 후 링/화살표 피드백 | 영역 중심, `direction`은 시각 방향만 사용 | 직사각형 swept 트리거 영역 | 승인: 자체 코드 | 외부 에셋 없음, 기능 참고만, 2026-08-06 |
 
 ## 상태·피벗 검증 규칙
 

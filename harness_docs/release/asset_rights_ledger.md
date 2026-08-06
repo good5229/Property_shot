@@ -31,6 +31,7 @@
 - `assets/generated/jelly-bumper-v1.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 젤리 범퍼 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 원본과 변환 이력, 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
 - 생성 자산과 NanumGothic 글꼴의 현재 SHA-256은 `assets/licenses/asset_hashes.txt`에 함께 고정한다. 자산 교체 시 생성 원본·변환 이력·최종 번들 목록과 해시를 같은 작업에서 갱신한다.
 - 공 얼굴·광택·속성 색상은 `lib/ui/game_ball_painter.dart`의 `GameBallIconPainter`로 그리며, 홈·게임·팝업·Golden에서 동일한 표현을 공유한다. `assets/icons/ball.png`는 CC0 레거시 파일로 번들 폴더에 남아 있지만 제품 화면에는 사용하지 않는다.
+- `power-slider-canvas`: `lib/game/property_shot_game.dart`에서 직접 그린 독자적인 Canvas 발판·화살표·작동 링이다. 외부 이미지·폰트·패키지 에셋을 사용하지 않으므로 외부 라이선스가 없고, 기존 퍼즐 게임의 영역 발동 기능은 기능 참고만 했다. 생성 프롬프트나 제3자 원본은 없다. `test/goldens/power_slider_*.png`에서 390x844·768x1024의 기본·작동·팝업·저모션 결과를 기록한다.
 
 ## 출품 전 확인 항목
 

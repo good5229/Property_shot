@@ -15,6 +15,7 @@ class ShotResult {
     required this.events,
     this.moves = const [],
     this.impacts = const [],
+    this.powerSliderActivations = const [],
     this.physicsEvents = const [],
     this.chainSafetyDiagnostics = const [],
   });
@@ -24,11 +25,52 @@ class ShotResult {
   final List<String> events;
   final List<ShotAnimationMove> moves;
   final List<ShotImpact> impacts;
+  final List<PowerSliderActivation> powerSliderActivations;
   final List<PhysicsEvent> physicsEvents;
   final List<ChainSafetyDiagnostic> chainSafetyDiagnostics;
 }
 
-enum PhysicsEventKind { impact, stateChange, move, chainSafetyStop }
+enum PhysicsEventKind {
+  impact,
+  powerSliderActivation,
+  stateChange,
+  move,
+  chainSafetyStop,
+}
+
+class PowerSliderActivation {
+  const PowerSliderActivation({
+    required this.sourceEntityId,
+    required this.sliderEntityId,
+    required this.contactId,
+    required this.position,
+    required this.pathIndex,
+    required this.direction,
+    required this.motionDirection,
+    required this.velocityBefore,
+    required this.velocityAfter,
+    required this.speedBefore,
+    required this.speedAfter,
+    required this.referenceSpeed,
+  });
+
+  final String sourceEntityId;
+  final String sliderEntityId;
+  final String contactId;
+  final Vec2 position;
+  final int pathIndex;
+
+  /// 슬라이더의 배치·시각 방향이다. 이동체의 방향이 아니다.
+  final Vec2 direction;
+
+  /// 슬라이더 작동 전후의 실제 이동 방향과 속도다.
+  final Vec2 motionDirection;
+  final Vec2 velocityBefore;
+  final Vec2 velocityAfter;
+  final double speedBefore;
+  final double speedAfter;
+  final double referenceSpeed;
+}
 
 /// 판정 중 실제로 적용된 엔티티 상태 변화를 기록한다.
 /// 문자열 이벤트나 애니메이션 경로를 다시 해석하지 않고도
@@ -92,6 +134,8 @@ class PhysicsEvent {
     this.iterations,
     this.impact,
     this.move,
+    this.contactId,
+    this.powerSlider,
   });
 
   final String eventId;
@@ -111,6 +155,8 @@ class PhysicsEvent {
   final int? iterations;
   final ShotImpact? impact;
   final ShotAnimationMove? move;
+  final String? contactId;
+  final PowerSliderActivation? powerSlider;
 }
 
 class ShotImpact {
@@ -167,6 +213,7 @@ List<PhysicsEvent> buildPhysicsEvents({
   required List<ShotAnimationMove> moves,
   required List<ChainSafetyDiagnostic> chainSafetyDiagnostics,
   List<PhysicsStateTransition> stateTransitions = const [],
+  List<PowerSliderActivation> powerSliderActivations = const [],
 }) {
   final events = <PhysicsEvent>[];
   final impactEventsByTarget = <String, PhysicsEvent>{};
@@ -192,6 +239,43 @@ List<PhysicsEvent> buildPhysicsEvents({
     );
     events.add(event);
     impactEventsByTarget[impact.entityId] = event;
+  }
+
+  for (var index = 0; index < powerSliderActivations.length; index++) {
+    final activation = powerSliderActivations[index];
+    final parent = events
+        .where(
+          (event) =>
+              event.pathIndex <= activation.pathIndex &&
+              (event.targetEntityId == activation.sourceEntityId ||
+                  event.targetEntityId == activation.sliderEntityId),
+        )
+        .fold<PhysicsEvent?>(
+          null,
+          (latest, event) =>
+              latest == null || event.pathIndex > latest.pathIndex
+              ? event
+              : latest,
+        );
+    events.add(
+      PhysicsEvent(
+        eventId:
+            'slider:${activation.contactId}:${activation.pathIndex}:$index',
+        parentEventId: parent?.eventId,
+        kind: PhysicsEventKind.powerSliderActivation,
+        pathIndex: activation.pathIndex,
+        sourceEntityId: activation.sourceEntityId,
+        targetEntityId: activation.sliderEntityId,
+        targetType: EntityType.powerSlider,
+        position: activation.position,
+        // 슬라이더 방향은 배치·시각 전용이다. 물리 법선으로 노출하지 않는다.
+        normal: Vec2.zero,
+        impulse: activation.speedAfter - activation.speedBefore,
+        resultingVelocity: activation.velocityAfter,
+        contactId: activation.contactId,
+        powerSlider: activation,
+      ),
+    );
   }
 
   for (var index = 0; index < stateTransitions.length; index++) {
@@ -347,6 +431,41 @@ class _MovingEntityCollision {
   final Vec2 position;
 }
 
+const _physicsEpsilon = 0.0001;
+
+class _PowerSliderEntry {
+  const _PowerSliderEntry({
+    required this.slider,
+    required this.position,
+    required this.progress,
+    required this.contactId,
+  });
+
+  final EntityState slider;
+  final Vec2 position;
+  final double progress;
+  final String contactId;
+}
+
+class _SliderEntryPoint {
+  const _SliderEntryPoint({required this.position, required this.progress});
+
+  final Vec2 position;
+  final double progress;
+}
+
+/// 한 resolve와 그 안에서 재귀로 발생한 전체 연쇄가 공유하는 접촉 원장이다.
+/// 경계에 계속 걸린 동안은 재발동하지 않고 완전히 빠져나온 뒤 재진입만 허용한다.
+class _SliderContactLedger {
+  final Set<String> _inside = <String>{};
+
+  bool isInside(String contactId) => _inside.contains(contactId);
+
+  void markEntered(String contactId) => _inside.add(contactId);
+
+  void markExited(String contactId) => _inside.remove(contactId);
+}
+
 class ShotResolver {
   const ShotResolver();
 
@@ -369,6 +488,8 @@ class ShotResolver {
     final events = <String>[];
     final moves = <ShotAnimationMove>[];
     final impacts = <ShotImpact>[];
+    final powerSliderActivations = <PowerSliderActivation>[];
+    final sliderContacts = _SliderContactLedger();
     final stateTransitions = <PhysicsStateTransition>[];
     final chainSafetyDiagnostics = <ChainSafetyDiagnostic>[];
     var success = false;
@@ -413,17 +534,80 @@ class ShotResolver {
               position,
               collisionSample.position,
             );
+      final sliderEntries = _firstPowerSliderEntriesAlongSegment(
+        entities,
+        ball,
+        previousPosition,
+        position,
+        sliderContacts,
+      );
+      final sliderProgress = sliderEntries.isEmpty
+          ? double.infinity
+          : sliderEntries.first.progress;
       if (collisionProgress.isFinite) {
         consumedDistance = attemptedSpeed * collisionProgress;
       }
-      if (holeProgress.isFinite && holeProgress <= collisionProgress + 0.001) {
+      if (holeProgress.isFinite &&
+          holeProgress <= collisionProgress + _physicsEpsilon &&
+          holeProgress <= sliderProgress + _physicsEpsilon) {
         consumedDistance = attemptedSpeed * holeProgress;
+      }
+      if (sliderProgress.isFinite &&
+          sliderProgress < collisionProgress - _physicsEpsilon &&
+          sliderProgress < holeProgress - _physicsEpsilon) {
+        final entryPosition = sliderEntries.first.position;
+        position = entryPosition;
+        path[path.length - 1] = position;
+        final speedBefore = speed;
+        final motionDirection = direction.normalized();
+        final referenceSpeed = sliderEntries.fold<double>(
+          0,
+          (maximum, entry) => math.max(maximum, entry.slider.referenceSpeed),
+        );
+        final speedAfter = math.max(speedBefore, referenceSpeed);
+        speed = speedAfter;
+        _consumeSliderSegment(
+          entities,
+          ball,
+          previousPosition,
+          entryPosition,
+          sliderContacts,
+          entered: sliderEntries,
+        );
+        for (final entry in sliderEntries) {
+          final activation = PowerSliderActivation(
+            sourceEntityId: ball.id,
+            sliderEntityId: entry.slider.id,
+            contactId: entry.contactId,
+            position: entry.position,
+            pathIndex: path.length - 1,
+            direction: entry.slider.direction,
+            motionDirection: motionDirection,
+            velocityBefore: motionDirection * speedBefore,
+            velocityAfter: motionDirection * speedAfter,
+            speedBefore: speedBefore,
+            speedAfter: speedAfter,
+            referenceSpeed: entry.slider.referenceSpeed,
+          );
+          powerSliderActivations.add(activation);
+          events.add('power_slider_activated');
+        }
+        consumedDistance = attemptedSpeed * sliderProgress;
+        continue;
       }
       if (hole != null &&
           holeProgress.isFinite &&
           _segmentDistance(previousPosition, position, hole.position) <=
               holeCaptureRadius &&
-          holeProgress <= collisionProgress + 0.001) {
+          holeProgress <= collisionProgress + _physicsEpsilon &&
+          holeProgress <= sliderProgress + _physicsEpsilon) {
+        _consumeSliderSegment(
+          entities,
+          ball,
+          previousPosition,
+          hole.position,
+          sliderContacts,
+        );
         position = hole.position;
         path[path.length - 1] = position;
         impacts.add(
@@ -458,8 +642,22 @@ class ShotResolver {
         break;
       }
       if (collisionSample == null) {
+        _consumeSliderSegment(
+          entities,
+          ball,
+          previousPosition,
+          position,
+          sliderContacts,
+        );
         continue;
       }
+      _consumeSliderSegment(
+        entities,
+        ball,
+        previousPosition,
+        collisionSample.position,
+        sliderContacts,
+      );
       position = collisionSample.position;
       path[path.length - 1] = position;
       final collision = collisionSample.hit;
@@ -779,6 +977,8 @@ class ShotResolver {
             impacts,
             chainSafetyDiagnostics,
             stateTransitions,
+            sliderContacts,
+            powerSliderActivations,
           );
           final pushedCrate =
               entities
@@ -881,6 +1081,8 @@ class ShotResolver {
           impacts,
           chainSafetyDiagnostics,
           stateTransitions,
+          sliderContacts,
+          powerSliderActivations,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -965,6 +1167,8 @@ class ShotResolver {
           impacts,
           chainSafetyDiagnostics,
           stateTransitions,
+          sliderContacts,
+          powerSliderActivations,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -1122,8 +1326,10 @@ class ShotResolver {
         moves: moves,
         chainSafetyDiagnostics: chainSafetyDiagnostics,
         stateTransitions: stateTransitions,
+        powerSliderActivations: powerSliderActivations,
       ),
       chainSafetyDiagnostics: chainSafetyDiagnostics,
+      powerSliderActivations: powerSliderActivations,
     );
   }
 
@@ -1389,6 +1595,198 @@ class ShotResolver {
     return null;
   }
 
+  List<_PowerSliderEntry> _firstPowerSliderEntriesAlongSegment(
+    List<EntityState> entities,
+    EntityState mover,
+    Vec2 from,
+    Vec2 to,
+    _SliderContactLedger ledger,
+  ) {
+    if (!mover.movable) return const [];
+    final entries = <_PowerSliderEntry>[];
+    for (final slider in entities) {
+      if (slider.type != EntityType.powerSlider ||
+          !slider.active ||
+          !slider.allowedTargets.contains(mover.type)) {
+        continue;
+      }
+      final contactId = '${mover.id}:${slider.id}';
+      if (ledger.isInside(contactId)) {
+        final exit = _firstPowerSliderExit(slider, mover, from, to);
+        if (exit == null) {
+          continue;
+        }
+        final reentry = _firstPowerSliderEntry(
+          slider,
+          mover,
+          exit.position,
+          to,
+        );
+        if (reentry == null) continue;
+        final progress = exit.progress + reentry.progress * (1 - exit.progress);
+        entries.add(
+          _PowerSliderEntry(
+            slider: slider,
+            position: _lerp(from, to, progress),
+            progress: progress,
+            contactId: contactId,
+          ),
+        );
+        continue;
+      }
+      final entry = _firstPowerSliderEntry(slider, mover, from, to);
+      if (entry == null) continue;
+      entries.add(
+        _PowerSliderEntry(
+          slider: slider,
+          position: entry.position,
+          progress: entry.progress,
+          contactId: contactId,
+        ),
+      );
+    }
+    entries.sort((left, right) {
+      final byProgress = left.progress.compareTo(right.progress);
+      if (byProgress != 0) return byProgress;
+      return left.slider.id.compareTo(right.slider.id);
+    });
+    if (entries.isEmpty) return const [];
+    final firstProgress = entries.first.progress;
+    return entries
+        .where(
+          (entry) => (entry.progress - firstProgress).abs() <= _physicsEpsilon,
+        )
+        .toList(growable: false);
+  }
+
+  /// 원장 변경은 실제로 소비한 선분에서만 수행한다.
+  void _consumeSliderSegment(
+    List<EntityState> entities,
+    EntityState mover,
+    Vec2 from,
+    Vec2 to,
+    _SliderContactLedger ledger, {
+    List<_PowerSliderEntry> entered = const [],
+  }) {
+    for (final slider in entities) {
+      if (slider.type != EntityType.powerSlider ||
+          !slider.active ||
+          !slider.allowedTargets.contains(mover.type)) {
+        continue;
+      }
+      final contactId = '${mover.id}:${slider.id}';
+      if (ledger.isInside(contactId) &&
+          _segmentHasFullExit(mover, slider, from, to)) {
+        ledger.markExited(contactId);
+      }
+    }
+    for (final entry in entered) {
+      ledger.markEntered(entry.contactId);
+    }
+  }
+
+  bool _segmentHasFullExit(
+    EntityState mover,
+    EntityState slider,
+    Vec2 from,
+    Vec2 to,
+  ) {
+    if (!_collidesAt(mover, slider, from)) return true;
+    final distance = from.distanceTo(to);
+    final steps = math.max(1, (distance / 1.25).ceil());
+    for (var step = 1; step <= steps; step++) {
+      if (!_collidesAt(mover, slider, _lerp(from, to, step / steps))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _SliderEntryPoint? _firstPowerSliderExit(
+    EntityState slider,
+    EntityState mover,
+    Vec2 from,
+    Vec2 to,
+  ) {
+    if (!_collidesAt(mover, slider, from)) {
+      return const _SliderEntryPoint(position: Vec2.zero, progress: 0);
+    }
+    final distance = from.distanceTo(to);
+    final steps = math.max(1, (distance / 1.25).ceil());
+    var previous = from;
+    for (var step = 1; step <= steps; step++) {
+      final progress = step / steps;
+      final position = _lerp(from, to, progress);
+      if (_collidesAt(mover, slider, position)) {
+        previous = position;
+        continue;
+      }
+      var low = previous;
+      var high = position;
+      for (var iteration = 0; iteration < 8; iteration++) {
+        final middle = _lerp(low, high, 0.5);
+        if (_collidesAt(mover, slider, middle)) {
+          low = middle;
+        } else {
+          high = middle;
+        }
+      }
+      return _SliderEntryPoint(
+        position: high,
+        progress: _segmentProgress(from, to, high),
+      );
+    }
+    return null;
+  }
+
+  Vec2 _lerp(Vec2 from, Vec2 to, double progress) {
+    return Vec2(
+      from.x + (to.x - from.x) * progress,
+      from.y + (to.y - from.y) * progress,
+    );
+  }
+
+  _SliderEntryPoint? _firstPowerSliderEntry(
+    EntityState slider,
+    EntityState mover,
+    Vec2 from,
+    Vec2 to,
+  ) {
+    final distance = from.distanceTo(to);
+    final steps = math.max(1, (distance / 1.25).ceil());
+    var previous = from;
+    for (var step = 1; step <= steps; step++) {
+      final progress = step / steps;
+      final position = Vec2(
+        from.x + (to.x - from.x) * progress,
+        from.y + (to.y - from.y) * progress,
+      );
+      if (!_collidesAt(mover, slider, position)) {
+        previous = position;
+        continue;
+      }
+      var low = previous;
+      var high = position;
+      if (_collidesAt(mover, slider, low)) {
+        high = low;
+      } else {
+        for (var iteration = 0; iteration < 8; iteration++) {
+          final middle = Vec2((low.x + high.x) / 2, (low.y + high.y) / 2);
+          if (_collidesAt(mover, slider, middle)) {
+            high = middle;
+          } else {
+            low = middle;
+          }
+        }
+      }
+      return _SliderEntryPoint(
+        position: high,
+        progress: _segmentProgress(from, to, high),
+      );
+    }
+    return null;
+  }
+
   bool _isCollisionCandidate(EntityState entity, String movingId) {
     if (entity.id == movingId ||
         !entity.active ||
@@ -1400,6 +1798,7 @@ class ShotResolver {
 
   // 벽은 렌더링 상태나 상호작용 상태와 무관하게 항상 고정 장애물이다.
   bool _isSolidForPhysics(EntityState entity) {
+    if (entity.type == EntityType.powerSlider) return false;
     return entity.type == EntityType.wall || entity.solid;
   }
 
@@ -1605,6 +2004,7 @@ class ShotResolver {
       EntityType.hole => 0.0,
       EntityType.balloon => 0.18,
       EntityType.spikeSource => 1.2,
+      EntityType.powerSlider => 0.0,
     };
   }
 
@@ -1749,6 +2149,8 @@ class ShotResolver {
     List<ShotImpact>? impacts,
     List<ChainSafetyDiagnostic>? chainSafetyDiagnostics,
     List<PhysicsStateTransition>? stateTransitions,
+    _SliderContactLedger? sliderContacts,
+    List<PowerSliderActivation>? powerSliderActivations,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -1828,6 +2230,64 @@ class ShotResolver {
               candidate.position,
               collision.position,
             );
+      final sliderEntries = sliderContacts == null
+          ? const <_PowerSliderEntry>[]
+          : _firstPowerSliderEntriesAlongSegment(
+              entities,
+              current,
+              current.position,
+              candidate.position,
+              sliderContacts,
+            );
+      final sliderProgress = sliderEntries.isEmpty
+          ? double.infinity
+          : sliderEntries.first.progress;
+      if (sliderProgress.isFinite &&
+          sliderProgress < collisionProgress - _physicsEpsilon &&
+          sliderProgress < holeProgress - _physicsEpsilon) {
+        final entry = sliderEntries.first;
+        final speedBefore = velocity.length;
+        final motionDirection = velocity.normalized();
+        final referenceSpeed = sliderEntries.fold<double>(
+          0,
+          (maximum, sliderEntry) =>
+              math.max(maximum, sliderEntry.slider.referenceSpeed),
+        );
+        final speedAfter = math.max(speedBefore, referenceSpeed);
+        _consumeSliderSegment(
+          entities,
+          current,
+          current.position,
+          entry.position,
+          sliderContacts!,
+          entered: sliderEntries,
+        );
+        current = current.copyWith(position: entry.position);
+        _appendMovePoint(path, entry.position);
+        velocity = velocity.normalized() * speedAfter;
+        impulseDirection = velocity.normalized();
+        remaining = velocity.length;
+        for (final sliderEntry in sliderEntries) {
+          powerSliderActivations?.add(
+            PowerSliderActivation(
+              sourceEntityId: current.id,
+              sliderEntityId: sliderEntry.slider.id,
+              contactId: sliderEntry.contactId,
+              position: sliderEntry.position,
+              pathIndex: triggerPathIndex + iterations,
+              direction: sliderEntry.slider.direction,
+              motionDirection: motionDirection,
+              velocityBefore: motionDirection * speedBefore,
+              velocityAfter: motionDirection * speedAfter,
+              speedBefore: speedBefore,
+              speedAfter: speedAfter,
+              referenceSpeed: sliderEntry.slider.referenceSpeed,
+            ),
+          );
+          events.add('power_slider_activated');
+        }
+        continue;
+      }
       if (hole != null &&
           holeProgress.isFinite &&
           _segmentDistance(
@@ -1836,7 +2296,15 @@ class ShotResolver {
                 hole.position,
               ) <=
               holeCaptureRadius &&
-          holeProgress <= collisionProgress + 0.001) {
+          holeProgress <= collisionProgress + _physicsEpsilon &&
+          holeProgress <= sliderProgress + _physicsEpsilon) {
+        _consumeSliderSegment(
+          entities,
+          current,
+          current.position,
+          hole.position,
+          sliderContacts!,
+        );
         current = current.copyWith(
           position: hole.position,
           movable: false,
@@ -1871,6 +2339,13 @@ class ShotResolver {
         break;
       }
       if (collision == null) {
+        _consumeSliderSegment(
+          entities,
+          current,
+          current.position,
+          candidate.position,
+          sliderContacts!,
+        );
         current = candidate;
         velocity = stepDirection * math.max(0.0, availableSpeed - step);
         impulseDirection = stepDirection;
@@ -1878,6 +2353,14 @@ class ShotResolver {
         _appendMovePoint(path, current.position);
         continue;
       }
+
+      _consumeSliderSegment(
+        entities,
+        current,
+        current.position,
+        collision.position,
+        sliderContacts!,
+      );
 
       final hit = collision.entity;
       final collisionEntity = candidate.copyWith(position: collision.position);
@@ -2184,6 +2667,8 @@ class ShotResolver {
           impacts,
           chainSafetyDiagnostics,
           stateTransitions,
+          sliderContacts,
+          powerSliderActivations,
         );
         events.add('chain_push');
         if (_anyBallInHole(entities)) {

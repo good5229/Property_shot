@@ -207,6 +207,9 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     required StageDefinition stage,
     required StagePattern pattern,
   }) {
+    final hasPowerSlider = pattern.objects.any(
+      (object) => object.type == EntityType.powerSlider && object.active,
+    );
     final inputCount = math.min(
       math.min(representativeInputs.length, maxProbeCount),
       maxShots ~/ 2,
@@ -216,6 +219,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       return PatternRuntimeEvidence(
         maxProbeCount: maxProbeCount,
         maxShots: maxShots,
+        sliderApplicable: hasPowerSlider,
         allRepresentativeInputsNoMovement: true,
       );
     }
@@ -234,6 +238,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     var infiniteBounce = false;
     var wallMoved = false;
     var holePassThrough = false;
+    var sliderTunneling = false;
     var routeObserved = false;
     final autoClearDetected = _initialBallOverlapsHole(initial);
     final definitiveNoRoute = !_hasStaticWallRoute(initial, boardSize);
@@ -264,6 +269,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
         wallMoved = wallMoved || _wallMoved(initial, result.state);
         holePassThrough =
             holePassThrough || _holeWasPassedWithoutCapture(initial, result);
+        sliderTunneling =
+            sliderTunneling || _hasSliderTunneling(initial, result);
       }
     }
 
@@ -284,10 +291,84 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       wallMoved: wallMoved,
       holePassThrough: holePassThrough,
       nonDeterministic: nonDeterministic,
+      sliderApplicable: hasPowerSlider,
+      sliderTunneling: sliderTunneling,
       allRepresentativeInputsNoMovement: allNoMovement,
       autoClearDetected: autoClearDetected,
     );
   }
+}
+
+bool _hasSliderTunneling(GameState initial, ShotResult result) {
+  final sliders = initial.entities.where(
+    (entity) => entity.type == EntityType.powerSlider && entity.active,
+  );
+  for (final slider in sliders) {
+    final activeBall = initial.activeBall;
+    if (activeBall.movable &&
+        slider.allowedTargets.contains(activeBall.type) &&
+        _pathCrossesSlider(result.path, activeBall, slider) &&
+        !_hasSliderActivation(result, activeBall.id, slider.id)) {
+      return true;
+    }
+    for (final move in result.moves) {
+      final mover = initial.entityById(move.entityId);
+      if (mover == null ||
+          !mover.movable ||
+          !slider.allowedTargets.contains(mover.type)) {
+        continue;
+      }
+      final points = move.path.length >= 2 ? move.path : [move.from, move.to];
+      if (_pathCrossesSlider(points, mover, slider) &&
+          !_hasSliderActivation(result, mover.id, slider.id)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool _hasSliderActivation(ShotResult result, String sourceId, String sliderId) {
+  return result.powerSliderActivations.any(
+    (activation) =>
+        activation.sourceEntityId == sourceId &&
+        activation.sliderEntityId == sliderId,
+  );
+}
+
+bool _pathCrossesSlider(
+  List<Vec2> points,
+  EntityState mover,
+  EntityState slider,
+) {
+  if (points.length < 2) return false;
+  for (var index = 1; index < points.length; index++) {
+    final from = points[index - 1];
+    final to = points[index];
+    final distance = from.distanceTo(to);
+    final steps = math.max(1, (distance / 1.25).ceil());
+    for (var step = 0; step <= steps; step++) {
+      final progress = step / steps;
+      final position = Vec2(
+        from.x + (to.x - from.x) * progress,
+        from.y + (to.y - from.y) * progress,
+      );
+      if (_probeOverlaps(mover, slider, position)) return true;
+    }
+  }
+  return false;
+}
+
+bool _probeOverlaps(EntityState mover, EntityState slider, Vec2 position) {
+  if (mover.isCircle) {
+    return slider.hitBounds.intersectsCircle(position, mover.hitRadius);
+  }
+  final moving = mover.copyWith(position: position).hitBounds;
+  final target = slider.hitBounds;
+  return moving.left <= target.right &&
+      moving.right >= target.left &&
+      moving.top <= target.bottom &&
+      moving.bottom >= target.top;
 }
 
 Set<String> _familiesFor(ShotResult result) {
@@ -353,6 +434,21 @@ bool _hasFiniteCoordinates(ShotResult result) {
   if (!result.impacts.every(finiteImpact)) {
     return false;
   }
+  bool finiteSlider(PowerSliderActivation activation) {
+    return finiteVec(activation.position) &&
+        finiteVec(activation.direction) &&
+        finiteVec(activation.motionDirection) &&
+        finiteVec(activation.velocityBefore) &&
+        finiteVec(activation.velocityAfter) &&
+        activation.speedBefore.isFinite &&
+        activation.speedAfter.isFinite &&
+        activation.referenceSpeed.isFinite &&
+        activation.pathIndex >= 0;
+  }
+
+  if (!result.powerSliderActivations.every(finiteSlider)) {
+    return false;
+  }
   bool finitePhysicsEvent(PhysicsEvent event) {
     return finiteVec(event.position) &&
         finiteVec(event.normal) &&
@@ -362,7 +458,8 @@ bool _hasFiniteCoordinates(ShotResult result) {
             event.remainingDistance!.isFinite) &&
         (event.remainingSpeed == null || event.remainingSpeed!.isFinite) &&
         (event.impact == null || finiteImpact(event.impact!)) &&
-        (event.move == null || finiteMove(event.move!));
+        (event.move == null || finiteMove(event.move!)) &&
+        (event.powerSlider == null || finiteSlider(event.powerSlider!));
   }
 
   if (!result.physicsEvents.every(finitePhysicsEvent)) {
@@ -386,8 +483,10 @@ bool _hasFiniteGameState(GameState state, Set<GameState> activeStates) {
         (entity) =>
             finiteVec(entity.position) &&
             finiteVec(entity.size) &&
+            finiteVec(entity.direction) &&
             entity.hitboxScale.isFinite &&
-            entity.restitution.isFinite,
+            entity.restitution.isFinite &&
+            entity.referenceSpeed.isFinite,
       ) &&
       state.history.every(
         (historyState) => _hasFiniteGameState(historyState, activeStates),
@@ -517,6 +616,24 @@ String _fingerprint(ShotResult result) {
   for (final impact in result.impacts) {
     _appendImpactFingerprint(buffer, impact);
   }
+  buffer.write(']|sliders[');
+  for (final activation in result.powerSliderActivations) {
+    buffer
+      ..write('|activation{')
+      ..write('|position=${_vecFingerprint(activation.position)}')
+      ..write('|direction=${_vecFingerprint(activation.direction)}')
+      ..write('|motionDirection=${_vecFingerprint(activation.motionDirection)}')
+      ..write('|velocityBefore=${_vecFingerprint(activation.velocityBefore)}')
+      ..write('|velocityAfter=${_vecFingerprint(activation.velocityAfter)}')
+      ..write('|pathIndex=${activation.pathIndex}')
+      ..write('|speedBefore=${_number(activation.speedBefore)}')
+      ..write('|speedAfter=${_number(activation.speedAfter)}')
+      ..write('|referenceSpeed=${_number(activation.referenceSpeed)}');
+    _writeText(buffer, 'sourceEntityId', activation.sourceEntityId);
+    _writeText(buffer, 'sliderEntityId', activation.sliderEntityId);
+    _writeText(buffer, 'contactId', activation.contactId);
+    buffer.write('}');
+  }
   buffer.write(']|moves[');
   for (final move in result.moves) {
     _appendMoveFingerprint(buffer, move);
@@ -601,7 +718,10 @@ void _appendEntityFingerprint(StringBuffer buffer, EntityState entity) {
     ..write('|open=${entity.open}')
     ..write('|pressed=${entity.pressed}')
     ..write('|hitboxScale=${_number(entity.hitboxScale)}')
-    ..write('|restitution=${_number(entity.restitution)}');
+    ..write('|restitution=${_number(entity.restitution)}')
+    ..write('|direction=${_vecFingerprint(entity.direction)}')
+    ..write('|referenceSpeed=${_number(entity.referenceSpeed)}')
+    ..write('|allowedTargets=${_stableAllowedTargets(entity.allowedTargets)}');
   _writeText(buffer, 'id', entity.id);
   _writeText(buffer, 'visualState', entity.visualState);
   _writeText(buffer, 'linkId', entity.linkId);
@@ -660,6 +780,21 @@ void _appendPhysicsEventFingerprint(StringBuffer buffer, PhysicsEvent event) {
   _writeText(buffer, 'sourceEntityId', event.sourceEntityId);
   _writeText(buffer, 'targetEntityId', event.targetEntityId);
   _writeText(buffer, 'visualState', event.visualState);
+  _writeText(buffer, 'contactId', event.contactId);
+  if (event.powerSlider == null) {
+    buffer.write('|powerSlider=null');
+  } else {
+    final activation = event.powerSlider!;
+    buffer
+      ..write('|powerSlider=')
+      ..write(activation.contactId)
+      ..write(':${_vecFingerprint(activation.direction)}')
+      ..write(':${_vecFingerprint(activation.motionDirection)}')
+      ..write(':${_vecFingerprint(activation.velocityBefore)}')
+      ..write(':${_vecFingerprint(activation.velocityAfter)}')
+      ..write(':${_number(activation.speedBefore)}')
+      ..write(':${_number(activation.speedAfter)}');
+  }
   if (event.impact == null) {
     buffer.write('|impact=null');
   } else {
@@ -676,6 +811,13 @@ void _appendPhysicsEventFingerprint(StringBuffer buffer, PhysicsEvent event) {
 }
 
 String _number(double value) => value.toStringAsPrecision(17);
+
+String _stableAllowedTargets(Set<EntityType> targets) {
+  return EntityType.values
+      .where(targets.contains)
+      .map((target) => target.name)
+      .join(',');
+}
 
 String _nullableNumber(double? value) => value == null ? '' : _number(value);
 
