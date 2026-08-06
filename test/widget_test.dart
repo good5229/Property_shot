@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/main.dart';
@@ -553,6 +554,34 @@ void main() {
 
     expect(find.byKey(const Key('entity_info_panel')), findsOneWidget);
     expect(find.textContaining('무거움'), findsWidgets);
+  });
+
+  testWidgets('과거 공을 누르면 순번·속성·고정 상태만 표시한다', (tester) async {
+    final base = levels[6].createState(6, productRules: true);
+    final spent = base.activeBall.copyWith(
+      id: 'spent_ball_1',
+      position: const Vec2(180, 380),
+      traits: const {TraitType.sticky},
+      movable: false,
+      visualState: 'stuck',
+    );
+    final state = base.copyWith(
+      entities: [...base.entities, spent],
+      shotCount: 1,
+    );
+    await tester.pumpWidget(
+      PropertyShotApp(initialState: state, showStageSelector: false),
+    );
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 180, 380));
+    await tester.pump();
+
+    expect(find.byKey(const Key('entity_info_panel')), findsOneWidget);
+    expect(find.text('첫 번째 공'), findsOneWidget);
+    expect(find.textContaining('점착으로 고정됨'), findsOneWidget);
+    expect(find.byKey(const Key('transfer_button')), findsNothing);
+    expect(find.byKey(const Key('copy_button')), findsNothing);
   });
 
   testWidgets('클리어 팝업의 다음 버튼은 다음 스테이지로 이동한다', (tester) async {

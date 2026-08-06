@@ -119,10 +119,13 @@ Iterable<_Candidate> _candidates(int stageIndex, GameState state) sync* {
   ];
   for (final trait in traits) {
     for (var degree = -180; degree < 180; degree += 5) {
-      for (var step = 1; step <= 20; step++) {
+      final minimumStep = stageIndex == 6 ? 6 : 1;
+      final maximumStep = stageIndex == 6 ? 50 : 20;
+      final divisor = stageIndex == 6 ? 50 : 20;
+      for (var step = minimumStep; step <= maximumStep; step++) {
         final shot = ReplayShotFixture(
           angleRadians: degree * math.pi / 180,
-          power: step / 20,
+          power: step / divisor,
           equippedTrait: trait,
         );
         yield _Candidate(

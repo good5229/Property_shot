@@ -37,6 +37,13 @@ void main() {
         ),
       ),
     );
+    expect(
+      fixtures
+          .where((fixture) => fixture.stageIndex == 6)
+          .expand((fixture) => fixture.shots)
+          .every((shot) => shot.power >= 0.12),
+      isTrue,
+    );
     for (final fixture in fixtures) {
       var state = levels[fixture.stageIndex].createState(
         fixture.stageIndex,

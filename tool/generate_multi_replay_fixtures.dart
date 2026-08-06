@@ -67,8 +67,9 @@ void main() {
         productRules: true,
       );
       for (var degree = 0; degree < 360 && plans.length < 5; degree += 10) {
+        final minimumPowerStep = stageIndex == 6 ? 2 : 1;
         for (
-          var powerStep = 1;
+          var powerStep = minimumPowerStep;
           powerStep <= 10 && plans.length < 5;
           powerStep++
         ) {
@@ -107,6 +108,12 @@ ShotSequencePlan? _validatedTwoShotSeed(int stageIndex) {
   if (stageIndex < 0 || stageIndex >= levels.length) {
     return null;
   }
+  if (stageIndex == 6) {
+    return ShotSequencePlan(
+      strategy: '과거 공 쿠션',
+      shots: [_angleInput(20, 0.12), _angleInput(170, 0.66)],
+    );
+  }
 
   // 레벨 배치가 조금 바뀌어도 고정 좌표 시드가 낡지 않도록,
   // 결정된 격자에서 첫 발 실패·둘째 발 성공 조합을 찾는다.
@@ -140,6 +147,14 @@ ShotSequencePlan? _validatedTwoShotSeed(int stageIndex) {
     }
   }
   throw StateError('단계 ${stageIndex + 1}의 격자에서 검증된 2발 시드를 찾지 못했습니다.');
+}
+
+ShotInput _angleInput(int degree, double power) {
+  final radians = degree * math.pi / 180;
+  return ShotInput(
+    direction: Vec2(math.cos(radians), math.sin(radians)),
+    power: power,
+  );
 }
 
 ShotInput _gridInput(int degree, int powerStep) {

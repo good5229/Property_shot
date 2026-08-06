@@ -3540,6 +3540,109 @@
           ]
         }
       ]
+    },
+    {
+      "stageId": "stage_persistent",
+      "title": "7. 공은 사라지지 않는다",
+      "patterns": [
+        {
+          "patternId": "stage_persistent_01",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {"x": 60, "y": 480},
+          "copyCharges": 0,
+          "bonusGoal": "첫 번째 공을 쿠션처럼 이용해 두 공으로 홀에 들어가 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "past_ball_cushion",
+          "acceptedStrategyIds": ["past_ball_cushion", "none"],
+          "solutionFamilies": ["past_ball_cushion", "direct_bypass"],
+          "optionalChallenges": ["previous_ball_cushion", "single_shot_bypass"],
+          "metadata": {"baseline": "true"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":300,"y":480},"size":{"x":68,"y":68},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"cushion_wall","type":"wall","position":{"x":236,"y":360},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true,"restitution":0.8},
+            {"id":"cushion_crate","type":"crate","position":{"x":154,"y":300},"size":{"x":50,"y":50},"traits":[],"movable":true,"solid":true}
+          ]
+        },
+        {
+          "patternId": "stage_persistent_02",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {"x": 60, "y": 480},
+          "copyCharges": 0,
+          "bonusGoal": "첫 번째 공을 스위치에 남겨 열린 길을 유지해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "spent_switch_hold",
+          "acceptedStrategyIds": ["spent_switch_hold", "none"],
+          "solutionFamilies": ["spent_switch_hold", "direct_bypass"],
+          "optionalChallenges": ["previous_ball_switch", "single_shot_bypass"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":296,"y":178},"size":{"x":70,"y":70},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"switch_hold","type":"switch_pad","position":{"x":150,"y":420},"size":{"x":46,"y":32},"traits":[],"movable":false,"solid":true,"linkId":"hold_gate"},
+            {"id":"hold_pad","type":"sticky_surface","position":{"x":208,"y":390},"size":{"x":36,"y":28},"traits":["sticky"],"movable":false,"solid":true},
+            {"id":"hold_gate","type":"gate","position":{"x":244,"y":300},"size":{"x":24,"y":170},"traits":[],"movable":false,"solid":true},
+            {"id":"weight_source","type":"weight","position":{"x":92,"y":350},"size":{"x":52,"y":40},"traits":["heavy"],"movable":false,"solid":true},
+            {"id":"hold_crate","type":"crate","position":{"x":278,"y":392},"size":{"x":44,"y":44},"traits":[],"movable":true,"solid":true}
+          ]
+        },
+        {
+          "patternId": "stage_persistent_03",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {"x": 60, "y":480},
+          "copyCharges": 0,
+          "bonusGoal": "점착으로 남긴 공을 범퍼처럼 맞혀 홀을 향해 튕겨 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "sticky_ball_bumper",
+          "acceptedStrategyIds": ["sticky_ball_bumper", "none"],
+          "solutionFamilies": ["sticky_ball_bumper", "direct_bypass"],
+          "optionalChallenges": ["previous_ball_bumper", "single_shot_bypass"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":40,"y":522},"size":{"x":60,"y":60},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"sticky_pad","type":"sticky_surface","position":{"x":156,"y":382},"size":{"x":94,"y":34},"traits":["sticky"],"movable":false,"solid":true},
+            {"id":"elastic_bumper","type":"bumper","position":{"x":244,"y":300},"size":{"x":64,"y":64},"traits":["bouncy"],"movable":false,"solid":true},
+            {"id":"side_wall","type":"wall","position":{"x":282,"y":182},"size":{"x":18,"y":190},"traits":[],"movable":false,"solid":true}
+          ]
+        },
+        {
+          "patternId": "stage_persistent_04",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {"x":180,"y":480},
+          "copyCharges": 0,
+          "bonusGoal": "첫 번째 공과 상자를 함께 스토퍼로 삼아 홀을 열어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "crate_stopper_chain",
+          "acceptedStrategyIds": ["crate_stopper_chain", "none"],
+          "solutionFamilies": ["crate_stopper_chain", "direct_bypass"],
+          "optionalChallenges": ["previous_ball_stopper", "single_shot_bypass"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":230,"y":274},"size":{"x":72,"y":72},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"stopper_crate","type":"crate","position":{"x":180,"y":352},"size":{"x":58,"y":58},"traits":[],"movable":true,"solid":true},
+            {"id":"stopper_wall","type":"wall","position":{"x":112,"y":260},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true},
+            {"id":"stopper_bumper","type":"bumper","position":{"x":260,"y":250},"size":{"x":58,"y":58},"traits":["bouncy"],"movable":false,"solid":true}
+          ]
+        }
+      ]
     }
   ]
 }

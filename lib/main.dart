@@ -20,7 +20,8 @@ String _stageIntroMessage(int levelIndex) {
     2 => '스위치 살피기 · 여러 경로로 도전',
     3 => '풍선 확인 · 여러 경로로 도전',
     4 => '공과 원본의 변화를 함께 살펴보세요',
-    _ => '감속을 읽고 발판으로 속도를 되살려 보세요',
+    5 => '감속을 읽고 발판으로 속도를 되살려 보세요',
+    _ => '첫 공을 남겨 다음 공의 쿠션과 스토퍼로 활용해 보세요',
   };
 }
 
@@ -869,6 +870,7 @@ class _StageTile extends StatelessWidget {
       '풍선은 밀리고, 뾰족한 공에는 터집니다.',
       '공이 얻는 능력과 원본이 잃는 능력을 함께 이용해 보세요.',
       '약하게 쏜 뒤 발판에 들어가는 각도와 우회 길을 찾아 보세요.',
+      '과거 공을 쿠션·스위치·스토퍼로 활용해 여러 발의 인과를 만들어 보세요.',
     ];
     final assets = [
       'assets/icons/stone_boulder.png',
@@ -877,6 +879,7 @@ class _StageTile extends StatelessWidget {
       '',
       'assets/icons/stone_boulder.png',
       'assets/generated/crate-v2.png',
+      '',
     ];
     final stageAsset = assets[index];
     return Padding(
@@ -923,9 +926,13 @@ class _StageTile extends StatelessWidget {
                                         Colors.transparent,
                                         BlendMode.dst,
                                       ),
-                                child: stageAsset.isEmpty
+                                child: index == 3
                                     ? const CustomPaint(
                                         painter: _StageBalloonPainter(),
+                                      )
+                                    : index == 6
+                                    ? const CustomPaint(
+                                        painter: GameBallIconPainter(null),
                                       )
                                     : Image.asset(
                                         stageAsset,

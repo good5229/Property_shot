@@ -32,6 +32,7 @@ void main() {
       'stage_balloon',
       'stage_drained',
       'stage_speed',
+      'stage_persistent',
     ]);
     expect(
       sourceCatalog.stages.first.patterns.map((pattern) => pattern.patternId),
@@ -70,6 +71,18 @@ void main() {
       ],
     );
     expect(sourceCatalog.validate(), isEmpty);
+    expect(
+      sourceCatalog
+          .stageById('stage_persistent')
+          .patterns
+          .map((pattern) => pattern.patternId),
+      [
+        'stage_persistent_01',
+        'stage_persistent_02',
+        'stage_persistent_03',
+        'stage_persistent_04',
+      ],
+    );
     for (final stage in sourceCatalog.stages) {
       final baseline = sourceCatalog.baselinePatternFor(stage);
       expect(baseline.metadata, {
@@ -94,14 +107,23 @@ void main() {
   });
 
   test('levels는 각 단계의 기준 패턴을 동기식으로 노출한다', () {
-    expect(levels, hasLength(6));
+    expect(levels, hasLength(7));
+    const expectedDifficultyBands = [
+      '튜토리얼',
+      '튜토리얼',
+      '튜토리얼',
+      '튜토리얼',
+      '기초 응용',
+      '기초 응용',
+      '연쇄 응용',
+    ];
     for (var index = 0; index < levels.length; index++) {
       expect(levels[index].id, sourceCatalog.stages[index].stageId);
       expect(
         levels[index].patternId,
         sourceCatalog.baselinePatternFor(sourceCatalog.stages[index]).patternId,
       );
-      expect(levels[index].difficultyBand, index < 4 ? '튜토리얼' : '기초 응용');
+      expect(levels[index].difficultyBand, expectedDifficultyBands[index]);
     }
     expect(() => levels.add(levels.first), throwsUnsupportedError);
   });

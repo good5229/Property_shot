@@ -1117,7 +1117,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _recordInspection(entity);
-    if (entity.traits.isNotEmpty) {
+    if (entity.type != EntityType.ball && entity.traits.isNotEmpty) {
       _selectTraitSource(entity.id);
     }
     setState(() {
@@ -1130,9 +1130,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final name = _entityName(entity);
     final state = switch (entity.type) {
       EntityType.ball =>
-        entity.traits.isEmpty
-            ? '현재 속성 없음'
-            : '${entity.traits.first.label} 속성 보유',
+        entity.id == 'active_ball'
+            ? entity.traits.isEmpty
+                  ? '현재 속성 없음'
+                  : '${entity.traits.first.label} 속성 보유'
+            : _ballStatusLabel(entity),
       EntityType.hole => '목표 홀',
       EntityType.switchPad => entity.pressed ? '눌림' : '누르기 전',
       EntityType.gate => entity.open ? '열림' : '닫힘',
@@ -1290,7 +1292,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final hit = _entityContainsTap(entity, logical);
       if (hit) {
         _recordInspection(entity);
-        if (entity.traits.isNotEmpty) {
+        if (entity.type != EntityType.ball && entity.traits.isNotEmpty) {
           _selectTraitSource(entity.id);
         }
         setState(() {
@@ -1994,11 +1996,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     entity: inspectedEntity,
                     copyCharges: _state.copyCharges,
                     copyCoreCount: _state.copyCoreCount,
-                    onTransfer: inspectedEntity.traits.isEmpty
+                    onTransfer:
+                        inspectedEntity.type == EntityType.ball ||
+                            inspectedEntity.traits.isEmpty
                         ? null
                         : _transferTrait,
                     onCopy:
-                        inspectedEntity.traits.isEmpty ||
+                        inspectedEntity.type == EntityType.ball ||
+                            inspectedEntity.traits.isEmpty ||
                             _state.copyCharges <= 0
                         ? null
                         : _copyTrait,
@@ -2742,7 +2747,8 @@ String _levelObjective(int levelIndex) {
     2 => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
     3 => '풍선을 밀거나 터뜨린 뒤 여러 경로로 홀에 가 보세요. 터뜨리면 뒤의 스위치가 보여요.',
     4 => '속성을 옮기면 공은 능력을 얻고 원본은 능력을 잃습니다. 두 변화를 함께 이용해 보세요.',
-    _ => '공은 처음 빠르고 점점 느려집니다. 약하게 쏜 뒤 발판으로 속도를 되살려 보세요.',
+    5 => '공은 처음 빠르고 점점 느려집니다. 약하게 쏜 뒤 발판으로 속도를 되살려 보세요.',
+    _ => '첫 공을 남겨 쿠션·스위치·스토퍼로 활용하며 여러 발의 인과를 만들어 보세요.',
   };
 }
 
@@ -2760,7 +2766,8 @@ String _compactLevelObjective(int levelIndex) {
     2 => '스위치와 문을 열어 홀로 가기',
     3 => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
     4 => '공과 비워진 원본을 함께 이용해 홀로 가기',
-    _ => '감속·반사·발판으로 속도를 되살려 홀로 가기',
+    5 => '감속·반사·발판으로 속도를 되살려 홀로 가기',
+    _ => '과거 공을 남겨 두 공으로 홀로 가기',
   };
 }
 
@@ -2786,6 +2793,18 @@ String? _levelProgressHint(GameState state) {
     return state.shotCount > 0
         ? '발판과 벽의 결과를 확인했어요. 같은 각도와 우회 길도 비교해 보세요.'
         : '공은 충돌할수록 느려져요. 약한 발사로 발판 진입 각도를 찾아 보세요.';
+  }
+  if (state.levelIndex == 6) {
+    final spentBalls = state.entities.where(
+      (entity) => entity.type == EntityType.ball && entity.id != 'active_ball',
+    );
+    if (spentBalls.isEmpty) {
+      return '첫 공도 사라지지 않아요. 쿠션·스위치·스토퍼로 남겨 보세요.';
+    }
+    final fixed = spentBalls.where((entity) => !entity.movable).length;
+    return fixed > 0
+        ? '고정된 과거 공도 클릭해 순번과 속성을 확인할 수 있어요.'
+        : '남은 공의 위치를 보고 다음 공으로 맞혀 연쇄를 이어 가세요.';
   }
   if (state.levelIndex == 4) {
     final drained = state.entities.where(
@@ -2835,6 +2854,12 @@ String? _compactLevelProgressHint(GameState state) {
   if (state.levelIndex == 5) {
     return state.shotCount > 0 ? '발판 결과 · 우회 길 비교' : '감속 읽기 · 진입 각도 찾기';
   }
+  if (state.levelIndex == 6) {
+    final spent = state.entities.where(
+      (entity) => entity.type == EntityType.ball && entity.id != 'active_ball',
+    );
+    return spent.isEmpty ? '첫 공을 남기기' : '과거 공 ${spent.length}개 · 다음 충돌 준비';
+  }
   if (state.levelIndex == 4) {
     return state.entities.any((entity) => entity.visualState == 'drained')
         ? '공은 능력 획득 · 원본은 이동 가능'
@@ -2878,7 +2903,8 @@ String _levelIntroMessage(int levelIndex) {
     2 => '스위치 살피기 · 여러 경로로 도전',
     3 => '풍선 확인 · 여러 경로로 도전',
     4 => '공과 원본의 변화를 함께 살펴보세요',
-    _ => '감속 · 발판 진입 각도 · 여러 경로로 도전',
+    5 => '감속 · 발판 진입 각도 · 여러 경로로 도전',
+    _ => '과거 공 · 쿠션 · 여러 발의 연쇄 경로',
   };
 }
 
@@ -3385,7 +3411,9 @@ class _ControlPanel extends StatelessWidget {
                   state.equippedTrait != null
                       ? '공을 길게 눌러 힘을 모으세요'
                       : state.selectedTrait == null
-                      ? '물체를 눌러 속성을 고르세요'
+                      ? state.traitSources.isEmpty
+                            ? '공을 길게 눌러 힘을 모으세요'
+                            : '물체를 눌러 속성을 고르세요'
                       : '선택: ${state.selectedTrait!.label}',
                   maxLines: 2,
                   softWrap: true,
@@ -3432,7 +3460,9 @@ class _ControlPanel extends StatelessWidget {
                   state.equippedTrait != null
                       ? '공을 길게 눌러 힘을 모으세요'
                       : state.selectedTrait == null
-                      ? '물체를 눌러 속성을 고르세요'
+                      ? state.traitSources.isEmpty
+                            ? '공을 길게 눌러 힘을 모으세요'
+                            : '물체를 눌러 속성을 고르세요'
                       : '선택: ${state.selectedTrait!.label}',
                 ),
               ),
@@ -3561,6 +3591,7 @@ class _EntityInfoPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final trait = entity.traits.isEmpty ? null : entity.traits.first;
     final hasCopyCore = copyCoreCount > 0;
+    final canManageTrait = onTransfer != null || onCopy != null;
     return Container(
       key: const Key('entity_info_panel'),
       width: double.infinity,
@@ -3588,7 +3619,17 @@ class _EntityInfoPanel extends StatelessWidget {
                       ? _entityDescription(entity)
                       : '${trait.label}: ${trait.description}',
                 ),
-                if (trait != null) ...[
+                if (entity.type == EntityType.ball) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _ballStatusDescription(entity),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF405D52),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+                if (trait != null && canManageTrait) ...[
                   const SizedBox(height: 4),
                   Text(
                     entity.movableWhenDrained
@@ -4000,7 +4041,7 @@ String? _assetPath(EntityState entity) {
 String _entityName(EntityState entity) {
   switch (entity.type) {
     case EntityType.ball:
-      return '공';
+      return _ballDisplayName(entity);
     case EntityType.hole:
       return '홀';
     case EntityType.wall:
@@ -4026,6 +4067,52 @@ String _entityName(EntityState entity) {
     case EntityType.rotatingReflector:
       return '회전 반사판';
   }
+}
+
+String _ballDisplayName(EntityState entity) {
+  if (entity.id == 'active_ball') {
+    return '공';
+  }
+  final match = RegExp(r'^spent_ball_(\d+)$').firstMatch(entity.id);
+  final number = match == null ? null : int.tryParse(match.group(1)!);
+  const ordinalNames = [
+    '첫 번째',
+    '두 번째',
+    '세 번째',
+    '네 번째',
+    '다섯 번째',
+    '여섯 번째',
+    '일곱 번째',
+    '여덟 번째',
+  ];
+  if (number != null && number >= 1 && number <= ordinalNames.length) {
+    return '${ordinalNames[number - 1]} 공';
+  }
+  return '과거 공';
+}
+
+String _ballStatusLabel(EntityState entity) {
+  final trait = entity.traits.isEmpty ? '속성 없음' : entity.traits.first.label;
+  final mobility = entity.movable
+      ? '다음 충돌에서 움직일 수 있음'
+      : entity.visualState == 'stuck'
+      ? '점착으로 고정됨'
+      : '고정됨';
+  return '$trait · $mobility';
+}
+
+String _ballStatusDescription(EntityState entity) {
+  final mobility = entity.movable
+      ? '다음 충돌에서 움직일 수 있음'
+      : entity.visualState == 'stuck'
+      ? '점착으로 고정됨'
+      : '고정됨';
+  final state = entity.id == 'active_ball'
+      ? '발사를 준비하는 공입니다.'
+      : entity.visualState == 'stuck'
+      ? '점착으로 멈춰 다음 공의 충돌 기준점이 됩니다.'
+      : '발사된 뒤에도 필드에 남아 다음 공과 충돌할 수 있습니다.';
+  return '$mobility. $state';
 }
 
 String _entityDescription(EntityState entity) {
