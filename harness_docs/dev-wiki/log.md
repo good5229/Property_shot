@@ -1640,3 +1640,6 @@ Use consistent headings so entries are easy to grep.
 2026-08-06: PS-DATA-01을 커밋 `73a42dc`로 원격 브랜치에 push했다. 다음 PS-RUN-01은 Dart VM·Web에서 동일한 32비트 seed 파생과 스테이지별 셔플 백을 순수 Dart로 구현하며, 저장·UI 연결은 PS-RUN-02 이후로 분리한다.
 2026-08-06: PS-RUN-01 Sol 검토에서 교차 런타임 고정 벡터와 `cycle`·`drawIndex`·남은 항목 수의 손상 상태 검증을 보강했다. VM과 Chrome에서 seed 고정 벡터와 집중 테스트 10개가 각각 통과해 결정론적 스테이지별 셔플 백을 PASS 판정한다.
 2026-08-06: PS-RUN-01 통합 게이트로 `flutter analyze`, 전체 회귀 268개, Web Release 빌드가 통과했다. 이 작업 단위는 seed 파생·셔플 백·집중 테스트와 기록만 포함해 별도 commit·push한다.
+2026-08-06: PS-RUN-01을 커밋 `68ee2aa`로 원격 브랜치에 push했다. PS-RUN-02는 패턴·보상 재추첨 방지를 위해 실행 단계를 명시한 `RunState`와 revision·체크섬을 가진 A/B 저장 슬롯을 도입하고, 손상 또는 중단 시 가장 최신의 완결 상태를 복구하도록 설계한다.
+2026-08-06: PS-RUN-02 구현을 시작했다. 기존 `ProgressStore` 키·스키마는 보존하고, `RunState`와 별도 A/B 슬롯 저장소에 단계·패턴·보상 후보·샷 입력·셔플 상태를 저장한다. 저장 후보를 재읽기·체크섬 검증한 뒤 active pointer를 갱신하고, 손상·중단 시 최신 유효 슬롯으로 복구하는 장애 주입 테스트를 추가한다.
+2026-08-06: PS-RUN-02를 완료했다. `RunState`의 phase·패턴·보상·점수·재생 참조·샷 입력·UTC 시각과 방어 복사 codec, SharedPreferences adapter 및 revision/checksum A/B 저장소를 추가했다. 후보 쓰기 전·후, verify·pointer 장애, checksum·pointer 손상, 동시 저장·reset·ProgressStore key 비침범을 집중 16개로 검증했고 `flutter analyze`, 전체 284개, Web release 빌드가 통과했다. 아직 앱 라우터·실제 패턴 draw·보상 UI 연결은 다음 작업 범위다.
