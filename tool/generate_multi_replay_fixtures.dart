@@ -61,6 +61,27 @@ void main() {
         }
       }
     }
+    if (plans.length < 5) {
+      final base = levels[stageIndex].createState(
+        stageIndex,
+        productRules: true,
+      );
+      for (var degree = 0; degree < 360 && plans.length < 5; degree += 10) {
+        for (
+          var powerStep = 1;
+          powerStep <= 10 && plans.length < 5;
+          powerStep++
+        ) {
+          final input = _gridInput(degree, powerStep);
+          final result = resolver.resolve(base, input);
+          if (result.state.phase != GamePhase.success) continue;
+          final plan = ShotSequencePlan(strategy: '무속성', shots: [input]);
+          if (seen.add(_sequenceKey(plan.shots))) {
+            plans.add(plan);
+          }
+        }
+      }
+    }
     if (plans.length != 5) {
       throw StateError('단계 ${stageIndex + 1}의 다중샷 예시 5개를 찾지 못했습니다.');
     }

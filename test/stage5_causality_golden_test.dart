@@ -64,7 +64,7 @@ void main() {
         }
         if (variant == 'result') {
           expect(find.byKey(const Key('clear_popup')), findsOneWidget);
-          expect(find.text('처음부터 다시'), findsOneWidget);
+          expect(find.text('다음'), findsOneWidget);
         }
 
         await expectLater(

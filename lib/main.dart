@@ -19,7 +19,8 @@ String _stageIntroMessage(int levelIndex) {
     1 => '방향 조정 · 길게 누르기 · 손 떼기',
     2 => '스위치 살피기 · 여러 경로로 도전',
     3 => '풍선 확인 · 여러 경로로 도전',
-    _ => '공과 원본의 변화를 함께 살펴보세요',
+    4 => '공과 원본의 변화를 함께 살펴보세요',
+    _ => '감속을 읽고 발판으로 속도를 되살려 보세요',
   };
 }
 
@@ -665,6 +666,49 @@ class _StageSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 Container(
+                  key: const Key('map_hint_card'),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xD9E8F4D9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0x6695B98C)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.explore_rounded,
+                        size: 28,
+                        color: Color(0xFF4F8460),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '한 번의 발사, 여러 갈래의 길',
+                              style: TextStyle(
+                                color: Color(0xFF315C46),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              '속성을 이용해도, 다른 충돌 경로를 찾아도 괜찮아요.',
+                              style: TextStyle(
+                                color: Color(0xFF52706A),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
                   key: const Key('stage_route_map'),
                   padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
                   decoration: BoxDecoration(
@@ -752,49 +796,6 @@ class _StageSelectScreen extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 14),
-                Container(
-                  key: const Key('map_hint_card'),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xD9E8F4D9),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0x6695B98C)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.explore_rounded,
-                        size: 28,
-                        color: Color(0xFF4F8460),
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '한 번의 발사, 여러 갈래의 길',
-                              style: TextStyle(
-                                color: Color(0xFF315C46),
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            SizedBox(height: 3),
-                            Text(
-                              '속성을 이용해도, 다른 충돌 경로를 찾아도 괜찮아요.',
-                              style: TextStyle(
-                                color: Color(0xFF52706A),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -867,6 +868,7 @@ class _StageTile extends StatelessWidget {
       '문과 스위치 사이의 연쇄를 실험해 보세요.',
       '풍선은 밀리고, 뾰족한 공에는 터집니다.',
       '공이 얻는 능력과 원본이 잃는 능력을 함께 이용해 보세요.',
+      '약하게 쏜 뒤 발판에 들어가는 각도와 우회 길을 찾아 보세요.',
     ];
     final assets = [
       'assets/icons/stone_boulder.png',
@@ -874,6 +876,7 @@ class _StageTile extends StatelessWidget {
       'assets/icons/crate.png',
       '',
       'assets/icons/stone_boulder.png',
+      'assets/generated/crate-v2.png',
     ];
     final stageAsset = assets[index];
     return Padding(

@@ -3439,6 +3439,107 @@
           ]
         }
       ]
+    },
+    {
+      "stageId": "stage_speed",
+      "title": "6. 속도를 되살리는 길",
+      "patterns": [
+        {
+          "patternId": "stage_speed_01",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 56, "y": 466},
+          "copyCharges": 0,
+          "bonusGoal": "약한 발사로 발판에 들어가 속도를 되살려 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_last_lane",
+          "acceptedStrategyIds": ["slider_last_lane", "none"],
+          "solutionFamilies": ["last_segment_reacceleration", "outer_wall_bypass"],
+          "optionalChallenges": ["weak_launch_slider", "without_slider"],
+          "metadata": {"baseline": "true"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":300,"y":270},"size":{"x":68,"y":68},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"last_slider","type":"power_slider","position":{"x":180,"y":370},"size":{"x":112,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},
+            {"id":"quiet_crate","type":"crate","position":{"x":76,"y":210},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+          ]
+        },
+        {
+          "patternId": "stage_speed_02",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 72, "y": 466},
+          "copyCharges": 0,
+          "bonusGoal": "벽에 맞은 뒤 발판에 들어가는 각도를 찾아 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "wall_then_slider",
+          "acceptedStrategyIds": ["wall_then_slider", "none"],
+          "solutionFamilies": ["wall_reflection_slider", "outer_wall_bypass"],
+          "optionalChallenges": ["weak_launch_slider", "without_slider"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":72,"y":104},"size":{"x":68,"y":68},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"bank_wall","type":"wall","position":{"x":224,"y":298},"size":{"x":18,"y":250},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.78,"linkId":null},
+            {"id":"after_bank_slider","type":"power_slider","position":{"x":138,"y":226},"size":{"x":106,"y":46},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":0,"y":-1},"referenceSpeed":40,"allowedTargets":["ball"]},
+            {"id":"quiet_crate","type":"crate","position":{"x":292,"y":430},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+          ]
+        },
+        {
+          "patternId": "stage_speed_03",
+          "weight": 1,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 62, "y": 466},
+          "copyCharges": 0,
+          "bonusGoal": "상자를 건드린 뒤 이어지는 발판의 힘을 활용해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "crate_then_slider",
+          "acceptedStrategyIds": ["crate_then_slider", "none"],
+          "solutionFamilies": ["crate_push_reacceleration", "outer_wall_bypass"],
+          "optionalChallenges": ["weak_launch_slider", "without_slider"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":270,"y":160},"size":{"x":76,"y":76},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"push_crate","type":"crate","position":{"x":118,"y":390},"size":{"x":36,"y":36},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.84,"restitution":0.66,"linkId":null},
+            {"id":"crate_slider","type":"power_slider","position":{"x":118,"y":330},"size":{"x":94,"y":46},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":0,"y":-1},"referenceSpeed":44,"allowedTargets":["ball","crate"]},
+            {"id":"side_wall","type":"wall","position":{"x":300,"y":300},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.75,"linkId":null}
+          ]
+        },
+        {
+          "patternId": "stage_speed_04",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 180, "y": 466},
+          "copyCharges": 0,
+          "bonusGoal": "서로 다른 발판을 골라 같은 홀에 도달해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "choose_slider",
+          "acceptedStrategyIds": ["choose_slider", "none"],
+          "solutionFamilies": ["multiple_slider_choice", "center_bypass"],
+          "optionalChallenges": ["weak_launch_slider", "without_slider"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":180,"y":96},"size":{"x":72,"y":72},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"left_slider","type":"power_slider","position":{"x":118,"y":298},"size":{"x":86,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":1,"y":0},"referenceSpeed":34,"allowedTargets":["ball"]},
+            {"id":"right_slider","type":"power_slider","position":{"x":242,"y":298},"size":{"x":86,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":-1,"y":0},"referenceSpeed":46,"allowedTargets":["ball"]},
+            {"id":"choice_crate","type":"crate","position":{"x":74,"y":188},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+          ]
+        }
+      ]
     }
   ]
 }

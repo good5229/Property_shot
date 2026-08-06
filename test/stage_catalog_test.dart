@@ -31,6 +31,7 @@ void main() {
       'stage_chain_gate',
       'stage_balloon',
       'stage_drained',
+      'stage_speed',
     ]);
     expect(
       sourceCatalog.stages.first.patterns.map((pattern) => pattern.patternId),
@@ -93,7 +94,7 @@ void main() {
   });
 
   test('levels는 각 단계의 기준 패턴을 동기식으로 노출한다', () {
-    expect(levels, hasLength(5));
+    expect(levels, hasLength(6));
     for (var index = 0; index < levels.length; index++) {
       expect(levels[index].id, sourceCatalog.stages[index].stageId);
       expect(

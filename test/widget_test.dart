@@ -103,7 +103,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
-    expect(find.text('앞 섬을 먼저 클리어하세요'), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 4));
+    await tester.ensureVisible(find.byKey(const Key('stage_tile_3')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('stage_tile_3')));
     await tester.pump();
 
@@ -121,7 +123,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
-    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNothing);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 5));
   });
 
   testWidgets('모든 단계 클리어 기록은 재시작 뒤 섬 지도 전체 해금을 복원한다', (tester) async {
@@ -149,7 +151,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
-    expect(find.text('앞 섬을 먼저 클리어하세요'), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 4));
   });
 
   testWidgets('홈의 첫 섬 시작 버튼은 첫 스테이지 플레이로 이동한다', (tester) async {

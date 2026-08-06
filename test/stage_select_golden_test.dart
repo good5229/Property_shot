@@ -46,6 +46,7 @@ void main() {
           'assets/icons/stone_boulder.png',
           'assets/generated/jelly-bumper-v1.png',
           'assets/icons/crate.png',
+          'assets/generated/crate-v2.png',
         ]) {
           await precacheImage(AssetImage(asset), context);
         }
@@ -54,7 +55,9 @@ void main() {
 
       expect(find.byKey(const Key('stage_route_map')), findsOneWidget);
       expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
+      expect(find.byKey(const Key('stage_tile_5')), findsOneWidget);
       expect(find.text('풍선은 밀리고, 뾰족한 공에는 터집니다.'), findsOneWidget);
+      expect(find.text('약하게 쏜 뒤 발판에 들어가는 각도와 우회 길을 찾아 보세요.'), findsOneWidget);
       expect(find.byKey(const Key('map_hint_card')), findsOneWidget);
       await expectLater(
         find.byKey(const Key('stage_select_golden')),

@@ -2741,7 +2741,8 @@ String _levelObjective(int levelIndex) {
     1 => '추천: 탄성을 옮겨 벽에 반사시켜 보세요. 다른 각도와 경로도 시도할 수 있습니다.',
     2 => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
     3 => '풍선을 밀거나 터뜨린 뒤 여러 경로로 홀에 가 보세요. 터뜨리면 뒤의 스위치가 보여요.',
-    _ => '속성을 옮기면 공은 능력을 얻고 원본은 능력을 잃습니다. 두 변화를 함께 이용해 보세요.',
+    4 => '속성을 옮기면 공은 능력을 얻고 원본은 능력을 잃습니다. 두 변화를 함께 이용해 보세요.',
+    _ => '공은 처음 빠르고 점점 느려집니다. 약하게 쏜 뒤 발판으로 속도를 되살려 보세요.',
   };
 }
 
@@ -2758,7 +2759,8 @@ String _compactLevelObjective(int levelIndex) {
     1 => '탄성으로 벽에 반사해 홀로 보내기',
     2 => '스위치와 문을 열어 홀로 가기',
     3 => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
-    _ => '공과 비워진 원본을 함께 이용해 홀로 가기',
+    4 => '공과 비워진 원본을 함께 이용해 홀로 가기',
+    _ => '감속·반사·발판으로 속도를 되살려 홀로 가기',
   };
 }
 
@@ -2780,6 +2782,11 @@ int _starsForShot(int shotCount, int parShots) {
 }
 
 String? _levelProgressHint(GameState state) {
+  if (state.levelIndex == 5) {
+    return state.shotCount > 0
+        ? '발판과 벽의 결과를 확인했어요. 같은 각도와 우회 길도 비교해 보세요.'
+        : '공은 충돌할수록 느려져요. 약한 발사로 발판 진입 각도를 찾아 보세요.';
+  }
   if (state.levelIndex == 4) {
     final drained = state.entities.where(
       (entity) => entity.visualState == 'drained',
@@ -2825,6 +2832,9 @@ String? _levelProgressHint(GameState state) {
 }
 
 String? _compactLevelProgressHint(GameState state) {
+  if (state.levelIndex == 5) {
+    return state.shotCount > 0 ? '발판 결과 · 우회 길 비교' : '감속 읽기 · 진입 각도 찾기';
+  }
   if (state.levelIndex == 4) {
     return state.entities.any((entity) => entity.visualState == 'drained')
         ? '공은 능력 획득 · 원본은 이동 가능'
@@ -2867,7 +2877,8 @@ String _levelIntroMessage(int levelIndex) {
     1 => '방향 조정 · 길게 누르기 · 손 떼기',
     2 => '스위치 살피기 · 여러 경로로 도전',
     3 => '풍선 확인 · 여러 경로로 도전',
-    _ => '공과 원본의 변화를 함께 살펴보세요',
+    4 => '공과 원본의 변화를 함께 살펴보세요',
+    _ => '감속 · 발판 진입 각도 · 여러 경로로 도전',
   };
 }
 
