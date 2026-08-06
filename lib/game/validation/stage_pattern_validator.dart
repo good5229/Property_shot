@@ -49,6 +49,10 @@ enum ValidationIssueCode {
   sliderMustBeStatic,
   sliderMustBeNonSolid,
   sliderOverlapsSolid,
+  invalidReflectorOrientation,
+  invalidReflectorRotationCount,
+  reflectorMustBeStatic,
+  reflectorMustBeSolid,
   ballSpawnOverlapsHole,
   existingBallOverlapsHole,
   ballSpawnInsideSolid,
@@ -139,6 +143,14 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'slider_must_be_non_solid';
       case ValidationIssueCode.sliderOverlapsSolid:
         return 'slider_overlaps_solid';
+      case ValidationIssueCode.invalidReflectorOrientation:
+        return 'invalid_reflector_orientation';
+      case ValidationIssueCode.invalidReflectorRotationCount:
+        return 'invalid_reflector_rotation_count';
+      case ValidationIssueCode.reflectorMustBeStatic:
+        return 'reflector_must_be_static';
+      case ValidationIssueCode.reflectorMustBeSolid:
+        return 'reflector_must_be_solid';
       case ValidationIssueCode.ballSpawnOverlapsHole:
         return 'ball_spawn_overlaps_hole';
       case ValidationIssueCode.existingBallOverlapsHole:
@@ -698,6 +710,48 @@ class StagePatternValidator {
         );
       }
     }
+    if (object.type == EntityType.rotatingReflector) {
+      if (object.reflectorOrientation < 0 || object.reflectorOrientation > 7) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.invalidReflectorOrientation,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+      if (object.reflectorRotationCount < 0) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.invalidReflectorRotationCount,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+      if (!object.active || object.movable) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.reflectorMustBeStatic,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+      if (!object.solid) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.reflectorMustBeSolid,
+            stageId,
+            patternId: patternId,
+            objectIds: ids,
+          ),
+        );
+      }
+    }
 
     final shape = _shapeFor(object);
     if (shape != null &&
@@ -710,6 +764,36 @@ class StagePatternValidator {
           objectIds: ids,
         ),
       );
+    }
+    if (object.type == EntityType.rotatingReflector &&
+        object.reflectorOrientation >= 0 &&
+        object.reflectorOrientation <= 7) {
+      for (final orientation in {
+        (object.reflectorOrientation + 2) % 8,
+        (object.reflectorOrientation + 4) % 8,
+        (object.reflectorOrientation + 6) % 8,
+      }) {
+        final reachableShape = _shapeFor(
+          object,
+          reflectorOrientation: orientation,
+        );
+        if (reachableShape != null &&
+            !_isInsideBoard(
+              reachableShape,
+              width: boardSize.x,
+              height: boardSize.y,
+            )) {
+          // 회전 후에도 기존 objectOutOfBounds 계약을 재사용한다.
+          issues.add(
+            _issue(
+              ValidationIssueCode.objectOutOfBounds,
+              stageId,
+              patternId: patternId,
+              objectIds: ids,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -842,6 +926,42 @@ class StagePatternValidator {
             objectIds: ids.where((id) => id.isNotEmpty),
           ),
         );
+      }
+    }
+
+    final futureReflectorPairs = <String>{};
+    for (final reflector in objects.where(
+      (object) => object.type == EntityType.rotatingReflector,
+    )) {
+      for (final orientation in {
+        (reflector.reflectorOrientation + 2) % 8,
+        (reflector.reflectorOrientation + 4) % 8,
+        (reflector.reflectorOrientation + 6) % 8,
+      }) {
+        final rotatedShape = _shapeFor(
+          reflector,
+          reflectorOrientation: orientation,
+        );
+        if (rotatedShape == null) continue;
+        for (final object in objects) {
+          if (object.id == reflector.id || object.movable) continue;
+          final otherShape = _shapeFor(object);
+          if (otherShape == null || !_overlaps(rotatedShape, otherShape)) {
+            continue;
+          }
+          final pairIds = [reflector.id, object.id]
+            ..sort((first, second) => first.compareTo(second));
+          final pairKey = pairIds.join('\u0000');
+          if (!futureReflectorPairs.add(pairKey)) continue;
+          _addIssueForObjectPair(
+            stage,
+            pattern,
+            issues,
+            ValidationIssueCode.initialObjectOverlap,
+            reflector,
+            object,
+          );
+        }
       }
     }
 
@@ -1243,6 +1363,14 @@ String _defaultMessage(ValidationIssueCode code) {
       return '파워 슬라이더는 비고체 영역이어야 합니다.';
     case ValidationIssueCode.sliderOverlapsSolid:
       return '파워 슬라이더 영역은 초기 고체 기물과 겹칠 수 없습니다.';
+    case ValidationIssueCode.invalidReflectorOrientation:
+      return '회전 반사판 방향은 0부터 7 사이여야 합니다.';
+    case ValidationIssueCode.invalidReflectorRotationCount:
+      return '회전 반사판 회전 횟수는 음수일 수 없습니다.';
+    case ValidationIssueCode.reflectorMustBeStatic:
+      return '회전 반사판은 활성 상태의 고정 기물이어야 합니다.';
+    case ValidationIssueCode.reflectorMustBeSolid:
+      return '회전 반사판은 고체 충돌면이어야 합니다.';
     case ValidationIssueCode.ballSpawnOverlapsHole:
       return '공 시작점이 홀에 걸쳐 자동 클리어됩니다.';
     case ValidationIssueCode.existingBallOverlapsHole:
@@ -1337,10 +1465,23 @@ class _Shape {
   const _Shape.circle(this.center, this.radius)
     : isCircle = true,
       halfWidth = 0,
-      halfHeight = 0;
+      halfHeight = 0,
+      axisX = const Vec2(1, 0),
+      axisY = const Vec2(0, 1);
 
   const _Shape.rectangle(this.center, this.halfWidth, this.halfHeight)
     : isCircle = false,
+      radius = 0,
+      axisX = const Vec2(1, 0),
+      axisY = const Vec2(0, 1);
+
+  const _Shape.orientedRectangle(
+    this.center,
+    this.halfWidth,
+    this.halfHeight,
+    this.axisX,
+    this.axisY,
+  ) : isCircle = false,
       radius = 0;
 
   final Vec2 center;
@@ -1348,9 +1489,23 @@ class _Shape {
   final double radius;
   final double halfWidth;
   final double halfHeight;
+  final Vec2 axisX;
+  final Vec2 axisY;
+
+  double projectionRadius(Vec2 axis) {
+    return halfWidth * axis.dot(axisX).abs() +
+        halfHeight * axis.dot(axisY).abs();
+  }
+
+  List<Vec2> get corners => [
+    center + axisX * halfWidth + axisY * halfHeight,
+    center - axisX * halfWidth + axisY * halfHeight,
+    center - axisX * halfWidth - axisY * halfHeight,
+    center + axisX * halfWidth - axisY * halfHeight,
+  ];
 }
 
-_Shape? _shapeFor(PatternObjectDefinition object) {
+_Shape? _shapeFor(PatternObjectDefinition object, {int? reflectorOrientation}) {
   if (!_isFiniteVec(object.position) ||
       !_isFiniteVec(object.size) ||
       !object.hitboxScale.isFinite ||
@@ -1367,6 +1522,19 @@ _Shape? _shapeFor(PatternObjectDefinition object) {
       math.min(object.size.x, object.size.y) / 2 * object.hitboxScale,
     );
   }
+  if (object.type == EntityType.rotatingReflector) {
+    final orientation = reflectorOrientation ?? object.reflectorOrientation;
+    final angle = -math.pi / 2 + orientation * math.pi / 4;
+    final normal = Vec2(math.cos(angle), math.sin(angle));
+    final tangent = Vec2(-normal.y, normal.x);
+    return _Shape.orientedRectangle(
+      object.position,
+      object.size.x / 2 * object.hitboxScale,
+      object.size.y / 2 * object.hitboxScale,
+      tangent,
+      normal,
+    );
+  }
   return _Shape.rectangle(
     object.position,
     object.size.x / 2 * object.hitboxScale,
@@ -1381,10 +1549,13 @@ bool _isInsideBoard(_Shape shape, {double width = 360, double height = 560}) {
         shape.center.y - shape.radius >= 0 &&
         shape.center.y + shape.radius <= height;
   }
-  return shape.center.x - shape.halfWidth >= 0 &&
-      shape.center.x + shape.halfWidth <= width &&
-      shape.center.y - shape.halfHeight >= 0 &&
-      shape.center.y + shape.halfHeight <= height;
+  return shape.corners.every(
+    (corner) =>
+        corner.x >= 0 &&
+        corner.x <= width &&
+        corner.y >= 0 &&
+        corner.y <= height,
+  );
 }
 
 bool _overlaps(_Shape first, _Shape second, {bool inclusive = false}) {
@@ -1395,39 +1566,29 @@ bool _overlaps(_Shape first, _Shape second, {bool inclusive = false}) {
     return inclusive ? distance <= limit + epsilon : distance < limit - epsilon;
   }
   if (!first.isCircle && !second.isCircle) {
-    final overlapX =
-        math.min(
-          first.center.x + first.halfWidth,
-          second.center.x + second.halfWidth,
-        ) -
-        math.max(
-          first.center.x - first.halfWidth,
-          second.center.x - second.halfWidth,
-        );
-    final overlapY =
-        math.min(
-          first.center.y + first.halfHeight,
-          second.center.y + second.halfHeight,
-        ) -
-        math.max(
-          first.center.y - first.halfHeight,
-          second.center.y - second.halfHeight,
-        );
-    return inclusive
-        ? overlapX >= -epsilon && overlapY >= -epsilon
-        : overlapX > epsilon && overlapY > epsilon;
+    final axes = [first.axisX, first.axisY, second.axisX, second.axisY];
+    for (final axis in axes) {
+      final distance = (second.center - first.center).dot(axis).abs();
+      final overlap =
+          first.projectionRadius(axis) +
+          second.projectionRadius(axis) -
+          distance;
+      if (inclusive ? overlap < -epsilon : overlap <= epsilon) return false;
+    }
+    return true;
   }
   final circle = first.isCircle ? first : second;
   final rectangle = first.isCircle ? second : first;
-  final nearestX = circle.center.x.clamp(
-    rectangle.center.x - rectangle.halfWidth,
-    rectangle.center.x + rectangle.halfWidth,
-  );
-  final nearestY = circle.center.y.clamp(
-    rectangle.center.y - rectangle.halfHeight,
-    rectangle.center.y + rectangle.halfHeight,
-  );
-  final distance = circle.center.distanceTo(Vec2(nearestX, nearestY));
+  final local = circle.center - rectangle.center;
+  final localX = local.dot(rectangle.axisX);
+  final localY = local.dot(rectangle.axisY);
+  final nearestX = localX.clamp(-rectangle.halfWidth, rectangle.halfWidth);
+  final nearestY = localY.clamp(-rectangle.halfHeight, rectangle.halfHeight);
+  final nearest =
+      rectangle.center +
+      rectangle.axisX * nearestX +
+      rectangle.axisY * nearestY;
+  final distance = circle.center.distanceTo(nearest);
   return inclusive
       ? distance <= circle.radius + epsilon
       : distance < circle.radius - epsilon;

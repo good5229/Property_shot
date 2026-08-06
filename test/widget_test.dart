@@ -41,6 +41,39 @@ void main() {
     expect(find.byKey(const Key('start_game_button')), findsOneWidget);
   });
 
+  testWidgets('회전 반사판 접근성 설명은 충돌당 90도 회전을 안내한다', (tester) async {
+    final state = GameState(
+      levelIndex: 0,
+      levelName: '회전 반사판 접근성 시험',
+      ballSpawn: const Vec2(60, 520),
+      entities: const [
+        EntityState(
+          id: 'active_ball',
+          type: EntityType.ball,
+          position: Vec2(60, 520),
+          size: Vec2(24, 24),
+          movable: true,
+        ),
+        EntityState(
+          id: 'reflector',
+          type: EntityType.rotatingReflector,
+          position: Vec2(180, 280),
+          size: Vec2(76, 12),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      PropertyShotApp(initialState: state, showStageSelector: false),
+    );
+    await tester.pump();
+
+    final semantics = tester.getSemantics(
+      find.bySemanticsLabel(RegExp('회전 반사판.*90도')),
+    );
+    expect(semantics.getSemanticsData().label, contains('다음 충돌부터 90도 방향 변경'));
+    expect(semantics.getSemanticsData().label, isNot(contains('45도')));
+  });
+
   testWidgets('섬 지도는 진행 경로와 실제 한 번 탭 동작을 안내한다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pump();

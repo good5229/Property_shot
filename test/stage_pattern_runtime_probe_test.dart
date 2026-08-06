@@ -159,6 +159,393 @@ void main() {
     );
   });
 
+  test('점착 또는 동일 접촉 중복 impact만으로는 회전 누락을 오탐하지 않는다', () {
+    final pattern = StagePattern(
+      patternId: 'reflector_negative',
+      weight: 1,
+      parShots: 3,
+      difficultyBand: '중급',
+      ballSpawn: const Vec2(60, 520),
+      solutionFamilies: const {'반사'},
+      objects: const [
+        PatternObjectDefinition(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(320, 100),
+          size: Vec2(36, 36),
+          solid: false,
+        ),
+        PatternObjectDefinition(
+          id: 'reflector',
+          type: EntityType.rotatingReflector,
+          position: Vec2(60, 280),
+          size: Vec2(76, 12),
+        ),
+      ],
+    );
+    final reflectorStage = StageDefinition(
+      stageId: 'reflector_negative_stage',
+      title: '반사판 음성 검증',
+      patterns: [pattern],
+    );
+    final initial = pattern
+        .toLevelDefinition(
+          stageId: reflectorStage.stageId,
+          stageTitle: reflectorStage.title,
+        )
+        .createState(0);
+    final impact = ShotImpact(
+      entityId: 'reflector',
+      entityType: EntityType.rotatingReflector,
+      position: const Vec2(60, 286),
+      normal: const Vec2(0, 1),
+      pathIndex: 1,
+      strength: 1,
+    );
+    final impactEvent = PhysicsEvent(
+      eventId: 'impact:sticky',
+      kind: PhysicsEventKind.impact,
+      pathIndex: 1,
+      sourceEntityId: 'active_ball',
+      targetEntityId: 'reflector',
+      targetType: EntityType.rotatingReflector,
+      position: impact.position,
+      normal: impact.normal,
+      impulse: 0,
+      resultingVelocity: Vec2.zero,
+      impact: impact,
+    );
+    final duplicate = ShotResult(
+      state: initial,
+      path: [initial.activeBall.position, impact.position],
+      events: const ['sticky_attached'],
+      impacts: [impact, impact],
+      physicsEvents: [impactEvent],
+    );
+    final evidence = _probeReflectorResult(
+      stage: reflectorStage,
+      pattern: pattern,
+      result: duplicate,
+    );
+    expect(evidence.rotatorOrderViolation, isFalse);
+  });
+
+  test('비자격 impact를 부모로 둔 가짜 회전 사건을 검출한다', () {
+    final pattern = StagePattern(
+      patternId: 'reflector_nonqualifying_rotation',
+      weight: 1,
+      parShots: 3,
+      difficultyBand: '중급',
+      ballSpawn: const Vec2(60, 520),
+      solutionFamilies: const {'반사'},
+      objects: const [
+        PatternObjectDefinition(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(320, 100),
+          size: Vec2(36, 36),
+          solid: false,
+        ),
+        PatternObjectDefinition(
+          id: 'reflector',
+          type: EntityType.rotatingReflector,
+          position: Vec2(60, 280),
+          size: Vec2(76, 12),
+        ),
+      ],
+    );
+    final fixtureStage = StageDefinition(
+      stageId: 'reflector_nonqualifying_rotation_stage',
+      title: '비자격 회전 검증',
+      patterns: [pattern],
+    );
+    final initial = pattern
+        .toLevelDefinition(
+          stageId: fixtureStage.stageId,
+          stageTitle: fixtureStage.title,
+        )
+        .createState(0);
+    final changed = initial.copyWith(
+      entities: [
+        for (final entity in initial.entities)
+          entity.id == 'reflector'
+              ? entity.copyWith(
+                  reflectorOrientation: 2,
+                  reflectorRotationCount: 1,
+                )
+              : entity,
+      ],
+    );
+    const impact = ShotImpact(
+      entityId: 'reflector',
+      entityType: EntityType.rotatingReflector,
+      position: Vec2(60, 286),
+      normal: Vec2(0, 1),
+      pathIndex: 1,
+      strength: 1,
+      contactId: 'active_ball:reflector',
+      triggersReflectorRotation: false,
+    );
+    const rotation = ReflectorRotation(
+      sourceEntityId: 'active_ball',
+      reflectorEntityId: 'reflector',
+      contactId: 'active_ball:reflector',
+      pathIndex: 1,
+      orientationBefore: 0,
+      orientationAfter: 2,
+      rotationCountBefore: 0,
+      rotationCountAfter: 1,
+      collisionNormal: Vec2(0, 1),
+      velocityBefore: Vec2(0, -8),
+      velocityAfter: Vec2(0, 6),
+    );
+    const path = [Vec2(60, 520), Vec2(60, 286), Vec2(60, 292)];
+    final result = ShotResult(
+      state: changed,
+      path: path,
+      events: const [],
+      impacts: const [impact],
+      reflectorRotations: const [rotation],
+      physicsEvents: buildPhysicsEvents(
+        path: path,
+        impacts: const [impact],
+        moves: const [],
+        chainSafetyDiagnostics: const [],
+        reflectorRotations: const [rotation],
+      ),
+    );
+
+    final evidence = _probeReflectorResult(
+      stage: fixtureStage,
+      pattern: pattern,
+      result: result,
+    );
+    expect(evidence.rotatorOrderViolation, isTrue);
+  });
+
+  test('회전 횟수만 증가하고 회전 사건이 누락된 fake resolver를 검출한다', () {
+    final reflector = const PatternObjectDefinition(
+      id: 'reflector',
+      type: EntityType.rotatingReflector,
+      position: Vec2(60, 280),
+      size: Vec2(76, 12),
+    );
+    final pattern = StagePattern(
+      patternId: 'reflector_missing_rotation',
+      weight: 1,
+      parShots: 3,
+      difficultyBand: '중급',
+      ballSpawn: const Vec2(60, 520),
+      solutionFamilies: const {'반사'},
+      objects: [
+        const PatternObjectDefinition(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(320, 100),
+          size: Vec2(36, 36),
+          solid: false,
+        ),
+        reflector,
+      ],
+    );
+    final stage = StageDefinition(
+      stageId: 'reflector_missing_rotation_stage',
+      title: '반사 사건 누락 검증',
+      patterns: [pattern],
+    );
+    final initial = pattern
+        .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+        .createState(0);
+    final changed = initial.copyWith(
+      entities: [
+        for (final entity in initial.entities)
+          entity.id == 'reflector'
+              ? entity.copyWith(
+                  reflectorOrientation: 2,
+                  reflectorRotationCount: 1,
+                )
+              : entity,
+      ],
+    );
+    final result = ShotResult(
+      state: changed,
+      path: [initial.activeBall.position],
+      events: const [],
+    );
+    final evidence = _probeReflectorResult(
+      stage: stage,
+      pattern: pattern,
+      result: result,
+    );
+    expect(evidence.rotatorOrderViolation, isTrue);
+  });
+
+  test(
+    'qualifying reflector impact와 rotation·state가 모두 누락된 fake resolver를 검출한다',
+    () {
+      final pattern = StagePattern(
+        patternId: 'reflector_qualifying_missing',
+        weight: 1,
+        parShots: 3,
+        difficultyBand: '중급',
+        ballSpawn: const Vec2(180, 440),
+        solutionFamilies: const {'반사'},
+        objects: const [
+          PatternObjectDefinition(
+            id: 'hole',
+            type: EntityType.hole,
+            position: Vec2(320, 100),
+            size: Vec2(36, 36),
+            solid: false,
+          ),
+          PatternObjectDefinition(
+            id: 'reflector',
+            type: EntityType.rotatingReflector,
+            position: Vec2(180, 280),
+            size: Vec2(76, 12),
+          ),
+        ],
+      );
+      final fixtureStage = StageDefinition(
+        stageId: 'reflector_qualifying_missing_stage',
+        title: '회전 자격 사건 누락',
+        patterns: [pattern],
+      );
+      final initial = pattern
+          .toLevelDefinition(
+            stageId: fixtureStage.stageId,
+            stageTitle: fixtureStage.title,
+          )
+          .createState(0);
+      const impact = ShotImpact(
+        entityId: 'reflector',
+        entityType: EntityType.rotatingReflector,
+        position: Vec2(180, 286),
+        normal: Vec2(0, 1),
+        pathIndex: 2,
+        strength: 1,
+        contactId: 'active_ball:reflector',
+        triggersReflectorRotation: true,
+      );
+      final result = ShotResult(
+        state: initial,
+        path: [initial.activeBall.position, impact.position],
+        events: const [],
+        impacts: const [impact],
+        physicsEvents: const [
+          PhysicsEvent(
+            eventId: 'impact:qualifying_missing',
+            kind: PhysicsEventKind.impact,
+            pathIndex: 2,
+            sourceEntityId: 'active_ball',
+            targetEntityId: 'reflector',
+            targetType: EntityType.rotatingReflector,
+            position: Vec2(180, 286),
+            normal: Vec2(0, 1),
+            impulse: 1,
+            resultingVelocity: Vec2(0, 1),
+            contactId: 'active_ball:reflector',
+            triggersReflectorRotation: true,
+            impact: impact,
+          ),
+        ],
+      );
+      final evidence = _probeReflectorResult(
+        stage: fixtureStage,
+        pattern: pattern,
+        result: result,
+      );
+
+      expect(evidence.rotatorOrderViolation, isTrue);
+    },
+  );
+
+  test('impact보다 앞선 rotation, 잘못된 parent, velocity 불일치 fake 사건을 모두 검출한다', () {
+    final pattern = StagePattern(
+      patternId: 'reflector_event_contract',
+      weight: 1,
+      parShots: 3,
+      difficultyBand: '중급',
+      ballSpawn: const Vec2(180, 440),
+      solutionFamilies: const {'반사'},
+      objects: const [
+        PatternObjectDefinition(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(320, 100),
+          size: Vec2(36, 36),
+          solid: false,
+        ),
+        PatternObjectDefinition(
+          id: 'reflector',
+          type: EntityType.rotatingReflector,
+          position: Vec2(180, 280),
+          size: Vec2(76, 12),
+        ),
+      ],
+    );
+    final eventStage = StageDefinition(
+      stageId: 'reflector_event_contract_stage',
+      title: '반사 사건 계약',
+      patterns: [pattern],
+    );
+    final initial = pattern
+        .toLevelDefinition(
+          stageId: eventStage.stageId,
+          stageTitle: eventStage.title,
+        )
+        .createState(0);
+    final valid = ShotResolver().resolve(
+      initial,
+      const ShotInput(direction: Vec2(0, -1), power: 1),
+    );
+    final impact = valid.physicsEvents.firstWhere(
+      (event) => event.kind == PhysicsEventKind.impact,
+    );
+    final rotation = valid.physicsEvents.firstWhere(
+      (event) => event.kind == PhysicsEventKind.reflectorRotation,
+    );
+    final otherEvents = valid.physicsEvents
+        .where(
+          (event) =>
+              event.eventId != impact.eventId &&
+              event.eventId != rotation.eventId,
+        )
+        .toList();
+
+    PatternRuntimeEvidence probeWith(List<PhysicsEvent> events) {
+      return _probeReflectorResult(
+        stage: eventStage,
+        pattern: pattern,
+        result: _resultWithPhysicsEvents(valid, events),
+      );
+    }
+
+    expect(
+      probeWith([rotation, impact, ...otherEvents]).rotatorOrderViolation,
+      isTrue,
+    );
+    expect(
+      probeWith([
+        impact,
+        _copyPhysicsEvent(rotation, parentEventId: 'wrong-parent'),
+        ...otherEvents,
+      ]).rotatorOrderViolation,
+      isTrue,
+    );
+    expect(
+      probeWith([
+        impact,
+        _copyPhysicsEvent(
+          rotation,
+          resultingVelocity: rotation.resultingVelocity + const Vec2(1, 0),
+        ),
+        ...otherEvents,
+      ]).rotatorOrderViolation,
+      isTrue,
+    );
+  });
+
   test('metadata 문자열만으로 신규 기물 오류를 만들지 않는다', () {
     final json = Map<String, dynamic>.from(basePattern.toJson());
     json['metadata'] = <String, dynamic>{
@@ -704,6 +1091,19 @@ class _FixedShotResolver extends ShotResolver {
   ShotResult resolve(GameState state, ShotInput rawInput) => result;
 }
 
+PatternRuntimeEvidence _probeReflectorResult({
+  required StageDefinition stage,
+  required StagePattern pattern,
+  required ShotResult result,
+}) {
+  return ShotResolverPatternRuntimeProbe(
+    shotResolver: _FixedShotResolver(result),
+    representativeInputs: const [ShotInput(direction: Vec2(0, -1), power: 0.5)],
+    maxProbeCount: 1,
+    maxShots: 2,
+  ).probe(stage: stage, pattern: pattern);
+}
+
 class _AlternatingShotResolver extends ShotResolver {
   _AlternatingShotResolver(this.first, this.second);
 
@@ -790,6 +1190,52 @@ ShotResult _resultWithState(ShotResult result, GameState state) {
     impacts: result.impacts,
     physicsEvents: result.physicsEvents,
     chainSafetyDiagnostics: result.chainSafetyDiagnostics,
+  );
+}
+
+ShotResult _resultWithPhysicsEvents(
+  ShotResult result,
+  List<PhysicsEvent> physicsEvents,
+) {
+  return ShotResult(
+    state: result.state,
+    path: result.path,
+    events: result.events,
+    moves: result.moves,
+    impacts: result.impacts,
+    powerSliderActivations: result.powerSliderActivations,
+    reflectorRotations: result.reflectorRotations,
+    physicsEvents: physicsEvents,
+    chainSafetyDiagnostics: result.chainSafetyDiagnostics,
+  );
+}
+
+PhysicsEvent _copyPhysicsEvent(
+  PhysicsEvent event, {
+  String? parentEventId,
+  Vec2? resultingVelocity,
+}) {
+  return PhysicsEvent(
+    eventId: event.eventId,
+    parentEventId: parentEventId ?? event.parentEventId,
+    kind: event.kind,
+    pathIndex: event.pathIndex,
+    sourceEntityId: event.sourceEntityId,
+    targetEntityId: event.targetEntityId,
+    targetType: event.targetType,
+    position: event.position,
+    normal: event.normal,
+    impulse: event.impulse,
+    resultingVelocity: resultingVelocity ?? event.resultingVelocity,
+    visualState: event.visualState,
+    remainingDistance: event.remainingDistance,
+    remainingSpeed: event.remainingSpeed,
+    iterations: event.iterations,
+    impact: event.impact,
+    move: event.move,
+    contactId: event.contactId,
+    powerSlider: event.powerSlider,
+    reflectorRotation: event.reflectorRotation,
   );
 }
 

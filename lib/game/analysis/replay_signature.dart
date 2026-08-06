@@ -1,4 +1,5 @@
 import '../domain/geometry.dart';
+import '../domain/entity_state.dart';
 import '../simulation/shot_resolver.dart';
 
 String shotResultSignature(ShotResult result) {
@@ -22,6 +23,11 @@ String shotResultSignature(ShotResult result) {
         'active=${entity.active};open=${entity.open};pressed=${entity.pressed};',
       )
       ..write('visual=${entity.visualState};');
+    if (entity.type == EntityType.rotatingReflector) {
+      buffer
+        ..write('reflector_orientation=${entity.reflectorOrientation};')
+        ..write('reflector_rotation_count=${entity.reflectorRotationCount};');
+    }
   }
   for (final impact in result.impacts) {
     buffer
@@ -29,6 +35,10 @@ String shotResultSignature(ShotResult result) {
       ..write('type=${impact.entityType.name};path=${impact.pathIndex};')
       ..write(
         'position=${_vector(impact.position)};normal=${_vector(impact.normal)};',
+      )
+      ..write('contact=${impact.contactId};')
+      ..write(
+        'triggers_reflector_rotation=${impact.triggersReflectorRotation};',
       )
       ..write('impulse=${_number(impact.impulse)};');
   }
@@ -39,7 +49,29 @@ String shotResultSignature(ShotResult result) {
       ..write(
         'target=${event.targetEntityId};position=${_vector(event.position)};',
       )
+      ..write('source=${event.sourceEntityId};')
+      ..write('contact=${event.contactId};')
+      ..write('triggers_reflector_rotation=${event.triggersReflectorRotation};')
       ..write('velocity=${_vector(event.resultingVelocity)};');
+    final rotation = event.reflectorRotation;
+    if (rotation != null) {
+      buffer
+        ..write('reflector_source=${rotation.sourceEntityId};')
+        ..write('reflector_target=${rotation.reflectorEntityId};')
+        ..write('reflector_contact=${rotation.contactId};')
+        ..write('reflector_path=${rotation.pathIndex};')
+        ..write('reflector_before=${rotation.orientationBefore};')
+        ..write('reflector_after=${rotation.orientationAfter};')
+        ..write('reflector_count_before=${rotation.rotationCountBefore};')
+        ..write('reflector_count_after=${rotation.rotationCountAfter};')
+        ..write(
+          'reflector_velocity_before=${_vector(rotation.velocityBefore)};',
+        )
+        ..write(
+          'reflector_collision_normal=${_vector(rotation.collisionNormal)};',
+        )
+        ..write('reflector_velocity_after=${_vector(rotation.velocityAfter)};');
+    }
   }
   for (final move in result.moves) {
     buffer

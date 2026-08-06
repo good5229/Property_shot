@@ -4,6 +4,38 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-06] physics-qa | PS-OBJ-02 final PASS
+
+- Sol 최종 통합에서 테스트 호스트의 `Canvas.toImage` 대기가 끝나지 않는 보조 crop 검사를 제거하고, 제품 코드에 남아 있던 테스트 전용 완료 보류 플래그도 함께 제거했다. 화면 검증은 390x844·768x1024의 14개 Golden과 실제 orientation 0·1·2 렌더 상태, 일반·저모션 다중 회전 일정 검사로 유지한다.
+- 강화된 replay signature가 기존 저장 지문과 충돌한 두 회귀를 확인했다. 단일 샷 16개·다중 샷 20개 fixture의 입력, 경로 태그, 예상 종료 상태는 그대로 두고 fingerprint만 재생성했으며 두 저장 재생 테스트가 통과했다.
+- 독립 QA가 비자격 impact의 가짜 회전 검출 누락, 연쇄 이동체의 impact·rotation 결과 속도 불일치, 회전 뒤 고정된 터치·접근성 영역을 찾아 1차 FAIL 판정했다. 모든 회전이 정확히 하나의 qualifying 부모를 요구하도록 probe를 강화하고, 반사판 impact에 실제 `velocityAfter`를 기록하며, 회전 OBB 선택 영역을 적용했다. 세 재현 회귀를 추가한 뒤 두 번째 독립 검토는 새 P0/P1 없이 PASS했다.
+- 최종 증거는 회전판 물리 30개, runtime probe 25개, 회전판 화면 16개, replay 포함 관련 집중 77개, 스테이지 선택·4단계 인과 28개, 전체 508개 테스트 통과다. `flutter analyze`, 생성 카탈로그 `--check`, Web Release 빌드와 14개 Golden 직접 비교도 통과했다.
+- 기존 1~4단계 원본 카탈로그와 생성본은 변경하지 않았고, 회전 반사판의 8방향 OBB·SAT, 충돌 전 법선 반사 후 90도 회전, 동일 접촉 중복 방지, 고속 swept 순서, 벽 불변·홀·점착 우선순위, 다중 이동체와 replay 결정론을 증명해 PS-OBJ-02를 PASS 판정한다. 서버는 전체 프로젝트 완료 전까지 실행하지 않는다.
+
+## [2026-08-06] physics-qa | PS-OBJ-02 P0 order and evidence refresh
+
+- Sol P0에서 chain sampled loop가 반사판을 generic bisection으로 다시 처리해 첫 sample을 가짜 충돌로 반환하던 결함을 확인했다. active/chain 모두 반사판은 analytic 후보만 사용하고, analytic 후보와 일반 후보를 전체 segment progress 및 기존 stable tie 규칙으로 비교하도록 수정했다.
+- 앞선 wall·hole·power slider·chain wall이 뒤쪽 반사판보다 먼저 선택되는 회귀와, 같은 방향으로 멀리 있는 반사판이 chain 첫 sample에서 회전하지 않는 회귀를 추가했다.
+- 기존 FAIL 목록을 독립 fixture로 확장했다. 동일 contact 1회·완전 이탈 후 재진입 2회, 회전 직후 새 OBB 겹침 중복 0회, 다중 reflector·movable source 안정 순서, 얇은 벽 전체 상태 불변, 8방향 기대 반사 벡터, runtime rotation-before-impact/parent/velocity 위반, RunState 실제 rotation count와 샷별 fingerprint를 검증한다.
+- 위 수치는 P1 보완 전 실행 증거다. P1 보완 후 최종 전체 PASS로 재사용하지 않으며, 새 집중 실행과 전체 회귀 결과를 별도로 기록한다.
+- 전체 회귀의 `multi_shot_analyzer_test.dart` 한 fixture는 약 1분 40초 진행 후 통과했다. 기능 실패는 아니지만 후속 성능 분석 위험으로 남긴다.
+
+## [2026-08-06] physics-qa | PS-OBJ-02 P1 qualifying, replay, reduced schedule
+
+- 시작 OBB 겹침은 outward escape면 같은 MTV로 위치만 보정하고 해당 impact를 `triggersReflectorRotation=false`로 기록한다. 완전 이탈 후 재접촉은 별도 qualifying 사건으로 허용한다.
+- 미래 orientation의 초기 겹침 검증은 `movable=false`인 고정 고체만 대상으로 제한하고, 여러 미래 방향에서 같은 고정 object pair가 겹쳐도 `initialObjectOverlap` 한 건만 보고한다. movable crate와의 미래 겹침은 동적 분리 계약으로 남긴다.
+- replay signature와 runtime probe fingerprint에 impact·generic physics의 source/contact/qualifying 필드를 추가하고 차이 양성 테스트를 넣었다.
+- 일반 회전 일정은 effectiveStart 순차 큐를 유지하고 reduced 모드는 각 원래 pathIndex에서 즉시 after를 누적한다. 같은 path의 2회 회전은 8 cursor를 추가로 기다리지 않는다.
+- 최신 집중 증거: 물리 30개, runtime probe 24개, PS-OBJ-02 Golden 14개와 다중·저모션 일정 테스트 통과. 전체 회귀·analyze·생성기·Web release는 최종 실행 후 이 로그에 추가한다. Sol 최종 PASS 전 commit·push·서버 실행은 하지 않는다.
+
+## [2026-08-06] physics-qa | PS-OBJ-02 rectangular SAT normal correction
+
+- Sol 중간 리뷰에서 직사각형 이동체가 `_reflectorContact`의 중심점 법선을 사용해 실제 OBB 최소 분리축과 달라질 수 있는 결함을 확인했다.
+- 회전판 normal·tangent·화면 x·y 4축의 overlap depth를 계산하는 공통 SAT helper를 추가하고, 최소 penetration 축과 고정 tie 순서를 충돌 법선·AABB support 분리에 함께 사용했다. 원형 공은 기존 nearest-point/corner normal 경로를 유지한다.
+- end-cap, 대각 corner, 화면 축 동률, 접촉 접선 보존, residual overlap, swept 벽 재검사, movable spent ball·crate·weight와 fixed spent ball 범위를 회귀 fixture로 고정했다. 임시 출력은 제거했다.
+- `rotating_reflector` 8방향 JSON·validator·PhysicsEvent/ReflectorRotation·replay signature·runtime probe·Canvas 및 한글 UI·14개 Golden을 PS-OBJ-02 문서에 반영했다.
+- 검증: 집중 물리 17개, 회전판 Golden 14개, 전체 486개 테스트, `flutter analyze`, 생성 카탈로그 `--check`, Web release, `git diff --check` 통과. Sol 최종 승인 전 commit·push·서버 실행은 하지 않는다.
+
 ## [2026-08-01] tutorial | make elasticity teachable
 
 - 일반 공도 벽에 반사되지만 탄성 공이 충돌 에너지를 더 보존하도록 조정하고, 2단계 목표와 회귀 기준을 속성 학습에 맞춘다.

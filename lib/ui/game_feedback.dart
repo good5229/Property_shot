@@ -153,6 +153,7 @@ class GameFeedback {
             : HapticFeedback.mediumImpact,
       EntityType.spikeSource => HapticFeedback.lightImpact,
       EntityType.powerSlider => HapticFeedback.lightImpact,
+      EntityType.rotatingReflector => HapticFeedback.mediumImpact,
     };
     _emit(
       'collision_${type.name}',
@@ -183,6 +184,16 @@ class GameFeedback {
   void powerSliderActivated() {
     _emit(
       'power_slider_activated',
+      minimumInterval: const Duration(milliseconds: 70),
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.bouncyCollision,
+      alert: true,
+    );
+  }
+
+  void reflectorRotated() {
+    _emit(
+      'reflector_rotated',
       minimumInterval: const Duration(milliseconds: 70),
       haptic: HapticFeedback.mediumImpact,
       cue: FeedbackCue.bouncyCollision,

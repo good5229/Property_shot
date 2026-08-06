@@ -21,6 +21,11 @@ String debugEntityLabel(String id) {
       id.startsWith('slider_')) {
     return '파워 슬라이더';
   }
+  if (id == 'rotating_reflector' ||
+      id == 'reflector' ||
+      id.startsWith('reflector_')) {
+    return '회전 반사판';
+  }
   return '물체';
 }
 
@@ -38,6 +43,7 @@ String debugEntityTypeLabel(String type) {
     'balloon' => '풍선',
     'spikeSource' => '뾰족함 원본',
     'powerSlider' => '파워 슬라이더',
+    'rotatingReflector' => '회전 반사판',
     _ => '물체',
   };
 }
@@ -63,6 +69,7 @@ String debugPhysicsEventLabel(String kind) {
     'stateChange' => '상태 변경',
     'traitTransfer' => '속성 이전',
     'powerSliderActivation' => '파워 슬라이더 작동',
+    'reflectorRotation' => '회전 반사판 회전',
     _ => '물리 사건',
   };
 }

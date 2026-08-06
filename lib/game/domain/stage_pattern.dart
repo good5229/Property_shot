@@ -33,6 +33,8 @@ String entityTypeToSchemaName(EntityType type) {
       return 'spike_source';
     case EntityType.powerSlider:
       return 'power_slider';
+    case EntityType.rotatingReflector:
+      return 'rotating_reflector';
   }
 }
 
@@ -62,6 +64,8 @@ EntityType entityTypeFromSchemaName(String value) {
       return EntityType.spikeSource;
     case 'power_slider':
       return EntityType.powerSlider;
+    case 'rotating_reflector':
+      return EntityType.rotatingReflector;
     default:
       throw FormatException('entity type: 알 수 없는 enum 이름 "$value"');
   }
@@ -303,6 +307,8 @@ class PatternObjectDefinition {
     this.direction = const Vec2(1, 0),
     this.referenceSpeed = 0,
     this.allowedTargets = const {},
+    this.reflectorOrientation = 0,
+    this.reflectorRotationCount = 0,
   });
 
   final String id;
@@ -322,6 +328,8 @@ class PatternObjectDefinition {
   final Vec2 direction;
   final double referenceSpeed;
   final Set<EntityType> allowedTargets;
+  final int reflectorOrientation;
+  final int reflectorRotationCount;
 
   factory PatternObjectDefinition.fromEntityState(EntityState entity) {
     return PatternObjectDefinition(
@@ -342,6 +350,8 @@ class PatternObjectDefinition {
       direction: entity.direction,
       referenceSpeed: entity.referenceSpeed,
       allowedTargets: Set.unmodifiable(entity.allowedTargets),
+      reflectorOrientation: entity.reflectorOrientation,
+      reflectorRotationCount: entity.reflectorRotationCount,
     );
   }
 
@@ -372,6 +382,8 @@ class PatternObjectDefinition {
             .optionalStringSet('allowedTargets')
             .map(entityTypeFromSchemaName),
       ),
+      reflectorOrientation: reader.optionalInt('reflectorOrientation', 0),
+      reflectorRotationCount: reader.optionalInt('reflectorRotationCount', 0),
     );
   }
 
@@ -394,6 +406,8 @@ class PatternObjectDefinition {
       direction: direction,
       referenceSpeed: referenceSpeed,
       allowedTargets: Set.unmodifiable(allowedTargets),
+      reflectorOrientation: reflectorOrientation,
+      reflectorRotationCount: reflectorRotationCount,
     );
   }
 
@@ -418,6 +432,10 @@ class PatternObjectDefinition {
       json['direction'] = direction.toJson();
       json['referenceSpeed'] = referenceSpeed;
       json['allowedTargets'] = _sortedEntityTypeNames(allowedTargets);
+    }
+    if (type == EntityType.rotatingReflector) {
+      json['reflectorOrientation'] = reflectorOrientation;
+      json['reflectorRotationCount'] = reflectorRotationCount;
     }
     return json;
   }
@@ -458,6 +476,7 @@ const _stableEntityTypeOrder = <EntityType>[
   EntityType.balloon,
   EntityType.spikeSource,
   EntityType.powerSlider,
+  EntityType.rotatingReflector,
 ];
 
 Map<String, String> _sortedMap(Map<String, String> values) {

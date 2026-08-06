@@ -16,6 +16,7 @@ class ShotResult {
     this.moves = const [],
     this.impacts = const [],
     this.powerSliderActivations = const [],
+    this.reflectorRotations = const [],
     this.physicsEvents = const [],
     this.chainSafetyDiagnostics = const [],
   });
@@ -26,6 +27,7 @@ class ShotResult {
   final List<ShotAnimationMove> moves;
   final List<ShotImpact> impacts;
   final List<PowerSliderActivation> powerSliderActivations;
+  final List<ReflectorRotation> reflectorRotations;
   final List<PhysicsEvent> physicsEvents;
   final List<ChainSafetyDiagnostic> chainSafetyDiagnostics;
 }
@@ -33,6 +35,7 @@ class ShotResult {
 enum PhysicsEventKind {
   impact,
   powerSliderActivation,
+  reflectorRotation,
   stateChange,
   move,
   chainSafetyStop,
@@ -70,6 +73,34 @@ class PowerSliderActivation {
   final double speedBefore;
   final double speedAfter;
   final double referenceSpeed;
+}
+
+class ReflectorRotation {
+  const ReflectorRotation({
+    required this.sourceEntityId,
+    required this.reflectorEntityId,
+    required this.contactId,
+    required this.pathIndex,
+    required this.orientationBefore,
+    required this.orientationAfter,
+    required this.rotationCountBefore,
+    required this.rotationCountAfter,
+    required this.collisionNormal,
+    required this.velocityBefore,
+    required this.velocityAfter,
+  });
+
+  final String sourceEntityId;
+  final String reflectorEntityId;
+  final String contactId;
+  final int pathIndex;
+  final int orientationBefore;
+  final int orientationAfter;
+  final int rotationCountBefore;
+  final int rotationCountAfter;
+  final Vec2 collisionNormal;
+  final Vec2 velocityBefore;
+  final Vec2 velocityAfter;
 }
 
 /// 판정 중 실제로 적용된 엔티티 상태 변화를 기록한다.
@@ -135,7 +166,9 @@ class PhysicsEvent {
     this.impact,
     this.move,
     this.contactId,
+    this.triggersReflectorRotation = false,
     this.powerSlider,
+    this.reflectorRotation,
   });
 
   final String eventId;
@@ -156,7 +189,9 @@ class PhysicsEvent {
   final ShotImpact? impact;
   final ShotAnimationMove? move;
   final String? contactId;
+  final bool triggersReflectorRotation;
   final PowerSliderActivation? powerSlider;
+  final ReflectorRotation? reflectorRotation;
 }
 
 class ShotImpact {
@@ -168,6 +203,8 @@ class ShotImpact {
     required this.pathIndex,
     required this.strength,
     this.sourceEntityId = 'active_ball',
+    this.contactId,
+    this.triggersReflectorRotation = false,
     this.relativeNormalSpeed = 0,
     this.impulse = 0,
     this.impactTier = ImpactTier.light,
@@ -180,6 +217,8 @@ class ShotImpact {
   final int pathIndex;
   final double strength;
   final String sourceEntityId;
+  final String? contactId;
+  final bool triggersReflectorRotation;
   final double relativeNormalSpeed;
   final double impulse;
   final ImpactTier impactTier;
@@ -214,9 +253,12 @@ List<PhysicsEvent> buildPhysicsEvents({
   required List<ChainSafetyDiagnostic> chainSafetyDiagnostics,
   List<PhysicsStateTransition> stateTransitions = const [],
   List<PowerSliderActivation> powerSliderActivations = const [],
+  List<ReflectorRotation> reflectorRotations = const [],
 }) {
   final events = <PhysicsEvent>[];
   final impactEventsByTarget = <String, PhysicsEvent>{};
+  final impactEventsByContact = <String, List<PhysicsEvent>>{};
+  final reflectorParentCursor = <String, int>{};
 
   for (var index = 0; index < impacts.length; index++) {
     final impact = impacts[index];
@@ -234,11 +276,21 @@ List<PhysicsEvent> buildPhysicsEvents({
       position: impact.position,
       normal: impact.normal,
       impulse: impact.impulse,
-      resultingVelocity: _observedVelocity(path, impact.pathIndex),
+      resultingVelocity: _impactResultingVelocity(
+        path,
+        moves,
+        reflectorRotations,
+        impact,
+      ),
       impact: impact,
+      contactId: impact.contactId,
+      triggersReflectorRotation: impact.triggersReflectorRotation,
     );
     events.add(event);
     impactEventsByTarget[impact.entityId] = event;
+    final key =
+        '${impact.sourceEntityId}:${impact.entityId}:${impact.pathIndex}';
+    impactEventsByContact.putIfAbsent(key, () => <PhysicsEvent>[]).add(event);
   }
 
   for (var index = 0; index < powerSliderActivations.length; index++) {
@@ -274,6 +326,36 @@ List<PhysicsEvent> buildPhysicsEvents({
         resultingVelocity: activation.velocityAfter,
         contactId: activation.contactId,
         powerSlider: activation,
+      ),
+    );
+  }
+
+  for (var index = 0; index < reflectorRotations.length; index++) {
+    final rotation = reflectorRotations[index];
+    final key =
+        '${rotation.sourceEntityId}:${rotation.reflectorEntityId}:${rotation.pathIndex}';
+    final candidates = impactEventsByContact[key] ?? const <PhysicsEvent>[];
+    final parentIndex = reflectorParentCursor[key] ?? 0;
+    final parent = candidates.length > parentIndex
+        ? candidates[parentIndex]
+        : null;
+    reflectorParentCursor[key] = parentIndex + 1;
+    events.add(
+      PhysicsEvent(
+        eventId: 'reflector:${rotation.contactId}:${rotation.pathIndex}:$index',
+        parentEventId: parent?.eventId,
+        kind: PhysicsEventKind.reflectorRotation,
+        pathIndex: rotation.pathIndex,
+        sourceEntityId: rotation.sourceEntityId,
+        targetEntityId: rotation.reflectorEntityId,
+        targetType: EntityType.rotatingReflector,
+        position: parent?.position ?? Vec2.zero,
+        normal: rotation.collisionNormal,
+        impulse: rotation.velocityAfter.length - rotation.velocityBefore.length,
+        resultingVelocity: rotation.velocityAfter,
+        contactId: rotation.contactId,
+        triggersReflectorRotation: true,
+        reflectorRotation: rotation,
       ),
     );
   }
@@ -382,7 +464,9 @@ List<PhysicsEvent> buildPhysicsEvents({
     if (byPath != 0) {
       return byPath;
     }
-    final byKind = left.kind.index.compareTo(right.kind.index);
+    final byKind = _physicsEventPriority(
+      left.kind,
+    ).compareTo(_physicsEventPriority(right.kind));
     if (byKind != 0) {
       return byKind;
     }
@@ -391,11 +475,57 @@ List<PhysicsEvent> buildPhysicsEvents({
   return events;
 }
 
+int _physicsEventPriority(PhysicsEventKind kind) {
+  return switch (kind) {
+    PhysicsEventKind.impact => 0,
+    PhysicsEventKind.powerSliderActivation => 1,
+    PhysicsEventKind.reflectorRotation => 2,
+    PhysicsEventKind.stateChange => 3,
+    PhysicsEventKind.move => 4,
+    PhysicsEventKind.chainSafetyStop => 5,
+  };
+}
+
 Vec2 _observedVelocity(List<Vec2> points, int index) {
   if (index < 0 || index + 1 >= points.length) {
     return Vec2.zero;
   }
   return points[index + 1] - points[index];
+}
+
+Vec2 _impactResultingVelocity(
+  List<Vec2> activePath,
+  List<ShotAnimationMove> moves,
+  List<ReflectorRotation> reflectorRotations,
+  ShotImpact impact,
+) {
+  for (final rotation in reflectorRotations) {
+    if (rotation.sourceEntityId == impact.sourceEntityId &&
+        rotation.reflectorEntityId == impact.entityId &&
+        rotation.pathIndex == impact.pathIndex &&
+        rotation.contactId == impact.contactId) {
+      return rotation.velocityAfter;
+    }
+  }
+  if (impact.sourceEntityId == 'active_ball') {
+    return _observedVelocity(activePath, impact.pathIndex);
+  }
+  for (final move in moves) {
+    if (move.entityId != impact.sourceEntityId || move.path.length < 2) {
+      continue;
+    }
+    var nearestIndex = 0;
+    var nearestDistance = double.infinity;
+    for (var index = 0; index + 1 < move.path.length; index++) {
+      final distance = move.path[index].distanceTo(impact.position);
+      if (distance < nearestDistance) {
+        nearestIndex = index;
+        nearestDistance = distance;
+      }
+    }
+    return _observedVelocity(move.path, nearestIndex);
+  }
+  return Vec2.zero;
 }
 
 class TrajectoryPreview {
@@ -411,10 +541,15 @@ class TrajectoryPreview {
 }
 
 class CollisionHit {
-  const CollisionHit({required this.entity, required this.normal});
+  const CollisionHit({
+    required this.entity,
+    required this.normal,
+    this.startsOverlapping = false,
+  });
 
   final EntityState entity;
   final Vec2 normal;
+  final bool startsOverlapping;
 }
 
 class CollisionSample {
@@ -425,13 +560,34 @@ class CollisionSample {
 }
 
 class _MovingEntityCollision {
-  const _MovingEntityCollision({required this.entity, required this.position});
+  const _MovingEntityCollision({
+    required this.entity,
+    required this.position,
+    this.normal,
+    this.startsOverlapping = false,
+  });
 
   final EntityState entity;
   final Vec2 position;
+  final Vec2? normal;
+  final bool startsOverlapping;
+}
+
+class _ReflectorSweepHit {
+  const _ReflectorSweepHit({
+    required this.position,
+    required this.normal,
+    this.startsOverlapping = false,
+  });
+
+  final Vec2 position;
+  final Vec2 normal;
+  final bool startsOverlapping;
 }
 
 const _physicsEpsilon = 0.0001;
+// 얇은 OBB의 접선 스침을 놓치지 않도록 반사판 sweep 간격을 고정한다.
+const _reflectorSweepLedgerSampleDistance = 0.5;
 
 class _PowerSliderEntry {
   const _PowerSliderEntry({
@@ -466,6 +622,46 @@ class _SliderContactLedger {
   void markExited(String contactId) => _inside.remove(contactId);
 }
 
+class _ReflectorContactLedger {
+  final Set<String> _inside = <String>{};
+
+  bool isInside(String contactId) => _inside.contains(contactId);
+
+  void markEntered(String contactId) => _inside.add(contactId);
+
+  void markExited(String contactId) => _inside.remove(contactId);
+}
+
+class _OrientedReflector {
+  const _OrientedReflector({
+    required this.center,
+    required this.normal,
+    required this.tangent,
+    required this.halfNormal,
+    required this.halfTangent,
+  });
+
+  final Vec2 center;
+  final Vec2 normal;
+  final Vec2 tangent;
+  final double halfNormal;
+  final double halfTangent;
+}
+
+class _ReflectorContact {
+  const _ReflectorContact({required this.point, required this.normal});
+
+  final Vec2 point;
+  final Vec2 normal;
+}
+
+class _ReflectorSatContact {
+  const _ReflectorSatContact({required this.normal, required this.penetration});
+
+  final Vec2 normal;
+  final double penetration;
+}
+
 class ShotResolver {
   const ShotResolver();
 
@@ -489,7 +685,9 @@ class ShotResolver {
     final moves = <ShotAnimationMove>[];
     final impacts = <ShotImpact>[];
     final powerSliderActivations = <PowerSliderActivation>[];
+    final reflectorRotations = <ReflectorRotation>[];
     final sliderContacts = _SliderContactLedger();
+    final reflectorContacts = _ReflectorContactLedger();
     final stateTransitions = <PhysicsStateTransition>[];
     final chainSafetyDiagnostics = <ChainSafetyDiagnostic>[];
     var success = false;
@@ -558,6 +756,13 @@ class ShotResolver {
         final entryPosition = sliderEntries.first.position;
         position = entryPosition;
         path[path.length - 1] = position;
+        _consumeReflectorSegment(
+          entities,
+          ball,
+          previousPosition,
+          entryPosition,
+          reflectorContacts,
+        );
         final speedBefore = speed;
         final motionDirection = direction.normalized();
         final referenceSpeed = sliderEntries.fold<double>(
@@ -601,6 +806,13 @@ class ShotResolver {
               holeCaptureRadius &&
           holeProgress <= collisionProgress + _physicsEpsilon &&
           holeProgress <= sliderProgress + _physicsEpsilon) {
+        _consumeReflectorSegment(
+          entities,
+          ball,
+          previousPosition,
+          hole.position,
+          reflectorContacts,
+        );
         _consumeSliderSegment(
           entities,
           ball,
@@ -637,11 +849,25 @@ class ShotResolver {
         break;
       }
       if (_anyBallInHole(entities)) {
+        _consumeReflectorSegment(
+          entities,
+          ball,
+          previousPosition,
+          position,
+          reflectorContacts,
+        );
         events.add('existing_ball_hole_entered');
         success = true;
         break;
       }
       if (collisionSample == null) {
+        _consumeReflectorSegment(
+          entities,
+          ball,
+          previousPosition,
+          position,
+          reflectorContacts,
+        );
         _consumeSliderSegment(
           entities,
           ball,
@@ -658,10 +884,28 @@ class ShotResolver {
         collisionSample.position,
         sliderContacts,
       );
+      _consumeReflectorSegment(
+        entities,
+        ball,
+        previousPosition,
+        collisionSample.position,
+        reflectorContacts,
+      );
       position = collisionSample.position;
       path[path.length - 1] = position;
       final collision = collisionSample.hit;
       final hit = collision.entity;
+      final impactContactId = hit.type == EntityType.rotatingReflector
+          ? '${ball.id}:${hit.id}'
+          : null;
+      final impactVelocity = direction * speed;
+      final reflectorRotationQualifies =
+          hit.type == EntityType.rotatingReflector &&
+          !ball.traits.contains(TraitType.sticky) &&
+          impactContactId != null &&
+          !reflectorContacts.isInside(impactContactId) &&
+          !(collision.startsOverlapping &&
+              impactVelocity.dot(collision.normal) >= -_physicsEpsilon);
       impacts.add(
         ShotImpact(
           entityId: hit.id,
@@ -683,11 +927,104 @@ class ShotResolver {
               targetMass: _massOf(hit),
             ),
           ),
+          contactId: impactContactId,
+          triggersReflectorRotation: reflectorRotationQualifies,
         ),
       );
       final contactPosition = position;
 
       if (hit.type == EntityType.gate && hit.open) {
+        continue;
+      }
+
+      if (hit.type == EntityType.rotatingReflector) {
+        if (ball.traits.contains(TraitType.sticky)) {
+          position = _separateFromCollision(
+            hit,
+            ball,
+            position,
+            collision.normal,
+          );
+          path[path.length - 1] = position;
+          events.add('sticky_attached');
+          stopped = true;
+          break;
+        }
+        final contactId = '${ball.id}:${hit.id}';
+        if (reflectorContacts.isInside(contactId)) {
+          position = _separateFromCollision(
+            hit,
+            ball,
+            position,
+            collision.normal,
+          );
+          path[path.length - 1] = position;
+          _consumeReflectorSegment(
+            entities,
+            ball,
+            contactPosition,
+            position,
+            reflectorContacts,
+          );
+          continue;
+        }
+        final normal = collision.normal;
+        final velocityBefore = direction * speed;
+        if (collision.startsOverlapping &&
+            velocityBefore.dot(normal) >= -_physicsEpsilon) {
+          position = _separateFromCollision(hit, ball, position, normal);
+          path[path.length - 1] = position;
+          reflectorContacts.markEntered(contactId);
+          _consumeReflectorSegment(
+            entities,
+            ball,
+            contactPosition,
+            position,
+            reflectorContacts,
+          );
+          events.add('reflector_overlap_separated');
+          continue;
+        }
+        final bounced = _reflectorBounceVelocity(
+          velocityBefore,
+          normal,
+          ball,
+          hit,
+        );
+        final beforeOrientation = hit.reflectorOrientation;
+        final afterOrientation = (beforeOrientation + 2) % 8;
+        final beforeCount = hit.reflectorRotationCount;
+        final afterCount = beforeCount + 1;
+        position = _separateFromCollision(hit, ball, position, normal);
+        path[path.length - 1] = position;
+        direction = bounced.length <= 0.001 ? direction : bounced.normalized();
+        speed = bounced.length;
+        entities = _replace(
+          entities,
+          hit.copyWith(
+            reflectorOrientation: afterOrientation,
+            reflectorRotationCount: afterCount,
+            visualState: 'rotated',
+          ),
+        );
+        reflectorContacts.markEntered(contactId);
+        reflectorRotations.add(
+          ReflectorRotation(
+            sourceEntityId: ball.id,
+            reflectorEntityId: hit.id,
+            contactId: contactId,
+            pathIndex: path.length - 1,
+            orientationBefore: beforeOrientation,
+            orientationAfter: afterOrientation,
+            rotationCountBefore: beforeCount,
+            rotationCountAfter: afterCount,
+            collisionNormal: normal,
+            velocityBefore: velocityBefore,
+            velocityAfter: bounced,
+          ),
+        );
+        events.add('reflector_reflected');
+        events.add('reflector_rotated');
         continue;
       }
 
@@ -979,6 +1316,8 @@ class ShotResolver {
             stateTransitions,
             sliderContacts,
             powerSliderActivations,
+            reflectorContacts,
+            reflectorRotations,
           );
           final pushedCrate =
               entities
@@ -1083,6 +1422,8 @@ class ShotResolver {
           stateTransitions,
           sliderContacts,
           powerSliderActivations,
+          reflectorContacts,
+          reflectorRotations,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -1169,6 +1510,8 @@ class ShotResolver {
           stateTransitions,
           sliderContacts,
           powerSliderActivations,
+          reflectorContacts,
+          reflectorRotations,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -1327,9 +1670,11 @@ class ShotResolver {
         chainSafetyDiagnostics: chainSafetyDiagnostics,
         stateTransitions: stateTransitions,
         powerSliderActivations: powerSliderActivations,
+        reflectorRotations: reflectorRotations,
       ),
       chainSafetyDiagnostics: chainSafetyDiagnostics,
       powerSliderActivations: powerSliderActivations,
+      reflectorRotations: reflectorRotations,
     );
   }
 
@@ -1542,6 +1887,31 @@ class ShotResolver {
   ) {
     final distance = from.distanceTo(to);
     final steps = math.max(1, (distance / 1.25).ceil());
+    CollisionSample? reflectorCandidate;
+    var reflectorProgress = double.infinity;
+    for (final entity in entities) {
+      if (entity.type != EntityType.rotatingReflector ||
+          !_isCollisionCandidate(entity, ball.id)) {
+        continue;
+      }
+      final swept = _firstReflectorSweepHit(ball, entity, from, to);
+      if (swept == null) continue;
+      final candidateProgress = _segmentProgress(from, to, swept.position);
+      if (reflectorCandidate == null ||
+          candidateProgress < reflectorProgress - _physicsEpsilon ||
+          (candidateProgress - reflectorProgress).abs() <= _physicsEpsilon &&
+              entity.id.compareTo(reflectorCandidate.hit.entity.id) < 0) {
+        reflectorCandidate = CollisionSample(
+          hit: CollisionHit(
+            entity: entity,
+            normal: swept.normal,
+            startsOverlapping: swept.startsOverlapping,
+          ),
+          position: swept.position,
+        );
+        reflectorProgress = candidateProgress;
+      }
+    }
     var previous = from;
     for (var step = 1; step <= steps; step++) {
       final progress = step / steps;
@@ -1554,6 +1924,9 @@ class ShotResolver {
       var bestProgress = double.infinity;
       for (final entity in entities) {
         if (!_isCollisionCandidate(entity, ball.id)) {
+          continue;
+        }
+        if (entity.type == EntityType.rotatingReflector) {
           continue;
         }
         if (!_collidesAt(ball, entity, position)) {
@@ -1574,10 +1947,12 @@ class ShotResolver {
           }
         }
         final candidateProgress = _segmentProgress(from, to, high);
-        final candidate = CollisionHit(
-          entity: entity,
-          normal: _collisionNormal(ball, entity, high),
-        );
+        var candidateNormal = _collisionNormal(ball, entity, high);
+        if (entity.type == EntityType.rotatingReflector &&
+            candidateNormal.dot(to - from) > 0) {
+          candidateNormal = -candidateNormal;
+        }
+        final candidate = CollisionHit(entity: entity, normal: candidateNormal);
         if (bestHit == null ||
             candidateProgress < bestProgress - 0.0001 ||
             (candidateProgress - bestProgress).abs() <= 0.0001 &&
@@ -1588,11 +1963,201 @@ class ShotResolver {
         }
       }
       if (bestHit != null && bestPosition != null) {
+        if (reflectorCandidate != null &&
+            (reflectorProgress < bestProgress - _physicsEpsilon ||
+                (reflectorProgress - bestProgress).abs() <= _physicsEpsilon &&
+                    reflectorCandidate.hit.entity.id.compareTo(
+                          bestHit.entity.id,
+                        ) <
+                        0)) {
+          return reflectorCandidate;
+        }
         return CollisionSample(hit: bestHit, position: bestPosition);
       }
       previous = position;
     }
-    return null;
+    return reflectorCandidate;
+  }
+
+  /// 반사판만 연속 swept로 판정한다. 원형 이동체는 OBB의 두 면 띠와
+  /// 네 모서리 원을, 사각 이동체는 OBB/AABB의 4개 SAT 축을 사용한다.
+  _ReflectorSweepHit? _firstReflectorSweepHit(
+    EntityState mover,
+    EntityState reflector,
+    Vec2 from,
+    Vec2 to,
+  ) {
+    final shape = _orientedReflector(reflector);
+    final delta = to - from;
+    final startMover = mover.copyWith(position: from);
+    if (_orientedReflectorOverlaps(reflector, startMover)) {
+      final normal = mover.isCircle
+          ? _reflectorContact(reflector, from).normal
+          : _reflectorAabbSatContact(reflector, startMover)?.normal ??
+                _reflectorSeparationNormal(reflector, from);
+      return _ReflectorSweepHit(
+        position: from,
+        normal: normal,
+        startsOverlapping: true,
+      );
+    }
+    final localFrom = Vec2(
+      (from - shape.center).dot(shape.tangent),
+      (from - shape.center).dot(shape.normal),
+    );
+    final localDelta = Vec2(delta.dot(shape.tangent), delta.dot(shape.normal));
+    double? earliest;
+
+    if (mover.isCircle) {
+      final radius = mover.hitRadius;
+      for (final interval in [
+        _segmentAabbEntry(
+          localFrom,
+          localDelta,
+          -shape.halfTangent - radius,
+          shape.halfTangent + radius,
+          -shape.halfNormal,
+          shape.halfNormal,
+        ),
+        _segmentAabbEntry(
+          localFrom,
+          localDelta,
+          -shape.halfTangent,
+          shape.halfTangent,
+          -shape.halfNormal - radius,
+          shape.halfNormal + radius,
+        ),
+      ]) {
+        if (interval != null) {
+          earliest = earliest == null ? interval : math.min(earliest, interval);
+        }
+      }
+      for (final corner in [
+        Vec2(shape.halfTangent, shape.halfNormal),
+        Vec2(-shape.halfTangent, shape.halfNormal),
+        Vec2(-shape.halfTangent, -shape.halfNormal),
+        Vec2(shape.halfTangent, -shape.halfNormal),
+      ]) {
+        final interval = _segmentCircleEntry(
+          localFrom,
+          localDelta,
+          corner,
+          radius,
+        );
+        if (interval != null) {
+          earliest = earliest == null ? interval : math.min(earliest, interval);
+        }
+      }
+    } else {
+      final axes = [
+        shape.normal,
+        shape.tangent,
+        const Vec2(1, 0),
+        const Vec2(0, 1),
+      ];
+      final centerDelta = mover.position - shape.center;
+      var entry = 0.0;
+      var exit = 1.0;
+      for (final axis in axes) {
+        final reflectorRadius =
+            shape.halfNormal * axis.dot(shape.normal).abs() +
+            shape.halfTangent * axis.dot(shape.tangent).abs();
+        final moverRadius = _aabbSupportRadius(mover, axis);
+        final interval = _sweptAxisRange(
+          centerDelta.dot(axis),
+          delta.dot(axis),
+          -reflectorRadius - moverRadius,
+          reflectorRadius + moverRadius,
+        );
+        if (interval == null) return null;
+        entry = math.max(entry, interval.$1);
+        exit = math.min(exit, interval.$2);
+        if (entry > exit + _physicsEpsilon) return null;
+      }
+      earliest = entry;
+    }
+
+    final hitProgress = earliest;
+    if (hitProgress == null ||
+        hitProgress < -_physicsEpsilon ||
+        hitProgress > 1) {
+      return null;
+    }
+    final progress = hitProgress.clamp(0.0, 1.0);
+    final position = _lerp(from, to, progress);
+    var normal = mover.isCircle
+        ? _reflectorSeparationNormal(reflector, position)
+        : _reflectorAabbSatContact(
+                reflector,
+                mover.copyWith(position: position),
+              )?.normal ??
+              _reflectorSeparationNormal(reflector, position);
+    if (normal.dot(delta) > 0) normal = -normal;
+    return _ReflectorSweepHit(position: position, normal: normal);
+  }
+
+  double? _segmentAabbEntry(
+    Vec2 from,
+    Vec2 delta,
+    double left,
+    double right,
+    double top,
+    double bottom,
+  ) {
+    var entry = 0.0;
+    var exit = 1.0;
+    for (final axis in const [Vec2(1, 0), Vec2(0, 1)]) {
+      final minimum = axis.x.abs() > 0 ? left : top;
+      final maximum = axis.x.abs() > 0 ? right : bottom;
+      final interval = _sweptAxisRange(
+        from.dot(axis),
+        delta.dot(axis),
+        minimum,
+        maximum,
+      );
+      if (interval == null) return null;
+      entry = math.max(entry, interval.$1);
+      exit = math.min(exit, interval.$2);
+      if (entry > exit + _physicsEpsilon) return null;
+    }
+    return entry;
+  }
+
+  (double, double)? _sweptAxisRange(
+    double start,
+    double velocity,
+    double minimum,
+    double maximum,
+  ) {
+    if (velocity.abs() <= _physicsEpsilon) {
+      return start >= minimum - _physicsEpsilon &&
+              start <= maximum + _physicsEpsilon
+          ? (0.0, 1.0)
+          : null;
+    }
+    final first = (minimum - start) / velocity;
+    final second = (maximum - start) / velocity;
+    return (math.min(first, second), math.max(first, second));
+  }
+
+  double? _segmentCircleEntry(
+    Vec2 from,
+    Vec2 delta,
+    Vec2 center,
+    double radius,
+  ) {
+    final offset = from - center;
+    final a = delta.dot(delta);
+    final c = offset.dot(offset) - radius * radius;
+    if (c <= _physicsEpsilon) return 0;
+    if (a <= _physicsEpsilon) return null;
+    final b = 2 * offset.dot(delta);
+    final discriminant = b * b - 4 * a * c;
+    if (discriminant < -_physicsEpsilon) return null;
+    final root = (-b - math.sqrt(math.max(0, discriminant))) / (2 * a);
+    return root >= -_physicsEpsilon && root <= 1 + _physicsEpsilon
+        ? root.clamp(0.0, 1.0)
+        : null;
   }
 
   List<_PowerSliderEntry> _firstPowerSliderEntriesAlongSegment(
@@ -1696,6 +2261,45 @@ class ShotResolver {
     final steps = math.max(1, (distance / 1.25).ceil());
     for (var step = 1; step <= steps; step++) {
       if (!_collidesAt(mover, slider, _lerp(from, to, step / steps))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _consumeReflectorSegment(
+    List<EntityState> entities,
+    EntityState mover,
+    Vec2 from,
+    Vec2 to,
+    _ReflectorContactLedger ledger,
+  ) {
+    for (final reflector in entities) {
+      if (reflector.type != EntityType.rotatingReflector || !reflector.active) {
+        continue;
+      }
+      final contactId = '${mover.id}:${reflector.id}';
+      if (!ledger.isInside(contactId)) continue;
+      if (!_collidesAt(mover, reflector, from) ||
+          _segmentHasFullReflectorExit(mover, reflector, from, to)) {
+        ledger.markExited(contactId);
+      }
+    }
+  }
+
+  bool _segmentHasFullReflectorExit(
+    EntityState mover,
+    EntityState reflector,
+    Vec2 from,
+    Vec2 to,
+  ) {
+    final distance = from.distanceTo(to);
+    final steps = math.max(
+      1,
+      (distance / _reflectorSweepLedgerSampleDistance).ceil(),
+    );
+    for (var step = 1; step <= steps; step++) {
+      if (!_collidesAt(mover, reflector, _lerp(from, to, step / steps))) {
         return true;
       }
     }
@@ -1865,6 +2469,16 @@ class ShotResolver {
     Vec2 position,
     Vec2 normal,
   ) {
+    if (hit.type == EntityType.rotatingReflector) {
+      final contact = _reflectorContact(hit, position);
+      final separationNormal = normal.length <= _physicsEpsilon
+          ? contact.normal
+          : normal.normalized();
+      final support = ball.isCircle
+          ? ball.hitRadius
+          : _aabbSupportRadius(ball, separationNormal);
+      return contact.point + separationNormal * (support + 1.8);
+    }
     if (hit.isCircle) {
       return hit.position +
           normal.normalized() * (hit.hitRadius + ball.hitRadius + 0.8);
@@ -2005,10 +2619,147 @@ class ShotResolver {
       EntityType.balloon => 0.18,
       EntityType.spikeSource => 1.2,
       EntityType.powerSlider => 0.0,
+      EntityType.rotatingReflector => 999.0,
     };
   }
 
+  _OrientedReflector _orientedReflector(EntityState entity) {
+    final angle = -math.pi / 2 + entity.reflectorOrientation * math.pi / 4;
+    final normal = Vec2(math.cos(angle), math.sin(angle)).normalized();
+    final tangent = Vec2(-normal.y, normal.x);
+    final scale = entity.hitboxScale;
+    return _OrientedReflector(
+      center: entity.position,
+      normal: normal,
+      tangent: tangent,
+      halfNormal: entity.size.y * scale / 2,
+      halfTangent: entity.size.x * scale / 2,
+    );
+  }
+
+  Vec2 _reflectorSeparationNormal(EntityState reflector, Vec2 position) {
+    return _reflectorContact(reflector, position).normal;
+  }
+
+  _ReflectorContact _reflectorContact(EntityState reflector, Vec2 position) {
+    final shape = _orientedReflector(reflector);
+    final delta = position - shape.center;
+    final localNormal = delta.dot(shape.normal);
+    final localTangent = delta.dot(shape.tangent);
+    final nearestNormal = localNormal.clamp(
+      -shape.halfNormal,
+      shape.halfNormal,
+    );
+    final nearestTangent = localTangent.clamp(
+      -shape.halfTangent,
+      shape.halfTangent,
+    );
+    final nearest =
+        shape.center +
+        shape.normal * nearestNormal +
+        shape.tangent * nearestTangent;
+    final offset = position - nearest;
+    if (offset.length > _physicsEpsilon) {
+      return _ReflectorContact(point: nearest, normal: offset.normalized());
+    }
+
+    final normalClearance = shape.halfNormal - localNormal.abs();
+    final tangentClearance = shape.halfTangent - localTangent.abs();
+    if (normalClearance <= tangentClearance) {
+      final sign = localNormal < 0 ? -1.0 : 1.0;
+      return _ReflectorContact(
+        point:
+            shape.center +
+            shape.normal * (sign * shape.halfNormal) +
+            shape.tangent * nearestTangent,
+        normal: shape.normal * sign,
+      );
+    }
+    final sign = localTangent < 0 ? -1.0 : 1.0;
+    return _ReflectorContact(
+      point:
+          shape.center +
+          shape.normal * nearestNormal +
+          shape.tangent * (sign * shape.halfTangent),
+      normal: shape.tangent * sign,
+    );
+  }
+
+  bool _orientedReflectorOverlaps(EntityState reflector, EntityState mover) {
+    final shape = _orientedReflector(reflector);
+    if (mover.isCircle) {
+      final delta = mover.position - shape.center;
+      final tangentDistance = delta.dot(shape.tangent).abs();
+      final normalDistance = delta.dot(shape.normal).abs();
+      final clampedTangent = tangentDistance.clamp(0.0, shape.halfTangent);
+      final clampedNormal = normalDistance.clamp(0.0, shape.halfNormal);
+      final tangentGap = tangentDistance - clampedTangent;
+      final normalGap = normalDistance - clampedNormal;
+      return (tangentGap * tangentGap + normalGap * normalGap) <=
+          mover.hitRadius * mover.hitRadius;
+    }
+    return _reflectorAabbSatContact(reflector, mover) != null;
+  }
+
+  /// 회전판과 AABB 이동체가 실제로 겹치는 최소 분리축을 계산한다.
+  ///
+  /// 축 순서는 반사판 법선, 반사판 접선, 화면 x축, 화면 y축으로 고정한다.
+  /// 침투 깊이가 같으면 이 순서를 그대로 사용해 재현 가능한 법선을 만든다.
+  _ReflectorSatContact? _reflectorAabbSatContact(
+    EntityState reflector,
+    EntityState mover,
+  ) {
+    final shape = _orientedReflector(reflector);
+    final delta = mover.position - shape.center;
+    final axes = <Vec2>[
+      shape.normal,
+      shape.tangent,
+      const Vec2(1, 0),
+      const Vec2(0, 1),
+    ];
+    _ReflectorSatContact? best;
+    for (final axis in axes) {
+      final reflectorRadius =
+          shape.halfNormal * axis.dot(shape.normal).abs() +
+          shape.halfTangent * axis.dot(shape.tangent).abs();
+      final moverRadius = _aabbSupportRadius(mover, axis);
+      final penetration = reflectorRadius + moverRadius - delta.dot(axis).abs();
+      if (penetration < -_physicsEpsilon) return null;
+      if (best == null || penetration < best.penetration - _physicsEpsilon) {
+        final sign = delta.dot(axis) < 0 ? -1.0 : 1.0;
+        best = _ReflectorSatContact(
+          normal: axis * sign,
+          penetration: math.max(0, penetration),
+        );
+      }
+    }
+    return best;
+  }
+
+  double _aabbSupportRadius(EntityState entity, Vec2 normal) {
+    if (entity.isCircle) return entity.hitRadius;
+    return entity.hitBounds.width / 2 * normal.x.abs() +
+        entity.hitBounds.height / 2 * normal.y.abs();
+  }
+
+  Vec2 _reflectorBounceVelocity(
+    Vec2 incoming,
+    Vec2 normal,
+    EntityState moving,
+    EntityState reflector,
+  ) {
+    if (incoming.length <= 0.001) return incoming;
+    final n = normal.normalized();
+    final normalSpeed = incoming.dot(n);
+    final tangent = incoming - n * normalSpeed;
+    final restitution = _collisionRestitution(moving, reflector);
+    return tangent - n * (normalSpeed * restitution);
+  }
+
   Vec2 _collisionNormal(EntityState ball, EntityState hit, Vec2 position) {
+    if (hit.type == EntityType.rotatingReflector) {
+      return _reflectorSeparationNormal(hit, position);
+    }
     if (hit.isCircle) {
       final delta = position - hit.position;
       return delta.length <= 0.001 ? const Vec2(1, 0) : delta.normalized();
@@ -2151,6 +2902,8 @@ class ShotResolver {
     List<PhysicsStateTransition>? stateTransitions,
     _SliderContactLedger? sliderContacts,
     List<PowerSliderActivation>? powerSliderActivations,
+    _ReflectorContactLedger? reflectorContacts,
+    List<ReflectorRotation>? reflectorRotations,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -2262,6 +3015,13 @@ class ShotResolver {
           sliderContacts!,
           entered: sliderEntries,
         );
+        _consumeReflectorSegment(
+          entities,
+          current,
+          current.position,
+          entry.position,
+          reflectorContacts!,
+        );
         current = current.copyWith(position: entry.position);
         _appendMovePoint(path, entry.position);
         velocity = velocity.normalized() * speedAfter;
@@ -2298,6 +3058,13 @@ class ShotResolver {
               holeCaptureRadius &&
           holeProgress <= collisionProgress + _physicsEpsilon &&
           holeProgress <= sliderProgress + _physicsEpsilon) {
+        _consumeReflectorSegment(
+          entities,
+          current,
+          current.position,
+          hole.position,
+          reflectorContacts!,
+        );
         _consumeSliderSegment(
           entities,
           current,
@@ -2339,6 +3106,13 @@ class ShotResolver {
         break;
       }
       if (collision == null) {
+        _consumeReflectorSegment(
+          entities,
+          current,
+          current.position,
+          candidate.position,
+          reflectorContacts!,
+        );
         _consumeSliderSegment(
           entities,
           current,
@@ -2361,11 +3135,35 @@ class ShotResolver {
         collision.position,
         sliderContacts!,
       );
+      _consumeReflectorSegment(
+        entities,
+        current,
+        current.position,
+        collision.position,
+        reflectorContacts!,
+      );
 
       final hit = collision.entity;
       final collisionEntity = candidate.copyWith(position: collision.position);
-      final normal = _collisionNormalForMovingEntity(collisionEntity, hit);
+      var normal =
+          collision.normal ??
+          _collisionNormalForMovingEntity(collisionEntity, hit);
+      if (hit.type == EntityType.rotatingReflector &&
+          !collision.startsOverlapping &&
+          normal.dot(velocity) > 0) {
+        normal = -normal;
+      }
       final collisionTrigger = triggerPathIndex + iterations;
+      final impactContactId = hit.type == EntityType.rotatingReflector
+          ? '${current.id}:${hit.id}'
+          : null;
+      final reflectorRotationQualifies =
+          hit.type == EntityType.rotatingReflector &&
+          !current.traits.contains(TraitType.sticky) &&
+          impactContactId != null &&
+          !reflectorContacts.isInside(impactContactId) &&
+          !(collision.startsOverlapping &&
+              velocity.dot(normal) >= -_physicsEpsilon);
       impacts?.add(
         ShotImpact(
           entityId: hit.id,
@@ -2375,6 +3173,8 @@ class ShotResolver {
           pathIndex: collisionTrigger,
           strength: (velocity.length / 24).clamp(0.18, 1.0),
           sourceEntityId: target.id,
+          contactId: impactContactId,
+          triggersReflectorRotation: reflectorRotationQualifies,
         ),
       );
       current = candidate.copyWith(
@@ -2389,6 +3189,103 @@ class ShotResolver {
       _appendMovePoint(path, collision.position);
       _appendMovePoint(path, current.position);
       events.add('chain_collision_${hit.type.name}');
+
+      if (hit.type == EntityType.rotatingReflector) {
+        if (current.traits.contains(TraitType.sticky)) {
+          stateTransitions?.add(
+            PhysicsStateTransition(
+              sourceEntityId: target.id,
+              targetEntityId: current.id,
+              targetType: current.type,
+              pathIndex: collisionTrigger,
+              previousState: current.visualState,
+              nextState: 'stuck',
+              position: collision.position,
+              normal: normal,
+            ),
+          );
+          entities = _replace(entities, current.copyWith(visualState: 'stuck'));
+          break;
+        }
+        final contactId = '${current.id}:${hit.id}';
+        if (reflectorContacts.isInside(contactId)) {
+          entities = _replace(entities, current);
+          _consumeReflectorSegment(
+            entities,
+            current,
+            collision.position,
+            current.position,
+            reflectorContacts,
+          );
+          continue;
+        }
+        final reflectorNormal = normal;
+        final velocityBefore = velocity;
+        if (collision.startsOverlapping &&
+            velocityBefore.dot(reflectorNormal) >= -_physicsEpsilon) {
+          entities = _replace(entities, current);
+          reflectorContacts.markEntered(contactId);
+          _consumeReflectorSegment(
+            entities,
+            current,
+            collision.position,
+            current.position,
+            reflectorContacts,
+          );
+          events.add('reflector_overlap_separated');
+          continue;
+        }
+        final bounced = _reflectorBounceVelocity(
+          velocityBefore,
+          reflectorNormal,
+          current,
+          hit,
+        );
+        final beforeOrientation = hit.reflectorOrientation;
+        final afterOrientation = (beforeOrientation + 2) % 8;
+        final beforeCount = hit.reflectorRotationCount;
+        final afterCount = beforeCount + 1;
+        current = current.copyWith(
+          position: _separateMovingEntityFromCollision(
+            hit,
+            collisionEntity,
+            reflectorNormal,
+          ),
+        );
+        entities = _replace(
+          entities,
+          hit.copyWith(
+            reflectorOrientation: afterOrientation,
+            reflectorRotationCount: afterCount,
+            visualState: 'rotated',
+          ),
+        );
+        entities = _replace(entities, current);
+        reflectorContacts.markEntered(contactId);
+        reflectorRotations?.add(
+          ReflectorRotation(
+            sourceEntityId: current.id,
+            reflectorEntityId: hit.id,
+            contactId: contactId,
+            pathIndex: collisionTrigger,
+            orientationBefore: beforeOrientation,
+            orientationAfter: afterOrientation,
+            rotationCountBefore: beforeCount,
+            rotationCountAfter: afterCount,
+            collisionNormal: reflectorNormal,
+            velocityBefore: velocityBefore,
+            velocityAfter: bounced,
+          ),
+        );
+        velocity = bounced;
+        remaining = velocity.length;
+        if (remaining > 0.001) {
+          impulseDirection = velocity.normalized();
+        }
+        events.add('reflector_reflected');
+        events.add('reflector_rotated');
+        continue;
+      }
 
       if (hit.type == EntityType.balloon) {
         if (current.traits.contains(TraitType.sharp)) {
@@ -2669,6 +3566,8 @@ class ShotResolver {
           stateTransitions,
           sliderContacts,
           powerSliderActivations,
+          reflectorContacts,
+          reflectorRotations,
         );
         events.add('chain_push');
         if (_anyBallInHole(entities)) {
@@ -2789,6 +3688,43 @@ class ShotResolver {
   ) {
     final distance = from.position.distanceTo(to.position);
     final steps = math.max(1, (distance / 1.25).ceil());
+    _MovingEntityCollision? reflectorCandidate;
+    var reflectorProgress = double.infinity;
+    for (final entity in entities) {
+      if (!_isMovingEntityCollisionCandidate(
+            entity,
+            from.id,
+            ignoreId,
+            ignoredIds,
+          ) ||
+          entity.type != EntityType.rotatingReflector) {
+        continue;
+      }
+      final swept = _firstReflectorSweepHit(
+        from,
+        entity,
+        from.position,
+        to.position,
+      );
+      if (swept == null) continue;
+      final candidateProgress = _segmentProgress(
+        from.position,
+        to.position,
+        swept.position,
+      );
+      if (reflectorCandidate == null ||
+          candidateProgress < reflectorProgress - _physicsEpsilon ||
+          (candidateProgress - reflectorProgress).abs() <= _physicsEpsilon &&
+              entity.id.compareTo(reflectorCandidate.entity.id) < 0) {
+        reflectorCandidate = _MovingEntityCollision(
+          entity: entity,
+          position: swept.position,
+          normal: swept.normal,
+          startsOverlapping: swept.startsOverlapping,
+        );
+        reflectorProgress = candidateProgress;
+      }
+    }
     var previous = from.position;
     for (var step = 1; step <= steps; step++) {
       final progress = step / steps;
@@ -2801,7 +3737,8 @@ class ShotResolver {
       Vec2? bestPosition;
       var bestProgress = double.infinity;
       for (final entity in entities) {
-        if (!_isMovingEntityCollisionCandidate(
+        if (entity.type == EntityType.rotatingReflector ||
+            !_isMovingEntityCollisionCandidate(
               entity,
               from.id,
               ignoreId,
@@ -2840,11 +3777,17 @@ class ShotResolver {
         }
       }
       if (bestHit != null && bestPosition != null) {
+        if (reflectorCandidate != null &&
+            (reflectorProgress < bestProgress - _physicsEpsilon ||
+                (reflectorProgress - bestProgress).abs() <= _physicsEpsilon &&
+                    reflectorCandidate.entity.id.compareTo(bestHit.id) < 0)) {
+          return reflectorCandidate;
+        }
         return _MovingEntityCollision(entity: bestHit, position: bestPosition);
       }
       previous = position;
     }
-    return null;
+    return reflectorCandidate;
   }
 
   bool _isMovingEntityCollisionCandidate(
@@ -2865,6 +3808,13 @@ class ShotResolver {
   }
 
   Vec2 _collisionNormalForMovingEntity(EntityState moving, EntityState hit) {
+    if (hit.type == EntityType.rotatingReflector) {
+      if (!moving.isCircle) {
+        return _reflectorAabbSatContact(hit, moving)?.normal ??
+            _reflectorSeparationNormal(hit, moving.position);
+      }
+      return _reflectorSeparationNormal(hit, moving.position);
+    }
     if (moving.isCircle && hit.isCircle) {
       final delta = moving.position - hit.position;
       return delta.length <= 0.001 ? const Vec2(1, 0) : delta.normalized();
@@ -2881,6 +3831,21 @@ class ShotResolver {
     EntityState moving,
     Vec2 normal,
   ) {
+    if (hit.type == EntityType.rotatingReflector) {
+      final contact = _reflectorAabbSatContact(hit, moving);
+      if (contact != null) {
+        final separationNormal = normal.length <= _physicsEpsilon
+            ? contact.normal
+            : normal.normalized();
+        return moving.position + separationNormal * (contact.penetration + 1.8);
+      }
+      final fallback = _reflectorContact(hit, moving.position);
+      final separationNormal = normal.length <= _physicsEpsilon
+          ? fallback.normal
+          : normal.normalized();
+      final support = _aabbSupportRadius(moving, separationNormal);
+      return fallback.point + separationNormal * (support + 1.8);
+    }
     if (moving.isCircle) {
       return _separateFromCollision(hit, moving, moving.position, normal);
     }
@@ -2902,6 +3867,12 @@ class ShotResolver {
   bool _collides(EntityState a, EntityState b) {
     if (b.type == EntityType.gate && b.open) {
       return false;
+    }
+    if (b.type == EntityType.rotatingReflector) {
+      return _orientedReflectorOverlaps(b, a);
+    }
+    if (a.type == EntityType.rotatingReflector) {
+      return _orientedReflectorOverlaps(a, b);
     }
     if (a.isCircle && b.isCircle) {
       return a.position.distanceTo(b.position) <= a.hitRadius + b.hitRadius;

@@ -16,6 +16,18 @@ import '../ui/game_ball_painter.dart';
 import '../ui/debug_labels.dart';
 import '../ui/launch_input_session.dart';
 
+class _ReflectorAnimationStep {
+  const _ReflectorAnimationStep({
+    required this.event,
+    required this.start,
+    required this.end,
+  });
+
+  final PhysicsEvent event;
+  final double start;
+  final double end;
+}
+
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(
     this.state, {
@@ -60,6 +72,22 @@ class PropertyShotGame extends FlameGame {
     chargeGaugeState = next;
     chargeGaugeActive = active;
   }
+
+  /// Golden·렌더 계약에서 물리 사건 시점을 재현하기 위한 결정론 cursor다.
+  /// 일반 플레이는 Flame update가 이 값을 진행시키며, 제품 입력 경로에서는 사용하지 않는다.
+  void setAnimationCursorForTest(double cursor) {
+    _animationCursor = cursor;
+    _emitDueAnimationEvents();
+  }
+
+  double reflectorRenderOrientationForTest(String entityId) {
+    final entity = _animatedEntities().firstWhere(
+      (candidate) => candidate.id == entityId,
+    );
+    return _reflectorRenderOrientation(entity);
+  }
+
+  double get animationEndCursorForTest => _animationEndCursor;
 
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
@@ -163,7 +191,7 @@ class PropertyShotGame extends FlameGame {
       // 한 프레임에 남은 충돌을 모두 소비하면 물체 이동과 타격 피드백의
       // 인과가 사라지므로, 다음 정상 프레임부터 시간축을 이어간다.
       final boundedDt = dt > 0.5 ? 0.0 : dt.clamp(0.0, 1 / 30).toDouble();
-      _animationCursor += boundedDt * 34;
+      _animationCursor += boundedDt * animationCursorUnitsPerSecond;
       _emitDueAnimationEvents();
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
@@ -191,7 +219,8 @@ class PropertyShotGame extends FlameGame {
     _animationCompletionTimer?.cancel();
     final milliseconds = math.max(
       120,
-      ((_animationEndCursor / 34) * 1000 + 120).ceil(),
+      ((_animationEndCursor / animationCursorUnitsPerSecond) * 1000 + 120)
+          .ceil(),
     );
     _animationCompletionTimer = Timer(
       Duration(milliseconds: milliseconds),
@@ -333,6 +362,14 @@ class PropertyShotGame extends FlameGame {
         );
         if (entity.isCircle) {
           canvas.drawOval(rect, hitboxPaint);
+        } else if (entity.type == EntityType.rotatingReflector) {
+          canvas.drawPath(
+            _reflectorHitboxPath(
+              entity,
+              orientation: _reflectorRenderOrientation(entity),
+            ),
+            hitboxPaint,
+          );
         } else {
           canvas.drawRect(rect, hitboxPaint);
         }
@@ -387,6 +424,26 @@ class PropertyShotGame extends FlameGame {
       )..layout(maxWidth: 130);
       stats.paint(canvas, const Offset(6, 6));
     }
+  }
+
+  Path _reflectorHitboxPath(EntityState entity, {double? orientation}) {
+    final angle =
+        -math.pi / 2 +
+        (orientation ?? entity.reflectorOrientation) * math.pi / 4;
+    final normal = Offset(math.cos(angle), math.sin(angle));
+    final tangent = Offset(-normal.dy, normal.dx);
+    final halfTangent = entity.size.x * entity.hitboxScale / 2;
+    final halfNormal = entity.size.y * entity.hitboxScale / 2;
+    final center = Offset(entity.position.x, entity.position.y);
+    final points = [
+      center + tangent * halfTangent + normal * halfNormal,
+      center - tangent * halfTangent + normal * halfNormal,
+      center - tangent * halfTangent - normal * halfNormal,
+      center + tangent * halfTangent - normal * halfNormal,
+    ];
+    return Path()
+      ..moveTo(points.first.dx, points.first.dy)
+      ..addPolygon(points, true);
   }
 
   void _drawScreenShake(Canvas canvas) {
@@ -595,6 +652,7 @@ class PropertyShotGame extends FlameGame {
         EntityType.balloon => const Color(0xFFFF9A87),
         EntityType.spikeSource => const Color(0xFFFFE49B),
         EntityType.powerSlider => const Color(0xFF4E8FD6),
+        EntityType.rotatingReflector => const Color(0xFFF2B66D),
       };
       final ring = Paint()
         ..color = accent.withValues(alpha: 0.82 * (1 - progress))
@@ -645,7 +703,57 @@ class PropertyShotGame extends FlameGame {
         visualState: local > 0 ? move.visualState : entity.visualState,
       );
     }
+    for (final step in _reflectorAnimationSchedule().where(
+      (step) => step.event.targetEntityId == entity.id,
+    )) {
+      final event = step.event;
+      final dueStart = reducedMotion ? event.pathIndex.toDouble() : step.start;
+      if (_animationCursor < dueStart) continue;
+      final rotation = event.reflectorRotation!;
+      final complete = reducedMotion || _animationCursor >= step.end;
+      if (!complete) {
+        animated = animated.copyWith(
+          reflectorOrientation: rotation.orientationBefore,
+          reflectorRotationCount: rotation.rotationCountBefore,
+        );
+        break;
+      }
+      animated = animated.copyWith(
+        reflectorOrientation: rotation.orientationAfter,
+        reflectorRotationCount: rotation.rotationCountAfter,
+        visualState: 'rotated',
+      );
+    }
     return animated;
+  }
+
+  static const double animationCursorUnitsPerSecond = 34;
+  static const double reflectorRotationDuration = 8;
+
+  double _reflectorRenderOrientation(EntityState entity) {
+    var orientation = entity.reflectorOrientation.toDouble();
+    if (_animationPath.isEmpty || entity.type != EntityType.rotatingReflector) {
+      return orientation;
+    }
+    for (final step in _reflectorAnimationSchedule().where(
+      (step) => step.event.targetEntityId == entity.id,
+    )) {
+      final event = step.event;
+      final dueStart = reducedMotion ? event.pathIndex.toDouble() : step.start;
+      if (_animationCursor < dueStart) break;
+      final rotation = event.reflectorRotation!;
+      if (reducedMotion || _animationCursor >= step.end) {
+        orientation = rotation.orientationAfter.toDouble();
+        continue;
+      }
+      final progress =
+          ((_animationCursor - step.start) / reflectorRotationDuration).clamp(
+            0.0,
+            1.0,
+          );
+      return rotation.orientationBefore + 2 * progress;
+    }
+    return orientation;
   }
 
   double _moveDuration(ShotAnimationMove move) {
@@ -661,10 +769,54 @@ class PropertyShotGame extends FlameGame {
     return math.max(1, distance / 4.0);
   }
 
+  List<_ReflectorAnimationStep> _reflectorAnimationSchedule() {
+    final rotations =
+        _animationPhysicsEvents
+            .where(
+              (event) =>
+                  event.kind == PhysicsEventKind.reflectorRotation &&
+                  event.reflectorRotation != null,
+            )
+            .toList()
+          ..sort((first, second) {
+            final byPath = first.pathIndex.compareTo(second.pathIndex);
+            if (byPath != 0) return byPath;
+            final byTarget = first.targetEntityId.compareTo(
+              second.targetEntityId,
+            );
+            if (byTarget != 0) return byTarget;
+            return first.eventId.compareTo(second.eventId);
+          });
+    final previousEnd = <String, double>{};
+    return [
+      for (final event in rotations)
+        () {
+          final start = math.max(
+            event.pathIndex.toDouble(),
+            previousEnd[event.targetEntityId] ?? double.negativeInfinity,
+          );
+          final end = start + reflectorRotationDuration;
+          previousEnd[event.targetEntityId] = end;
+          return _ReflectorAnimationStep(event: event, start: start, end: end);
+        }(),
+    ];
+  }
+
   double get _animationEndCursor {
     var end = math.max(0, _animationPath.length - 1).toDouble();
     for (final move in _animationMoves) {
       end = math.max(end, move.triggerPathIndex + _moveDuration(move));
+    }
+    if (reducedMotion) {
+      for (final event in _animationPhysicsEvents.where(
+        (event) => event.kind == PhysicsEventKind.reflectorRotation,
+      )) {
+        end = math.max(end, event.pathIndex.toDouble());
+      }
+    } else {
+      for (final step in _reflectorAnimationSchedule()) {
+        end = math.max(end, step.end);
+      }
     }
     return end;
   }
@@ -1202,6 +1354,11 @@ class PropertyShotGame extends FlameGame {
         _drawBallTraitTexture(canvas, entity);
       }
     } else {
+      if (entity.type == EntityType.rotatingReflector) {
+        _drawRotatingReflector(canvas, entity, stroke);
+        _drawEntityIcon(canvas, entity);
+        return;
+      }
       final rect = _projectedRect(entity);
       final topPoints = _projectedEntityCorners(entity);
       final topPath = _pathFromPoints(topPoints);
@@ -1352,6 +1509,9 @@ class PropertyShotGame extends FlameGame {
     if (!loadVisualAssets || highlighted || !entity.active || entity.isCircle) {
       return false;
     }
+    if (entity.type == EntityType.rotatingReflector) {
+      return false;
+    }
     if (animated && _animationMoves.any((move) => move.entityId == entity.id)) {
       return false;
     }
@@ -1378,8 +1538,52 @@ class PropertyShotGame extends FlameGame {
       entity.visualState,
       entity.direction.x,
       entity.direction.y,
+      entity.reflectorOrientation,
+      entity.reflectorRotationCount,
       // 기준 속력은 물리 데이터이며 정적 그림에는 영향을 주지 않는다.
     ].join('|');
+  }
+
+  void _drawRotatingReflector(Canvas canvas, EntityState entity, Paint stroke) {
+    final center = _project(entity.position);
+    final angle =
+        -math.pi / 2 + _reflectorRenderOrientation(entity) * math.pi / 4;
+    final width = entity.size.x;
+    final height = entity.size.y;
+    final body = Paint()
+      ..color = const Color(0xFFE08B4A)
+      ..style = PaintingStyle.fill;
+    final edge = Paint()
+      ..color = const Color(0xFF6B3F2A)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke.strokeWidth;
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    // 물리 angle은 법선 방향이고 직사각형의 긴 축은 그에 직교한다.
+    canvas.rotate(angle + math.pi / 2);
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: width,
+      height: height,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+      body,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(3)),
+      edge,
+    );
+    final sheen = Paint()
+      ..color = const Color(0x99FFE1A8)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(-width * 0.28, -height * 0.22),
+      Offset(width * 0.28, -height * 0.22),
+      sheen,
+    );
+    canvas.restore();
   }
 
   _StaticEntityPicture _recordStaticEntity(
@@ -1957,6 +2161,7 @@ class PropertyShotGame extends FlameGame {
     final extrusion = switch (entity.type) {
       EntityType.weight => 8.0,
       EntityType.bumper => 4.0,
+      EntityType.rotatingReflector => 3.0,
       _ => 6.0,
     };
     final extrusionPaint = Paint()
@@ -2567,6 +2772,8 @@ class PropertyShotGame extends FlameGame {
         return;
       case EntityType.powerSlider:
         return;
+      case EntityType.rotatingReflector:
+        return;
       case EntityType.crate:
         if (_objectImages.containsKey(EntityType.crate)) {
           return;
@@ -2797,6 +3004,8 @@ class PropertyShotGame extends FlameGame {
         return const Color(0xFFF08B78);
       case EntityType.powerSlider:
         return const Color(0xFF4E8FD6);
+      case EntityType.rotatingReflector:
+        return const Color(0xFFE0A45D);
     }
   }
 

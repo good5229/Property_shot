@@ -210,6 +210,9 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     final hasPowerSlider = pattern.objects.any(
       (object) => object.type == EntityType.powerSlider && object.active,
     );
+    final hasRotatingReflector = pattern.objects.any(
+      (object) => object.type == EntityType.rotatingReflector && object.active,
+    );
     final inputCount = math.min(
       math.min(representativeInputs.length, maxProbeCount),
       maxShots ~/ 2,
@@ -220,6 +223,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
         maxProbeCount: maxProbeCount,
         maxShots: maxShots,
         sliderApplicable: hasPowerSlider,
+        rotatorApplicable: hasRotatingReflector,
         allRepresentativeInputsNoMovement: true,
       );
     }
@@ -239,6 +243,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     var wallMoved = false;
     var holePassThrough = false;
     var sliderTunneling = false;
+    var rotatorOrderViolation = false;
     var routeObserved = false;
     final autoClearDetected = _initialBallOverlapsHole(initial);
     final definitiveNoRoute = !_hasStaticWallRoute(initial, boardSize);
@@ -271,6 +276,9 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
             holePassThrough || _holeWasPassedWithoutCapture(initial, result);
         sliderTunneling =
             sliderTunneling || _hasSliderTunneling(initial, result);
+        rotatorOrderViolation =
+            rotatorOrderViolation ||
+            _hasReflectorOrderViolation(initial, result);
       }
     }
 
@@ -293,6 +301,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       nonDeterministic: nonDeterministic,
       sliderApplicable: hasPowerSlider,
       sliderTunneling: sliderTunneling,
+      rotatorApplicable: hasRotatingReflector,
+      rotatorOrderViolation: rotatorOrderViolation,
       allRepresentativeInputsNoMovement: allNoMovement,
       autoClearDetected: autoClearDetected,
     );
@@ -326,6 +336,156 @@ bool _hasSliderTunneling(GameState initial, ShotResult result) {
     }
   }
   return false;
+}
+
+bool _hasReflectorOrderViolation(GameState initial, ShotResult result) {
+  final events = result.physicsEvents;
+  final impacts = events
+      .where(
+        (event) =>
+            event.kind == PhysicsEventKind.impact &&
+            event.targetType == EntityType.rotatingReflector,
+      )
+      .toList();
+  final rotations = events
+      .where((event) => event.kind == PhysicsEventKind.reflectorRotation)
+      .toList();
+
+  final initialReflectors = <String, EntityState>{
+    for (final entity in initial.entities)
+      if (entity.type == EntityType.rotatingReflector) entity.id: entity,
+  };
+  final finalReflectors = <String, EntityState>{
+    for (final entity in result.state.entities)
+      if (entity.type == EntityType.rotatingReflector) entity.id: entity,
+  };
+  final eventRotationsByTarget = <String, List<PhysicsEvent>>{};
+  for (final event in rotations) {
+    eventRotationsByTarget
+        .putIfAbsent(event.targetEntityId, () => <PhysicsEvent>[])
+        .add(event);
+  }
+  final payloadRotationsByTarget = <String, List<ReflectorRotation>>{};
+  for (final rotation in result.reflectorRotations) {
+    payloadRotationsByTarget
+        .putIfAbsent(rotation.reflectorEntityId, () => <ReflectorRotation>[])
+        .add(rotation);
+  }
+
+  for (final entry in initialReflectors.entries) {
+    final finalReflector = finalReflectors[entry.key];
+    if (finalReflector == null) return true;
+    final countDelta =
+        finalReflector.reflectorRotationCount -
+        entry.value.reflectorRotationCount;
+    if (countDelta < 0 ||
+        finalReflector.reflectorOrientation !=
+            (entry.value.reflectorOrientation + 2 * countDelta) % 8) {
+      return true;
+    }
+    final eventList = eventRotationsByTarget[entry.key] ?? const [];
+    final payloadList = payloadRotationsByTarget[entry.key] ?? const [];
+    if (eventList.length != countDelta ||
+        payloadList.length != countDelta ||
+        eventList.length != payloadList.length) {
+      return true;
+    }
+    for (var index = 0; index < countDelta; index++) {
+      final payload = payloadList[index];
+      if (payload.rotationCountBefore !=
+              entry.value.reflectorRotationCount + index ||
+          payload.rotationCountAfter != payload.rotationCountBefore + 1 ||
+          payload.orientationBefore !=
+              (entry.value.reflectorOrientation + 2 * index) % 8 ||
+          payload.orientationAfter != (payload.orientationBefore + 2) % 8) {
+        return true;
+      }
+      final matchingEvents = eventList.where(
+        (event) =>
+            event.reflectorRotation != null &&
+            _sameReflectorPayload(event.reflectorRotation!, payload),
+      );
+      if (matchingEvents.length != 1) {
+        return true;
+      }
+    }
+  }
+
+  if (initialReflectors.length != finalReflectors.length ||
+      eventRotationsByTarget.keys.any(
+        (id) => !initialReflectors.containsKey(id),
+      ) ||
+      payloadRotationsByTarget.keys.any(
+        (id) => !initialReflectors.containsKey(id),
+      )) {
+    return true;
+  }
+
+  bool sameKey(PhysicsEvent first, PhysicsEvent second) {
+    return first.sourceEntityId == second.sourceEntityId &&
+        first.targetEntityId == second.targetEntityId &&
+        first.pathIndex == second.pathIndex &&
+        (first.contactId == null ||
+            second.contactId == null ||
+            first.contactId == second.contactId);
+  }
+
+  // sticky·동일 접촉·outward escape impact은 기록만 하고 회전하지 않는다.
+  // resolver가 qualifying 계약을 true로 확정한 impact만 회전의 원인이 된다.
+  for (final impact in impacts.where(
+    (event) => event.impact?.triggersReflectorRotation == true,
+  )) {
+    final matches = rotations
+        .where((rotation) => sameKey(impact, rotation))
+        .toList();
+    if (matches.length != 1) return true;
+    final rotation = matches.single;
+    final index = events.indexOf(rotation);
+    final impactIndex = events.indexOf(impact);
+    if (impactIndex < 0 || index < 0 || impactIndex >= index) return true;
+    if (rotation.parentEventId != impact.eventId) return true;
+    final payload = rotation.reflectorRotation;
+    if (payload == null ||
+        payload.sourceEntityId != rotation.sourceEntityId ||
+        payload.reflectorEntityId != rotation.targetEntityId ||
+        impact.contactId != payload.contactId ||
+        payload.pathIndex != rotation.pathIndex ||
+        payload.collisionNormal != impact.normal ||
+        rotation.normal != payload.collisionNormal ||
+        impact.resultingVelocity != payload.velocityAfter ||
+        rotation.resultingVelocity != payload.velocityAfter ||
+        payload.orientationAfter != (payload.orientationBefore + 2) % 8 ||
+        payload.rotationCountAfter != payload.rotationCountBefore + 1) {
+      return true;
+    }
+  }
+
+  // 회전은 정확히 하나의 qualifying impact를 부모로 가져야 한다.
+  for (final rotation in rotations) {
+    final causes = impacts.where(
+      (impact) =>
+          sameKey(impact, rotation) && rotation.parentEventId == impact.eventId,
+    );
+    if (causes.length != 1 ||
+        causes.single.impact?.triggersReflectorRotation != true) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _sameReflectorPayload(ReflectorRotation first, ReflectorRotation second) {
+  return first.sourceEntityId == second.sourceEntityId &&
+      first.reflectorEntityId == second.reflectorEntityId &&
+      first.contactId == second.contactId &&
+      first.pathIndex == second.pathIndex &&
+      first.orientationBefore == second.orientationBefore &&
+      first.orientationAfter == second.orientationAfter &&
+      first.rotationCountBefore == second.rotationCountBefore &&
+      first.rotationCountAfter == second.rotationCountAfter &&
+      first.collisionNormal == second.collisionNormal &&
+      first.velocityBefore == second.velocityBefore &&
+      first.velocityAfter == second.velocityAfter;
 }
 
 bool _hasSliderActivation(ShotResult result, String sourceId, String sliderId) {
@@ -449,6 +609,22 @@ bool _hasFiniteCoordinates(ShotResult result) {
   if (!result.powerSliderActivations.every(finiteSlider)) {
     return false;
   }
+  bool finiteReflector(ReflectorRotation rotation) {
+    return finiteVec(rotation.collisionNormal) &&
+        finiteVec(rotation.velocityBefore) &&
+        finiteVec(rotation.velocityAfter) &&
+        rotation.orientationBefore >= 0 &&
+        rotation.orientationBefore <= 7 &&
+        rotation.orientationAfter >= 0 &&
+        rotation.orientationAfter <= 7 &&
+        rotation.rotationCountBefore >= 0 &&
+        rotation.rotationCountAfter >= 0 &&
+        rotation.pathIndex >= 0;
+  }
+
+  if (!result.reflectorRotations.every(finiteReflector)) {
+    return false;
+  }
   bool finitePhysicsEvent(PhysicsEvent event) {
     return finiteVec(event.position) &&
         finiteVec(event.normal) &&
@@ -459,7 +635,9 @@ bool _hasFiniteCoordinates(ShotResult result) {
         (event.remainingSpeed == null || event.remainingSpeed!.isFinite) &&
         (event.impact == null || finiteImpact(event.impact!)) &&
         (event.move == null || finiteMove(event.move!)) &&
-        (event.powerSlider == null || finiteSlider(event.powerSlider!));
+        (event.powerSlider == null || finiteSlider(event.powerSlider!)) &&
+        (event.reflectorRotation == null ||
+            finiteReflector(event.reflectorRotation!));
   }
 
   if (!result.physicsEvents.every(finitePhysicsEvent)) {
@@ -486,7 +664,11 @@ bool _hasFiniteGameState(GameState state, Set<GameState> activeStates) {
             finiteVec(entity.direction) &&
             entity.hitboxScale.isFinite &&
             entity.restitution.isFinite &&
-            entity.referenceSpeed.isFinite,
+            entity.referenceSpeed.isFinite &&
+            (entity.type != EntityType.rotatingReflector ||
+                (entity.reflectorOrientation >= 0 &&
+                    entity.reflectorOrientation <= 7 &&
+                    entity.reflectorRotationCount >= 0)),
       ) &&
       state.history.every(
         (historyState) => _hasFiniteGameState(historyState, activeStates),
@@ -722,6 +904,11 @@ void _appendEntityFingerprint(StringBuffer buffer, EntityState entity) {
     ..write('|direction=${_vecFingerprint(entity.direction)}')
     ..write('|referenceSpeed=${_number(entity.referenceSpeed)}')
     ..write('|allowedTargets=${_stableAllowedTargets(entity.allowedTargets)}');
+  if (entity.type == EntityType.rotatingReflector) {
+    buffer
+      ..write('|reflectorOrientation=${entity.reflectorOrientation}')
+      ..write('|reflectorRotationCount=${entity.reflectorRotationCount}');
+  }
   _writeText(buffer, 'id', entity.id);
   _writeText(buffer, 'visualState', entity.visualState);
   _writeText(buffer, 'linkId', entity.linkId);
@@ -738,9 +925,11 @@ void _appendImpactFingerprint(StringBuffer buffer, ShotImpact impact) {
     ..write('|strength=${_number(impact.strength)}')
     ..write('|relativeNormalSpeed=${_number(impact.relativeNormalSpeed)}')
     ..write('|impulse=${_number(impact.impulse)}')
-    ..write('|impactTier=${impact.impactTier.name}');
+    ..write('|impactTier=${impact.impactTier.name}')
+    ..write('|triggersReflectorRotation=${impact.triggersReflectorRotation}');
   _writeText(buffer, 'sourceEntityId', impact.sourceEntityId);
   _writeText(buffer, 'entityId', impact.entityId);
+  _writeText(buffer, 'contactId', impact.contactId);
   buffer.write('}');
 }
 
@@ -774,7 +963,8 @@ void _appendPhysicsEventFingerprint(StringBuffer buffer, PhysicsEvent event) {
     ..write('|resultingVelocity=${_vecFingerprint(event.resultingVelocity)}')
     ..write('|remainingDistance=${_nullableNumber(event.remainingDistance)}')
     ..write('|remainingSpeed=${_nullableNumber(event.remainingSpeed)}')
-    ..write('|iterations=${event.iterations ?? ''}');
+    ..write('|iterations=${event.iterations ?? ''}')
+    ..write('|triggersReflectorRotation=${event.triggersReflectorRotation}');
   _writeText(buffer, 'eventId', event.eventId);
   _writeText(buffer, 'parentEventId', event.parentEventId);
   _writeText(buffer, 'sourceEntityId', event.sourceEntityId);
@@ -794,6 +984,20 @@ void _appendPhysicsEventFingerprint(StringBuffer buffer, PhysicsEvent event) {
       ..write(':${_vecFingerprint(activation.velocityAfter)}')
       ..write(':${_number(activation.speedBefore)}')
       ..write(':${_number(activation.speedAfter)}');
+  }
+  if (event.reflectorRotation == null) {
+    buffer.write('|reflectorRotation=null');
+  } else {
+    final rotation = event.reflectorRotation!;
+    buffer
+      ..write('|reflectorRotation=')
+      ..write(':${rotation.orientationBefore}')
+      ..write(':${rotation.orientationAfter}')
+      ..write(':${rotation.rotationCountBefore}')
+      ..write(':${rotation.rotationCountAfter}')
+      ..write(':${_vecFingerprint(rotation.collisionNormal)}')
+      ..write(':${_vecFingerprint(rotation.velocityBefore)}')
+      ..write(':${_vecFingerprint(rotation.velocityAfter)}');
   }
   if (event.impact == null) {
     buffer.write('|impact=null');

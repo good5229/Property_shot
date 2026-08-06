@@ -727,6 +727,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         referenceSpeed: activation.referenceSpeed,
       );
     }
+    if (mounted &&
+        _isAnimatingShot &&
+        event.kind == PhysicsEventKind.reflectorRotation &&
+        event.reflectorRotation != null) {
+      final rotation = event.reflectorRotation!;
+      _feedback.reflectorRotated();
+      _telemetry.record(
+        '회전 반사판 회전',
+        stage: _state.levelIndex,
+        target: rotation.reflectorEntityId,
+        result:
+            '${rotation.orientationBefore}에서 ${rotation.orientationAfter}로 회전',
+        eventCode: 'reflector_rotated',
+        shotId: _state.shotCount + 1,
+        objectId: rotation.sourceEntityId,
+        objectType: EntityType.rotatingReflector.name,
+        contactId: rotation.contactId,
+        position: event.position,
+        velocity: rotation.velocityAfter,
+        speedBefore: rotation.velocityBefore.length,
+        speedAfter: rotation.velocityAfter.length,
+        collisionNormal: rotation.collisionNormal,
+      );
+    }
     if (!mounted ||
         !_isAnimatingShot ||
         event.kind != PhysicsEventKind.chainSafetyStop) {
@@ -1095,6 +1119,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       EntityType.balloon => entity.visualState == 'popped' ? '터짐' : '풍선',
       EntityType.spikeSource => '뾰족함 공급 물체',
       EntityType.powerSlider => '기준 속력 · 진행 방향 유지 · 접촉 중 한 번',
+      EntityType.rotatingReflector => '충돌 방향 반사 · 다음 충돌부터 90도 방향 변경',
       EntityType.wall => '움직이지 않는 장애물',
       _ =>
         entity.traits.isEmpty
@@ -1116,6 +1141,48 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final projectedX = (localPosition.dx - origin.dx) / scale;
     final projectedY = (localPosition.dy - origin.dy) / scale;
     return Vec2(projectedX, projectedY);
+  }
+
+  bool _entityContainsTap(EntityState entity, Vec2 logical) {
+    if (entity.isCircle) {
+      return logical.distanceTo(entity.position) <= entity.radius + 10;
+    }
+    if (!entity.isRotatingReflector) {
+      return entity.bounds.intersectsCircle(logical, 10);
+    }
+    final axes = _reflectorAxes(entity);
+    final delta = logical - entity.position;
+    return delta.dot(axes.tangent).abs() <= entity.size.x / 2 + 10 &&
+        delta.dot(axes.normal).abs() <= entity.size.y / 2 + 10;
+  }
+
+  Rect _semanticEntityRect(EntityState entity, double scale) {
+    var logicalWidth = entity.size.x;
+    var logicalHeight = entity.size.y;
+    if (entity.isRotatingReflector) {
+      final axes = _reflectorAxes(entity);
+      final halfTangent = entity.size.x / 2;
+      final halfNormal = entity.size.y / 2;
+      logicalWidth =
+          2 *
+          (axes.tangent.x.abs() * halfTangent +
+              axes.normal.x.abs() * halfNormal);
+      logicalHeight =
+          2 *
+          (axes.tangent.y.abs() * halfTangent +
+              axes.normal.y.abs() * halfNormal);
+    }
+    return Rect.fromCenter(
+      center: Offset(entity.position.x * scale, entity.position.y * scale),
+      width: math.max(44, logicalWidth * scale),
+      height: math.max(44, logicalHeight * scale),
+    );
+  }
+
+  ({Vec2 tangent, Vec2 normal}) _reflectorAxes(EntityState entity) {
+    final angle = -math.pi / 2 + entity.reflectorOrientation * math.pi / 4;
+    final normal = Vec2(math.cos(angle), math.sin(angle));
+    return (tangent: Vec2(-normal.y, normal.x), normal: normal);
   }
 
   void _dismissInfo() {
@@ -1200,9 +1267,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (entity.id == _state.activeBall.id || !entity.active) {
         continue;
       }
-      final hit = entity.isCircle
-          ? logical.distanceTo(entity.position) <= entity.radius + 10
-          : entity.bounds.intersectsCircle(logical, 10);
+      final hit = _entityContainsTap(entity, logical);
       if (hit) {
         _recordInspection(entity);
         if (entity.traits.isNotEmpty) {
@@ -1822,22 +1887,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                 in _state.entities)
                                               if (entity.active)
                                                 Positioned(
-                                                  left:
-                                                      (entity.position.x -
-                                                          entity.size.x / 2) *
-                                                      scale,
-                                                  top:
-                                                      (entity.position.y -
-                                                          entity.size.y / 2) *
-                                                      scale,
-                                                  width: math.max(
-                                                    44,
-                                                    entity.size.x * scale,
-                                                  ),
-                                                  height: math.max(
-                                                    44,
-                                                    entity.size.y * scale,
-                                                  ),
+                                                  left: _semanticEntityRect(
+                                                    entity,
+                                                    scale,
+                                                  ).left,
+                                                  top: _semanticEntityRect(
+                                                    entity,
+                                                    scale,
+                                                  ).top,
+                                                  width: _semanticEntityRect(
+                                                    entity,
+                                                    scale,
+                                                  ).width,
+                                                  height: _semanticEntityRect(
+                                                    entity,
+                                                    scale,
+                                                  ).height,
                                                   child: Semantics(
                                                     container: true,
                                                     button: true,
@@ -3835,6 +3900,18 @@ class _EntityIconPainter extends CustomPainter {
         canvas.drawLine(const Offset(3, -4), const Offset(8, 0), outline);
         canvas.drawLine(const Offset(3, 4), const Offset(8, 0), outline);
         canvas.restore();
+      case EntityType.rotatingReflector:
+        final angle = -math.pi / 2 + entity.reflectorOrientation * math.pi / 4;
+        canvas.save();
+        canvas.translate(center.dx, center.dy);
+        canvas.rotate(angle + math.pi / 2);
+        final panel = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset.zero, width: 28, height: 8),
+          const Radius.circular(3),
+        );
+        canvas.drawRRect(panel, Paint()..color = const Color(0xFFE0A45D));
+        canvas.drawRRect(panel, outline);
+        canvas.restore();
       case EntityType.ball:
       case EntityType.crate:
       case EntityType.weight:
@@ -3847,7 +3924,10 @@ class _EntityIconPainter extends CustomPainter {
       oldDelegate.entity.type != entity.type ||
       oldDelegate.entity.open != entity.open ||
       oldDelegate.entity.pressed != entity.pressed ||
-      oldDelegate.entity.direction != entity.direction;
+      oldDelegate.entity.direction != entity.direction ||
+      oldDelegate.entity.reflectorOrientation != entity.reflectorOrientation ||
+      oldDelegate.entity.reflectorRotationCount !=
+          entity.reflectorRotationCount;
 }
 
 String? _assetPath(EntityState entity) {
@@ -3885,6 +3965,8 @@ String _entityName(EntityState entity) {
       return '가시 성게';
     case EntityType.powerSlider:
       return '파워 슬라이더';
+    case EntityType.rotatingReflector:
+      return '회전 반사판';
   }
 }
 
@@ -3914,6 +3996,8 @@ String _entityDescription(EntityState entity) {
       return '공에 옮기면 풍선을 터뜨릴 수 있는 뾰족함을 줍니다.';
     case EntityType.powerSlider:
       return '기물을 기준 속력까지 올립니다. 진행 방향은 유지되고 같은 접촉에는 한 번만 적용됩니다.';
+    case EntityType.rotatingReflector:
+      return '맞은 방향으로 공을 반사한 뒤 90도 회전합니다. 다음 충돌부터 새 방향을 사용합니다.';
   }
 }
 

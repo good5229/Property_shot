@@ -61,6 +61,86 @@ void main() {
     }
   });
 
+  test('replay fingerprint는 impact와 generic physics의 접촉·회전 계약 차이를 구분한다', () {
+    final base = resolver.resolve(
+      levels.first.createState(0),
+      const ShotInput(direction: Vec2(1, 0), power: 0.7),
+    );
+    expect(base.impacts, isNotEmpty);
+    expect(base.physicsEvents, isNotEmpty);
+
+    final originalImpact = base.impacts.first;
+    final changedImpact = ShotImpact(
+      entityId: originalImpact.entityId,
+      entityType: originalImpact.entityType,
+      position: originalImpact.position,
+      normal: originalImpact.normal,
+      pathIndex: originalImpact.pathIndex,
+      strength: originalImpact.strength,
+      sourceEntityId: 'spent_ball',
+      contactId: 'spent_ball:${originalImpact.entityId}',
+      triggersReflectorRotation: true,
+      relativeNormalSpeed: originalImpact.relativeNormalSpeed,
+      impulse: originalImpact.impulse,
+      impactTier: originalImpact.impactTier,
+    );
+    final impactChanged = ShotResult(
+      state: base.state,
+      path: base.path,
+      events: base.events,
+      moves: base.moves,
+      impacts: [changedImpact, ...base.impacts.skip(1)],
+      powerSliderActivations: base.powerSliderActivations,
+      reflectorRotations: base.reflectorRotations,
+      physicsEvents: base.physicsEvents,
+      chainSafetyDiagnostics: base.chainSafetyDiagnostics,
+    );
+    expect(
+      shotResultFingerprint(impactChanged),
+      isNot(shotResultFingerprint(base)),
+    );
+
+    final originalEvent = base.physicsEvents.first;
+    final changedEvent = PhysicsEvent(
+      eventId: originalEvent.eventId,
+      parentEventId: originalEvent.parentEventId,
+      kind: originalEvent.kind,
+      pathIndex: originalEvent.pathIndex,
+      sourceEntityId: 'spent_ball',
+      targetEntityId: originalEvent.targetEntityId,
+      targetType: originalEvent.targetType,
+      position: originalEvent.position,
+      normal: originalEvent.normal,
+      impulse: originalEvent.impulse,
+      resultingVelocity: originalEvent.resultingVelocity,
+      visualState: originalEvent.visualState,
+      remainingDistance: originalEvent.remainingDistance,
+      remainingSpeed: originalEvent.remainingSpeed,
+      iterations: originalEvent.iterations,
+      impact: originalEvent.impact,
+      move: originalEvent.move,
+      contactId: 'spent_ball:${originalEvent.targetEntityId}',
+      triggersReflectorRotation: true,
+      powerSlider: originalEvent.powerSlider,
+      reflectorRotation: originalEvent.reflectorRotation,
+    );
+    final physicsChanged = ShotResult(
+      state: base.state,
+      path: base.path,
+      events: base.events,
+      moves: base.moves,
+      impacts: base.impacts,
+      powerSliderActivations: base.powerSliderActivations,
+      reflectorRotations: base.reflectorRotations,
+      physicsEvents: [changedEvent, ...base.physicsEvents.skip(1)],
+      chainSafetyDiagnostics: base.chainSafetyDiagnostics,
+    );
+    expect(
+      shotResultFingerprint(physicsChanged),
+      isNot(shotResultFingerprint(base)),
+    );
+  });
+
   test('샷 종료 후 모든 벽은 위치와 이동 가능 상태를 유지한다', () {
     for (var levelIndex = 0; levelIndex < levels.length; levelIndex++) {
       final state = levels[levelIndex].createState(levelIndex);

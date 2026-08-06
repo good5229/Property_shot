@@ -16,6 +16,7 @@ enum EntityType {
   balloon,
   spikeSource,
   powerSlider,
+  rotatingReflector,
 }
 
 class EntityState {
@@ -37,6 +38,8 @@ class EntityState {
     this.direction = const Vec2(1, 0),
     this.referenceSpeed = 0,
     this.allowedTargets = const {},
+    this.reflectorOrientation = 0,
+    this.reflectorRotationCount = 0,
   });
 
   final String id;
@@ -59,11 +62,19 @@ class EntityState {
   final double referenceSpeed;
   final Set<EntityType> allowedTargets;
 
+  /// 회전 반사판의 현재 법선 방향(0~7)과 누적 회전 횟수다.
+  /// 화면 좌표(y가 아래로 증가)에서 0은 위쪽이며, 값이 1씩 늘 때
+  /// 시계 방향으로 45도씩 증가한다. 90도 회전은 `(방향 + 2) % 8`이다.
+  /// 회전판이 아닌 엔티티에는 기본값을 사용하고 JSON에 기록하지 않는다.
+  final int reflectorOrientation;
+  final int reflectorRotationCount;
+
   bool get isCircle =>
       type == EntityType.ball ||
       type == EntityType.hole ||
       type == EntityType.balloon;
   bool get isPowerSlider => type == EntityType.powerSlider;
+  bool get isRotatingReflector => type == EntityType.rotatingReflector;
   double get radius => math.min(size.x, size.y) / 2;
   double get hitRadius => radius * hitboxScale;
   Bounds get bounds => Bounds(
@@ -92,6 +103,8 @@ class EntityState {
     Vec2? direction,
     double? referenceSpeed,
     Set<EntityType>? allowedTargets,
+    int? reflectorOrientation,
+    int? reflectorRotationCount,
   }) {
     return EntityState(
       id: id ?? this.id,
@@ -111,6 +124,9 @@ class EntityState {
       direction: direction ?? this.direction,
       referenceSpeed: referenceSpeed ?? this.referenceSpeed,
       allowedTargets: allowedTargets ?? this.allowedTargets,
+      reflectorOrientation: reflectorOrientation ?? this.reflectorOrientation,
+      reflectorRotationCount:
+          reflectorRotationCount ?? this.reflectorRotationCount,
     );
   }
 }

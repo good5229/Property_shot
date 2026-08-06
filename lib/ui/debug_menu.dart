@@ -412,6 +412,7 @@ class _DebugMenuState extends State<DebugMenu> {
     return switch (kind) {
       PhysicsEventKind.impact => '충돌',
       PhysicsEventKind.powerSliderActivation => '파워 슬라이더 작동',
+      PhysicsEventKind.reflectorRotation => '회전 반사판 회전',
       PhysicsEventKind.stateChange => '상태 변경',
       PhysicsEventKind.move => '이동',
       PhysicsEventKind.chainSafetyStop => '연쇄 안전 중단',
