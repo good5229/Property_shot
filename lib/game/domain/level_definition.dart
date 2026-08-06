@@ -14,6 +14,13 @@ class LevelDefinition {
     this.copyCoreReward = 0,
     this.intendedStrategyId,
     this.acceptedStrategyIds = const {},
+    this.stageId,
+    this.patternId,
+    this.patternWeight = 1,
+    this.difficultyBand,
+    this.solutionFamilies = const {},
+    this.optionalChallenges = const {},
+    this.patternMetadata = const {},
   });
 
   /// 배열 순서가 바뀌어도 진행 기록을 유지하는 내부 식별자다.
@@ -27,6 +34,16 @@ class LevelDefinition {
   final int copyCoreReward;
   final String? intendedStrategyId;
   final Set<String> acceptedStrategyIds;
+
+  /// 패턴 데이터에서 변환된 경우에만 채워지는 선택 메타데이터다.
+  /// 기존 하드코딩 레벨은 이 값들을 생략해도 이전과 같은 상태를 만든다.
+  final String? stageId;
+  final String? patternId;
+  final double patternWeight;
+  final String? difficultyBand;
+  final Set<String> solutionFamilies;
+  final Set<String> optionalChallenges;
+  final Map<String, String> patternMetadata;
 
   GameState createState(
     int index, {

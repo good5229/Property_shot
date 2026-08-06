@@ -1633,3 +1633,7 @@ Use consistent headings so entries are easy to grep.
 2026-08-03: 보드 래스터 캐시의 새 Web Release 재빌드가 실행 환경 사용 한도로 검증되지 않아 해당 실험 코드를 제거한다. 실제 Web에서 검증된 정적 물체 Picture 캐시와 중간 품질 래스터 필터만 최종 후보로 유지한다.
 2026-08-03: 최종 검증 후보는 정적 물체 Picture 캐시·256px 병렬 디코드·Codec/Image 수명 해제·중간 품질 필터다. 감사 당시 번들 `2738b00fae84719864756376ad3179facb03ceaea3c66f91cb031dd0aaa832d1`, 서버 PID `7795`에서 390×844 발사 평균 24.195ms·p95 51.5ms, 768×1024 평균 38.717ms·p95 66.6ms를 기록했다. 감사 후 서버 재시작은 실행 환경 사용 한도로 보류됐다.
 2026-08-03: PID 7795 감사 서버가 종료된 뒤 실행 환경 사용 한도로 8080 재시작이 거부되어 `.runtime/property_shot_web_8080.pid`를 0으로 정리한다. 다음 실행 가능 환경에서 검증 후보를 다시 제공해야 한다.
+2026-08-06: 10단계 확장 총괄 프롬프트에 따라 PS-BASE-01을 재검증했다. 작업 트리는 깨끗하고 `flutter analyze`, 전체 회귀 252개, Web Release 빌드가 모두 통과했다. 기존 1~4단계 결과를 보존하는 JSON 기반 `StageDefinition`·`StagePattern`·`LevelDefinition` 변환 경계를 PS-DATA-01의 공통 인터페이스로 확정한다.
+2026-08-06: PS-DATA-01을 시작했다. 이번 단위는 기존 1~4단계 데이터를 이전하지 않고 JSON 스키마·EntityState 손실 없는 codec·LevelDefinition 변환과 집중 회귀 테스트만 담당한다.
+2026-08-06: PS-DATA-01 구현을 완료했다. `StageDefinition`·`StagePattern`·`PatternObjectDefinition`의 JSON Map/문자열 codec, 모든 현재 `EntityType`·`TraitType`의 안정 이름, 레거시 `LevelDefinition` 양방향 변환과 오류 검증을 추가했다. 집중 6개, 핵심 물리 77개, 전체 258개 테스트와 `flutter analyze`가 통과했다.
+2026-08-06: Sol 검토에서 레거시 호환 회귀가 1단계만 확인하는 증거 공백을 발견해 Luna에 보완을 요청했다. 1~4단계 전체의 기본·제품 규칙 `createState`와 모든 엔티티 필드가 변환 전후 일치하도록 확장했고 집중 테스트를 재통과해 PS-DATA-01을 PASS 판정한다.
