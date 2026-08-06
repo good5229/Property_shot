@@ -36,10 +36,27 @@ void main() {
       ['stage_heavy_01', 'stage_heavy_02', 'stage_heavy_03', 'stage_heavy_04'],
     );
     expect(
+      sourceCatalog
+          .stageById('stage_bouncy')
+          .patterns
+          .map((pattern) => pattern.patternId),
+      [
+        'stage_bouncy_01',
+        'stage_bouncy_02',
+        'stage_bouncy_03',
+        'stage_bouncy_04',
+      ],
+    );
+    expect(
       sourceCatalog.stages
-          .skip(1)
-          .map((stage) => stage.patterns.single.patternId),
-      ['stage_bouncy_01', 'stage_chain_gate_01', 'stage_balloon_01'],
+          .where(
+            (stage) =>
+                stage.stageId == 'stage_chain_gate' ||
+                stage.stageId == 'stage_balloon',
+          )
+          .map((stage) => stage.patterns.single.patternId)
+          .toList(),
+      ['stage_chain_gate_01', 'stage_balloon_01'],
     );
     expect(sourceCatalog.validate(), isEmpty);
     for (final stage in sourceCatalog.stages) {

@@ -814,8 +814,14 @@
             "jelly",
             "none"
           ],
-          "solutionFamilies": [],
-          "optionalChallenges": [],
+          "solutionFamilies": [
+            "wall_reflection",
+            "multi_wall_reflection"
+          ],
+          "optionalChallenges": [
+            "two_wall_banks",
+            "one_shot"
+          ],
           "metadata": {
             "baseline": "true"
           },
@@ -958,6 +964,473 @@
               "position": {
                 "x": 300,
                 "y": 450
+              },
+              "size": {
+                "x": 58,
+                "y": 42
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ]
+        },
+        {
+          "patternId": "stage_bouncy_02",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 58,
+            "y": 462
+          },
+          "copyCharges": 0,
+          "bonusGoal": "젤리를 거쳐 벽을 반사하거나 벽을 이용해 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "jelly",
+          "acceptedStrategyIds": [
+            "jelly",
+            "none"
+          ],
+          "solutionFamilies": [
+            "jelly_interaction",
+            "wall_reflection"
+          ],
+          "optionalChallenges": [
+            "jelly_hit",
+            "one_shot"
+          ],
+          "metadata": {},
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300,
+                "y": 110
+              },
+              "size": {
+                "x": 52,
+                "y": 52
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180,
+                "y": 12
+              },
+              "size": {
+                "x": 340,
+                "y": 24
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12,
+                "y": 280
+              },
+              "size": {
+                "x": 24,
+                "y": 520
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348,
+                "y": 280
+              },
+              "size": {
+                "x": 24,
+                "y": 520
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "bank_center_horizontal",
+              "type": "wall",
+              "position": {
+                "x": 180,
+                "y": 310
+              },
+              "size": {
+                "x": 170,
+                "y": 24
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": null
+            },
+            {
+              "id": "jelly",
+              "type": "bumper",
+              "position": {
+                "x": 180,
+                "y": 360
+              },
+              "size": {
+                "x": 58,
+                "y": 42
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ]
+        },
+        {
+          "patternId": "stage_bouncy_03",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 58,
+            "y": 462
+          },
+          "copyCharges": 0,
+          "bonusGoal": "젤리의 반발과 열린 통로를 이용해 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "jelly",
+          "acceptedStrategyIds": [
+            "jelly",
+            "none"
+          ],
+          "solutionFamilies": [
+            "jelly_interaction",
+            "wall_reflection"
+          ],
+          "optionalChallenges": [
+            "jelly_hit",
+            "one_shot"
+          ],
+          "metadata": {},
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300,
+                "y": 510
+              },
+              "size": {
+                "x": 52,
+                "y": 52
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180,
+                "y": 12
+              },
+              "size": {
+                "x": 340,
+                "y": 24
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12,
+                "y": 280
+              },
+              "size": {
+                "x": 24,
+                "y": 520
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348,
+                "y": 280
+              },
+              "size": {
+                "x": 24,
+                "y": 520
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "bank_center_horizontal",
+              "type": "wall",
+              "position": {
+                "x": 180,
+                "y": 310
+              },
+              "size": {
+                "x": 170,
+                "y": 24
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": null
+            },
+            {
+              "id": "jelly",
+              "type": "bumper",
+              "position": {
+                "x": 220,
+                "y": 360
+              },
+              "size": {
+                "x": 58,
+                "y": 42
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ]
+        },
+        {
+          "patternId": "stage_bouncy_04",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 300,
+            "y": 462
+          },
+          "copyCharges": 0,
+          "bonusGoal": "젤리와 벽의 반발 각도를 조절해 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "jelly",
+          "acceptedStrategyIds": [
+            "jelly",
+            "none"
+          ],
+          "solutionFamilies": [
+            "jelly_interaction",
+            "wall_reflection"
+          ],
+          "optionalChallenges": [
+            "jelly_hit",
+            "upper_wall_bank"
+          ],
+          "metadata": {},
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 100,
+                "y": 110
+              },
+              "size": {
+                "x": 52,
+                "y": 52
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180,
+                "y": 12
+              },
+              "size": {
+                "x": 340,
+                "y": 24
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12,
+                "y": 280
+              },
+              "size": {
+                "x": 24,
+                "y": 520
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348,
+                "y": 280
+              },
+              "size": {
+                "x": 24,
+                "y": 520
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "jelly",
+              "type": "bumper",
+              "position": {
+                "x": 180,
+                "y": 360
               },
               "size": {
                 "x": 58,
