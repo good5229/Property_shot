@@ -8,7 +8,7 @@ import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 
 void main() {
-  test('저장된 단계별 다중샷 20개를 같은 순서로 재생한다', () {
+  test('저장된 단계별 다중샷을 같은 순서로 재생한다', () {
     final json =
         jsonDecode(
               File(
@@ -23,9 +23,12 @@ void main() {
 
     expect(json['schemaVersion'], 1);
     expect(fixtures, hasLength(levels.length * 5));
-    expect(fixtures.map((fixture) => fixture.stageIndex).toSet(), {0, 1, 2, 3});
+    final stageIndexes = {
+      for (var index = 0; index < levels.length; index++) index,
+    };
+    expect(fixtures.map((fixture) => fixture.stageIndex).toSet(), stageIndexes);
     expect(fixtures.every((fixture) => fixture.shots.isNotEmpty), isTrue);
-    for (final stageIndex in {0, 1, 2, 3}) {
+    for (final stageIndex in stageIndexes) {
       expect(
         fixtures.any(
           (fixture) =>

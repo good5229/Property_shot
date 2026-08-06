@@ -309,6 +309,7 @@ class PatternObjectDefinition {
     this.allowedTargets = const {},
     this.reflectorOrientation = 0,
     this.reflectorRotationCount = 0,
+    this.movableWhenDrained = false,
   });
 
   final String id;
@@ -330,6 +331,7 @@ class PatternObjectDefinition {
   final Set<EntityType> allowedTargets;
   final int reflectorOrientation;
   final int reflectorRotationCount;
+  final bool movableWhenDrained;
 
   factory PatternObjectDefinition.fromEntityState(EntityState entity) {
     return PatternObjectDefinition(
@@ -352,6 +354,7 @@ class PatternObjectDefinition {
       allowedTargets: Set.unmodifiable(entity.allowedTargets),
       reflectorOrientation: entity.reflectorOrientation,
       reflectorRotationCount: entity.reflectorRotationCount,
+      movableWhenDrained: entity.movableWhenDrained,
     );
   }
 
@@ -384,6 +387,7 @@ class PatternObjectDefinition {
       ),
       reflectorOrientation: reader.optionalInt('reflectorOrientation', 0),
       reflectorRotationCount: reader.optionalInt('reflectorRotationCount', 0),
+      movableWhenDrained: reader.optionalBool('movableWhenDrained', false),
     );
   }
 
@@ -408,6 +412,7 @@ class PatternObjectDefinition {
       allowedTargets: Set.unmodifiable(allowedTargets),
       reflectorOrientation: reflectorOrientation,
       reflectorRotationCount: reflectorRotationCount,
+      movableWhenDrained: movableWhenDrained,
     );
   }
 
@@ -427,6 +432,7 @@ class PatternObjectDefinition {
       'hitboxScale': hitboxScale,
       'restitution': restitution,
       'linkId': linkId,
+      'movableWhenDrained': movableWhenDrained,
     };
     if (type == EntityType.powerSlider) {
       json['direction'] = direction.toJson();

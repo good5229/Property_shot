@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/stage_pattern.dart';
+import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/validation/stage_pattern_validator.dart';
 
@@ -210,6 +211,75 @@ void main() {
       expect(report.hasCode(ValidationIssueCode.holeIsSolid), isTrue);
       expect(report.hasCode(ValidationIssueCode.holeIsMovable), isTrue);
       expect(report.hasCode(ValidationIssueCode.wallIsMovable), isTrue);
+    });
+
+    test('비워진 뒤 이동 설정은 속성이 있는 일반 고체에만 허용한다', () {
+      final noTrait = StagePatternValidator().validateLegacyStage(
+        _stage(
+          patterns: [
+            _pattern(
+              objects: [
+                _hole(),
+                _object(
+                  'empty_crate',
+                  EntityType.crate,
+                  const Vec2(180, 280),
+                  movableWhenDrained: true,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      final fixedWall = StagePatternValidator().validateLegacyStage(
+        _stage(
+          patterns: [
+            _pattern(
+              objects: [
+                _hole(),
+                _object(
+                  'trait_wall',
+                  EntityType.wall,
+                  const Vec2(180, 280),
+                  traits: const {TraitType.heavy},
+                  movableWhenDrained: true,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      final validWeight = StagePatternValidator().validateLegacyStage(
+        _stage(
+          patterns: [
+            _pattern(
+              objects: [
+                _hole(),
+                _object(
+                  'trait_weight',
+                  EntityType.weight,
+                  const Vec2(180, 280),
+                  traits: const {TraitType.heavy},
+                  movableWhenDrained: true,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(
+        noTrait.hasCode(ValidationIssueCode.invalidMovableWhenDrained),
+        isTrue,
+      );
+      expect(
+        fixedWall.hasCode(ValidationIssueCode.invalidMovableWhenDrained),
+        isTrue,
+      );
+      expect(
+        validWeight.hasCode(ValidationIssueCode.invalidMovableWhenDrained),
+        isFalse,
+      );
     });
 
     test('시작 공의 자동 클리어·고체 내부 생성을 검사한다', () {
@@ -761,6 +831,8 @@ PatternObjectDefinition _object(
   double hitboxScale = 0.88,
   double restitution = 0.72,
   String? linkId,
+  Set<TraitType> traits = const {},
+  bool movableWhenDrained = false,
 }) {
   return PatternObjectDefinition(
     id: id,
@@ -775,5 +847,7 @@ PatternObjectDefinition _object(
     hitboxScale: hitboxScale,
     restitution: restitution,
     linkId: linkId,
+    traits: traits,
+    movableWhenDrained: movableWhenDrained,
   );
 }

@@ -30,6 +30,7 @@ void main() {
       'stage_bouncy',
       'stage_chain_gate',
       'stage_balloon',
+      'stage_drained',
     ]);
     expect(
       sourceCatalog.stages.first.patterns.map((pattern) => pattern.patternId),
@@ -92,14 +93,14 @@ void main() {
   });
 
   test('levels는 각 단계의 기준 패턴을 동기식으로 노출한다', () {
-    expect(levels, hasLength(4));
+    expect(levels, hasLength(5));
     for (var index = 0; index < levels.length; index++) {
       expect(levels[index].id, sourceCatalog.stages[index].stageId);
       expect(
         levels[index].patternId,
         sourceCatalog.baselinePatternFor(sourceCatalog.stages[index]).patternId,
       );
-      expect(levels[index].difficultyBand, '튜토리얼');
+      expect(levels[index].difficultyBand, index < 4 ? '튜토리얼' : '기초 응용');
     }
     expect(() => levels.add(levels.first), throwsUnsupportedError);
   });
@@ -133,8 +134,8 @@ void main() {
   });
 
   test('새 levels의 기존 게임 상태와 기준 fixture가 완전히 일치한다', () {
-    expect(legacyLevels, hasLength(levels.length));
-    for (var index = 0; index < levels.length; index++) {
+    expect(legacyLevels, hasLength(4));
+    for (var index = 0; index < legacyLevels.length; index++) {
       final expected = legacyLevels[index];
       final actual = levels[index];
 

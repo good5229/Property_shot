@@ -10,6 +10,7 @@ import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
+import 'package:property_shot/game/simulation/trait_resolver.dart';
 
 const resolver = ShotResolver();
 
@@ -25,7 +26,10 @@ void main() {
     final successes = <_Candidate>[];
     final failures = <_Candidate>[];
     for (final candidate in candidates) {
-      final result = resolver.resolve(state, candidate.shot.toInput());
+      final result = resolver.resolve(
+        candidate.initialState,
+        candidate.shot.toInput(),
+      );
       if (result.state.phase == GamePhase.success) {
         if (successes.length < 2) {
           successes.add(candidate);
@@ -41,10 +45,10 @@ void main() {
       throw StateError('단계 ${stageIndex + 1}의 성공·실패 픽스처를 찾지 못했습니다.');
     }
     for (var index = 0; index < successes.length; index++) {
-      fixtures.add(_fixture(stageIndex, successes[index], index, state));
+      fixtures.add(_fixture(stageIndex, successes[index], index));
     }
     for (var index = 0; index < failures.length; index++) {
-      fixtures.add(_fixture(stageIndex, failures[index], index, state));
+      fixtures.add(_fixture(stageIndex, failures[index], index));
     }
   }
 
@@ -61,12 +65,8 @@ void main() {
   print('리플레이 픽스처 ${fixtures.length}개 생성: ${file.path}');
 }
 
-ReplayFixture _fixture(
-  int stageIndex,
-  _Candidate candidate,
-  int index,
-  GameState state,
-) {
+ReplayFixture _fixture(int stageIndex, _Candidate candidate, int index) {
+  final state = candidate.initialState;
   final result = resolver.resolve(state, candidate.shot.toInput());
   final success = result.state.phase == GamePhase.success;
   return ReplayFixture(
@@ -77,10 +77,34 @@ ReplayFixture _fixture(
     expectedFingerprints: [shotResultFingerprint(result)],
     expectedPhase: result.state.phase.name,
     copyCoreCount: state.copyCoreCount,
+    transferSourceId: candidate.transferSourceId,
   );
 }
 
 Iterable<_Candidate> _candidates(int stageIndex, GameState state) sync* {
+  if (stageIndex == 4) {
+    const traits = TraitResolver();
+    for (final source in state.traitSources) {
+      final transferred = traits.transferSelectedTrait(
+        traits.selectSource(state, source.id),
+      );
+      for (var degree = -180; degree < 180; degree += 5) {
+        for (var step = 1; step <= 20; step++) {
+          yield _Candidate(
+            shot: ReplayShotFixture(
+              angleRadians: degree * math.pi / 180,
+              power: step / 20,
+              equippedTrait: transferred.equippedTrait,
+            ),
+            routeTag: 'drained_source',
+            initialState: transferred,
+            transferSourceId: source.id,
+          );
+        }
+      }
+    }
+    return;
+  }
   final preferred = switch (stageIndex) {
     0 => TraitType.heavy,
     1 => TraitType.bouncy,
@@ -104,6 +128,7 @@ Iterable<_Candidate> _candidates(int stageIndex, GameState state) sync* {
         yield _Candidate(
           shot: shot,
           routeTag: _routeTag(stageIndex, trait, preferred),
+          initialState: state,
         );
       }
     }
@@ -121,8 +146,15 @@ String _routeTag(int stageIndex, TraitType? trait, TraitType? preferred) {
 }
 
 class _Candidate {
-  const _Candidate({required this.shot, required this.routeTag});
+  const _Candidate({
+    required this.shot,
+    required this.routeTag,
+    required this.initialState,
+    this.transferSourceId,
+  });
 
   final ReplayShotFixture shot;
   final String routeTag;
+  final GameState initialState;
+  final String? transferSourceId;
 }

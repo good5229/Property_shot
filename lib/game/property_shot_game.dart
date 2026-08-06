@@ -2194,7 +2194,9 @@ class PropertyShotGame extends FlameGame {
     );
     _drawRasterSurfaceFinish(canvas, entity, target);
     canvas.restore();
-    if (entity.type == EntityType.bumper && motion.impact > 0.04) {
+    if (entity.type == EntityType.bumper &&
+        entity.traits.contains(TraitType.bouncy) &&
+        motion.impact > 0.04) {
       _drawJellySpriteImpact(canvas, center, target, motion.impact);
     }
     _drawSpriteGleam(canvas, entity, target, motion);
@@ -2234,6 +2236,14 @@ class PropertyShotGame extends FlameGame {
     canvas.save();
     canvas.clipRRect(RRect.fromRectAndRadius(target, radius));
     canvas.drawRect(target, finish);
+    if (entity.visualState == 'drained') {
+      canvas.drawRect(
+        target,
+        Paint()
+          ..blendMode = BlendMode.srcATop
+          ..color = const Color(0x88D8D4C7),
+      );
+    }
     canvas.drawLine(
       target.topLeft.translate(2, 1),
       target.topRight.translate(-2, 1),

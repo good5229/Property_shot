@@ -92,8 +92,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late int _stageCopyCoreAtStart;
   bool _bonusBumperHit = false;
   bool _bonusSwitchPressed = false;
+  bool _bonusDrainedSourceMoved = false;
   final List<bool> _bonusBumperHistory = [];
   final List<bool> _bonusSwitchHistory = [];
+  final List<bool> _bonusDrainedSourceHistory = [];
   bool _bonusChallengeAchieved = false;
   late TutorialExperimentVariant _activeTutorialVariant;
   final List<PhysicsEvent> _debugPhysicsEvents = [];
@@ -281,8 +283,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _resetChargeGauge();
     _bonusBumperHit = false;
     _bonusSwitchPressed = false;
+    _bonusDrainedSourceMoved = false;
     _bonusBumperHistory.clear();
     _bonusSwitchHistory.clear();
+    _bonusDrainedSourceHistory.clear();
     _bonusChallengeAchieved = _bonusGoals[index] ?? false;
     final sameStage = index == _state.levelIndex;
     if (sameStage && _state.shotCount > 0) {
@@ -352,7 +356,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         .copyWith(
           message: _state.levelIndex == 0
               ? '추천 경로를 준비했습니다. 공을 길게 눌렀다 손을 떼면 자동 발사됩니다.'
-              : '속성을 공에 담았습니다. 길게 눌러 힘을 모은 뒤 손을 떼면 자동 발사됩니다.',
+              : '${sourceTrait?.label ?? '선택한'} 능력은 공으로 옮겨지고 원본에서는 사라졌습니다. '
+                    '${source?.movableWhenDrained == true ? '원본은 이제 움직일 수 있습니다.' : '원본의 위치와 형태는 남습니다.'}',
         );
     _telemetry.record(
       '속성 이전',
@@ -406,6 +411,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _bonusBumperHistory.insert(0, _bonusBumperHit);
     _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
+    _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
     final input =
         inputOverride ??
         ShotInput(
@@ -446,6 +452,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         result.impacts.any((impact) => impact.entityType == EntityType.bumper);
     _bonusSwitchPressed =
         _bonusSwitchPressed || result.events.contains('switch_pressed');
+    final drainedSourceIds = _state.entities
+        .where((entity) => entity.visualState == 'drained')
+        .map((entity) => entity.id)
+        .toSet();
+    _bonusDrainedSourceMoved =
+        _bonusDrainedSourceMoved ||
+        result.moves.any(
+          (move) =>
+              drainedSourceIds.contains(move.entityId) && move.from != move.to,
+        );
     _aimStartedForShot = false;
     _isAnimatingShot = true;
     _setState(
@@ -491,6 +507,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           shotCount: result.state.shotCount,
           bumperHit: _bonusBumperHit,
           switchPressed: _bonusSwitchPressed,
+          drainedSourceMoved: _bonusDrainedSourceMoved,
         );
   }
 
@@ -1006,6 +1023,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _bonusSwitchPressed = _bonusSwitchHistory.isEmpty
           ? false
           : _bonusSwitchHistory.removeAt(0);
+      _bonusDrainedSourceMoved = _bonusDrainedSourceHistory.isEmpty
+          ? false
+          : _bonusDrainedSourceHistory.removeAt(0);
     }
     _setState(_shotResolver.rewind(_state));
   }
@@ -2314,7 +2334,7 @@ class _ClearPopup extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final panelHeight = math
-                    .min(540.0, math.max(1, constraints.maxHeight - 48))
+                    .min(620.0, math.max(1, constraints.maxHeight - 48))
                     .toDouble();
                 return Center(
                   child: Padding(
@@ -2720,7 +2740,8 @@ String _levelObjective(int levelIndex) {
     0 => '추천: 무거움을 옮겨 상자를 밀어 보세요. 다른 충돌 경로도 홀에 닿으면 성공합니다.',
     1 => '추천: 탄성을 옮겨 벽에 반사시켜 보세요. 다른 각도와 경로도 시도할 수 있습니다.',
     2 => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
-    _ => '풍선을 밀거나 터뜨린 뒤 여러 경로로 홀에 가 보세요. 터뜨리면 뒤의 스위치가 보여요.',
+    3 => '풍선을 밀거나 터뜨린 뒤 여러 경로로 홀에 가 보세요. 터뜨리면 뒤의 스위치가 보여요.',
+    _ => '속성을 옮기면 공은 능력을 얻고 원본은 능력을 잃습니다. 두 변화를 함께 이용해 보세요.',
   };
 }
 
@@ -2736,7 +2757,8 @@ String _compactLevelObjective(int levelIndex) {
     0 => '무거움으로 상자를 밀어 홀로 보내기',
     1 => '탄성으로 벽에 반사해 홀로 보내기',
     2 => '스위치와 문을 열어 홀로 가기',
-    _ => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
+    3 => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
+    _ => '공과 비워진 원본을 함께 이용해 홀로 가기',
   };
 }
 
@@ -2758,6 +2780,15 @@ int _starsForShot(int shotCount, int parShots) {
 }
 
 String? _levelProgressHint(GameState state) {
+  if (state.levelIndex == 4) {
+    final drained = state.entities.where(
+      (entity) => entity.visualState == 'drained',
+    );
+    if (drained.isNotEmpty) {
+      return '원본은 능력을 잃고 움직일 수 있게 됐어요. 공과 원본의 충돌을 함께 이용해 보세요.';
+    }
+    return '어떤 능력을 얻을지뿐 아니라 어느 원본을 비울지도 살펴보세요.';
+  }
   if (state.levelIndex == 3) {
     final balloon = state.entityById('balloon');
     final balloonSwitch = state.entityById('balloon_switch');
@@ -2794,6 +2825,11 @@ String? _levelProgressHint(GameState state) {
 }
 
 String? _compactLevelProgressHint(GameState state) {
+  if (state.levelIndex == 4) {
+    return state.entities.any((entity) => entity.visualState == 'drained')
+        ? '공은 능력 획득 · 원본은 이동 가능'
+        : '공의 변화 · 원본의 변화 함께 보기';
+  }
   if (state.levelIndex == 3) {
     final balloonSwitch = state.entityById('balloon_switch');
     return balloonSwitch?.pressed == true
@@ -2830,7 +2866,8 @@ String _levelIntroMessage(int levelIndex) {
     0 => '방향 조정 · 길게 누르기 · 손 떼기',
     1 => '방향 조정 · 길게 누르기 · 손 떼기',
     2 => '스위치 살피기 · 여러 경로로 도전',
-    _ => '풍선 확인 · 여러 경로로 도전',
+    3 => '풍선 확인 · 여러 경로로 도전',
+    _ => '공과 원본의 변화를 함께 살펴보세요',
   };
 }
 
@@ -3040,7 +3077,7 @@ class _Hud extends StatelessWidget {
             Text(
               _compactObjectiveForState(state),
               key: const Key('compact_objective'),
-              maxLines: state.levelIndex == 3 ? 2 : 1,
+              maxLines: state.levelIndex >= 3 ? 2 : 1,
               softWrap: true,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
@@ -3541,6 +3578,16 @@ class _EntityInfoPanel extends StatelessWidget {
                       : '${trait.label}: ${trait.description}',
                 ),
                 if (trait != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    entity.movableWhenDrained
+                        ? '옮기면 공은 ${trait.label} 능력을 얻고, 이 물체는 능력을 잃은 뒤 움직일 수 있습니다.'
+                        : '옮기면 공은 ${trait.label} 능력을 얻고, 이 물체에서는 능력이 사라집니다.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF405D52),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   if (copyCharges > 0) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -3971,6 +4018,14 @@ String _entityName(EntityState entity) {
 }
 
 String _entityDescription(EntityState entity) {
+  if (entity.visualState == 'drained') {
+    return switch (entity.type) {
+      EntityType.weight => '무거움을 잃어 가벼워졌지만 돌 모양과 충돌 판정은 남아 있습니다.',
+      EntityType.bumper => '탄성을 잃어 더는 젤리처럼 튕기지 않는 이동 물체입니다.',
+      EntityType.stickySurface => '점착을 잃어 더는 공을 붙잡지 않는 이동 물체입니다.',
+      _ => '속성을 잃었지만 움직일 수 있는 고체 물체로 남아 있습니다.',
+    };
+  }
   switch (entity.type) {
     case EntityType.ball:
       return '다음 발사와 충돌할 수 있는 공입니다.';

@@ -223,6 +223,7 @@ ShotResult _createStickySpentBall(
         type: EntityType.stickySurface,
         position: Vec2(160, 80),
         size: Vec2(34, 80),
+        traits: {TraitType.sticky},
       ),
       hole ??
           const EntityState(

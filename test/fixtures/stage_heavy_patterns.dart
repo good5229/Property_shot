@@ -52,9 +52,9 @@ const List<StageHeavyRepresentative> stageHeavyRepresentatives = [
   StageHeavyRepresentative(
     patternId: 'stage_heavy_02',
     strategyId: 'anvil',
-    degree: 282,
-    power: 0.42,
-    familyId: 'weight_interaction',
+    degree: 42,
+    power: 0.96,
+    familyId: 'multi_wall_reflection',
   ),
   StageHeavyRepresentative(
     patternId: 'stage_heavy_03',

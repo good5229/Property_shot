@@ -4,6 +4,8 @@
 기준 브랜치: `commercial/wall-physics-qa`
 관련 커밋: `0b516ba`
 
+> 이 문서는 2026-08-03 당시 4단계 기준의 역사 스냅샷이다. 현재 5단계와 최신 리플레이 수치는 `stage5_drained_validation.md` 및 리플레이 JSON을 기준으로 확인한다.
+
 ## 검증 목적
 
 동일한 `GameState`와 `ShotInput`이 주어졌을 때 물리 판정이 반복 실행마다 달라지지 않는지 확인한다. 화면 애니메이션의 중간 프레임은 판정 근거로 사용하지 않고, 순수 Dart `ShotResolver`가 반환한 상태·충돌·연쇄 이벤트를 비교한다.

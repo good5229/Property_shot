@@ -31,6 +31,7 @@ Map<String, Object?> _stateSnapshot(GameState state) {
           'visualState': entity.visualState,
           'hitboxScale': entity.hitboxScale,
           'restitution': entity.restitution,
+          'movableWhenDrained': entity.movableWhenDrained,
           'linkId': entity.linkId,
         },
     ],

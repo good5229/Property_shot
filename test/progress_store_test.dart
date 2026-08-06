@@ -180,4 +180,57 @@ void main() {
     ]);
     expect(preferences.getInt('best_shots_stage_stage_b'), 3);
   });
+
+  test('기존 1~4단계 안정 ID 기록은 5단계를 해금한다', () async {
+    const stageIds = [
+      'stage_heavy',
+      'stage_bouncy',
+      'stage_chain_gate',
+      'stage_balloon',
+      'stage_drained',
+    ];
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.clearedStageIdsKey: stageIds.take(4).toList(),
+      ProgressStore.unlockedLevelKey: 3,
+    });
+    final expanded = ProgressStore(stageCount: 5, stageIds: stageIds);
+
+    final restored = await expanded.load();
+
+    expect(restored.clearedLevels, {0, 1, 2, 3});
+    expect(restored.unlockedLevel, 4);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getStringList(ProgressStore.clearedStageIdsKey),
+      stageIds.take(4).toList(),
+    );
+  });
+
+  test('5단계를 모두 클리어한 기록은 앱 재시작 뒤 전체 해금을 유지한다', () async {
+    const stageIds = [
+      'stage_heavy',
+      'stage_bouncy',
+      'stage_chain_gate',
+      'stage_balloon',
+      'stage_drained',
+    ];
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final firstRun = ProgressStore(stageCount: 5, stageIds: stageIds);
+    for (var index = 0; index < stageIds.length; index++) {
+      await firstRun.recordStageClear(index);
+    }
+
+    final afterRestart = await ProgressStore(
+      stageCount: 5,
+      stageIds: stageIds,
+    ).load();
+
+    expect(afterRestart.clearedLevels, {0, 1, 2, 3, 4});
+    expect(afterRestart.unlockedLevel, 4);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getStringList(ProgressStore.clearedStageIdsKey),
+      stageIds,
+    );
+  });
 }

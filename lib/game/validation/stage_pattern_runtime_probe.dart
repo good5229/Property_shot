@@ -903,7 +903,8 @@ void _appendEntityFingerprint(StringBuffer buffer, EntityState entity) {
     ..write('|restitution=${_number(entity.restitution)}')
     ..write('|direction=${_vecFingerprint(entity.direction)}')
     ..write('|referenceSpeed=${_number(entity.referenceSpeed)}')
-    ..write('|allowedTargets=${_stableAllowedTargets(entity.allowedTargets)}');
+    ..write('|allowedTargets=${_stableAllowedTargets(entity.allowedTargets)}')
+    ..write('|movableWhenDrained=${entity.movableWhenDrained}');
   if (entity.type == EntityType.rotatingReflector) {
     buffer
       ..write('|reflectorOrientation=${entity.reflectorOrientation}')

@@ -148,6 +148,12 @@ GameState _singleTargetState(EntityType type, {required Vec2 targetSize}) {
         type: type,
         position: const Vec2(142, 280),
         size: targetSize,
+        traits: switch (type) {
+          EntityType.bumper => const {TraitType.bouncy},
+          EntityType.stickySurface => const {TraitType.sticky},
+          EntityType.weight => const {TraitType.heavy},
+          _ => const {},
+        },
         movable: type == EntityType.crate || type == EntityType.ball,
       ),
     ],

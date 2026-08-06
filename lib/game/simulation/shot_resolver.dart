@@ -1248,7 +1248,8 @@ class ShotResolver {
         continue;
       }
 
-      if (hit.type == EntityType.stickySurface) {
+      if (hit.type == EntityType.stickySurface &&
+          hit.traits.contains(TraitType.sticky)) {
         position = _separateFromCollision(
           hit,
           ball,
@@ -1461,7 +1462,8 @@ class ShotResolver {
         continue;
       }
 
-      if (hit.type == EntityType.bumper) {
+      if (hit.type == EntityType.bumper &&
+          hit.traits.contains(TraitType.bouncy)) {
         moves.add(
           ShotAnimationMove(
             entityId: hit.id,
@@ -1493,11 +1495,14 @@ class ShotResolver {
         );
         final impulseScale = ((0.35 + input.power * 0.65) * impactSpeedRatio)
             .clamp(0.25, 1.0);
+        final targetMass = _massOf(hit);
+        final transferRatio = (movingMass * 2 / (movingMass + targetMass))
+            .clamp(0.35, 2.4);
         entities = _pushWithMomentum(
           entities,
           hit,
           direction,
-          24 + 52 * impulseScale,
+          (24 + 52 * impulseScale) * transferRatio,
           events,
           moves,
           path.length - 1,
@@ -2609,7 +2614,9 @@ class ShotResolver {
     return switch (entity.type) {
       EntityType.ball => 1.0,
       EntityType.crate => 2.0,
-      EntityType.weight => 5.2,
+      // 비워진 돌은 무거움(4.4)을 잃은 뒤 상자보다도 가볍게 밀린다.
+      // 이 값은 5단계 대표 충돌과 근방 성공 영역 회귀로 함께 고정한다.
+      EntityType.weight => 1.6,
       EntityType.bumper => 1.4,
       EntityType.stickySurface => 2.6,
       EntityType.switchPad => 3.0,
@@ -3177,14 +3184,17 @@ class ShotResolver {
           triggersReflectorRotation: reflectorRotationQualifies,
         ),
       );
+      final hitIsSticky =
+          hit.type == EntityType.stickySurface &&
+          hit.traits.contains(TraitType.sticky);
       current = candidate.copyWith(
         position: _separateMovingEntityFromCollision(
           hit,
           collisionEntity,
           normal,
         ),
-        movable: hit.type == EntityType.stickySurface ? false : current.movable,
-        visualState: hit.type == EntityType.stickySurface ? 'stuck' : 'pushed',
+        movable: hitIsSticky ? false : current.movable,
+        visualState: hitIsSticky ? 'stuck' : 'pushed',
       );
       _appendMovePoint(path, collision.position);
       _appendMovePoint(path, current.position);
@@ -3403,7 +3413,8 @@ class ShotResolver {
         continue;
       }
 
-      if (hit.type == EntityType.stickySurface) {
+      if (hit.type == EntityType.stickySurface &&
+          hit.traits.contains(TraitType.sticky)) {
         stateTransitions?.add(
           PhysicsStateTransition(
             sourceEntityId: target.id,
@@ -3507,7 +3518,8 @@ class ShotResolver {
         continue;
       }
 
-      if (hit.type == EntityType.bumper) {
+      if (hit.type == EntityType.bumper &&
+          hit.traits.contains(TraitType.bouncy)) {
         moves?.add(
           ShotAnimationMove(
             entityId: hit.id,

@@ -48,7 +48,11 @@ void main() {
     final sticky = _transfer(initial, 'glue');
     final attached = shots.resolve(
       sticky,
-      const ShotInput(direction: Vec2(1, -0.54), power: 1),
+      ShotInput(
+        direction: const Vec2(-1, 0),
+        power: 0.5,
+        equippedTrait: sticky.equippedTrait,
+      ),
     );
 
     expect(attached.events, contains('sticky_attached'));

@@ -312,18 +312,19 @@ Set<String> _solutionFamiliesFor(ShotResult result) {
   if (hasWallImpact && result.events.contains('bounced')) {
     families.add('wall_reflection');
   }
+  final distinctWallCount = result.impacts
+      .where((impact) => impact.entityType == EntityType.wall)
+      .map((impact) => impact.entityId)
+      .toSet()
+      .length;
+  if (distinctWallCount >= 2 && result.events.contains('bounced')) {
+    families.add('multi_wall_reflection');
+  }
   final hasCrateImpact = result.impacts.any(
     (impact) => impact.entityType == EntityType.crate,
   );
   if (hasCrateImpact && result.events.contains('crate_pushed')) {
     families.add('crate_push');
-  }
-  final hasWeightInteraction = result.impacts.any(
-    (impact) =>
-        impact.entityId == 'anvil' && impact.entityType == EntityType.weight,
-  );
-  if (hasWeightInteraction && result.events.contains('bounced')) {
-    families.add('weight_interaction');
   }
   return families;
 }

@@ -522,8 +522,8 @@ void main() {
     final sticky = shots.resolve(
       stickyState,
       const ShotInput(
-        direction: Vec2(1, -0.54),
-        power: 1,
+        direction: Vec2(-1, 0),
+        power: 0.5,
         equippedTrait: TraitType.sticky,
       ),
     );
@@ -744,7 +744,11 @@ void main() {
   test('돌에서 상자를 거쳐 벽까지 충돌 이벤트가 순서대로 계산된다', () {
     final result = shots.resolve(
       _weightCrateWallChainState(),
-      const ShotInput(direction: Vec2(1, 0), power: 1),
+      const ShotInput(
+        direction: Vec2(1, 0),
+        power: 1,
+        equippedTrait: TraitType.heavy,
+      ),
     );
 
     final weightMove = result.moves.firstWhere(
@@ -1687,6 +1691,7 @@ GameState _mixedMaterialChainState() {
         type: EntityType.bumper,
         position: Vec2(142, 80),
         size: Vec2(36, 36),
+        traits: {TraitType.bouncy},
         restitution: 0.9,
       ),
       EntityState(
@@ -1724,6 +1729,7 @@ GameState _weightCrateWallChainState() {
         type: EntityType.weight,
         position: Vec2(86, 80),
         size: Vec2(32, 32),
+        traits: {TraitType.heavy},
         movable: true,
       ),
       EntityState(
@@ -1768,6 +1774,7 @@ GameState _movableWeightPowerState() {
         type: EntityType.weight,
         position: Vec2(92, 80),
         size: Vec2(32, 32),
+        traits: {TraitType.heavy},
         movable: true,
       ),
       EntityState(
@@ -2198,6 +2205,7 @@ GameState _chainedStickyState() {
         type: EntityType.stickySurface,
         position: Vec2(154, 80),
         size: Vec2(42, 42),
+        traits: {TraitType.sticky},
       ),
       EntityState(
         id: 'hole',

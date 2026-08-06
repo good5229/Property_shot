@@ -369,11 +369,11 @@
           ],
           "solutionFamilies": [
             "wall_reflection",
-            "weight_interaction"
+            "multi_wall_reflection"
           ],
           "optionalChallenges": [
             "벽 세 번 반사",
-            "무거운 공으로 고정된 무게 물체와 충돌"
+            "서로 다른 벽을 이어서 반사"
           ],
           "metadata": {}
         },
@@ -3335,6 +3335,107 @@
               "restitution": 0.91,
               "linkId": null
             }
+          ]
+        }
+      ]
+    },
+    {
+      "stageId": "stage_drained",
+      "title": "5. 비워진 속성",
+      "patterns": [
+        {
+          "patternId": "stage_drained_01",
+          "weight": 1,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 56, "y": 466},
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_weight",
+          "acceptedStrategyIds": ["drain_weight", "none"],
+          "solutionFamilies": ["drained_weight_push", "outer_wall_bypass"],
+          "optionalChallenges": ["drained_source_moved", "without_copy_core"],
+          "metadata": {"baseline": "true"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":178,"y":100},"size":{"x":72,"y":72},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"drain_weight","type":"weight","position":{"x":178,"y":286},"size":{"x":56,"y":52},"traits":["heavy"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.86,"restitution":0.62,"linkId":null,"movableWhenDrained":true},
+            {"id":"weight_route_ball","type":"ball","position":{"x":178,"y":205},"size":{"x":24,"y":24},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"spent","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"side_crate","type":"crate","position":{"x":286,"y":330},"size":{"x":50,"y":50},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.68,"linkId":null}
+          ]
+        },
+        {
+          "patternId": "stage_drained_02",
+          "weight": 1,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 300, "y": 466},
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_jelly",
+          "acceptedStrategyIds": ["drain_jelly", "none"],
+          "solutionFamilies": ["drained_jelly_lane", "elastic_bank"],
+          "optionalChallenges": ["drained_source_moved", "without_copy_core"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":62,"y":104},"size":{"x":72,"y":72},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"drain_jelly","type":"bumper","position":{"x":180,"y":286},"size":{"x":58,"y":62},"traits":["bouncy"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.86,"restitution":0.9,"linkId":null,"movableWhenDrained":true},
+            {"id":"lane_crate","type":"crate","position":{"x":74,"y":330},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+          ]
+        },
+        {
+          "patternId": "stage_drained_03",
+          "weight": 1,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 179, "y": 456},
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_glue",
+          "acceptedStrategyIds": ["drain_glue", "none"],
+          "solutionFamilies": ["drained_sticky_lane", "long_side_bypass"],
+          "optionalChallenges": ["drained_source_moved", "without_copy_core"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":179,"y":160},"size":{"x":100,"y":100},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"drain_glue","type":"sticky_surface","position":{"x":179,"y":286},"size":{"x":80,"y":50},"traits":["sticky"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.28,"linkId":null,"movableWhenDrained":true},
+            {"id":"glue_route_ball","type":"ball","position":{"x":179,"y":240},"size":{"x":40,"y":40},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"spent","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"bypass_crate","type":"crate","position":{"x":282,"y":360},"size":{"x":46,"y":46},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+          ]
+        },
+        {
+          "patternId": "stage_drained_04",
+          "weight": 1,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {"x": 180, "y": 478},
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_weight_choice",
+          "acceptedStrategyIds": ["drain_weight_choice", "drain_jelly_choice", "none"],
+          "solutionFamilies": ["heavy_left_choice", "bouncy_right_choice", "center_bypass"],
+          "optionalChallenges": ["two_sources_explored", "without_copy_core"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":180,"y":88},"size":{"x":74,"y":74},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":1.06,"restitution":0.72,"linkId":null},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"drain_weight_choice","type":"weight","position":{"x":154,"y":300},"size":{"x":52,"y":50},"traits":["heavy"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.84,"restitution":0.62,"linkId":null,"movableWhenDrained":true},
+            {"id":"drain_jelly_choice","type":"bumper","position":{"x":218,"y":230},"size":{"x":54,"y":58},"traits":["bouncy"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.84,"restitution":0.9,"linkId":null,"movableWhenDrained":true},
+            {"id":"choice_crate","type":"crate","position":{"x":92,"y":210},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
           ]
         }
       ]

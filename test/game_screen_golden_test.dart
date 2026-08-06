@@ -19,7 +19,7 @@ void main() {
     await materialIcons.load();
   });
 
-  for (var stageIndex = 0; stageIndex < 4; stageIndex++) {
+  for (var stageIndex = 0; stageIndex < levels.length; stageIndex++) {
     for (final fixture in const [
       (name: '390x844', width: 390.0, height: 844.0),
       (name: '393x852', width: 393.0, height: 852.0),
@@ -42,9 +42,13 @@ void main() {
             child: PropertyShotApp(
               initialState: levels[stageIndex]
                   .createState(stageIndex, productRules: true)
-                  .copyWith(message: stageIndex == 3
-                      ? '풍선 확인 · 여러 경로로 도전'
-                      : '방향 조정 · 길게 누르기 · 손 떼기'),
+                  .copyWith(
+                    message: switch (stageIndex) {
+                      3 => '풍선 확인 · 여러 경로로 도전',
+                      4 => '공과 원본의 변화를 함께 살펴보세요',
+                      _ => '방향 조정 · 길게 누르기 · 손 떼기',
+                    },
+                  ),
               showStageSelector: false,
               fontFamilyOverride: 'GoldenNanumGothic',
               loadGameAssets: false,
@@ -55,7 +59,7 @@ void main() {
 
         final context = tester.element(find.byKey(const Key('aim_area')));
         await tester.runAsync(() async {
-        for (final asset in const [
+          for (final asset in const [
             'assets/generated/stone-v2.png',
             'assets/generated/crate-v2.png',
             'assets/generated/jelly-bumper-v1.png',

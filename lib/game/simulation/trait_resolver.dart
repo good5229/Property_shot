@@ -33,7 +33,10 @@ class TraitResolver {
           entity.copyWith(
             traits: nextTraits,
             visualState: 'drained',
-            movable: entity.movable || trait == state.selectedTrait,
+            movable:
+                entity.movable ||
+                (nextTraits.isEmpty && entity.movableWhenDrained),
+            solid: entity.solid,
           ),
         );
       } else if (entity.id == state.activeBall.id) {
@@ -47,7 +50,7 @@ class TraitResolver {
       entities: entities,
       equippedTrait: trait,
       clearSelection: true,
-      message: '${trait.label} 속성을 공으로 옮겼습니다.',
+      message: '공은 ${trait.label} 능력을 얻고, 원본은 그 능력을 잃었습니다.',
     );
   }
 
@@ -57,9 +60,7 @@ class TraitResolver {
       return state.copyWith(message: '먼저 속성 물체를 선택하세요.');
     }
     if (state.copyCharges <= 0) {
-      return state.copyWith(
-        message: '복사 횟수를 모두 사용했습니다. 속성 옮기기 또는 되감기를 선택하세요.',
-      );
+      return state.copyWith(message: '복사 횟수를 모두 사용했습니다. 속성 옮기기 또는 되감기를 선택하세요.');
     }
 
     final entities = <EntityState>[];

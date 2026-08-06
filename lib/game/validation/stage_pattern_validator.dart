@@ -43,6 +43,7 @@ enum ValidationIssueCode {
   holeIsSolid,
   holeIsMovable,
   wallIsMovable,
+  invalidMovableWhenDrained,
   invalidSliderDirection,
   invalidSliderReferenceSpeed,
   invalidSliderTargets,
@@ -131,6 +132,8 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'hole_is_movable';
       case ValidationIssueCode.wallIsMovable:
         return 'wall_is_movable';
+      case ValidationIssueCode.invalidMovableWhenDrained:
+        return 'invalid_movable_when_drained';
       case ValidationIssueCode.invalidSliderDirection:
         return 'invalid_slider_direction';
       case ValidationIssueCode.invalidSliderReferenceSpeed:
@@ -649,6 +652,20 @@ class StagePatternValidator {
           stageId,
           patternId: patternId,
           objectIds: ids,
+        ),
+      );
+    }
+    if (object.movableWhenDrained &&
+        (object.traits.isEmpty ||
+            !object.solid ||
+            _fixedWhenDrainedTypes.contains(object.type))) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.invalidMovableWhenDrained,
+          stageId,
+          patternId: patternId,
+          objectIds: ids,
+          message: '비워진 뒤 이동하려면 속성이 있는 이동 가능한 종류의 고체여야 합니다.',
         ),
       );
     }
@@ -1351,6 +1368,8 @@ String _defaultMessage(ValidationIssueCode code) {
       return '홀은 움직일 수 없습니다.';
     case ValidationIssueCode.wallIsMovable:
       return '벽은 움직일 수 없습니다.';
+    case ValidationIssueCode.invalidMovableWhenDrained:
+      return '비워진 뒤 이동 설정을 이 기물에 사용할 수 없습니다.';
     case ValidationIssueCode.invalidSliderDirection:
       return '파워 슬라이더 방향은 유한하고 0이 아닌 벡터여야 합니다.';
     case ValidationIssueCode.invalidSliderReferenceSpeed:
@@ -1438,6 +1457,15 @@ bool _isSolidForValidation(PatternObjectDefinition object) {
   }
   return object.solid;
 }
+
+const _fixedWhenDrainedTypes = <EntityType>{
+  EntityType.hole,
+  EntityType.wall,
+  EntityType.switchPad,
+  EntityType.gate,
+  EntityType.powerSlider,
+  EntityType.rotatingReflector,
+};
 
 const _validPowerSliderTargetTypes = <EntityType>{
   EntityType.ball,

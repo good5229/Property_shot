@@ -52,6 +52,7 @@ class ReplayFixture {
     required this.expectedFingerprints,
     required this.expectedPhase,
     this.copyCoreCount = 0,
+    this.transferSourceId,
   });
 
   final String id;
@@ -61,6 +62,7 @@ class ReplayFixture {
   final List<String> expectedFingerprints;
   final String expectedPhase;
   final int copyCoreCount;
+  final String? transferSourceId;
 
   Map<String, Object?> toJson() {
     return {
@@ -68,6 +70,7 @@ class ReplayFixture {
       'stageIndex': stageIndex,
       'routeTag': routeTag,
       'copyCoreCount': copyCoreCount,
+      if (transferSourceId != null) 'transferSourceId': transferSourceId,
       'shots': shots.map((shot) => shot.toJson()).toList(),
       'expectedFingerprints': expectedFingerprints,
       'expectedPhase': expectedPhase,
@@ -80,6 +83,7 @@ class ReplayFixture {
       stageIndex: json['stageIndex'] as int,
       routeTag: json['routeTag'] as String,
       copyCoreCount: (json['copyCoreCount'] as num?)?.toInt() ?? 0,
+      transferSourceId: json['transferSourceId'] as String?,
       shots: [
         for (final shot in (json['shots'] as List))
           ReplayShotFixture.fromJson(Map<String, Object?>.from(shot as Map)),

@@ -40,6 +40,7 @@ class EntityState {
     this.allowedTargets = const {},
     this.reflectorOrientation = 0,
     this.reflectorRotationCount = 0,
+    this.movableWhenDrained = false,
   });
 
   final String id;
@@ -68,6 +69,9 @@ class EntityState {
   /// 회전판이 아닌 엔티티에는 기본값을 사용하고 JSON에 기록하지 않는다.
   final int reflectorOrientation;
   final int reflectorRotationCount;
+
+  /// 속성 이전으로 마지막 속성을 잃었을 때 이동 가능한 물체가 되는지 나타낸다.
+  final bool movableWhenDrained;
 
   bool get isCircle =>
       type == EntityType.ball ||
@@ -105,6 +109,7 @@ class EntityState {
     Set<EntityType>? allowedTargets,
     int? reflectorOrientation,
     int? reflectorRotationCount,
+    bool? movableWhenDrained,
   }) {
     return EntityState(
       id: id ?? this.id,
@@ -127,6 +132,7 @@ class EntityState {
       reflectorOrientation: reflectorOrientation ?? this.reflectorOrientation,
       reflectorRotationCount:
           reflectorRotationCount ?? this.reflectorRotationCount,
+      movableWhenDrained: movableWhenDrained ?? this.movableWhenDrained,
     );
   }
 }

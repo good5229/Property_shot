@@ -3,6 +3,7 @@ bool bonusGoalReached({
   required int shotCount,
   required bool bumperHit,
   required bool switchPressed,
+  bool drainedSourceMoved = false,
 }) {
   if (shotCount <= 0) {
     return false;
@@ -10,6 +11,8 @@ bool bonusGoalReached({
   return switch (levelIndex) {
     0 => shotCount <= 3,
     1 => bumperHit,
-    _ => switchPressed,
+    2 || 3 => switchPressed,
+    4 => drainedSourceMoved,
+    _ => false,
   };
 }

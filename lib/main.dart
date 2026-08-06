@@ -17,7 +17,9 @@ String _stageIntroMessage(int levelIndex) {
   return switch (levelIndex) {
     0 => '방향 조정 · 길게 누르기 · 손 떼기',
     1 => '방향 조정 · 길게 누르기 · 손 떼기',
-    _ => '스위치 살피기 · 여러 경로로 도전',
+    2 => '스위치 살피기 · 여러 경로로 도전',
+    3 => '풍선 확인 · 여러 경로로 도전',
+    _ => '공과 원본의 변화를 함께 살펴보세요',
   };
 }
 
@@ -864,12 +866,14 @@ class _StageTile extends StatelessWidget {
       '탄성 있는 반사로 방향을 바꿔 보세요.',
       '문과 스위치 사이의 연쇄를 실험해 보세요.',
       '풍선은 밀리고, 뾰족한 공에는 터집니다.',
+      '공이 얻는 능력과 원본이 잃는 능력을 함께 이용해 보세요.',
     ];
     final assets = [
       'assets/icons/stone_boulder.png',
       'assets/generated/jelly-bumper-v1.png',
       'assets/icons/crate.png',
       '',
+      'assets/icons/stone_boulder.png',
     ];
     final stageAsset = assets[index];
     return Padding(

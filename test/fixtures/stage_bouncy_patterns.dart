@@ -70,6 +70,13 @@ const stageBouncyRepresentatives = <StageBouncyRepresentative>[
     strategyId: 'jelly',
     degree: 210,
     power: 0.70,
+    familyId: 'wall_reflection',
+  ),
+  StageBouncyRepresentative(
+    patternId: 'stage_bouncy_02',
+    strategyId: 'none',
+    degree: 314,
+    power: 0.96,
     familyId: 'jelly_interaction',
   ),
   StageBouncyRepresentative(
@@ -84,6 +91,13 @@ const stageBouncyRepresentatives = <StageBouncyRepresentative>[
     strategyId: 'jelly',
     degree: 45,
     power: 0.96,
+    familyId: 'wall_reflection',
+  ),
+  StageBouncyRepresentative(
+    patternId: 'stage_bouncy_03',
+    strategyId: 'none',
+    degree: 132,
+    power: 0.72,
     familyId: 'jelly_interaction',
   ),
   StageBouncyRepresentative(
@@ -98,6 +112,13 @@ const stageBouncyRepresentatives = <StageBouncyRepresentative>[
     strategyId: 'jelly',
     degree: 107,
     power: 0.85,
+    familyId: 'wall_reflection',
+  ),
+  StageBouncyRepresentative(
+    patternId: 'stage_bouncy_04',
+    strategyId: 'none',
+    degree: 228,
+    power: 0.90,
     familyId: 'jelly_interaction',
   ),
 ];

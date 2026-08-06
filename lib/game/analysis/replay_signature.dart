@@ -22,6 +22,10 @@ String shotResultSignature(ShotResult result) {
       ..write(
         'active=${entity.active};open=${entity.open};pressed=${entity.pressed};',
       )
+      ..write(
+        'movable=${entity.movable};solid=${entity.solid};'
+        'movable_when_drained=${entity.movableWhenDrained};',
+      )
       ..write('visual=${entity.visualState};');
     if (entity.type == EntityType.rotatingReflector) {
       buffer

@@ -339,6 +339,7 @@ void main() {
             type: EntityType.stickySurface,
             position: Vec2(100, 280),
             size: Vec2(36, 60),
+            traits: {TraitType.sticky},
             solid: true,
           ),
         ],

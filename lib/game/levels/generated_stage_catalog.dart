@@ -42,7 +42,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -64,7 +65,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -86,7 +88,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -108,7 +111,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_a",
@@ -130,7 +134,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.82,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "anvil",
@@ -154,7 +159,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.84,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -207,7 +213,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -229,7 +236,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -251,7 +259,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -273,7 +282,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_a",
@@ -295,7 +305,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.82,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "anvil",
@@ -319,7 +330,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.84,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "reflection_wall_a",
@@ -341,7 +353,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "reflection_wall_b",
@@ -363,7 +376,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -375,12 +389,12 @@ const generatedStageCatalogJson = r'''
             "none"
           ],
           "solutionFamilies": [
-            "wall_reflection",
-            "weight_interaction"
+            "multi_wall_reflection",
+            "wall_reflection"
           ],
           "optionalChallenges": [
-            "무거운 공으로 고정된 무게 물체와 충돌",
-            "벽 세 번 반사"
+            "벽 세 번 반사",
+            "서로 다른 벽을 이어서 반사"
           ],
           "metadata": {}
         },
@@ -414,7 +428,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -436,7 +451,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -458,7 +474,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -480,7 +497,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_a",
@@ -502,7 +520,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.82,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "anvil",
@@ -526,7 +545,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.84,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_lane",
@@ -548,7 +568,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_b",
@@ -570,7 +591,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.82,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -621,7 +643,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -643,7 +666,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -665,7 +689,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -687,7 +712,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_a",
@@ -709,7 +735,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.82,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "anvil",
@@ -733,7 +760,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.84,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_detour_a",
@@ -755,7 +783,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_detour_b",
@@ -777,7 +806,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -834,7 +864,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -856,7 +887,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -878,7 +910,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -900,7 +933,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "blocker",
@@ -922,7 +956,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.08,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "approach_guard",
@@ -944,7 +979,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.08,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "jelly",
@@ -968,7 +1004,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1021,7 +1058,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -1043,7 +1081,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -1065,7 +1104,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -1087,7 +1127,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "bank_center_horizontal",
@@ -1109,7 +1150,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.08,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "jelly",
@@ -1133,7 +1175,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1184,7 +1227,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -1206,7 +1250,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -1228,7 +1273,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -1250,7 +1296,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "bank_center_horizontal",
@@ -1272,7 +1319,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.08,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "jelly",
@@ -1296,7 +1344,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1347,7 +1396,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -1369,7 +1419,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -1391,7 +1442,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -1413,7 +1465,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "jelly",
@@ -1437,7 +1490,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1494,7 +1548,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -1516,7 +1571,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -1538,7 +1594,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -1560,7 +1617,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "gate",
@@ -1582,7 +1640,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "switch",
@@ -1604,7 +1663,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "steel",
@@ -1628,7 +1688,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "glue",
@@ -1652,7 +1713,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_b",
@@ -1674,7 +1736,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1728,7 +1791,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -1750,7 +1814,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -1772,7 +1837,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -1794,7 +1860,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "gate",
@@ -1816,7 +1883,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "switch",
@@ -1838,7 +1906,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "steel",
@@ -1862,7 +1931,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "glue",
@@ -1886,7 +1956,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_b",
@@ -1908,7 +1979,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1962,7 +2034,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -1984,7 +2057,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -2006,7 +2080,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -2028,7 +2103,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "gate",
@@ -2050,7 +2126,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "switch",
@@ -2072,7 +2149,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "steel",
@@ -2096,7 +2174,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "glue",
@@ -2120,7 +2199,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_b",
@@ -2142,7 +2222,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -2194,7 +2275,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -2216,7 +2298,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -2238,7 +2321,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -2260,7 +2344,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "gate",
@@ -2282,7 +2367,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "switch",
@@ -2304,7 +2390,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "steel",
@@ -2328,7 +2415,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "glue",
@@ -2352,7 +2440,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "crate_b",
@@ -2374,7 +2463,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -2432,7 +2522,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 1.06,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -2454,7 +2545,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -2476,7 +2568,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -2498,7 +2591,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_gate",
@@ -2520,7 +2614,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_switch",
@@ -2542,7 +2637,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "hidden",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon",
@@ -2564,7 +2660,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "spike_source",
@@ -2588,7 +2685,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "ready",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_crate",
@@ -2610,7 +2708,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -2663,7 +2762,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 1.06,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -2685,7 +2785,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -2707,7 +2808,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -2729,7 +2831,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_gate",
@@ -2751,7 +2854,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_switch",
@@ -2773,7 +2877,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "hidden",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon",
@@ -2795,7 +2900,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "spike_source",
@@ -2819,7 +2925,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "ready",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_crate",
@@ -2841,7 +2948,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -2893,7 +3001,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 1.06,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -2915,7 +3024,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -2937,7 +3047,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -2959,7 +3070,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_gate",
@@ -2981,7 +3093,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_switch",
@@ -3003,7 +3116,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "hidden",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon",
@@ -3025,7 +3139,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "spike_source",
@@ -3049,7 +3164,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "ready",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_crate",
@@ -3071,7 +3187,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -3122,7 +3239,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 1.06,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_top",
@@ -3144,7 +3262,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_left",
@@ -3166,7 +3285,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "wall_right",
@@ -3188,7 +3308,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_gate",
@@ -3210,7 +3331,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_switch",
@@ -3232,7 +3354,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "hidden",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": "balloon_gate"
+              "linkId": "balloon_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "balloon",
@@ -3254,7 +3377,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "spike_source",
@@ -3278,7 +3402,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "ready",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_crate",
@@ -3300,7 +3425,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             },
             {
               "id": "balloon_b",
@@ -3322,7 +3448,8 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -3341,6 +3468,763 @@ const generatedStageCatalogJson = r'''
             "one_shot",
             "ordinary_balloon_bounce",
             "two_balloons_one_sharp"
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "stageId": "stage_drained",
+      "title": "5. 비워진 속성",
+      "patterns": [
+        {
+          "patternId": "stage_drained_01",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {
+            "x": 56.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 178.0,
+                "y": 100.0
+              },
+              "size": {
+                "x": 72.0,
+                "y": 72.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "drain_weight",
+              "type": "weight",
+              "position": {
+                "x": 178.0,
+                "y": 286.0
+              },
+              "size": {
+                "x": 56.0,
+                "y": 52.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.86,
+              "restitution": 0.62,
+              "linkId": null,
+              "movableWhenDrained": true
+            },
+            {
+              "id": "weight_route_ball",
+              "type": "ball",
+              "position": {
+                "x": 178.0,
+                "y": 205.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "spent",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "side_crate",
+              "type": "crate",
+              "position": {
+                "x": 286.0,
+                "y": 330.0
+              },
+              "size": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_weight",
+          "acceptedStrategyIds": [
+            "drain_weight",
+            "none"
+          ],
+          "solutionFamilies": [
+            "drained_weight_push",
+            "outer_wall_bypass"
+          ],
+          "optionalChallenges": [
+            "drained_source_moved",
+            "without_copy_core"
+          ],
+          "metadata": {
+            "baseline": "true"
+          }
+        },
+        {
+          "patternId": "stage_drained_02",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {
+            "x": 300.0,
+            "y": 466.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 62.0,
+                "y": 104.0
+              },
+              "size": {
+                "x": 72.0,
+                "y": 72.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "drain_jelly",
+              "type": "bumper",
+              "position": {
+                "x": 180.0,
+                "y": 286.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 62.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.86,
+              "restitution": 0.9,
+              "linkId": null,
+              "movableWhenDrained": true
+            },
+            {
+              "id": "lane_crate",
+              "type": "crate",
+              "position": {
+                "x": 74.0,
+                "y": 330.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_jelly",
+          "acceptedStrategyIds": [
+            "drain_jelly",
+            "none"
+          ],
+          "solutionFamilies": [
+            "drained_jelly_lane",
+            "elastic_bank"
+          ],
+          "optionalChallenges": [
+            "drained_source_moved",
+            "without_copy_core"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_drained_03",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {
+            "x": 179.0,
+            "y": 456.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 179.0,
+                "y": 160.0
+              },
+              "size": {
+                "x": 100.0,
+                "y": 100.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "drain_glue",
+              "type": "sticky_surface",
+              "position": {
+                "x": 179.0,
+                "y": 286.0
+              },
+              "size": {
+                "x": 80.0,
+                "y": 50.0
+              },
+              "traits": [
+                "sticky"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.28,
+              "linkId": null,
+              "movableWhenDrained": true
+            },
+            {
+              "id": "glue_route_ball",
+              "type": "ball",
+              "position": {
+                "x": 179.0,
+                "y": 240.0
+              },
+              "size": {
+                "x": 40.0,
+                "y": 40.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "spent",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "bypass_crate",
+              "type": "crate",
+              "position": {
+                "x": 282.0,
+                "y": 360.0
+              },
+              "size": {
+                "x": 46.0,
+                "y": 46.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_glue",
+          "acceptedStrategyIds": [
+            "drain_glue",
+            "none"
+          ],
+          "solutionFamilies": [
+            "drained_sticky_lane",
+            "long_side_bypass"
+          ],
+          "optionalChallenges": [
+            "drained_source_moved",
+            "without_copy_core"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_drained_04",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "기초 응용",
+          "ballSpawn": {
+            "x": 180.0,
+            "y": 478.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 180.0,
+                "y": 88.0
+              },
+              "size": {
+                "x": 74.0,
+                "y": 74.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "drain_weight_choice",
+              "type": "weight",
+              "position": {
+                "x": 154.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 50.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.84,
+              "restitution": 0.62,
+              "linkId": null,
+              "movableWhenDrained": true
+            },
+            {
+              "id": "drain_jelly_choice",
+              "type": "bumper",
+              "position": {
+                "x": 218.0,
+                "y": 230.0
+              },
+              "size": {
+                "x": 54.0,
+                "y": 58.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.84,
+              "restitution": 0.9,
+              "linkId": null,
+              "movableWhenDrained": true
+            },
+            {
+              "id": "choice_crate",
+              "type": "crate",
+              "position": {
+                "x": 92.0,
+                "y": 210.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.86,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "drain_weight_choice",
+          "acceptedStrategyIds": [
+            "drain_jelly_choice",
+            "drain_weight_choice",
+            "none"
+          ],
+          "solutionFamilies": [
+            "bouncy_right_choice",
+            "center_bypass",
+            "heavy_left_choice"
+          ],
+          "optionalChallenges": [
+            "two_sources_explored",
+            "without_copy_core"
           ],
           "metadata": {}
         }
