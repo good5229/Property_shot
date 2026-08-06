@@ -827,6 +827,41 @@ class ShotResolver {
         continue;
       }
 
+      if (hit.type == EntityType.ball && !hit.movable) {
+        // 점착으로 고정된 과거 공도 실제 충돌 대상이다. 정지한 물체를
+        // 통과시키거나 단순히 멈추게 하지 않고, 벽과 같은 고정 장애물로
+        // 취급해 접촉 법선에 따라 발사 공을 반사한다.
+        position = _separateFromCollision(
+          hit,
+          ball,
+          position,
+          collision.normal,
+        );
+        path[path.length - 1] = position;
+        moves.add(
+          ShotAnimationMove(
+            entityId: hit.id,
+            from: hit.position,
+            to: hit.position,
+            triggerPathIndex: path.length - 1,
+            visualState: 'spent_ball_hit',
+            impactPosition: contactPosition,
+            impactNormal: collision.normal,
+          ),
+        );
+        final bouncedVelocity = _wallBounceVelocity(
+          direction * speed,
+          collision.normal,
+          ball,
+          hit,
+        );
+        direction = bouncedVelocity.normalized();
+        speed = bouncedVelocity.length;
+        events.add('bounced');
+        events.add('spent_ball_bounced');
+        continue;
+      }
+
       if (hit.type == EntityType.ball && hit.movable) {
         final targetMass = _massOf(hit);
         final transferRatio = (movingMass * 2 / (movingMass + targetMass))
