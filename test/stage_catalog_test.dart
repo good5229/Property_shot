@@ -32,15 +32,14 @@ void main() {
       'stage_balloon',
     ]);
     expect(
+      sourceCatalog.stages.first.patterns.map((pattern) => pattern.patternId),
+      ['stage_heavy_01', 'stage_heavy_02', 'stage_heavy_03', 'stage_heavy_04'],
+    );
+    expect(
       sourceCatalog.stages
-          .map((stage) => stage.patterns.single.patternId)
-          .toList(),
-      [
-        'stage_heavy_01',
-        'stage_bouncy_01',
-        'stage_chain_gate_01',
-        'stage_balloon_01',
-      ],
+          .skip(1)
+          .map((stage) => stage.patterns.single.patternId),
+      ['stage_bouncy_01', 'stage_chain_gate_01', 'stage_balloon_01'],
     );
     expect(sourceCatalog.validate(), isEmpty);
     for (final stage in sourceCatalog.stages) {
@@ -72,7 +71,7 @@ void main() {
       expect(levels[index].id, sourceCatalog.stages[index].stageId);
       expect(
         levels[index].patternId,
-        sourceCatalog.stages[index].patterns.single.patternId,
+        sourceCatalog.baselinePatternFor(sourceCatalog.stages[index]).patternId,
       );
       expect(levels[index].difficultyBand, '튜토리얼');
     }
@@ -81,7 +80,7 @@ void main() {
 
   test('기준 패턴은 JSON 패턴 순서와 무관하게 metadata로 선택한다', () {
     final stage = sourceCatalog.stages.first;
-    final baseline = stage.patterns.single;
+    final baseline = sourceCatalog.baselinePatternFor(stage);
     final decoy = StagePattern.fromJson({
       ...baseline.toJson(),
       'patternId': 'stage_heavy_decoy',
@@ -133,7 +132,7 @@ void main() {
       );
       expect(
         actual.patternId,
-        sourceCatalog.stages[index].patterns.single.patternId,
+        sourceCatalog.baselinePatternFor(sourceCatalog.stages[index]).patternId,
         reason: 'stage $index patternId metadata',
       );
       expect(

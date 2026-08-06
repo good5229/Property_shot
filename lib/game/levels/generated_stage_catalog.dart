@@ -165,11 +165,638 @@ const generatedStageCatalogJson = r'''
             "anvil",
             "none"
           ],
-          "solutionFamilies": [],
-          "optionalChallenges": [],
+          "solutionFamilies": [
+            "crate_push",
+            "wall_reflection"
+          ],
+          "optionalChallenges": [
+            "무거운 공으로 상자 밀기",
+            "속성 없이 성공"
+          ],
           "metadata": {
             "baseline": "true"
           }
+        },
+        {
+          "patternId": "stage_heavy_02",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 62.0,
+            "y": 472.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 120.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 52.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "crate_a",
+              "type": "crate",
+              "position": {
+                "x": 188.0,
+                "y": 326.0
+              },
+              "size": {
+                "x": 42.0,
+                "y": 42.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.82,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "anvil",
+              "type": "weight",
+              "position": {
+                "x": 88.0,
+                "y": 188.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 38.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.84,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "reflection_wall_a",
+              "type": "wall",
+              "position": {
+                "x": 214.0,
+                "y": 246.0
+              },
+              "size": {
+                "x": 150.0,
+                "y": 20.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "reflection_wall_b",
+              "type": "wall",
+              "position": {
+                "x": 278.0,
+                "y": 360.0
+              },
+              "size": {
+                "x": 20.0,
+                "y": 168.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "3회 이하로 상자와 홀의 길을 완성하세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "anvil",
+          "acceptedStrategyIds": [
+            "anvil",
+            "none"
+          ],
+          "solutionFamilies": [
+            "wall_reflection",
+            "weight_interaction"
+          ],
+          "optionalChallenges": [
+            "무거운 공으로 고정된 무게 물체와 충돌",
+            "벽 세 번 반사"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_heavy_03",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 58.0,
+            "y": 468.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 304.0,
+                "y": 116.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 52.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "crate_a",
+              "type": "crate",
+              "position": {
+                "x": 164.0,
+                "y": 304.0
+              },
+              "size": {
+                "x": 42.0,
+                "y": 42.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.82,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "anvil",
+              "type": "weight",
+              "position": {
+                "x": 90.0,
+                "y": 174.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 38.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.84,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_lane",
+              "type": "wall",
+              "position": {
+                "x": 286.0,
+                "y": 430.0
+              },
+              "size": {
+                "x": 104.0,
+                "y": 20.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "crate_b",
+              "type": "crate",
+              "position": {
+                "x": 248.0,
+                "y": 262.0
+              },
+              "size": {
+                "x": 46.0,
+                "y": 46.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.82,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "3회 이하로 상자와 홀의 길을 완성하세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "anvil",
+          "acceptedStrategyIds": [
+            "anvil",
+            "none"
+          ],
+          "solutionFamilies": [
+            "crate_push",
+            "wall_reflection"
+          ],
+          "optionalChallenges": [
+            "두 상자 배치에서 연쇄 시도",
+            "속성 없이 성공"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_heavy_04",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "튜토리얼",
+          "ballSpawn": {
+            "x": 74.0,
+            "y": 446.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 292.0,
+                "y": 138.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 52.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "crate_a",
+              "type": "crate",
+              "position": {
+                "x": 214.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 42.0,
+                "y": 42.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.82,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "anvil",
+              "type": "weight",
+              "position": {
+                "x": 104.0,
+                "y": 226.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 38.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.84,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_detour_a",
+              "type": "wall",
+              "position": {
+                "x": 146.0,
+                "y": 266.0
+              },
+              "size": {
+                "x": 164.0,
+                "y": 20.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            },
+            {
+              "id": "wall_detour_b",
+              "type": "wall",
+              "position": {
+                "x": 264.0,
+                "y": 206.0
+              },
+              "size": {
+                "x": 20.0,
+                "y": 116.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "3회 이하로 상자와 홀의 길을 완성하세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "anvil",
+          "acceptedStrategyIds": [
+            "anvil",
+            "none"
+          ],
+          "solutionFamilies": [
+            "crate_push",
+            "wall_reflection"
+          ],
+          "optionalChallenges": [
+            "상자 충돌 시도",
+            "속성 없이 우회 시도"
+          ],
+          "metadata": {}
         }
       ]
     },
