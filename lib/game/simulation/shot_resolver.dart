@@ -41,6 +41,20 @@ enum PhysicsEventKind {
   chainSafetyStop,
 }
 
+int traitMaskOf(Iterable<TraitType> traits) {
+  var mask = 0;
+  for (final trait in traits) {
+    mask |= 1 << trait.index;
+  }
+  return mask;
+}
+
+Set<TraitType> traitsFromMask(int mask) {
+  return Set.unmodifiable(
+    TraitType.values.where((trait) => mask & (1 << trait.index) != 0),
+  );
+}
+
 class PowerSliderActivation {
   const PowerSliderActivation({
     required this.sourceEntityId,
@@ -169,6 +183,7 @@ class PhysicsEvent {
     this.triggersReflectorRotation = false,
     this.powerSlider,
     this.reflectorRotation,
+    this.sourceTraitMask = 0,
   });
 
   final String eventId;
@@ -192,6 +207,8 @@ class PhysicsEvent {
   final bool triggersReflectorRotation;
   final PowerSliderActivation? powerSlider;
   final ReflectorRotation? reflectorRotation;
+  final int sourceTraitMask;
+  Set<TraitType> get sourceTraits => traitsFromMask(sourceTraitMask);
 }
 
 class ShotImpact {
@@ -208,6 +225,7 @@ class ShotImpact {
     this.relativeNormalSpeed = 0,
     this.impulse = 0,
     this.impactTier = ImpactTier.light,
+    this.sourceTraitMask = 0,
   });
 
   final String entityId;
@@ -222,6 +240,8 @@ class ShotImpact {
   final double relativeNormalSpeed;
   final double impulse;
   final ImpactTier impactTier;
+  final int sourceTraitMask;
+  Set<TraitType> get sourceTraits => traitsFromMask(sourceTraitMask);
 }
 
 class ShotAnimationMove {
@@ -285,6 +305,7 @@ List<PhysicsEvent> buildPhysicsEvents({
       impact: impact,
       contactId: impact.contactId,
       triggersReflectorRotation: impact.triggersReflectorRotation,
+      sourceTraitMask: impact.sourceTraitMask,
     );
     events.add(event);
     impactEventsByTarget[impact.entityId] = event;
@@ -830,6 +851,7 @@ class ShotResolver {
             normal: direction * -1,
             pathIndex: path.length - 1,
             strength: 1,
+            sourceTraitMask: traitMaskOf(ball.traits),
           ),
         );
         stateTransitions.add(
@@ -929,6 +951,7 @@ class ShotResolver {
           ),
           contactId: impactContactId,
           triggersReflectorRotation: reflectorRotationQualifies,
+          sourceTraitMask: traitMaskOf(ball.traits),
         ),
       );
       final contactPosition = position;
@@ -1613,6 +1636,47 @@ class ShotResolver {
       stopped = true;
     }
 
+    if (success &&
+        events.contains('existing_ball_hole_entered') &&
+        !impacts.any((impact) => impact.entityType == EntityType.hole)) {
+      final hole = _findHole(entities);
+      final capturedBall = hole == null
+          ? null
+          : _existingBallAtHole(entities, moves, hole);
+      if (hole != null && capturedBall != null) {
+        final capturePathIndex = moves
+            .where((move) => move.entityId == capturedBall.id)
+            .fold<int>(
+              path.length - 1,
+              (latest, move) => math.max(latest, move.triggerPathIndex),
+            );
+        impacts.add(
+          ShotImpact(
+            entityId: hole.id,
+            entityType: EntityType.hole,
+            position: hole.position,
+            normal: Vec2.zero,
+            pathIndex: capturePathIndex,
+            strength: 1,
+            sourceEntityId: capturedBall.id,
+            sourceTraitMask: traitMaskOf(capturedBall.traits),
+          ),
+        );
+        stateTransitions.add(
+          PhysicsStateTransition(
+            sourceEntityId: capturedBall.id,
+            targetEntityId: hole.id,
+            targetType: hole.type,
+            pathIndex: capturePathIndex,
+            previousState: capturedBall.visualState,
+            nextState: 'captured',
+            position: hole.position,
+            normal: Vec2.zero,
+          ),
+        );
+      }
+    }
+
     final landedBall = ball.copyWith(
       id: 'spent_ball_${state.shotCount + 1}',
       position: position,
@@ -1766,6 +1830,37 @@ class ShotResolver {
       return entity.position.distanceTo(hole.position) <=
           hole.radius + entity.hitRadius * 0.85;
     });
+  }
+
+  EntityState? _existingBallAtHole(
+    List<EntityState> entities,
+    List<ShotAnimationMove> moves,
+    EntityState hole,
+  ) {
+    for (final entity in entities) {
+      if (entity.type == EntityType.ball &&
+          entity.id != 'active_ball' &&
+          entity.active &&
+          entity.position.distanceTo(hole.position) <=
+              hole.radius + entity.hitRadius * 0.85) {
+        return entity;
+      }
+    }
+    for (final move in moves.reversed) {
+      final entity = _entityById(entities, move.entityId);
+      if (entity == null || entity.type != EntityType.ball) {
+        continue;
+      }
+      final points = move.path.length >= 2 ? move.path : [move.from, move.to];
+      final tolerance = hole.radius + entity.hitRadius * 0.85;
+      for (var index = 1; index < points.length; index++) {
+        if (_segmentDistance(points[index - 1], points[index], hole.position) <=
+            tolerance) {
+          return entity;
+        }
+      }
+    }
+    return null;
   }
 
   bool _anyBallMoveEnteredHole(
@@ -3094,6 +3189,7 @@ class ShotResolver {
             pathIndex: triggerPathIndex + iterations,
             strength: (velocity.length / 24).clamp(0.18, 1.0),
             sourceEntityId: target.id,
+            sourceTraitMask: traitMaskOf(current.traits),
           ),
         );
         stateTransitions?.add(
@@ -3182,6 +3278,20 @@ class ShotResolver {
           sourceEntityId: target.id,
           contactId: impactContactId,
           triggersReflectorRotation: reflectorRotationQualifies,
+          relativeNormalSpeed: math.max(0, -velocity.dot(normal)),
+          impulse: ImpactMetrics.normalizedImpulse(
+            relativeNormalSpeed: math.max(0, -velocity.dot(normal)),
+            movingMass: _massOf(current),
+            targetMass: _massOf(hit),
+          ),
+          impactTier: ImpactMetrics.tierFor(
+            ImpactMetrics.normalizedImpulse(
+              relativeNormalSpeed: math.max(0, -velocity.dot(normal)),
+              movingMass: _massOf(current),
+              targetMass: _massOf(hit),
+            ),
+          ),
+          sourceTraitMask: traitMaskOf(current.traits),
         ),
       );
       final hitIsSticky =

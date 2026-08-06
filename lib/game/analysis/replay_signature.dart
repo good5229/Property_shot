@@ -1,5 +1,6 @@
 import '../domain/geometry.dart';
 import '../domain/entity_state.dart';
+import '../domain/trait.dart';
 import '../simulation/shot_resolver.dart';
 
 String shotResultSignature(ShotResult result) {
@@ -44,6 +45,7 @@ String shotResultSignature(ShotResult result) {
       ..write(
         'triggers_reflector_rotation=${impact.triggersReflectorRotation};',
       )
+      ..write('source_traits=${_traits(impact.sourceTraits)};')
       ..write('impulse=${_number(impact.impulse)};');
   }
   for (final event in result.physicsEvents) {
@@ -56,6 +58,7 @@ String shotResultSignature(ShotResult result) {
       ..write('source=${event.sourceEntityId};')
       ..write('contact=${event.contactId};')
       ..write('triggers_reflector_rotation=${event.triggersReflectorRotation};')
+      ..write('source_traits=${_traits(event.sourceTraits)};')
       ..write('velocity=${_vector(event.resultingVelocity)};');
     final rotation = event.reflectorRotation;
     if (rotation != null) {
@@ -101,3 +104,8 @@ String shotResultFingerprint(ShotResult result) {
 String _vector(Vec2 vector) => '${_number(vector.x)},${_number(vector.y)}';
 
 String _number(double value) => value.toStringAsFixed(6);
+
+String _traits(Iterable<TraitType> traits) {
+  final names = traits.map((trait) => trait.name).toList()..sort();
+  return names.join(',');
+}
