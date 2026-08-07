@@ -1,0 +1,115 @@
+import 'dart:math' as math;
+
+import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/shot_input.dart';
+import 'package:property_shot/game/domain/trait.dart';
+
+class Stage10PropertyShotSolution {
+  const Stage10PropertyShotSolution({
+    required this.patternId,
+    required this.contract,
+    required this.firstDegree,
+    required this.firstPower,
+    required this.secondDegree,
+    required this.secondPower,
+    required this.directDegree,
+    required this.directPower,
+    required this.familyId,
+    this.transferTrait,
+    this.expectedImpactIds = const [],
+    this.expectedEvents = const [],
+  });
+
+  final String patternId;
+  final String contract;
+  final int firstDegree;
+  final double firstPower;
+  final int secondDegree;
+  final double secondPower;
+  final int directDegree;
+  final double directPower;
+  final String familyId;
+  final TraitType? transferTrait;
+  final List<String> expectedImpactIds;
+  final List<String> expectedEvents;
+
+  // 실제 UI는 이전된 속성을 첫 발사 입력에 싣고, 실패 공이 남은 뒤에는
+  // 장착을 해제한다. 대표 두 발도 같은 한 번 이전 계약을 재생한다.
+  ShotInput get firstInput => _input(firstDegree, firstPower, transferTrait);
+  ShotInput get secondInput => _input(secondDegree, secondPower);
+  ShotInput get directInput => _input(directDegree, directPower);
+}
+
+const stage10PropertyShotSolutions = <Stage10PropertyShotSolution>[
+  Stage10PropertyShotSolution(
+    patternId: 'stage_property_shot_a',
+    contract: 'A',
+    firstDegree: 27,
+    firstPower: 0.86,
+    secondDegree: 43,
+    secondPower: 0.88,
+    directDegree: 266,
+    directPower: 0.20,
+    familyId: 'heavy_transfer_switch',
+    transferTrait: TraitType.heavy,
+    expectedImpactIds: ['a_crate', 'a_switch'],
+    expectedEvents: ['crate_pushed', 'switch_pressed'],
+  ),
+  Stage10PropertyShotSolution(
+    patternId: 'stage_property_shot_b',
+    contract: 'B',
+    firstDegree: 312,
+    firstPower: 0.12,
+    secondDegree: 203,
+    secondPower: 0.70,
+    directDegree: 239,
+    directPower: 0.74,
+    familyId: 'slider_reflector_chain',
+    expectedImpactIds: ['b_reflector', 'b_bumper'],
+    expectedEvents: [
+      'power_slider_activated',
+      'reflector_rotated',
+      'jelly_bounced',
+    ],
+  ),
+  Stage10PropertyShotSolution(
+    patternId: 'stage_property_shot_c',
+    contract: 'C',
+    firstDegree: 0,
+    firstPower: 0.12,
+    secondDegree: 346,
+    secondPower: 0.86,
+    directDegree: 298,
+    directPower: 0.38,
+    familyId: 'sticky_balloon_crate_chain',
+    transferTrait: TraitType.sticky,
+    expectedImpactIds: ['spent_ball_1', 'c_crate', 'c_balloon'],
+    expectedEvents: [
+      'sticky_attached',
+      'spent_ball_bounced',
+      'balloon_bounced',
+    ],
+  ),
+  Stage10PropertyShotSolution(
+    patternId: 'stage_property_shot_d',
+    contract: 'D',
+    firstDegree: 280,
+    firstPower: 0.42,
+    secondDegree: 312,
+    secondPower: 0.84,
+    directDegree: 266,
+    directPower: 0.32,
+    familyId: 'slider_stone_wall_past_ball',
+    expectedImpactIds: ['d_stone', 'd_wall', 'spent_ball_1'],
+    expectedEvents: ['power_slider_activated', 'existing_ball_hole_entered'],
+  ),
+];
+
+ShotInput _input(int degree, double power, [TraitType? trait]) {
+  final radians = degree * math.pi / 180;
+  return ShotInput(
+    direction: Vec2(math.cos(radians), math.sin(radians)),
+    power: power,
+    equippedTrait: trait,
+  );
+}

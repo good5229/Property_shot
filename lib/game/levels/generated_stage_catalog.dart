@@ -7490,6 +7490,965 @@ const generatedStageCatalogJson = r'''
           "metadata": {}
         }
       ]
+    },
+    {
+      "stageId": "stage_property_shot",
+      "title": "10. 속성 한방",
+      "patterns": [
+        {
+          "patternId": "stage_property_shot_a",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 480.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 72.0,
+                "y": 132.0
+              },
+              "size": {
+                "x": 80.0,
+                "y": 80.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "a_crate",
+              "type": "crate",
+              "position": {
+                "x": 180.0,
+                "y": 245.0
+              },
+              "size": {
+                "x": 72.0,
+                "y": 64.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "a_stone",
+              "type": "weight",
+              "position": {
+                "x": 250.0,
+                "y": 80.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 44.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": true
+            },
+            {
+              "id": "a_switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 250.0,
+                "y": 210.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 32.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "a_gate",
+              "movableWhenDrained": false
+            },
+            {
+              "id": "a_gate",
+              "type": "gate",
+              "position": {
+                "x": 300.0,
+                "y": 160.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 140.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "a_gate",
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "무거움을 옮긴 뒤 비워진 돌과 상자, 스위치의 변화를 살펴보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "heavy_transfer_switch",
+          "acceptedStrategyIds": [
+            "heavy_transfer_switch",
+            "none"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "heavy_transfer_switch"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "drained_weight_push",
+            "heavy_crate_switch"
+          ],
+          "metadata": {
+            "baseline": "true",
+            "contract": "A"
+          }
+        },
+        {
+          "patternId": "stage_property_shot_b",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 500.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 120.0
+              },
+              "size": {
+                "x": 56.0,
+                "y": 56.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "b_slider",
+              "type": "power_slider",
+              "position": {
+                "x": 118.0,
+                "y": 390.0
+              },
+              "size": {
+                "x": 76.0,
+                "y": 36.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 44.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            },
+            {
+              "id": "b_reflector",
+              "type": "rotating_reflector",
+              "position": {
+                "x": 230.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 88.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "reflectorOrientation": 1,
+              "reflectorRotationCount": 0
+            },
+            {
+              "id": "b_bumper",
+              "type": "bumper",
+              "position": {
+                "x": 260.0,
+                "y": 150.0
+              },
+              "size": {
+                "x": 54.0,
+                "y": 54.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "b_stone",
+              "type": "weight",
+              "position": {
+                "x": 280.0,
+                "y": 420.0
+              },
+              "size": {
+                "x": 44.0,
+                "y": 44.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "슬라이더와 탄성 물체를 거친 뒤 회전판의 새 면을 활용해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_bouncy_reflector",
+          "acceptedStrategyIds": [
+            "none",
+            "slider_bouncy_reflector"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "slider_reflector_chain"
+          ],
+          "optionalChallenges": [
+            "bouncy_reflection",
+            "direct_low_score",
+            "precise_direct"
+          ],
+          "metadata": {
+            "contract": "B"
+          }
+        },
+        {
+          "patternId": "stage_property_shot_c",
+          "weight": 1.0,
+          "parShots": 3,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 480.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 100.0
+              },
+              "size": {
+                "x": 88.0,
+                "y": 88.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "c_crate",
+              "type": "crate",
+              "position": {
+                "x": 270.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "c_bumper",
+              "type": "bumper",
+              "position": {
+                "x": 146.5,
+                "y": 180.6
+              },
+              "size": {
+                "x": 76.0,
+                "y": 76.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "c_balloon",
+              "type": "balloon",
+              "position": {
+                "x": 220.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 64.0,
+                "y": 64.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "c_slider",
+              "type": "power_slider",
+              "position": {
+                "x": 280.0,
+                "y": 240.0
+              },
+              "size": {
+                "x": 100.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 42.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            },
+            {
+              "id": "c_sticky",
+              "type": "sticky_surface",
+              "position": {
+                "x": 310.0,
+                "y": 500.0
+              },
+              "size": {
+                "x": 32.0,
+                "y": 40.0
+              },
+              "traits": [
+                "sticky"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.94,
+              "restitution": 0.12,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "c_sticky_target",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 480.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 32.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.94,
+              "restitution": 0.12,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "점착으로 남긴 과거 공과 풍선, 상자를 여러 샷으로 이어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "sticky_past_ball_chain",
+          "acceptedStrategyIds": [
+            "none",
+            "sticky_past_ball_chain"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "sticky_balloon_crate_chain"
+          ],
+          "optionalChallenges": [
+            "balloon_crate_chain",
+            "direct_low_score",
+            "past_ball_route"
+          ],
+          "metadata": {
+            "contract": "C"
+          }
+        },
+        {
+          "patternId": "stage_property_shot_d",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 480.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 72.0,
+                "y": 80.0
+              },
+              "size": {
+                "x": 68.0,
+                "y": 68.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "d_slider",
+              "type": "power_slider",
+              "position": {
+                "x": 125.0,
+                "y": 390.0
+              },
+              "size": {
+                "x": 70.0,
+                "y": 36.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 44.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            },
+            {
+              "id": "d_stone",
+              "type": "weight",
+              "position": {
+                "x": 150.0,
+                "y": 330.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 44.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "d_wall",
+              "type": "wall",
+              "position": {
+                "x": 195.0,
+                "y": 390.0
+              },
+              "size": {
+                "x": 60.0,
+                "y": 18.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.8,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "d_bumper",
+              "type": "bumper",
+              "position": {
+                "x": 300.0,
+                "y": 440.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 58.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "벽과 돌, 슬라이더를 이어 남겨 둔 공까지 한 번에 흔들어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_stone_past_ball",
+          "acceptedStrategyIds": [
+            "none",
+            "slider_stone_past_ball"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "slider_stone_wall_past_ball"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "high_chain",
+            "past_ball_impact"
+          ],
+          "metadata": {
+            "contract": "D"
+          }
+        }
+      ]
     }
   ]
 }

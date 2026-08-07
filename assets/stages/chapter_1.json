@@ -3850,6 +3850,114 @@
           ]
         }
       ]
+    },
+    {
+      "stageId": "stage_property_shot",
+      "title": "10. 속성 한방",
+      "patterns": [
+        {
+          "patternId": "stage_property_shot_a",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {"x":60,"y":480},
+          "copyCharges": 0,
+          "bonusGoal": "무거움을 옮긴 뒤 비워진 돌과 상자, 스위치의 변화를 살펴보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "heavy_transfer_switch",
+          "acceptedStrategyIds": ["heavy_transfer_switch", "none"],
+          "solutionFamilies": ["heavy_transfer_switch", "direct_bypass"],
+          "optionalChallenges": ["drained_weight_push", "heavy_crate_switch", "direct_low_score"],
+          "metadata": {"baseline":"true", "contract":"A"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":72,"y":132},"size":{"x":80,"y":80},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"a_crate","type":"crate","position":{"x":180,"y":245},"size":{"x":72,"y":64},"traits":["heavy"],"movable":true,"solid":true,"restitution":0.66},
+            {"id":"a_stone","type":"weight","position":{"x":250,"y":80},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68,"movableWhenDrained":true},
+            {"id":"a_switch","type":"switch_pad","position":{"x":250,"y":210},"size":{"x":48,"y":32},"traits":[],"movable":false,"solid":true,"linkId":"a_gate"},
+            {"id":"a_gate","type":"gate","position":{"x":300,"y":160},"size":{"x":24,"y":140},"traits":[],"movable":false,"solid":true,"linkId":"a_gate"}
+          ]
+        },
+        {
+          "patternId": "stage_property_shot_b",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {"x":60,"y":500},
+          "copyCharges": 0,
+          "bonusGoal": "슬라이더와 탄성 물체를 거친 뒤 회전판의 새 면을 활용해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_bouncy_reflector",
+          "acceptedStrategyIds": ["slider_bouncy_reflector", "none"],
+          "solutionFamilies": ["slider_reflector_chain", "direct_bypass"],
+          "optionalChallenges": ["precise_direct", "bouncy_reflection", "direct_low_score"],
+          "metadata": {"contract":"B"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":300,"y":120},"size":{"x":56,"y":56},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"b_slider","type":"power_slider","position":{"x":118,"y":390},"size":{"x":76,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"]},
+            {"id":"b_reflector","type":"rotating_reflector","position":{"x":230,"y":300},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":1,"reflectorRotationCount":0},
+            {"id":"b_bumper","type":"bumper","position":{"x":260,"y":150},"size":{"x":54,"y":54},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
+            {"id":"b_stone","type":"weight","position":{"x":280,"y":420},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68}
+          ]
+        },
+        {
+          "patternId": "stage_property_shot_c",
+          "weight": 1,
+          "parShots": 3,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {"x":60,"y":480},
+          "copyCharges": 0,
+          "bonusGoal": "점착으로 남긴 과거 공과 풍선, 상자를 여러 샷으로 이어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "sticky_past_ball_chain",
+          "acceptedStrategyIds": ["sticky_past_ball_chain", "none"],
+          "solutionFamilies": ["sticky_balloon_crate_chain", "direct_bypass"],
+          "optionalChallenges": ["past_ball_route", "balloon_crate_chain", "direct_low_score"],
+          "metadata": {"contract":"C"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":300,"y":100},"size":{"x":88,"y":88},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"c_crate","type":"crate","position":{"x":270,"y":300},"size":{"x":58,"y":58},"traits":[],"movable":true,"solid":true,"restitution":0.66},
+            {"id":"c_bumper","type":"bumper","position":{"x":146.5,"y":180.6},"size":{"x":76,"y":76},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
+            {"id":"c_balloon","type":"balloon","position":{"x":220,"y":350},"size":{"x":64,"y":64},"traits":[],"movable":false,"solid":true,"restitution":0.82},
+            {"id":"c_slider","type":"power_slider","position":{"x":280,"y":240},"size":{"x":100,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},
+            {"id":"c_sticky","type":"sticky_surface","position":{"x":310,"y":500},"size":{"x":32,"y":40},"traits":["sticky"],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12},
+            {"id":"c_sticky_target","type":"wall","position":{"x":180,"y":480},"size":{"x":48,"y":32},"traits":[],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12}
+          ]
+        },
+        {
+          "patternId": "stage_property_shot_d",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "속성 종합",
+          "ballSpawn": {"x":60,"y":480},
+          "copyCharges": 0,
+          "bonusGoal": "벽과 돌, 슬라이더를 이어 남겨 둔 공까지 한 번에 흔들어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_stone_past_ball",
+          "acceptedStrategyIds": ["slider_stone_past_ball", "none"],
+          "solutionFamilies": ["slider_stone_wall_past_ball", "direct_bypass"],
+          "optionalChallenges": ["high_chain", "past_ball_impact", "direct_low_score"],
+          "metadata": {"contract":"D"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":72,"y":80},"size":{"x":68,"y":68},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"d_slider","type":"power_slider","position":{"x":125,"y":390},"size":{"x":70,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"]},
+            {"id":"d_stone","type":"weight","position":{"x":150,"y":330},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
+            {"id":"d_wall","type":"wall","position":{"x":195,"y":390},"size":{"x":60,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8},
+            {"id":"d_bumper","type":"bumper","position":{"x":300,"y":440},"size":{"x":58,"y":58},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92}
+          ]
+        }
+      ]
     }
   ]
 }
