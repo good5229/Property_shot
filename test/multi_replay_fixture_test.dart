@@ -30,7 +30,7 @@ void main() {
     expect(fixtures.every((fixture) => fixture.shots.isNotEmpty), isTrue);
     expect(
       fixtures
-          .where((fixture) => fixture.stageIndex == 6)
+          .where((fixture) => fixture.stageIndex >= 6)
           .expand((fixture) => fixture.shots)
           .every((shot) => shot.power >= 0.12),
       isTrue,

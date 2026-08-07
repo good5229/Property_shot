@@ -67,7 +67,7 @@ void main() {
         productRules: true,
       );
       for (var degree = 0; degree < 360 && plans.length < 5; degree += 10) {
-        final minimumPowerStep = stageIndex == 6 ? 2 : 1;
+        final minimumPowerStep = stageIndex >= 6 ? 2 : 1;
         for (
           var powerStep = minimumPowerStep;
           powerStep <= 10 && plans.length < 5;
@@ -112,6 +112,12 @@ ShotSequencePlan? _validatedTwoShotSeed(int stageIndex) {
     return ShotSequencePlan(
       strategy: '과거 공 쿠션',
       shots: [_angleInput(20, 0.12), _angleInput(170, 0.66)],
+    );
+  }
+  if (stageIndex == 7) {
+    return ShotSequencePlan(
+      strategy: '3쿠션과 점착 과거 공 연쇄',
+      shots: [_angleInput(22, 0.12), _angleInput(158, 0.88)],
     );
   }
 

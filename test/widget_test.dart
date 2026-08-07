@@ -1,19 +1,37 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/domain/trait.dart';
+import 'package:property_shot/game/analysis/replay_signature.dart';
+import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/persistence/progress_store.dart';
+import 'package:property_shot/game/persistence/run_state_store.dart';
+import 'package:property_shot/game/run/run_state.dart';
+import 'package:property_shot/game/run/stage_pattern_session.dart';
+import 'package:property_shot/game/run/stage_shuffle_bag.dart';
+import 'package:property_shot/game/simulation/shot_resolver.dart';
+import 'package:property_shot/game/simulation/trait_resolver.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_screen.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fixtures/stage_chain_score_patterns.dart';
+import 'fixtures/stage_drained_patterns.dart';
+
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
   testWidgets('실제 시작 흐름은 홈·섬 지도·플레이를 연결한다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pump();
@@ -28,11 +46,13 @@ void main() {
     expect(find.text('섬 지도'), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_0')), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
+    expect(find.byKey(const Key('stage_tile_7')), findsOneWidget);
     expect(find.text('풍선은 밀리고, 뾰족한 공에는 터집니다.'), findsOneWidget);
+    expect(find.text('짧게 넣거나 벽과 기물을 이어 더 높은 연쇄 점수에 도전해 보세요.'), findsOneWidget);
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
 
     await tester.tap(find.byKey(const Key('stage_tile_0')));
-    await tester.pump();
+    await _pumpUntilFound(tester, find.byKey(const Key('aim_area')));
     expect(find.byKey(const Key('aim_area')), findsOneWidget);
     expect(find.byKey(const Key('home_button')), findsOneWidget);
     expect(find.byKey(const Key('level_1')), findsNothing);
@@ -98,15 +118,15 @@ void main() {
   testWidgets('클리어 진행 상태가 섬 지도에서 4단계를 연다', (tester) async {
     SharedPreferences.setMockInitialValues({'property_shot_unlocked_level': 3});
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     await tester.tap(find.byKey(const Key('stage_select_button')));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 4));
     await tester.ensureVisible(find.byKey(const Key('stage_tile_3')));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
     await tester.tap(find.byKey(const Key('stage_tile_3')));
     await tester.pump();
 
@@ -118,10 +138,10 @@ void main() {
       'property_shot_cleared_levels': ['0', '1', '2', '3'],
     });
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     await tester.tap(find.byKey(const Key('stage_select_button')));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 5));
@@ -132,10 +152,10 @@ void main() {
       'property_shot_cleared_stage_ids': [for (final level in levels) level.id],
     });
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     await tester.tap(find.byKey(const Key('stage_select_button')));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     for (var index = 0; index < levels.length; index++) {
       expect(find.byKey(Key('stage_tile_$index')), findsOneWidget);
@@ -143,13 +163,556 @@ void main() {
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNothing);
   });
 
+  testWidgets('8단계에서 추첨한 패턴은 앱 화면을 다시 만든 뒤에도 복원된다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'property_shot_cleared_stage_ids': [for (final level in levels) level.id],
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+    await tester.drag(find.byType(ListView), const Offset(0, -800));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('stage_tile_7')));
+    await _pumpForAsyncWork(tester);
+
+    final firstPattern = tester
+        .widget<GameScreen>(find.byType(GameScreen))
+        .levelOverride
+        ?.patternId;
+    expect(firstPattern, startsWith('stage_chain_score_'));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pumpForAsyncWork(tester);
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+    await tester.drag(find.byType(ListView), const Offset(0, -800));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('stage_tile_7')));
+    await _pumpForAsyncWork(tester);
+
+    expect(
+      tester
+          .widget<GameScreen>(find.byType(GameScreen))
+          .levelOverride
+          ?.patternId,
+      firstPattern,
+    );
+  });
+
+  testWidgets('홈 시작은 저장된 8단계 샷을 재생해 같은 보드 상태를 복원한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+    );
+    final draw = await session.selectStage('stage_chain_score');
+    final savedInput = const ShotInput(direction: Vec2(0, 1), power: 0.12);
+    await session.recordShot(input: savedInput);
+    final level = draw.pattern.toLevelDefinition(
+      stageId: draw.stageId,
+      stageTitle: generatedStageCatalog.stageById(draw.stageId).title,
+    );
+    final expected = const ShotResolver().resolve(
+      level.createState(7, productRules: true),
+      savedInput,
+    );
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final screen = tester.widget<GameScreen>(find.byType(GameScreen));
+    expect(screen.levelOverride?.patternId, draw.patternId);
+    expect(screen.initialShotResults, hasLength(1));
+    expect(screen.initialState?.shotCount, expected.state.shotCount);
+    expect(
+      shotResultFingerprint(screen.initialShotResults.single),
+      shotResultFingerprint(expected),
+    );
+    expect(
+      screen.initialState?.activeBall.position,
+      expected.state.activeBall.position,
+    );
+
+    await tester.tap(find.byKey(const Key('rewind_button')).first);
+    await _pumpForAsyncWork(tester);
+
+    final rewoundSession = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    await rewoundSession.loadState();
+    expect(rewoundSession.currentShotInputs, isEmpty);
+    expect(find.textContaining('시도 0'), findsOneWidget);
+  });
+
+  testWidgets('홈 시작은 복제와 옮기기를 소비 전 코어 수에서 재생한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+    );
+    final draw = await session.selectStage(
+      'stage_chain_score',
+      initialCloneCoreCount: 1,
+    );
+    final source = draw.pattern.objects.firstWhere(
+      (object) => object.traits.isNotEmpty,
+    );
+    final actions = [
+      RunTraitActionRecord(sourceId: source.id, action: RunTraitAction.copy),
+      RunTraitActionRecord(
+        sourceId: source.id,
+        action: RunTraitAction.transfer,
+      ),
+    ];
+    for (final action in actions) {
+      await session.recordTraitAction(
+        sourceId: action.sourceId,
+        action: action.action,
+      );
+    }
+    final input = ShotInput(
+      direction: const Vec2(0.8, -0.6),
+      power: 0.34,
+      equippedTrait: source.traits.first,
+    );
+    await session.recordShot(input: input);
+    final stage = generatedStageCatalog.stageById(draw.stageId);
+    final level = draw.pattern.toLevelDefinition(
+      stageId: stage.stageId,
+      stageTitle: stage.title,
+    );
+    var expectedState = level.createState(
+      7,
+      productRules: true,
+      copyCoreCount: 1,
+    );
+    const traitResolver = TraitResolver();
+    for (final action in actions) {
+      expectedState = traitResolver.selectSource(
+        expectedState,
+        action.sourceId,
+      );
+      expectedState = switch (action.action) {
+        RunTraitAction.copy => traitResolver.copySelectedTrait(expectedState),
+        RunTraitAction.transfer => traitResolver.transferSelectedTrait(
+          expectedState,
+        ),
+      };
+    }
+    final expected = const ShotResolver().resolve(expectedState, input);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final screen = tester.widget<GameScreen>(find.byType(GameScreen));
+    expect(screen.initialShotResults, hasLength(1));
+    expect(screen.initialState?.copyCoreCount, 0);
+    expect(
+      screen.initialState?.entityById(source.id)?.traits,
+      expected.state.entityById(source.id)?.traits,
+    );
+    expect(
+      shotResultFingerprint(screen.initialShotResults.single),
+      shotResultFingerprint(expected),
+    );
+  });
+
+  testWidgets('성공 샷 저장 직후 종료해도 런 완료와 지도 기록을 복구한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+    );
+    final draw = await session.selectStage('stage_chain_score');
+    final solution = stageChainScoreSolutions.singleWhere(
+      (candidate) => candidate.patternId == draw.patternId,
+    );
+    final level = draw.pattern.toLevelDefinition(
+      stageId: draw.stageId,
+      stageTitle: generatedStageCatalog.stageById(draw.stageId).title,
+    );
+    final expected = const ShotResolver().resolve(
+      level.createState(7, productRules: true),
+      solution.directInput,
+    );
+    expect(expected.state.phase, GamePhase.success);
+    await session.recordShot(input: solution.directInput);
+    expect(session.state?.phase, RunPhase.playing);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    final restoredSession = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    final restoredRun = await restoredSession.loadState();
+    final progress = await ProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((stage) => stage.id),
+    ).load();
+    expect(restoredRun?.phase, RunPhase.stageCompleted);
+    expect(restoredRun?.shotsPerStage['stage_chain_score'], 1);
+    expect(progress.clearedLevels, contains(7));
+  });
+
+  testWidgets('비워진 원본 성공 샷 직후 종료해도 보너스와 최고 기록을 복구한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+    );
+    final solution = stageDrainedRepresentativeSolutions.first;
+    late StagePatternDraw draw;
+    for (var index = 0; index < 4; index++) {
+      draw = await session.selectStage('stage_drained');
+      if (draw.patternId == solution.patternId) break;
+      await session.completeCurrentStage(
+        stageId: 'stage_drained',
+        shotCount: 3,
+      );
+    }
+    expect(draw.patternId, solution.patternId);
+    final source = draw.pattern.objects.firstWhere(
+      (object) => object.id == solution.strategyId,
+    );
+    await session.recordTraitAction(
+      sourceId: source.id,
+      action: RunTraitAction.transfer,
+    );
+    final input = ShotInput(
+      direction: solution.direction,
+      power: solution.power,
+      equippedTrait: source.traits.first,
+    );
+    await session.recordShot(input: input);
+    expect(session.state?.phase, RunPhase.playing);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    final restoredSession = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    final restoredRun = await restoredSession.loadState();
+    final progress = await ProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((stage) => stage.id),
+    ).load();
+    expect(restoredRun?.phase, RunPhase.stageCompleted);
+    expect(
+      restoredRun?.optionalChallenges['stage_drained:${solution.patternId}'],
+      isTrue,
+    );
+    expect(progress.clearedLevels, contains(4));
+    expect(progress.bestShots[4], 1);
+    expect(progress.bonusGoals, contains(4));
+  });
+
+  testWidgets('클리어 완료 뒤 종료해도 복제 코어 보상을 한 번만 복구한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final rewardIndex = levels.indexWhere((level) => level.copyCoreReward > 0);
+    expect(rewardIndex, greaterThanOrEqualTo(0));
+    expect(rewardIndex, lessThan(levels.length - 1));
+    final rewardLevel = levels[rewardIndex];
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+    );
+    await session.selectStage(rewardLevel.id);
+    await session.completeCurrentStage(
+      stageId: rewardLevel.id,
+      nextStageId: levels[rewardIndex + 1].id,
+      shotCount: 1,
+    );
+    expect(session.state?.cloneCoreCount, 0);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final firstScreen = tester.widget<GameScreen>(find.byType(GameScreen));
+    expect(firstScreen.initialState?.copyCoreCount, rewardLevel.copyCoreReward);
+    final firstRestored = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    final firstRun = await firstRestored.loadState();
+    expect(firstRun?.cloneCoreCount, rewardLevel.copyCoreReward);
+    expect(
+      firstRun?.acquiredRewards,
+      contains('stage_clone_core:${rewardLevel.id}'),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final secondScreen = tester.widget<GameScreen>(find.byType(GameScreen));
+    expect(
+      secondScreen.initialState?.copyCoreCount,
+      rewardLevel.copyCoreReward,
+    );
+  });
+
+  testWidgets('구형 복제 코어는 첫 RunState로 옮긴 뒤 그 기록만 기준으로 삼는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.copyCoreCountKey: 2,
+      ProgressStore.copyCoreRewardedKey: true,
+    });
+    final preferences = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final migratedSession = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    final migrated = await migratedSession.loadState();
+    expect(migrated?.cloneCoreCount, 2);
+    expect(
+      migrated?.acquiredRewards,
+      contains(stageCloneCoreRewardId(legacyCloneCoreRewardStageId)),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pumpForAsyncWork(tester);
+    await preferences.setInt(ProgressStore.copyCoreCountKey, 99);
+    await preferences.setBool(ProgressStore.copyCoreRewardedKey, false);
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final screen = tester.widget<GameScreen>(find.byType(GameScreen));
+    expect(screen.initialState?.copyCoreCount, 2);
+    final mirrored = await ProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((stage) => stage.id),
+    ).load();
+    expect(mirrored.copyCoreCount, 2);
+    expect(mirrored.copyCoreRewarded, isTrue);
+    expect(mirrored.copyCoreRewardedStageIds, {legacyCloneCoreRewardStageId});
+  });
+
+  testWidgets('표식 없는 구형 완료 런은 복제 코어를 늘리지 않고 지급 상태만 옮긴다', (tester) async {
+    final rewardIndex = levels.indexWhere(
+      (level) => level.id == legacyCloneCoreRewardStageId,
+    );
+    expect(rewardIndex, greaterThanOrEqualTo(0));
+    expect(levels[rewardIndex].copyCoreReward, greaterThan(0));
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.copyCoreCountKey: 2,
+      ProgressStore.copyCoreRewardedKey: true,
+    });
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+    );
+    await session.selectStage(levels[rewardIndex].id, initialCloneCoreCount: 2);
+    await session.completeCurrentStage(
+      stageId: levels[rewardIndex].id,
+      nextStageId: levels[rewardIndex + 1].id,
+      shotCount: 1,
+    );
+    expect(session.state?.acquiredRewards, isEmpty);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final restoredSession = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    final restored = await restoredSession.loadState();
+    final screen = tester.widget<GameScreen>(find.byType(GameScreen));
+    expect(restored?.cloneCoreCount, 2);
+    expect(
+      restored?.acquiredRewards,
+      contains(stageCloneCoreRewardId(legacyCloneCoreRewardStageId)),
+    );
+    expect(
+      restored?.acquiredRewards,
+      contains(stageCloneCoreRewardId(levels[rewardIndex].id)),
+    );
+    expect(screen.initialState?.copyCoreCount, 2);
+    expect(screen.initialState?.copyCoreRewarded, isFalse);
+    final mirrored = await ProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((level) => level.id),
+    ).load();
+    expect(mirrored.copyCoreCount, 2);
+    expect(mirrored.copyCoreRewardedStageIds, {legacyCloneCoreRewardStageId});
+  });
+
+  testWidgets('런 완료 뒤 지도 저장 전에 종료해도 클리어 기록을 복구한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+    );
+    await session.selectStage(levels.first.id);
+    await session.completeCurrentStage(
+      stageId: levels.first.id,
+      nextStageId: levels[1].id,
+      shotCount: 2,
+      optionalChallengeAchieved: true,
+    );
+    final beforeRecovery = await ProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((stage) => stage.id),
+    ).load();
+    expect(beforeRecovery.clearedLevels, isNot(contains(0)));
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    final recovered = await ProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((stage) => stage.id),
+    ).load();
+    expect(recovered.clearedLevels, contains(0));
+    expect(recovered.unlockedLevel, greaterThanOrEqualTo(1));
+    expect(recovered.bestShots[0], 2);
+    expect(recovered.bonusGoals, contains(0));
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).levelOverride?.id,
+      levels[1].id,
+    );
+  });
+
+  testWidgets('지도 저장 실패 전에는 다음 단계를 해금하지 않고 재시도 뒤에만 연다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    await session.selectStage(levels.first.id);
+    await session.completeCurrentStage(
+      stageId: levels.first.id,
+      nextStageId: levels[1].id,
+      shotCount: 2,
+    );
+    final store = _FailOnceStageClearProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((level) => level.id),
+    );
+
+    await tester.pumpWidget(
+      PropertyShotApp(
+        key: const ValueKey('첫 저장 시도'),
+        showHome: true,
+        progressStore: store,
+      ),
+    );
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(store.stageClearAttempts, 1);
+    expect(find.byType(GameScreen), findsNothing);
+    expect(find.text('단계 정보를 불러오지 못했습니다. 다시 시도해 주세요.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+    expect(find.text('1 / ${levels.length}'), findsOneWidget);
+
+    await tester.pumpWidget(
+      PropertyShotApp(
+        key: const ValueKey('저장 재시도'),
+        showHome: true,
+        progressStore: store,
+      ),
+    );
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('start_game_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(store.stageClearAttempts, 2);
+    expect(find.byType(GameScreen), findsOneWidget);
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).levelOverride?.id,
+      levels[1].id,
+    );
+    final progress = await store.load();
+    expect(progress.clearedLevels, contains(0));
+    expect(progress.unlockedLevel, 1);
+  });
+
   testWidgets('기존 게임 화면 해금 기록도 섬 지도에서 호환한다', (tester) async {
     SharedPreferences.setMockInitialValues({'unlocked_level': 3});
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     await tester.tap(find.byKey(const Key('stage_select_button')));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 4));
@@ -176,10 +739,10 @@ void main() {
       GameFeedback.reducedMotionEnabled = false;
     });
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
 
     await tester.tap(find.byKey(const Key('feedback_settings_button')));
-    await tester.pumpAndSettle();
+    await _pumpForAsyncWork(tester);
     expect(find.text('소리와 진동'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('sound_toggle')));
@@ -196,9 +759,10 @@ void main() {
   });
 
   testWidgets('복제 코어가 없으면 실제 플레이 화면에 복사 행동을 노출하지 않는다', (tester) async {
-    await tester.pumpWidget(const PropertyShotApp(showHome: true));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('start_game_button')));
+    final state = levels[0].createState(0, productRules: true);
+    await tester.pumpWidget(
+      PropertyShotApp(initialState: state, showStageSelector: false),
+    );
     await tester.pump();
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
@@ -270,6 +834,40 @@ void main() {
     expect(find.textContaining('추천 경로를 준비했습니다'), findsOneWidget);
     expect(find.text('공을 길게 눌러 발사해요'), findsOneWidget);
     expect(find.text('공을 길게 눌러 힘을 모으세요'), findsOneWidget);
+  });
+
+  testWidgets('속성 행동은 런 저장이 끝난 뒤에만 화면에 적용된다', (tester) async {
+    final persisted = Completer<void>();
+    String? savedSourceId;
+    RunTraitAction? savedAction;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: levels[0].createState(0, productRules: true),
+          levelOverride: levels[0],
+          showStageSelector: false,
+          loadGameAssets: false,
+          onTraitActionCommitted: (sourceId, action) {
+            savedSourceId = sourceId;
+            savedAction = action;
+            return persisted.future;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tapAt(_logicalOffset(tester, 78, 154));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('transfer_button')));
+    await tester.pump();
+
+    expect(savedSourceId, 'anvil');
+    expect(savedAction, RunTraitAction.transfer);
+    expect(find.textContaining('공 속성: 없음'), findsOneWidget);
+    persisted.complete();
+    await _pumpForAsyncWork(tester);
+    expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
   });
 
   testWidgets('속성을 선택해 공으로 복사할 수 있다', (tester) async {
@@ -759,6 +1357,268 @@ void main() {
     expect(find.text('클리어!'), findsOneWidget);
   });
 
+  testWidgets('클리어 팝업은 런과 다음 패턴 저장이 끝난 뒤 표시된다', (tester) async {
+    final persisted = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          loadGameAssets: false,
+          onLevelCleared: (_, _, _, _) => persisted.future,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 2400));
+
+    expect(find.byKey(const Key('clear_popup')), findsNothing);
+    persisted.complete();
+    await _pumpForAsyncWork(tester);
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+  });
+
+  testWidgets('런 완료 저장이 실패하면 클리어 팝업과 다음 이동을 열지 않는다', (tester) async {
+    var attempts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          loadGameAssets: false,
+          onLevelCleared: (_, _, _, _) async {
+            attempts++;
+            if (attempts == 1) {
+              throw StateError('저장 실패 주입');
+            }
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 2400));
+
+    expect(find.byKey(const Key('clear_popup')), findsNothing);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('failure_popup')), findsNothing);
+    expect(find.text('클리어 기록을 저장하지 못했습니다'), findsOneWidget);
+    expect(find.byKey(const Key('failure_rewind_button')), findsNothing);
+    expect(find.byKey(const Key('failure_reset_button')), findsNothing);
+    expect(find.text('다음'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('clear_persistence_retry_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(attempts, 2);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+  });
+
+  testWidgets('최고 기록 저장이 한 번 실패해도 저장 다시 시도에서 실제 기록한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = _FailOnceBestShotProgressStore(stageCount: levels.length);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          loadGameAssets: false,
+          progressStore: store,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 2400));
+
+    expect(store.bestShotAttempts, 1);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('clear_persistence_retry_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(store.bestShotAttempts, 2);
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    final progress = await store.load();
+    expect(progress.bestShots[0], 1);
+  });
+
+  testWidgets('초기 진행 기록 로드가 실패해도 발사와 이후 저장을 계속할 수 있다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = _FailOnceLoadProgressStore(stageCount: levels.length);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          loadGameAssets: false,
+          progressStore: store,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(store.loadAttempts, 1);
+    expect(tester.takeException(), isNull);
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 2400));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    expect((await store.load()).bestShots[0], 1);
+  });
+
+  testWidgets('보너스 저장이 한 번 실패해도 저장 다시 시도에서 실제 기록한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = _FailOnceBonusProgressStore(stageCount: levels.length);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          loadGameAssets: false,
+          progressStore: store,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 2400));
+
+    expect(store.bonusAttempts, 1);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('clear_persistence_retry_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(store.bonusAttempts, 2);
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    final progress = await store.load();
+    expect(progress.bonusGoals, contains(0));
+  });
+
+  testWidgets('복제 코어 보상 저장 실패는 같은 클리어를 다시 저장한 뒤 보상을 재시도한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final rewardIndex = levels.indexWhere((level) => level.copyCoreReward > 0);
+    expect(rewardIndex, greaterThanOrEqualTo(0));
+    var clearAttempts = 0;
+    var rewardAttempts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(levelIndex: rewardIndex),
+          loadGameAssets: false,
+          showStageSelector: false,
+          onLevelCleared: (_, _, _, _) async {
+            clearAttempts++;
+          },
+          onCopyCoreEarned: (_, _) async {
+            rewardAttempts++;
+            if (rewardAttempts == 1) {
+              throw StateError('복제 코어 보상 저장 실패 주입');
+            }
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 2400));
+
+    expect(clearAttempts, 1);
+    expect(rewardAttempts, 1);
+    expect(find.text('복제 코어 보상을 저장하지 못했습니다'), findsOneWidget);
+    expect(find.byKey(const Key('clear_popup')), findsNothing);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('clear_persistence_retry_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(clearAttempts, 2);
+    expect(rewardAttempts, 2);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+  });
+
+  testWidgets('다음 단계 요청 저장이 실패하면 클리어 팝업을 유지하고 다시 누를 수 있다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    var attempts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState().copyWith(
+            phase: GamePhase.success,
+            shotCount: 1,
+          ),
+          loadGameAssets: false,
+          onStageRequested: (_) async {
+            attempts++;
+            throw StateError('다음 단계 저장 실패 주입');
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('next_stage_button')));
+    await tester.pump();
+
+    expect(attempts, 1);
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+    expect(find.textContaining('다음 단계 기록을 저장하지 못했습니다'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('실제 클리어 결과가 주입된 저장소에 기록되고 다시 읽힌다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = ProgressStore(stageCount: levels.length);
@@ -1088,12 +1948,75 @@ void main() {
   });
 }
 
-GameState _directClearState() {
-  return const GameState(
-    levelIndex: 0,
+class _FailOnceBestShotProgressStore extends ProgressStore {
+  _FailOnceBestShotProgressStore({required super.stageCount});
+
+  int bestShotAttempts = 0;
+
+  @override
+  Future<void> recordBestShot(int levelIndex, int shotCount) async {
+    bestShotAttempts++;
+    if (bestShotAttempts == 1) {
+      throw StateError('최고 기록 저장 실패 주입');
+    }
+    await super.recordBestShot(levelIndex, shotCount);
+  }
+}
+
+class _FailOnceStageClearProgressStore extends ProgressStore {
+  _FailOnceStageClearProgressStore({
+    required super.stageCount,
+    required super.stageIds,
+  });
+
+  int stageClearAttempts = 0;
+
+  @override
+  Future<void> recordStageClear(int levelIndex) async {
+    stageClearAttempts++;
+    if (stageClearAttempts == 1) {
+      throw StateError('지도 저장 실패 주입');
+    }
+    await super.recordStageClear(levelIndex);
+  }
+}
+
+class _FailOnceLoadProgressStore extends ProgressStore {
+  _FailOnceLoadProgressStore({required super.stageCount});
+
+  int loadAttempts = 0;
+
+  @override
+  Future<ProgressSnapshot> load() async {
+    loadAttempts++;
+    if (loadAttempts == 1) {
+      throw StateError('초기 진행 기록 로드 실패 주입');
+    }
+    return super.load();
+  }
+}
+
+class _FailOnceBonusProgressStore extends ProgressStore {
+  _FailOnceBonusProgressStore({required super.stageCount});
+
+  int bonusAttempts = 0;
+
+  @override
+  Future<void> recordBonusGoal(int levelIndex) async {
+    bonusAttempts++;
+    if (bonusAttempts == 1) {
+      throw StateError('보너스 저장 실패 주입');
+    }
+    await super.recordBonusGoal(levelIndex);
+  }
+}
+
+GameState _directClearState({int levelIndex = 0}) {
+  return GameState(
+    levelIndex: levelIndex,
     levelName: '클리어 테스트',
-    ballSpawn: Vec2(56, 456),
-    entities: [
+    ballSpawn: const Vec2(56, 456),
+    entities: const [
       EntityState(
         id: 'active_ball',
         type: EntityType.ball,
@@ -1113,6 +2036,35 @@ GameState _directClearState() {
 }
 
 const _testPointerDownAt = Duration(seconds: 1);
+
+Future<void> _pumpForAsyncWork(
+  WidgetTester tester, {
+  int frames = 20,
+  Duration step = const Duration(milliseconds: 50),
+}) async {
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 20)),
+  );
+  for (var frame = 0; frame < frames; frame++) {
+    await tester.pump(step);
+  }
+}
+
+Future<void> _pumpUntilFound(
+  WidgetTester tester,
+  Finder finder, {
+  int frames = 40,
+  Duration step = const Duration(milliseconds: 50),
+}) async {
+  for (var frame = 0; frame < frames; frame++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 5)),
+    );
+    await tester.pump(step);
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  expect(finder, findsWidgets);
+}
 
 Future<TestGesture> _startTimedGesture(
   WidgetTester tester,

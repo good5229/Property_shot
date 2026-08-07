@@ -1,0 +1,555 @@
+{
+  "schemaVersion": 1,
+  "stageId": "stage_chain_score",
+  "fixtures": [
+    {
+      "patternId": "stage_chain_score_01",
+      "routeKind": "direct",
+      "fixture": {
+        "id": "stage_chain_score_01_direct",
+        "stageIndex": 7,
+        "routeTag": "직접 클리어",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 5.654866776461628,
+            "power": 0.12,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "1f762afa6ce7286a"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 1035,
+      "expectedReplaySignature": "19267f714cc6f995",
+      "expectedChallengeAchieved": false,
+      "expectedBreakdown": {
+        "totalPoints": 1035,
+        "causalDepth": 0,
+        "causalEventCount": 1,
+        "distinctEntityTypes": 0,
+        "wallReflectionCount": 0,
+        "pastBallCount": 0,
+        "powerSliderCount": 0,
+        "movedEntityCount": 0,
+        "preparationShotCount": 0,
+        "qualifiedImpactCount": 0
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 1,
+        "physicsEventCount": 2,
+        "safetyEvidence": {
+          "checkedStateCount": 2,
+          "dynamicObjectCount": 1,
+          "checkedMovementSegmentCount": 31,
+          "tunnelingCandidateCount": 2,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 0,
+          "verifiedFollowUpShotCount": 0,
+          "terminalWallContactIds": [],
+          "terminalBallId": "spent_ball_1"
+        }
+      }
+    },
+    {
+      "patternId": "stage_chain_score_01",
+      "routeKind": "chain",
+      "fixture": {
+        "id": "stage_chain_score_01_chain",
+        "stageIndex": 7,
+        "routeTag": "고연쇄",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 2.792526803190927,
+            "power": 0.2,
+            "equippedTrait": null
+          },
+          {
+            "angleRadians": 2.7576202181510405,
+            "power": 0.96,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "a5265a876804dff7",
+          "161a06f4a273c5ca"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 1970,
+      "expectedReplaySignature": "8895dd53337faf7d",
+      "expectedChallengeAchieved": true,
+      "expectedBreakdown": {
+        "totalPoints": 1970,
+        "causalDepth": 6,
+        "causalEventCount": 7,
+        "distinctEntityTypes": 3,
+        "wallReflectionCount": 4,
+        "pastBallCount": 1,
+        "powerSliderCount": 1,
+        "movedEntityCount": 0,
+        "preparationShotCount": 1,
+        "qualifiedImpactCount": 5
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 2,
+        "physicsEventCount": 19,
+        "safetyEvidence": {
+          "checkedStateCount": 3,
+          "dynamicObjectCount": 2,
+          "checkedMovementSegmentCount": 113,
+          "tunnelingCandidateCount": 4,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 1,
+          "verifiedFollowUpShotCount": 1,
+          "terminalWallContactIds": [
+            "spent_ball_1:wall_left",
+            "spent_ball_2:wall_left"
+          ],
+          "terminalBallId": "spent_ball_2"
+        }
+      }
+    },
+    {
+      "patternId": "stage_chain_score_02",
+      "routeKind": "direct",
+      "fixture": {
+        "id": "stage_chain_score_02_direct",
+        "stageIndex": 7,
+        "routeTag": "직접 클리어",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 4.642575810304916,
+            "power": 0.2,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "bf4d16b764125f1b"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 1035,
+      "expectedReplaySignature": "2f2d169e3f0dca9f",
+      "expectedChallengeAchieved": false,
+      "expectedBreakdown": {
+        "totalPoints": 1035,
+        "causalDepth": 0,
+        "causalEventCount": 1,
+        "distinctEntityTypes": 0,
+        "wallReflectionCount": 0,
+        "pastBallCount": 0,
+        "powerSliderCount": 0,
+        "movedEntityCount": 0,
+        "preparationShotCount": 0,
+        "qualifiedImpactCount": 0
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 1,
+        "physicsEventCount": 2,
+        "safetyEvidence": {
+          "checkedStateCount": 2,
+          "dynamicObjectCount": 3,
+          "checkedMovementSegmentCount": 39,
+          "tunnelingCandidateCount": 2,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 0,
+          "verifiedFollowUpShotCount": 0,
+          "terminalWallContactIds": [],
+          "terminalBallId": "spent_ball_1"
+        }
+      }
+    },
+    {
+      "patternId": "stage_chain_score_02",
+      "routeKind": "chain",
+      "fixture": {
+        "id": "stage_chain_score_02_chain",
+        "stageIndex": 7,
+        "routeTag": "고연쇄",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 5.934119456780721,
+            "power": 0.92,
+            "equippedTrait": null
+          },
+          {
+            "angleRadians": 4.118977034706617,
+            "power": 0.76,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "5e37e0d02528cad9",
+          "336266658723233c"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 1689,
+      "expectedReplaySignature": "b663550a1b592145",
+      "expectedChallengeAchieved": true,
+      "expectedBreakdown": {
+        "totalPoints": 1689,
+        "causalDepth": 3,
+        "causalEventCount": 3,
+        "distinctEntityTypes": 3,
+        "wallReflectionCount": 1,
+        "pastBallCount": 1,
+        "powerSliderCount": 0,
+        "movedEntityCount": 2,
+        "preparationShotCount": 1,
+        "qualifiedImpactCount": 3
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 2,
+        "physicsEventCount": 12,
+        "safetyEvidence": {
+          "checkedStateCount": 3,
+          "dynamicObjectCount": 6,
+          "checkedMovementSegmentCount": 104,
+          "tunnelingCandidateCount": 2,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 1,
+          "verifiedFollowUpShotCount": 1,
+          "terminalWallContactIds": [
+            "spent_ball_1:wall_left",
+            "spent_ball_1:wall_right",
+            "spent_ball_2:wall_left"
+          ],
+          "terminalBallId": "spent_ball_2"
+        }
+      }
+    },
+    {
+      "patternId": "stage_chain_score_03",
+      "routeKind": "direct",
+      "fixture": {
+        "id": "stage_chain_score_03_direct",
+        "stageIndex": 7,
+        "routeTag": "직접 클리어",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 4.642575810304916,
+            "power": 0.32,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "b11ff2ed9e1e6eee"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 1035,
+      "expectedReplaySignature": "7a09a981a6844c4c",
+      "expectedChallengeAchieved": false,
+      "expectedBreakdown": {
+        "totalPoints": 1035,
+        "causalDepth": 0,
+        "causalEventCount": 1,
+        "distinctEntityTypes": 0,
+        "wallReflectionCount": 0,
+        "pastBallCount": 0,
+        "powerSliderCount": 0,
+        "movedEntityCount": 0,
+        "preparationShotCount": 0,
+        "qualifiedImpactCount": 0
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 1,
+        "physicsEventCount": 2,
+        "safetyEvidence": {
+          "checkedStateCount": 2,
+          "dynamicObjectCount": 1,
+          "checkedMovementSegmentCount": 41,
+          "tunnelingCandidateCount": 2,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 0,
+          "verifiedFollowUpShotCount": 0,
+          "terminalWallContactIds": [],
+          "terminalBallId": "spent_ball_1"
+        }
+      }
+    },
+    {
+      "patternId": "stage_chain_score_03",
+      "routeKind": "chain",
+      "fixture": {
+        "id": "stage_chain_score_03_chain",
+        "stageIndex": 7,
+        "routeTag": "고연쇄",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 4.886921905584122,
+            "power": 0.42,
+            "equippedTrait": null
+          },
+          {
+            "angleRadians": 5.445427266222308,
+            "power": 0.84,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "72e35b33ac563631",
+          "11b3771cb960a6f6"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 2002,
+      "expectedReplaySignature": "f1dc427d8f6d0edd",
+      "expectedChallengeAchieved": true,
+      "expectedBreakdown": {
+        "totalPoints": 2002,
+        "causalDepth": 6,
+        "causalEventCount": 6,
+        "distinctEntityTypes": 4,
+        "wallReflectionCount": 3,
+        "pastBallCount": 1,
+        "powerSliderCount": 1,
+        "movedEntityCount": 1,
+        "preparationShotCount": 1,
+        "qualifiedImpactCount": 5
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 2,
+        "physicsEventCount": 12,
+        "safetyEvidence": {
+          "checkedStateCount": 3,
+          "dynamicObjectCount": 3,
+          "checkedMovementSegmentCount": 141,
+          "tunnelingCandidateCount": 3,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 1,
+          "verifiedFollowUpShotCount": 1,
+          "terminalWallContactIds": [
+            "spent_ball_2:bounce_wall",
+            "spent_ball_2:wall_right",
+            "spent_ball_2:wall_top"
+          ],
+          "terminalBallId": "spent_ball_2"
+        }
+      }
+    },
+    {
+      "patternId": "stage_chain_score_04",
+      "routeKind": "direct",
+      "fixture": {
+        "id": "stage_chain_score_04_direct",
+        "stageIndex": 7,
+        "routeTag": "직접 클리어",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 5.201081170943102,
+            "power": 0.38,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "54a72c25df54b562"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 1035,
+      "expectedReplaySignature": "d9a5839a69733171",
+      "expectedChallengeAchieved": false,
+      "expectedBreakdown": {
+        "totalPoints": 1035,
+        "causalDepth": 0,
+        "causalEventCount": 1,
+        "distinctEntityTypes": 0,
+        "wallReflectionCount": 0,
+        "pastBallCount": 0,
+        "powerSliderCount": 0,
+        "movedEntityCount": 0,
+        "preparationShotCount": 0,
+        "qualifiedImpactCount": 0
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 1,
+        "physicsEventCount": 2,
+        "safetyEvidence": {
+          "checkedStateCount": 2,
+          "dynamicObjectCount": 3,
+          "checkedMovementSegmentCount": 41,
+          "tunnelingCandidateCount": 2,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 0,
+          "verifiedFollowUpShotCount": 0,
+          "terminalWallContactIds": [],
+          "terminalBallId": "spent_ball_1"
+        }
+      }
+    },
+    {
+      "patternId": "stage_chain_score_04",
+      "routeKind": "chain",
+      "fixture": {
+        "id": "stage_chain_score_04_chain",
+        "stageIndex": 7,
+        "routeTag": "고연쇄",
+        "copyCoreCount": 0,
+        "shots": [
+          {
+            "angleRadians": 1.2217304763960306,
+            "power": 0.52,
+            "equippedTrait": null
+          },
+          {
+            "angleRadians": 0.9773843811168246,
+            "power": 0.76,
+            "equippedTrait": null
+          }
+        ],
+        "expectedFingerprints": [
+          "13fd797d09c931a6",
+          "bf07d84145897f63"
+        ],
+        "expectedPhase": "success"
+      },
+      "expectedScore": 1945,
+      "expectedReplaySignature": "5a759d8a8460e889",
+      "expectedChallengeAchieved": true,
+      "expectedBreakdown": {
+        "totalPoints": 1945,
+        "causalDepth": 5,
+        "causalEventCount": 6,
+        "distinctEntityTypes": 4,
+        "wallReflectionCount": 3,
+        "pastBallCount": 1,
+        "powerSliderCount": 1,
+        "movedEntityCount": 2,
+        "preparationShotCount": 1,
+        "qualifiedImpactCount": 5
+      },
+      "expectedSafety": {
+        "deterministic": true,
+        "finite": true,
+        "noChainSafetyStop": true,
+        "wallsUnchanged": true,
+        "uniqueEntityIds": true,
+        "dynamicObjectsInField": true,
+        "initialNoForbiddenOverlaps": true,
+        "terminalNoForbiddenOverlaps": true,
+        "noHighSpeedTunneling": true,
+        "capturedBallsHaveNoFollowUp": true,
+        "nonSuccessShotsHaveActiveBall": true,
+        "multiShotNoSoftlock": true,
+        "terminalSuccess": true,
+        "shotCount": 2,
+        "physicsEventCount": 16,
+        "safetyEvidence": {
+          "checkedStateCount": 3,
+          "dynamicObjectCount": 6,
+          "checkedMovementSegmentCount": 102,
+          "tunnelingCandidateCount": 6,
+          "capturedBallCount": 1,
+          "nonSuccessShotCount": 1,
+          "verifiedFollowUpShotCount": 1,
+          "terminalWallContactIds": [
+            "spent_ball_2:wall_right"
+          ],
+          "terminalBallId": "spent_ball_2"
+        }
+      }
+    }
+  ]
+}

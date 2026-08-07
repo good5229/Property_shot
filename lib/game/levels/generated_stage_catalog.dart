@@ -5816,6 +5816,909 @@ const generatedStageCatalogJson = r'''
           "metadata": {}
         }
       ]
+    },
+    {
+      "stageId": "stage_chain_score",
+      "title": "8. 세 번 이어라",
+      "patterns": [
+        {
+          "patternId": "stage_chain_score_01",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 480.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 360.0
+              },
+              "size": {
+                "x": 88.0,
+                "y": 88.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "three_jelly",
+              "type": "bumper",
+              "position": {
+                "x": 200.0,
+                "y": 150.0
+              },
+              "size": {
+                "x": 56.0,
+                "y": 56.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "three_balloon",
+              "type": "balloon",
+              "position": {
+                "x": 72.0,
+                "y": 230.0
+              },
+              "size": {
+                "x": 46.0,
+                "y": 46.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "cushion_slider",
+              "type": "power_slider",
+              "position": {
+                "x": 220.0,
+                "y": 460.0
+              },
+              "size": {
+                "x": 104.0,
+                "y": 42.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 40.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            },
+            {
+              "id": "three_sticky",
+              "type": "sticky_surface",
+              "position": {
+                "x": 204.0,
+                "y": 540.0
+              },
+              "size": {
+                "x": 32.0,
+                "y": 40.0
+              },
+              "traits": [
+                "sticky"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.94,
+              "restitution": 0.12,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "벽 쿠션과 첫 번째 공을 정해진 순서로 이어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "three_cushion_chain",
+          "acceptedStrategyIds": [
+            "none",
+            "three_cushion_chain"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "three_cushion_chain"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "ordered_cushion_past_ball",
+            "previous_ball_chain"
+          ],
+          "metadata": {
+            "baseline": "true"
+          }
+        },
+        {
+          "patternId": "stage_chain_score_02",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 480.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 72.0,
+                "y": 132.0
+              },
+              "size": {
+                "x": 80.0,
+                "y": 80.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "chain_crate",
+              "type": "crate",
+              "position": {
+                "x": 180.0,
+                "y": 245.0
+              },
+              "size": {
+                "x": 72.0,
+                "y": 64.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "chain_stone",
+              "type": "weight",
+              "position": {
+                "x": 250.0,
+                "y": 80.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 44.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "chain_switch",
+              "type": "switch_pad",
+              "position": {
+                "x": 300.0,
+                "y": 460.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 32.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "chain_gate",
+              "movableWhenDrained": false
+            },
+            {
+              "id": "chain_gate",
+              "type": "gate",
+              "position": {
+                "x": 300.0,
+                "y": 160.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 140.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "chain_gate",
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 1,
+          "bonusGoal": "벽에서 상자와 첫 번째 공까지 힘을 이어 높은 연쇄 점수를 만들어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "wall_crate_past_ball",
+          "acceptedStrategyIds": [
+            "none",
+            "switch_gate_route",
+            "wall_crate_past_ball"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "switch_gate_route",
+            "wall_crate_past_ball"
+          ],
+          "optionalChallenges": [
+            "moving_crate_chain",
+            "optional_gate_route",
+            "previous_ball_chain"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_chain_score_03",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 480.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 72.0,
+                "y": 80.0
+              },
+              "size": {
+                "x": 68.0,
+                "y": 68.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "speed_slider",
+              "type": "power_slider",
+              "position": {
+                "x": 125.0,
+                "y": 390.0
+              },
+              "size": {
+                "x": 70.0,
+                "y": 36.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 44.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            },
+            {
+              "id": "chain_stone",
+              "type": "weight",
+              "position": {
+                "x": 150.0,
+                "y": 330.0
+              },
+              "size": {
+                "x": 52.0,
+                "y": 44.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "bounce_wall",
+              "type": "wall",
+              "position": {
+                "x": 195.0,
+                "y": 390.0
+              },
+              "size": {
+                "x": 60.0,
+                "y": 18.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.8,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "chain_jelly",
+              "type": "bumper",
+              "position": {
+                "x": 300.0,
+                "y": 440.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 58.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "힘 발판에서 돌과 벽, 첫 번째 공까지 충돌 순서를 이어 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_stone_wall_past_ball",
+          "acceptedStrategyIds": [
+            "none",
+            "slider_stone_wall_past_ball"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "slider_stone_wall_past_ball"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "power_slider_chain",
+            "stone_wall_chain"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_chain_score_04",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "연쇄 응용",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 480.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 100.0
+              },
+              "size": {
+                "x": 88.0,
+                "y": 88.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "score_crate",
+              "type": "crate",
+              "position": {
+                "x": 270.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 58.0,
+                "y": 58.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "score_jelly",
+              "type": "bumper",
+              "position": {
+                "x": 146.5,
+                "y": 180.6
+              },
+              "size": {
+                "x": 76.0,
+                "y": 76.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "score_balloon",
+              "type": "balloon",
+              "position": {
+                "x": 57.6,
+                "y": 297.4
+              },
+              "size": {
+                "x": 64.0,
+                "y": 64.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "score_slider",
+              "type": "power_slider",
+              "position": {
+                "x": 280.0,
+                "y": 240.0
+              },
+              "size": {
+                "x": 100.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 42.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "같은 홀의 짧은 길과 여러 기물을 잇는 긴 길을 비교해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "wall_object_chain",
+          "acceptedStrategyIds": [
+            "none",
+            "straight_low_chain_high",
+            "wall_object_chain"
+          ],
+          "solutionFamilies": [
+            "straight_low_chain_high",
+            "wall_object_chain"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "five_object_chain",
+            "moving_crate_chain"
+          ],
+          "metadata": {}
+        }
+      ]
     }
   ]
 }

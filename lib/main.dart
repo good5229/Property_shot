@@ -3,13 +3,26 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'game/analysis/creative_chain_score.dart';
+import 'game/analysis/stage_chain_challenge.dart';
+import 'game/domain/entity_state.dart';
 import 'game/domain/game_state.dart';
+import 'game/domain/level_definition.dart';
+import 'game/domain/shot_input.dart';
+import 'game/levels/generated_stage_catalog.dart';
 import 'game/levels/levels.dart';
 import 'game/persistence/progress_store.dart';
+import 'game/persistence/run_state_store.dart';
+import 'game/run/stage_pattern_session.dart';
+import 'game/run/run_state.dart';
+import 'game/simulation/shot_resolver.dart';
+import 'game/simulation/trait_resolver.dart';
 import 'ui/game_feedback.dart';
 import 'ui/game_screen.dart';
 import 'ui/game_ball_painter.dart';
+import 'ui/bonus_goal.dart';
 import 'ui/play_telemetry.dart';
 import 'ui/tutorial_experiment.dart';
 
@@ -21,7 +34,8 @@ String _stageIntroMessage(int levelIndex) {
     3 => '풍선 확인 · 여러 경로로 도전',
     4 => '공과 원본의 변화를 함께 살펴보세요',
     5 => '감속을 읽고 발판으로 속도를 되살려 보세요',
-    _ => '첫 공을 남겨 다음 공의 쿠션과 스토퍼로 활용해 보세요',
+    6 => '첫 공을 남겨 다음 공의 쿠션과 스토퍼로 활용해 보세요',
+    _ => '짧은 길과 여러 기물을 잇는 연쇄 길을 비교해 보세요',
   };
 }
 
@@ -40,6 +54,7 @@ class PropertyShotApp extends StatelessWidget {
     this.loadGameAssets = true,
     this.showDebugControls = false,
     this.tutorialVariant = TutorialExperimentVariant.guided,
+    this.progressStore,
   });
 
   final GameState? initialState;
@@ -50,6 +65,7 @@ class PropertyShotApp extends StatelessWidget {
   final bool loadGameAssets;
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
+  final ProgressStore? progressStore;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +97,7 @@ class PropertyShotApp extends StatelessWidget {
           ? _PropertyShotRouter(
               showDebugControls: showDebugControls,
               tutorialVariant: tutorialVariant,
+              progressStore: progressStore,
             )
           : GameScreen(
               initialState: initialState,
@@ -98,10 +115,12 @@ class _PropertyShotRouter extends StatefulWidget {
   const _PropertyShotRouter({
     required this.showDebugControls,
     required this.tutorialVariant,
+    this.progressStore,
   });
 
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
+  final ProgressStore? progressStore;
 
   @override
   State<_PropertyShotRouter> createState() => _PropertyShotRouterState();
@@ -109,21 +128,42 @@ class _PropertyShotRouter extends StatefulWidget {
 
 class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int? _activeStage;
+  LevelDefinition? _activeLevel;
+  GameState? _activeState;
+  List<ShotResult> _activeShotResults = const [];
   bool _showStageSelect = false;
+  bool _selectingStage = false;
   int _copyCoreCount = 0;
   bool _copyCoreRewarded = false;
+  bool _legacyCopyCoreRewarded = false;
+  Set<String> _copyCoreRewardedStageIds = <String>{};
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
   late TutorialExperimentVariant _tutorialVariant = widget.tutorialVariant;
-  final _progressStore = ProgressStore(
-    stageCount: levels.length,
-    stageIds: levels.map((level) => level.id),
-  );
+  late final ProgressStore _progressStore =
+      widget.progressStore ??
+      ProgressStore(
+        stageCount: levels.length,
+        stageIds: levels.map((level) => level.id),
+      );
+  late final Future<StagePatternSession> _patternSessionFuture;
+  late final Future<void> _progressLoadFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadCopyCore();
+    _patternSessionFuture = _createPatternSession();
+    _progressLoadFuture = _loadCopyCore();
+  }
+
+  Future<StagePatternSession> _createPatternSession() async {
+    final preferences = await SharedPreferences.getInstance();
+    return StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
   }
 
   Future<void> _loadCopyCore() async {
@@ -135,45 +175,328 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       }
       setState(() {
         _copyCoreCount = progress.copyCoreCount;
-        _copyCoreRewarded = progress.copyCoreRewarded;
+        _legacyCopyCoreRewarded = progress.copyCoreRewarded;
+        _copyCoreRewardedStageIds = progress.copyCoreRewardedStageIds;
         _clearedLevels = progress.clearedLevels;
         _unlockedLevel = progress.unlockedLevel;
       });
-    } on Exception {
+    } on Object {
       // 저장소를 사용할 수 없어도 기본 진행 상태로 홈을 표시한다.
     }
   }
 
-  void _saveCopyCore() {
-    unawaited(_progressStore.recordCopyCore(_copyCoreCount, _copyCoreRewarded));
-  }
-
-  void _startStage(int index) {
-    if (index > _unlockedLevel) {
+  Future<void> _startStage(
+    int index, {
+    bool allowStoredRunResume = false,
+  }) async {
+    if ((index > _unlockedLevel && !allowStoredRunResume) || _selectingStage) {
       return;
     }
-    setState(() => _activeStage = index);
+    _selectingStage = true;
+    try {
+      await _progressLoadFuture;
+      final session = await _patternSessionFuture;
+      await session.loadState();
+      await session.migrateLegacyCloneCoreReward(
+        rewarded: _legacyCopyCoreRewarded && _copyCoreRewardedStageIds.isEmpty,
+      );
+      await _adoptCloneCoreState(session);
+      await _recoverCompletedProgress(session);
+      await _recoverPendingCopyCoreReward(session);
+      final draw = await session.selectStage(
+        levels[index].id,
+        initialCloneCoreCount: _copyCoreCount,
+        initialCloneCoreRewarded:
+            _legacyCopyCoreRewarded && _copyCoreRewardedStageIds.isEmpty,
+        initialCloneCoreRewardedStageIds: _copyCoreRewardedStageIds,
+      );
+      await _mirrorCloneCore(session);
+      _copyCoreRewarded = _isCloneCoreRewardedForStage(
+        session.state,
+        draw.stageId,
+      );
+      final level = draw.pattern.toLevelDefinition(
+        stageId: draw.stageId,
+        stageTitle: generatedStageCatalog.stageById(draw.stageId).title,
+      );
+      var restoredState = level.createState(
+        index,
+        productRules: true,
+        copyCoreCount: session.replayStartingCloneCoreCount,
+        copyCoreRewarded: _copyCoreRewarded,
+      );
+      final restoredResults = <ShotResult>[];
+      for (final saved in session.currentShotInputs) {
+        restoredState = _restoreTraitActions(restoredState, saved.traitActions);
+        final result = const ShotResolver().resolve(
+          restoredState,
+          ShotInput(
+            direction: saved.direction,
+            power: saved.power,
+            equippedTrait: saved.equippedTrait,
+          ),
+        );
+        restoredResults.add(result);
+        restoredState = result.state;
+      }
+      restoredState = _restoreTraitActions(
+        restoredState,
+        session.state?.pendingTraitActions ?? const [],
+      );
+      if (restoredState.phase == GamePhase.success &&
+          session.state?.phase == RunPhase.playing) {
+        await _recoverCompletedStage(
+          session: session,
+          levelIndex: index,
+          level: level,
+          results: restoredResults,
+          shotCount: restoredState.shotCount,
+        );
+      }
+      restoredState = restoredState.copyWith(
+        copyCoreCount: session.state?.cloneCoreCount ?? _copyCoreCount,
+        copyCoreRewarded: _copyCoreRewarded,
+        message: session.legacyCurrentShotHistoryAmbiguous
+            ? '확인 가능한 ${restoredResults.length}발만 복원했습니다. '
+                  '소속을 확인할 수 없는 구형 발사는 제외했습니다.'
+                  '${session.ambiguousLegacyCopyActionCount > 0 ? ' 복제 코어는 기존 저장 수량을 유지했습니다.' : ''}'
+            : restoredResults.isEmpty
+            ? _stageIntroMessage(index)
+            : '${restoredResults.length}발 진행 상태를 복원했습니다.',
+      );
+      if (!mounted) return;
+      setState(() {
+        _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
+        _activeStage = index;
+        _activeLevel = level;
+        _activeState = restoredState;
+        _activeShotResults = List.unmodifiable(restoredResults);
+      });
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('단계 정보를 불러오지 못했습니다. 다시 시도해 주세요.')),
+        );
+      }
+    } finally {
+      _selectingStage = false;
+    }
+  }
+
+  Future<void> _startOrResume() async {
+    if (_selectingStage) return;
+    try {
+      final session = await _patternSessionFuture;
+      final state = await session.loadState();
+      final stageId =
+          state?.phase == RunPhase.stageCompleted && state?.nextStageId != null
+          ? state!.nextStageId
+          : state?.currentStageId;
+      final restoredIndex = stageId == null
+          ? -1
+          : levels.indexWhere((level) => level.id == stageId);
+      final targetIndex = restoredIndex < 0 ? 0 : restoredIndex;
+      await _startStage(targetIndex, allowStoredRunResume: restoredIndex >= 0);
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('진행 기록을 불러오지 못했습니다. 다시 시도해 주세요.')),
+        );
+      }
+    }
   }
 
   void _returnHome() {
     setState(() {
       _activeStage = null;
+      _activeLevel = null;
+      _activeState = null;
+      _activeShotResults = const [];
       _showStageSelect = false;
     });
   }
 
-  void _earnCopyCore(int amount) {
-    setState(() {
-      _copyCoreCount += amount;
-      _copyCoreRewarded = true;
-    });
-    _saveCopyCore();
+  Future<bool> _earnCopyCore(int levelIndex, int amount) async {
+    final session = await _patternSessionFuture;
+    final awarded = await session.awardStageCloneCores(
+      stageId: levels[levelIndex].id,
+      amount: amount,
+    );
+    _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
+    _copyCoreRewarded = _isCloneCoreRewardedForStage(
+      session.state,
+      levels[levelIndex].id,
+    );
+    _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
+    try {
+      await _progressStore.recordCopyCore(
+        _copyCoreCount,
+        _copyCoreRewardedStageIds.isNotEmpty,
+        rewardedStageIds: _copyCoreRewardedStageIds,
+      );
+    } on Object {
+      // RunState가 복제 코어의 기준이며 진행 기록은 다음 저장 때 다시 동기화한다.
+    }
+    if (mounted) {
+      setState(() {});
+    }
+    return awarded;
   }
 
-  void _recordLevelClear(int levelIndex) {
+  Future<void> _recordLevelClear(
+    int levelIndex,
+    CreativeChainScoreAnalysis? chainScore,
+    bool optionalChallengeAchieved,
+    int shotCount,
+  ) async {
     if (levelIndex < 0 || levelIndex >= levels.length) {
       return;
     }
+    final session = await _patternSessionFuture;
+    await session.completeCurrentStage(
+      stageId: levels[levelIndex].id,
+      shotCount: shotCount,
+      nextStageId: levelIndex < levels.length - 1
+          ? levels[levelIndex + 1].id
+          : null,
+      chainScore: chainScore?.totalScore,
+      optionalChallengeAchieved: optionalChallengeAchieved,
+    );
+    await _progressStore.recordStageClear(levelIndex);
+    _applyClearedLevelInMemory(levelIndex);
+  }
+
+  Future<void> _recoverPendingCopyCoreReward(
+    StagePatternSession session,
+  ) async {
+    final state = session.state;
+    if (state == null ||
+        state.phase != RunPhase.stageCompleted ||
+        _copyCoreRewarded) {
+      return;
+    }
+    final stageId = state.currentStageId;
+    final levelIndex = stageId == null
+        ? -1
+        : levels.indexWhere((level) => level.id == stageId);
+    if (levelIndex < 0) return;
+    final reward = levels[levelIndex].copyCoreReward;
+    if (reward < 1) return;
+    await session.awardStageCloneCores(stageId: stageId!, amount: reward);
+    _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
+    _copyCoreRewarded = _isCloneCoreRewardedForStage(session.state, stageId);
+    _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
+    try {
+      await _progressStore.recordCopyCore(
+        _copyCoreCount,
+        _copyCoreRewardedStageIds.isNotEmpty,
+        rewardedStageIds: _copyCoreRewardedStageIds,
+      );
+    } on Object {
+      // 지급 표식과 수량은 RunState에 원자적으로 보존되어 재지급되지 않는다.
+    }
+  }
+
+  Future<void> _recoverCompletedProgress(StagePatternSession session) async {
+    final state = session.state;
+    if (state == null || state.phase != RunPhase.stageCompleted) return;
+    final stageId = state.currentStageId;
+    final levelIndex = stageId == null
+        ? -1
+        : levels.indexWhere((level) => level.id == stageId);
+    if (levelIndex < 0) return;
+    await _progressStore.recordStageClear(levelIndex);
+    final shotCount = state.shotsPerStage[stageId];
+    if (shotCount != null) {
+      await _progressStore.recordBestShot(levelIndex, shotCount);
+    }
+    final challengeKey = '$stageId:${state.currentPatternId}';
+    if (state.optionalChallenges[challengeKey] == true) {
+      await _progressStore.recordBonusGoal(levelIndex);
+    }
+    _applyClearedLevelInMemory(levelIndex);
+  }
+
+  Future<void> _adoptCloneCoreState(StagePatternSession session) async {
+    final state = session.state;
+    if (state == null) return;
+    _copyCoreCount = state.cloneCoreCount;
+    _copyCoreRewarded = _isCloneCoreRewardedForStage(
+      state,
+      state.currentStageId,
+    );
+    _copyCoreRewardedStageIds = stageCloneCoreRewardStageIds(
+      state.acquiredRewards,
+    );
+    try {
+      await _progressStore.recordCopyCore(
+        _copyCoreCount,
+        _copyCoreRewardedStageIds.isNotEmpty,
+        rewardedStageIds: _copyCoreRewardedStageIds,
+      );
+    } on Object {
+      // RunState의 원자 저장값을 사용할 수 있으므로 게임 진입은 계속한다.
+    }
+  }
+
+  Future<void> _recoverCompletedStage({
+    required StagePatternSession session,
+    required int levelIndex,
+    required LevelDefinition level,
+    required List<ShotResult> results,
+    required int shotCount,
+  }) async {
+    CreativeChainScoreAnalysis? analysis;
+    var optionalChallengeAchieved = false;
+    if (levelIndex == 7 && results.isNotEmpty) {
+      analysis = const CreativeChainScoreAnalyzer().analyze(
+        results,
+        parShots: level.parShots,
+        optionalChallengeIds: CreativeChainChallengeId.all,
+      );
+      final patternId = level.patternId;
+      optionalChallengeAchieved =
+          patternId != null &&
+          const StageChainChallengeEvaluator().isAchieved(
+            patternId: patternId,
+            analysis: analysis,
+            results: results,
+          );
+    } else if (results.isNotEmpty) {
+      optionalChallengeAchieved = bonusGoalReached(
+        levelIndex: levelIndex,
+        shotCount: shotCount,
+        bumperHit: results.any(
+          (result) => result.impacts.any(
+            (impact) => impact.entityType == EntityType.bumper,
+          ),
+        ),
+        switchPressed: results.any(
+          (result) => result.events.contains('switch_pressed'),
+        ),
+        drainedSourceMoved: _drainedSourceMoved(results),
+      );
+    }
+    await session.completeCurrentStage(
+      stageId: levels[levelIndex].id,
+      shotCount: shotCount,
+      nextStageId: levelIndex < levels.length - 1
+          ? levels[levelIndex + 1].id
+          : null,
+      chainScore: analysis?.totalScore,
+      optionalChallengeAchieved: optionalChallengeAchieved,
+    );
+    await _progressStore.recordStageClear(levelIndex);
+    await _progressStore.recordBestShot(levelIndex, shotCount);
+    if (optionalChallengeAchieved) {
+      await _progressStore.recordBonusGoal(levelIndex);
+    }
+    await _recoverPendingCopyCoreReward(session);
+    _applyClearedLevelInMemory(levelIndex);
+  }
+
+  void _applyClearedLevelInMemory(int levelIndex) {
+    if (!mounted) return;
     final clearedLevels = {..._clearedLevels, levelIndex};
     setState(() {
       _clearedLevels = clearedLevels;
@@ -182,27 +505,120 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _progressStore.unlockedLevelFromCleared(clearedLevels),
       );
     });
-    unawaited(_progressStore.recordStageClear(levelIndex));
+  }
+
+  bool _drainedSourceMoved(Iterable<ShotResult> results) {
+    for (final result in results) {
+      if (result.state.history.isEmpty) continue;
+      final drainedIds = result.state.history.first.entities
+          .where((entity) => entity.visualState == 'drained')
+          .map((entity) => entity.id)
+          .toSet();
+      if (result.moves.any(
+        (move) => drainedIds.contains(move.entityId) && move.from != move.to,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _recordShot(ShotInput input) async {
+    final session = await _patternSessionFuture;
+    await session.recordShot(input: input);
+  }
+
+  Future<void> _recordTraitAction(
+    String sourceId,
+    RunTraitAction action,
+  ) async {
+    final session = await _patternSessionFuture;
+    await session.recordTraitAction(sourceId: sourceId, action: action);
+    _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
+    _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
+    try {
+      await _progressStore.recordCopyCore(
+        _copyCoreCount,
+        _copyCoreRewardedStageIds.isNotEmpty,
+        rewardedStageIds: _copyCoreRewardedStageIds,
+      );
+    } on Object {
+      // 기준 RunState 저장이 성공했으므로 화면의 속성 행동은 계속 적용한다.
+    }
+  }
+
+  Future<void> _restartStageRun() async {
+    final session = await _patternSessionFuture;
+    await session.restartCurrentStage();
+    await _mirrorCloneCore(session);
+  }
+
+  Future<void> _rewindStageRun() async {
+    final session = await _patternSessionFuture;
+    await session.rewindCurrentShot();
+    await _mirrorCloneCore(session);
+  }
+
+  Future<void> _mirrorCloneCore(StagePatternSession session) async {
+    _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
+    _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
+    try {
+      await _progressStore.recordCopyCore(
+        _copyCoreCount,
+        _copyCoreRewardedStageIds.isNotEmpty,
+        rewardedStageIds: _copyCoreRewardedStageIds,
+      );
+    } on Object {
+      // RunState가 기준이므로 다음 성공한 미러 저장 때 다시 동기화한다.
+    }
+  }
+
+  bool _isCloneCoreRewardedForStage(RunState? state, String? stageId) {
+    if (state == null || stageId == null) return false;
+    return hasStageCloneCoreReward(state.acquiredRewards, stageId);
+  }
+
+  Set<String> _cloneCoreRewardStageIds(StagePatternSession session) =>
+      stageCloneCoreRewardStageIds(
+        session.state?.acquiredRewards ?? const <String>[],
+      );
+
+  GameState _restoreTraitActions(
+    GameState state,
+    Iterable<RunTraitActionRecord> actions,
+  ) {
+    const resolver = TraitResolver();
+    var restored = state;
+    for (final action in actions) {
+      final selected = resolver.selectSource(restored, action.sourceId);
+      restored = switch (action.action) {
+        RunTraitAction.transfer => resolver.transferSelectedTrait(selected),
+        RunTraitAction.copy => resolver.copySelectedTrait(selected),
+      };
+    }
+    return restored;
   }
 
   @override
   Widget build(BuildContext context) {
     final activeStage = _activeStage;
-    if (activeStage != null) {
+    final activeLevel = _activeLevel;
+    final activeState = _activeState;
+    if (activeStage != null && activeLevel != null && activeState != null) {
       return GameScreen(
-        key: ValueKey('stage_$activeStage'),
-        initialState: levels[activeStage]
-            .createState(
-              activeStage,
-              productRules: true,
-              copyCoreCount: _copyCoreCount,
-              copyCoreRewarded: _copyCoreRewarded,
-            )
-            .copyWith(message: _stageIntroMessage(activeStage)),
+        key: ValueKey('stage_$activeStage:${activeLevel.patternId}'),
+        initialState: activeState,
+        initialShotResults: _activeShotResults,
+        levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
         onCopyCoreEarned: _earnCopyCore,
         onLevelCleared: _recordLevelClear,
+        onStageRequested: _startStage,
+        onShotCommitted: _recordShot,
+        onTraitActionCommitted: _recordTraitAction,
+        onStageRestarted: _restartStageRun,
+        onShotRewound: _rewindStageRun,
         progressStore: _progressStore,
         tutorialVariant: _tutorialVariant,
         showDebugControls: widget.showDebugControls,
@@ -211,12 +627,12 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     if (_showStageSelect) {
       return _StageSelectScreen(
         onBack: () => setState(() => _showStageSelect = false),
-        onSelectStage: _startStage,
+        onSelectStage: (index) => unawaited(_startStage(index)),
         unlockedLevel: _unlockedLevel,
       );
     }
     return _HomeScreen(
-      onStart: () => _startStage(0),
+      onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => setState(() => _showStageSelect = true),
       showDebugControls: widget.showDebugControls,
       tutorialVariant: _tutorialVariant,
@@ -871,6 +1287,7 @@ class _StageTile extends StatelessWidget {
       '공이 얻는 능력과 원본이 잃는 능력을 함께 이용해 보세요.',
       '약하게 쏜 뒤 발판에 들어가는 각도와 우회 길을 찾아 보세요.',
       '과거 공을 쿠션·스위치·스토퍼로 활용해 여러 발의 인과를 만들어 보세요.',
+      '짧게 넣거나 벽과 기물을 이어 더 높은 연쇄 점수에 도전해 보세요.',
     ];
     final assets = [
       'assets/icons/stone_boulder.png',
@@ -880,6 +1297,7 @@ class _StageTile extends StatelessWidget {
       'assets/icons/stone_boulder.png',
       'assets/generated/crate-v2.png',
       '',
+      'assets/icons/crate.png',
     ];
     final stageAsset = assets[index];
     return Padding(

@@ -282,7 +282,7 @@ class _DebugMenuState extends State<DebugMenu> {
                   ),
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('물체 ID 표시'),
+                    title: const Text('물체 식별자 표시'),
                     value: widget.showIds,
                     onChanged: widget.onToggleIds,
                   ),
@@ -316,7 +316,7 @@ class _DebugMenuState extends State<DebugMenu> {
                         child: OutlinedButton.icon(
                           onPressed: widget.onCopyState,
                           icon: const Icon(Icons.content_copy),
-                          label: const Text('상태 JSON 복사'),
+                          label: const Text('상태 데이터 복사'),
                         ),
                       ),
                       const SizedBox(width: 8),

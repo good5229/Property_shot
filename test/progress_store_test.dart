@@ -5,6 +5,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   final store = ProgressStore(stageCount: 4);
 
+  test('저장 API가 false를 반환하면 성공으로 처리하지 않는다', () {
+    expect(
+      () => requireSuccessfulProgressWrite(false, '테스트_키'),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      () => requireSuccessfulProgressWrite(true, '테스트_키'),
+      returnsNormally,
+    );
+  });
+
   test('새 저장소는 기본값을 만들고 버전을 기록한다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 
@@ -13,7 +24,10 @@ void main() {
 
     expect(snapshot.unlockedLevel, 0);
     expect(snapshot.clearedLevels, isEmpty);
-    expect(preferences.getInt(ProgressStore.saveVersionKey), 2);
+    expect(
+      preferences.getInt(ProgressStore.saveVersionKey),
+      ProgressStore.saveVersion,
+    );
     expect(preferences.getStringList(ProgressStore.clearedLevelsKey), isEmpty);
   });
 
@@ -56,7 +70,7 @@ void main() {
     await store.recordBestShot(0, 4);
     await store.recordBestShot(0, 5);
     await store.recordBonusGoal(0);
-    await store.recordCopyCore(2, true);
+    await store.recordCopyCore(2, true, rewardedStageIds: const ['stage_2']);
     final snapshot = await store.load();
 
     expect(snapshot.clearedLevels, contains(0));
@@ -65,6 +79,7 @@ void main() {
     expect(snapshot.bonusGoals, contains(0));
     expect(snapshot.copyCoreCount, 2);
     expect(snapshot.copyCoreRewarded, isTrue);
+    expect(snapshot.copyCoreRewardedStageIds, {'stage_2'});
   });
 
   test('앱 재실행 뒤 클리어·기록·보너스·복제 코어를 복원한다', () async {
@@ -74,7 +89,11 @@ void main() {
     await firstRun.recordStageClear(0);
     await firstRun.recordBestShot(0, 2);
     await firstRun.recordBonusGoal(0);
-    await firstRun.recordCopyCore(3, true);
+    await firstRun.recordCopyCore(
+      3,
+      true,
+      rewardedStageIds: const ['stage_1', 'stage_3'],
+    );
 
     final afterRestart = await ProgressStore(stageCount: 4).load();
 
@@ -84,6 +103,7 @@ void main() {
     expect(afterRestart.bonusGoals, contains(0));
     expect(afterRestart.copyCoreCount, 3);
     expect(afterRestart.copyCoreRewarded, isTrue);
+    expect(afterRestart.copyCoreRewardedStageIds, {'stage_1', 'stage_3'});
   });
 
   test('동시에 들어온 클리어와 최고 기록을 순서대로 보존한다', () async {
@@ -134,6 +154,25 @@ void main() {
     expect(snapshot.bestShots, isEmpty);
     expect(snapshot.bonusGoals, isEmpty);
     expect(snapshot.copyCoreCount, 0);
+    expect(snapshot.copyCoreRewardedStageIds, isEmpty);
+  });
+
+  test('복제 코어 보상 단계는 유효한 안정 ID만 중복 없이 저장한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final stableStore = ProgressStore(
+      stageCount: 3,
+      stageIds: const ['stage_a', 'stage_b', 'stage_c'],
+    );
+
+    await stableStore.recordCopyCore(
+      4,
+      false,
+      rewardedStageIds: const ['stage_b', 'stage_b', '삭제된_단계'],
+    );
+    final snapshot = await stableStore.load();
+
+    expect(snapshot.copyCoreRewarded, isTrue);
+    expect(snapshot.copyCoreRewardedStageIds, {'stage_b'});
   });
 
   test('스테이지 배열 순서가 바뀌어도 안정 ID로 최고 기록을 유지한다', () async {

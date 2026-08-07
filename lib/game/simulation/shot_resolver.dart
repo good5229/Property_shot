@@ -1682,6 +1682,7 @@ class ShotResolver {
       position: position,
       traits: ball.traits,
       movable: !events.contains('sticky_attached'),
+      hitboxScale: ball.hitboxScale,
       visualState: success
           ? 'scored'
           : events.contains('sticky_attached')

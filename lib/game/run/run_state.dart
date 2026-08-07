@@ -102,43 +102,103 @@ class PatternDrawRecord {
 }
 
 /// 재현에 필요한 한 번의 발사 입력이다.
+enum RunTraitAction { transfer, copy }
+
+String stageCloneCoreRewardId(String stageId) => 'stage_clone_core:$stageId';
+
+const legacyStageCloneCoreRewardId = 'stage_clone_core:legacy';
+const legacyCloneCoreRewardStageId = 'stage_chain_gate';
+
+bool hasStageCloneCoreReward(Iterable<String> rewards, String stageId) =>
+    rewards.contains(stageCloneCoreRewardId(stageId));
+
+bool hasAnyStageCloneCoreReward(Iterable<String> rewards) =>
+    rewards.any((reward) => reward.startsWith('stage_clone_core:'));
+
+Set<String> stageCloneCoreRewardStageIds(Iterable<String> rewards) => {
+  for (final reward in rewards)
+    if (reward.startsWith('stage_clone_core:') &&
+        reward != legacyStageCloneCoreRewardId)
+      reward.substring('stage_clone_core:'.length),
+};
+
+class RunTraitActionRecord {
+  const RunTraitActionRecord({required this.sourceId, required this.action});
+
+  final String sourceId;
+  final RunTraitAction action;
+
+  factory RunTraitActionRecord.fromJson(Map<String, dynamic> json) {
+    final sourceId = _requiredString(json, 'sourceId', 'trait action');
+    final action = _requiredString(json, 'action', 'trait action');
+    try {
+      return RunTraitActionRecord(
+        sourceId: sourceId,
+        action: RunTraitAction.values.byName(action),
+      );
+    } on ArgumentError {
+      throw FormatException('trait action: 알 수 없는 action입니다: $action');
+    }
+  }
+
+  Map<String, dynamic> toJson() => {
+    'sourceId': sourceId,
+    'action': action.name,
+  };
+}
+
 class RunShotInput {
   RunShotInput({
     required this.stageId,
     required this.patternId,
+    this.patternSeed,
     required this.shotIndex,
     required this.direction,
     required this.power,
     this.equippedTrait,
-  }) {
+    Iterable<RunTraitActionRecord> traitActions = const [],
+  }) : traitActions = List.unmodifiable(traitActions) {
     _validateId(stageId, 'stageId');
     _validateId(patternId, 'patternId');
+    if (patternSeed != null) {
+      _validateSeed(patternSeed!, 'patternSeed');
+    }
     _validateNonNegative(shotIndex, 'shotIndex');
     _validateVec2(direction, 'direction');
     if (!power.isFinite || power < 0 || power > 1) {
       throw ArgumentError.value(power, 'power', '0 이상 1 이하의 유한한 수여야 합니다.');
     }
+    for (final action in this.traitActions) {
+      _validateId(action.sourceId, 'trait action sourceId');
+    }
   }
 
   final String stageId;
   final String patternId;
+  final int? patternSeed;
   final int shotIndex;
   final Vec2 direction;
   final double power;
   final TraitType? equippedTrait;
+  final List<RunTraitActionRecord> traitActions;
 
   factory RunShotInput.fromJson(Map<String, dynamic> json) {
     final trait = json['equippedTrait'];
     if (trait != null && trait is! String) {
       throw const FormatException('shot input: equippedTrait가 문자열이 아닙니다.');
     }
+    final actions = _traitActionsFromShotJson(json);
     return RunShotInput(
       stageId: _requiredString(json, 'stageId', 'shot input'),
       patternId: _requiredString(json, 'patternId', 'shot input'),
+      patternSeed: json.containsKey('patternSeed')
+          ? _nullableSeed(json, 'patternSeed', 'shot input')
+          : null,
       shotIndex: _requiredNonNegativeInt(json, 'shotIndex', 'shot input'),
       direction: _requiredVec2(json, 'direction', 'shot input'),
       power: _requiredFiniteDouble(json, 'power', 'shot input'),
       equippedTrait: trait == null ? null : traitTypeFromSchemaName(trait),
+      traitActions: actions,
     );
   }
 
@@ -146,13 +206,46 @@ class RunShotInput {
     return {
       'stageId': stageId,
       'patternId': patternId,
+      'patternSeed': patternSeed,
       'shotIndex': shotIndex,
       'direction': direction.toJson(),
       'power': power,
       'equippedTrait': equippedTrait == null
           ? null
           : traitTypeToSchemaName(equippedTrait!),
+      'traitActions': traitActions.map((action) => action.toJson()).toList(),
     };
+  }
+}
+
+List<RunTraitActionRecord> _traitActionsFromShotJson(
+  Map<String, dynamic> json,
+) {
+  final rawActions = json['traitActions'];
+  if (rawActions != null) {
+    if (rawActions is! List) {
+      throw const FormatException('shot input: traitActions가 목록이 아닙니다.');
+    }
+    return [
+      for (final raw in rawActions)
+        RunTraitActionRecord.fromJson(_mapValue(raw, 'shot trait action')),
+    ];
+  }
+  final sourceId = json['traitSourceId'];
+  final action = json['traitAction'];
+  if (sourceId == null && action == null) return const [];
+  if (sourceId is! String || action is! String) {
+    throw const FormatException('shot input: 구형 속성 원본과 행동이 올바르지 않습니다.');
+  }
+  try {
+    return [
+      RunTraitActionRecord(
+        sourceId: sourceId,
+        action: RunTraitAction.values.byName(action),
+      ),
+    ];
+  } on ArgumentError {
+    throw FormatException('shot input: 알 수 없는 traitAction입니다: $action');
   }
 }
 
@@ -181,6 +274,7 @@ class RunState {
     this.selectedRewardId,
     Iterable<String> acquiredRewards = const [],
     required this.cloneCoreCount,
+    Iterable<RunTraitActionRecord> pendingTraitActions = const [],
     Map<String, int> shotsPerStage = const {},
     Map<String, int> chainScoresPerStage = const {},
     Map<String, bool> optionalChallenges = const {},
@@ -193,6 +287,7 @@ class RunState {
        stageShuffleBags = Map.unmodifiable(stageShuffleBags),
        rewardCandidateIds = List.unmodifiable(rewardCandidateIds),
        acquiredRewards = Set.unmodifiable(acquiredRewards),
+       pendingTraitActions = List.unmodifiable(pendingTraitActions),
        shotsPerStage = Map.unmodifiable(shotsPerStage),
        chainScoresPerStage = Map.unmodifiable(chainScoresPerStage),
        optionalChallenges = Map.unmodifiable(optionalChallenges),
@@ -222,6 +317,7 @@ class RunState {
   final String? selectedRewardId;
   final Set<String> acquiredRewards;
   final int cloneCoreCount;
+  final List<RunTraitActionRecord> pendingTraitActions;
 
   final Map<String, int> shotsPerStage;
   final Map<String, int> chainScoresPerStage;
@@ -238,6 +334,8 @@ class RunState {
     required int rootSeed,
     required String resolverVersion,
     required StagePatternDraw currentDraw,
+    int cloneCoreCount = 0,
+    Iterable<String> acquiredRewards = const [],
     StagePatternDraw? nextDraw,
     DateTime? now,
   }) {
@@ -266,7 +364,9 @@ class RunState {
       nextStagePatternSeed: nextDraw?.patternSeed,
       patternDrawHistory: drawHistory,
       stageShuffleBags: stageShuffleBags,
-      cloneCoreCount: 0,
+      acquiredRewards: acquiredRewards,
+      cloneCoreCount: cloneCoreCount,
+      pendingTraitActions: const [],
       totalScore: 0,
       startedAt: timestamp,
       updatedAt: timestamp,
@@ -348,6 +448,14 @@ class RunState {
           'cloneCoreCount',
           'run state',
         ),
+        pendingTraitActions: json.containsKey('pendingTraitActions')
+            ? _requiredList(
+                json,
+                'pendingTraitActions',
+                'run state',
+                RunTraitActionRecord.fromJson,
+              )
+            : const [],
         shotsPerStage: _requiredNonNegativeIntMap(
           json,
           'shotsPerStage',
@@ -421,6 +529,9 @@ class RunState {
       'selectedRewardId': selectedRewardId,
       'acquiredRewards': acquiredRewards.toList()..sort(),
       'cloneCoreCount': cloneCoreCount,
+      'pendingTraitActions': pendingTraitActions
+          .map((action) => action.toJson())
+          .toList(),
       'shotsPerStage': _sortedIntMap(shotsPerStage),
       'chainScoresPerStage': _sortedIntMap(chainScoresPerStage),
       'optionalChallenges': _sortedBoolMap(optionalChallenges),
@@ -537,6 +648,9 @@ void _validateRunState(RunState state) {
   }
 
   _validateNonNegative(state.cloneCoreCount, 'cloneCoreCount');
+  for (final action in state.pendingTraitActions) {
+    _validateId(action.sourceId, 'pending trait action sourceId');
+  }
   _validateNonNegative(state.totalScore, 'totalScore');
   _validateStringIntMap(state.shotsPerStage, 'shotsPerStage');
   _validateStringIntMap(state.chainScoresPerStage, 'chainScoresPerStage');
@@ -556,11 +670,46 @@ void _validateRunState(RunState state) {
       throw ArgumentError('stageShuffleBags key와 상태의 stageId가 다릅니다.');
     }
   }
+  _validateShotInputLog(state.shotInputLog, state.patternDrawHistory);
   if (!state.startedAt.isUtc || !state.updatedAt.isUtc) {
     throw ArgumentError('날짜는 UTC여야 합니다.');
   }
   if (state.updatedAt.isBefore(state.startedAt)) {
     throw ArgumentError('updatedAt은 startedAt보다 빠를 수 없습니다.');
+  }
+}
+
+void _validateShotInputLog(
+  List<RunShotInput> inputs,
+  List<PatternDrawRecord> history,
+) {
+  final grouped = <String, List<RunShotInput>>{};
+  for (final input in inputs) {
+    final matchingDraws = history.where(
+      (record) =>
+          record.stageId == input.stageId &&
+          record.patternId == input.patternId &&
+          (input.patternSeed == null ||
+              record.patternSeed == input.patternSeed),
+    );
+    if (matchingDraws.isEmpty) {
+      throw ArgumentError('샷 입력이 patternDrawHistory의 추첨 기록과 일치하지 않습니다.');
+    }
+    if (input.traitActions.isNotEmpty && input.equippedTrait == null) {
+      throw ArgumentError('속성 이전·복사 기록에는 장착된 속성이 필요합니다.');
+    }
+    final key =
+        '${input.stageId}\u0000${input.patternId}\u0000'
+        '${input.patternSeed?.toString() ?? 'legacy'}';
+    grouped.putIfAbsent(key, () => []).add(input);
+  }
+  for (final group in grouped.values) {
+    group.sort((left, right) => left.shotIndex.compareTo(right.shotIndex));
+    for (var index = 0; index < group.length; index++) {
+      if (group[index].shotIndex != index) {
+        throw ArgumentError('같은 패턴의 샷 순서는 0부터 빠짐없이 이어져야 합니다.');
+      }
+    }
   }
 }
 

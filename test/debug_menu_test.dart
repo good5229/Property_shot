@@ -33,7 +33,7 @@ void main() {
     expect(find.text('리플레이 녹화'), findsOneWidget);
     expect(find.text('사운드 켜기'), findsOneWidget);
     expect(find.text('햅틱 켜기'), findsOneWidget);
-    expect(find.text('상태 JSON 복사'), findsOneWidget);
+    expect(find.text('상태 데이터 복사'), findsOneWidget);
     expect(find.text('이벤트 복사'), findsOneWidget);
     expect(find.textContaining('anvil'), findsNothing);
     expect(find.textContaining('spike_source'), findsNothing);

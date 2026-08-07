@@ -1,5 +1,11 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+void requireSuccessfulProgressWrite(bool succeeded, String key) {
+  if (!succeeded) {
+    throw StateError('진행 기록 저장에 실패했습니다: $key');
+  }
+}
+
 class ProgressSnapshot {
   const ProgressSnapshot({
     required this.clearedLevels,
@@ -8,6 +14,7 @@ class ProgressSnapshot {
     required this.bonusGoals,
     required this.copyCoreCount,
     required this.copyCoreRewarded,
+    required this.copyCoreRewardedStageIds,
   });
 
   final Set<int> clearedLevels;
@@ -16,6 +23,7 @@ class ProgressSnapshot {
   final Set<int> bonusGoals;
   final int copyCoreCount;
   final bool copyCoreRewarded;
+  final Set<String> copyCoreRewardedStageIds;
 }
 
 class ProgressStore {
@@ -26,7 +34,7 @@ class ProgressStore {
             : stageIds,
       );
 
-  static const saveVersion = 2;
+  static const saveVersion = 3;
   static const clearedLevelsKey = 'property_shot_cleared_levels';
   static const clearedStageIdsKey = 'property_shot_cleared_stage_ids';
   static const unlockedLevelKey = 'property_shot_unlocked_level';
@@ -34,6 +42,8 @@ class ProgressStore {
   static const saveVersionKey = 'property_shot_save_version';
   static const copyCoreCountKey = 'property_shot_copy_core_count';
   static const copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
+  static const copyCoreRewardedStageIdsKey =
+      'property_shot_copy_core_rewarded_stage_ids';
 
   final int stageCount;
   final List<String> stageIds;
@@ -96,6 +106,9 @@ class ProgressStore {
         bonusGoals.add(index);
       }
     }
+    final copyCoreRewardedStageIds = _readStringSet(
+      _safeStringList(preferences, copyCoreRewardedStageIdsKey),
+    );
 
     return ProgressSnapshot(
       clearedLevels: clearedLevels,
@@ -106,7 +119,10 @@ class ProgressStore {
         0,
         999,
       ),
-      copyCoreRewarded: _safeBool(preferences, copyCoreRewardedKey) == true,
+      copyCoreRewarded:
+          _safeBool(preferences, copyCoreRewardedKey) == true ||
+          copyCoreRewardedStageIds.isNotEmpty,
+      copyCoreRewardedStageIds: copyCoreRewardedStageIds,
     );
   }
 
@@ -123,30 +139,46 @@ class ProgressStore {
         _unlockedLevelFromCleared(clearedLevels),
       );
       await _writeVersion(preferences);
-      await preferences.setStringList(
+      await _setStringList(
+        preferences,
         clearedLevelsKey,
         (clearedLevels.toList()..sort()).map((index) => '$index').toList(),
       );
-      await preferences.setStringList(
+      await _setStringList(
+        preferences,
         clearedStageIdsKey,
         (clearedLevels.toList()..sort())
             .map((index) => stageIds[index])
             .toList(),
       );
-      await preferences.setInt(unlockedLevelKey, _clampLevel(unlockedLevel));
-      await preferences.setInt(
+      await _setInt(preferences, unlockedLevelKey, _clampLevel(unlockedLevel));
+      await _setInt(
+        preferences,
         legacyUnlockedLevelKey,
         _clampLevel(unlockedLevel),
       );
     });
   }
 
-  Future<void> recordCopyCore(int count, bool rewarded) {
+  Future<void> recordCopyCore(
+    int count,
+    bool rewarded, {
+    Iterable<String>? rewardedStageIds,
+  }) {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
+      final ids = rewardedStageIds?.where(stageIds.contains).toSet().toList()
+        ?..sort();
       await _writeVersion(preferences);
-      await preferences.setInt(copyCoreCountKey, count.clamp(0, 999));
-      await preferences.setBool(copyCoreRewardedKey, rewarded);
+      await _setInt(preferences, copyCoreCountKey, count.clamp(0, 999));
+      await _setBool(
+        preferences,
+        copyCoreRewardedKey,
+        rewarded || (ids?.isNotEmpty ?? false),
+      );
+      if (ids != null) {
+        await _setStringList(preferences, copyCoreRewardedStageIdsKey, ids);
+      }
     });
   }
 
@@ -160,14 +192,21 @@ class ProgressStore {
       final previous = current.bestShots[levelIndex];
       if (previous != null && previous <= shotCount) {
         await _writeVersion(preferences);
+        await _setInt(
+          preferences,
+          bestShotStageKey(stageIds[levelIndex]),
+          previous,
+        );
+        await _setInt(preferences, bestShotKey(levelIndex), previous);
         return;
       }
       await _writeVersion(preferences);
-      await preferences.setInt(
+      await _setInt(
+        preferences,
         bestShotStageKey(stageIds[levelIndex]),
         shotCount,
       );
-      await preferences.setInt(bestShotKey(levelIndex), shotCount);
+      await _setInt(preferences, bestShotKey(levelIndex), shotCount);
     });
   }
 
@@ -178,24 +217,25 @@ class ProgressStore {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
       await _writeVersion(preferences);
-      await preferences.setBool(bonusGoalKey(levelIndex), true);
+      await _setBool(preferences, bonusGoalKey(levelIndex), true);
     });
   }
 
   Future<void> reset() {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
-      await preferences.remove(saveVersionKey);
-      await preferences.remove(clearedLevelsKey);
-      await preferences.remove(clearedStageIdsKey);
-      await preferences.remove(unlockedLevelKey);
-      await preferences.remove(legacyUnlockedLevelKey);
-      await preferences.remove(copyCoreCountKey);
-      await preferences.remove(copyCoreRewardedKey);
+      await _remove(preferences, saveVersionKey);
+      await _remove(preferences, clearedLevelsKey);
+      await _remove(preferences, clearedStageIdsKey);
+      await _remove(preferences, unlockedLevelKey);
+      await _remove(preferences, legacyUnlockedLevelKey);
+      await _remove(preferences, copyCoreCountKey);
+      await _remove(preferences, copyCoreRewardedKey);
+      await _remove(preferences, copyCoreRewardedStageIdsKey);
       for (var index = 0; index < stageCount; index++) {
-        await preferences.remove(bestShotKey(index));
-        await preferences.remove(bestShotStageKey(stageIds[index]));
-        await preferences.remove(bonusGoalKey(index));
+        await _remove(preferences, bestShotKey(index));
+        await _remove(preferences, bestShotStageKey(stageIds[index]));
+        await _remove(preferences, bonusGoalKey(index));
       }
     });
   }
@@ -204,13 +244,13 @@ class ProgressStore {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
       await _writeVersion(preferences);
-      await preferences.setStringList(clearedLevelsKey, [
+      await _setStringList(preferences, clearedLevelsKey, [
         for (var index = 0; index < stageCount; index++) '$index',
       ]);
-      await preferences.setStringList(clearedStageIdsKey, stageIds);
+      await _setStringList(preferences, clearedStageIdsKey, stageIds);
       if (stageCount > 0) {
-        await preferences.setInt(unlockedLevelKey, stageCount - 1);
-        await preferences.setInt(legacyUnlockedLevelKey, stageCount - 1);
+        await _setInt(preferences, unlockedLevelKey, stageCount - 1);
+        await _setInt(preferences, legacyUnlockedLevelKey, stageCount - 1);
       }
     });
   }
@@ -225,9 +265,8 @@ class ProgressStore {
     return _unlockedLevelFromCleared(clearedLevels);
   }
 
-  Future<void> _writeVersion(SharedPreferences preferences) {
-    return preferences.setInt(saveVersionKey, saveVersion);
-  }
+  Future<void> _writeVersion(SharedPreferences preferences) =>
+      _setInt(preferences, saveVersionKey, saveVersion);
 
   Future<void> _write(
     SharedPreferences preferences,
@@ -238,42 +277,84 @@ class ProgressStore {
             .where((index) => index >= 0 && index < stageCount)
             .toList()
           ..sort();
-    await preferences.setInt(saveVersionKey, saveVersion);
-    await preferences.setStringList(
+    await _setInt(preferences, saveVersionKey, saveVersion);
+    await _setStringList(
+      preferences,
       clearedLevelsKey,
       clearedLevels.map((index) => '$index').toList(),
     );
-    await preferences.setStringList(
+    await _setStringList(
+      preferences,
       clearedStageIdsKey,
       clearedLevels.map((index) => stageIds[index]).toList(),
     );
-    await preferences.setInt(
+    await _setInt(
+      preferences,
       unlockedLevelKey,
       _clampLevel(snapshot.unlockedLevel),
     );
-    await preferences.setInt(
+    await _setInt(
+      preferences,
       legacyUnlockedLevelKey,
       _clampLevel(snapshot.unlockedLevel),
     );
-    await preferences.setInt(
+    await _setInt(
+      preferences,
       copyCoreCountKey,
       snapshot.copyCoreCount.clamp(0, 999),
     );
-    await preferences.setBool(copyCoreRewardedKey, snapshot.copyCoreRewarded);
+    await _setBool(preferences, copyCoreRewardedKey, snapshot.copyCoreRewarded);
+    await _setStringList(
+      preferences,
+      copyCoreRewardedStageIdsKey,
+      snapshot.copyCoreRewardedStageIds.toList()..sort(),
+    );
     for (var index = 0; index < stageCount; index++) {
       final best = snapshot.bestShots[index];
       if (best == null) {
-        await preferences.remove(bestShotKey(index));
-        await preferences.remove(bestShotStageKey(stageIds[index]));
+        await _remove(preferences, bestShotKey(index));
+        await _remove(preferences, bestShotStageKey(stageIds[index]));
       } else {
-        await preferences.setInt(bestShotStageKey(stageIds[index]), best);
-        await preferences.setInt(bestShotKey(index), best);
+        await _setInt(preferences, bestShotStageKey(stageIds[index]), best);
+        await _setInt(preferences, bestShotKey(index), best);
       }
-      await preferences.setBool(
+      await _setBool(
+        preferences,
         bonusGoalKey(index),
         snapshot.bonusGoals.contains(index),
       );
     }
+  }
+
+  Future<void> _setInt(
+    SharedPreferences preferences,
+    String key,
+    int value,
+  ) async {
+    requireSuccessfulProgressWrite(await preferences.setInt(key, value), key);
+  }
+
+  Future<void> _setBool(
+    SharedPreferences preferences,
+    String key,
+    bool value,
+  ) async {
+    requireSuccessfulProgressWrite(await preferences.setBool(key, value), key);
+  }
+
+  Future<void> _setStringList(
+    SharedPreferences preferences,
+    String key,
+    List<String> value,
+  ) async {
+    requireSuccessfulProgressWrite(
+      await preferences.setStringList(key, value),
+      key,
+    );
+  }
+
+  Future<void> _remove(SharedPreferences preferences, String key) async {
+    requireSuccessfulProgressWrite(await preferences.remove(key), key);
   }
 
   Set<int> _readIntSet(List<String>? values) {

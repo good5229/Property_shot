@@ -7,6 +7,18 @@ import 'package:property_shot/game/run/run_state.dart';
 import 'package:property_shot/game/run/stage_shuffle_bag.dart';
 
 void main() {
+  test('복제 코어 보상 표식은 단계별 판정과 전역 마이그레이션 판정을 분리한다', () {
+    final rewards = {
+      stageCloneCoreRewardId('stage_a'),
+      legacyStageCloneCoreRewardId,
+    };
+
+    expect(hasStageCloneCoreReward(rewards, 'stage_a'), isTrue);
+    expect(hasStageCloneCoreReward(rewards, 'stage_b'), isFalse);
+    expect(hasAnyStageCloneCoreReward(rewards), isTrue);
+    expect(stageCloneCoreRewardStageIds(rewards), {'stage_a'});
+  });
+
   test('모든 RunState 필드는 JSON Map과 문자열을 왕복한다', () {
     final original = _fullState();
 
@@ -206,15 +218,91 @@ void main() {
     final input = RunShotInput(
       stageId: 'stage_1',
       patternId: 'pattern_a',
+      patternSeed: 913,
       shotIndex: 3,
       direction: const Vec2(0.3, -0.8),
       power: 0.75,
       equippedTrait: TraitType.heavy,
+      traitActions: const [
+        RunTraitActionRecord(
+          sourceId: 'heavy_stone',
+          action: RunTraitAction.copy,
+        ),
+        RunTraitActionRecord(
+          sourceId: 'heavy_stone',
+          action: RunTraitAction.transfer,
+        ),
+      ],
     );
 
     final restored = RunShotInput.fromJson(input.toJson());
     expect(restored.toJson(), input.toJson());
     expect(restored.equippedTrait, TraitType.heavy);
+    expect(restored.patternSeed, 913);
+    expect(restored.traitActions, hasLength(2));
+    expect(restored.traitActions.first.sourceId, 'heavy_stone');
+    expect(restored.traitActions.first.action, RunTraitAction.copy);
+    expect(restored.traitActions.last.action, RunTraitAction.transfer);
+  });
+
+  test('구형 샷 입력에는 새 속성 행동 필드가 없어도 된다', () {
+    final restored = RunShotInput.fromJson({
+      'stageId': 'stage_1',
+      'patternId': 'pattern_a',
+      'shotIndex': 0,
+      'direction': const Vec2(1, 0).toJson(),
+      'power': 0.4,
+      'equippedTrait': null,
+    });
+
+    expect(restored.patternSeed, isNull);
+    expect(restored.traitActions, isEmpty);
+  });
+
+  test('속성 원본과 행동 종류가 한쪽만 있으면 샷 입력을 거부한다', () {
+    expect(
+      () => RunShotInput.fromJson({
+        'stageId': 'stage_1',
+        'patternId': 'pattern_a',
+        'shotIndex': 0,
+        'direction': const Vec2(1, 0).toJson(),
+        'power': 0.4,
+        'equippedTrait': 'heavy',
+        'traitSourceId': 'heavy_stone',
+      }),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('추첨 이력과 다르거나 순번이 끊긴 샷 로그는 거부한다', () {
+    final base = _state().toJson();
+    final shot = RunShotInput(
+      stageId: 'stage_1',
+      patternId: 'pattern_a',
+      patternSeed: base['currentPatternSeed'] as int,
+      shotIndex: 0,
+      direction: const Vec2(1, 0),
+      power: 0.5,
+    ).toJson();
+
+    expect(
+      () => RunState.fromJson({
+        ...base,
+        'shotInputLog': [
+          {...shot, 'patternSeed': 123456789},
+        ],
+      }),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => RunState.fromJson({
+        ...base,
+        'shotInputLog': [
+          {...shot, 'shotIndex': 1},
+        ],
+      }),
+      throwsA(isA<FormatException>()),
+    );
   });
 }
 

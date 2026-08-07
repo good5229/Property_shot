@@ -33,6 +33,7 @@ void main() {
       'stage_drained',
       'stage_speed',
       'stage_persistent',
+      'stage_chain_score',
     ]);
     expect(
       sourceCatalog.stages.first.patterns.map((pattern) => pattern.patternId),
@@ -83,6 +84,18 @@ void main() {
         'stage_persistent_04',
       ],
     );
+    expect(
+      sourceCatalog
+          .stageById('stage_chain_score')
+          .patterns
+          .map((pattern) => pattern.patternId),
+      [
+        'stage_chain_score_01',
+        'stage_chain_score_02',
+        'stage_chain_score_03',
+        'stage_chain_score_04',
+      ],
+    );
     for (final stage in sourceCatalog.stages) {
       final baseline = sourceCatalog.baselinePatternFor(stage);
       expect(baseline.metadata, {
@@ -107,7 +120,7 @@ void main() {
   });
 
   test('levels는 각 단계의 기준 패턴을 동기식으로 노출한다', () {
-    expect(levels, hasLength(7));
+    expect(levels, hasLength(8));
     const expectedDifficultyBands = [
       '튜토리얼',
       '튜토리얼',
@@ -115,6 +128,7 @@ void main() {
       '튜토리얼',
       '기초 응용',
       '기초 응용',
+      '연쇄 응용',
       '연쇄 응용',
     ];
     for (var index = 0; index < levels.length; index++) {

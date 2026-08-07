@@ -9,19 +9,25 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
+import '../game/analysis/creative_chain_score.dart';
+import '../game/analysis/stage_chain_challenge.dart';
 import '../game/domain/entity_state.dart';
 import '../game/domain/game_state.dart';
 import '../game/domain/geometry.dart';
+import '../game/domain/level_definition.dart';
 import '../game/domain/shot_input.dart';
 import '../game/domain/trait.dart';
+import '../game/input/aim_direction_quantizer.dart';
 import '../game/levels/levels.dart';
 import '../game/persistence/progress_store.dart';
 import '../game/property_shot_game.dart';
+import '../game/run/run_state.dart';
 import '../game/simulation/shot_resolver.dart';
 import '../game/simulation/trait_resolver.dart';
 import 'game_feedback.dart';
 import 'game_ball_painter.dart';
 import 'bonus_goal.dart';
+import 'creative_chain_score_summary.dart';
 import 'debug_menu.dart';
 import 'debug_labels.dart';
 import 'play_telemetry.dart';
@@ -37,6 +43,13 @@ class GameScreen extends StatefulWidget {
     this.onExit,
     this.onCopyCoreEarned,
     this.onLevelCleared,
+    this.onStageRequested,
+    this.onShotCommitted,
+    this.onTraitActionCommitted,
+    this.onStageRestarted,
+    this.onShotRewound,
+    this.levelOverride,
+    this.initialShotResults = const [],
     this.loadGameAssets = true,
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.showDebugControls = false,
@@ -47,8 +60,16 @@ class GameScreen extends StatefulWidget {
   final bool showStageSelector;
   final LocalPlayTelemetry? telemetry;
   final VoidCallback? onExit;
-  final ValueChanged<int>? onCopyCoreEarned;
-  final ValueChanged<int>? onLevelCleared;
+  final Future<bool> Function(int, int)? onCopyCoreEarned;
+  final Future<void> Function(int, CreativeChainScoreAnalysis?, bool, int)?
+  onLevelCleared;
+  final Future<void> Function(int)? onStageRequested;
+  final Future<void> Function(ShotInput)? onShotCommitted;
+  final Future<void> Function(String, RunTraitAction)? onTraitActionCommitted;
+  final Future<void> Function()? onStageRestarted;
+  final Future<void> Function()? onShotRewound;
+  final LevelDefinition? levelOverride;
+  final List<ShotResult> initialShotResults;
   final bool loadGameAssets;
   final TutorialExperimentVariant tutorialVariant;
   final bool showDebugControls;
@@ -66,6 +87,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _launchInputSession = LaunchInputSession();
   late final LocalPlayTelemetry _telemetry;
   late GameState _state;
+  late LevelDefinition _currentLevel;
   late PropertyShotGame _game;
   bool _showBallInfo = false;
   String? _inspectedEntityId;
@@ -80,8 +102,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Duration? _lastPointerTimeStamp;
   Duration? _frameTimeStampAtLastPointer;
   bool _isAnimatingShot = false;
+  bool _isCommittingShot = false;
+  bool _isCommittingTraitAction = false;
   bool _showClearPopup = false;
   bool _showFailurePopup = false;
+  bool _showClearPersistenceError = false;
+  String _clearPersistenceErrorTitle = '클리어 기록을 저장하지 못했습니다';
+  String _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
   bool _hintWasVisible = false;
   String _failureAdvice = '';
   bool _bestShotsLoaded = false;
@@ -96,6 +123,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final List<bool> _bonusBumperHistory = [];
   final List<bool> _bonusSwitchHistory = [];
   final List<bool> _bonusDrainedSourceHistory = [];
+  late final List<ShotResult> _stageShotResults;
+  CreativeChainScoreAnalysis? _chainScoreAnalysis;
+  Future<bool>? _clearPersistenceFuture;
+  Future<bool> Function()? _clearPersistenceRetry;
   bool _bonusChallengeAchieved = false;
   late TutorialExperimentVariant _activeTutorialVariant;
   final List<PhysicsEvent> _debugPhysicsEvents = [];
@@ -106,6 +137,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _debugRecordReplay = false;
   GameState? _debugReplayStartState;
   ShotInput? _debugReplayInput;
+  List<ShotResult> _debugReplayPriorShotResults = const [];
+  bool _debugReplayPriorBumperHit = false;
+  bool _debugReplayPriorSwitchPressed = false;
+  bool _debugReplayPriorDrainedSourceMoved = false;
+  List<bool> _debugReplayPriorBumperHistory = const [];
+  List<bool> _debugReplayPriorSwitchHistory = const [];
+  List<bool> _debugReplayPriorDrainedHistory = const [];
 
   double get _lastDebugSpeed {
     for (final event in _debugPhysicsEvents.reversed) {
@@ -154,6 +192,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         levels.first
             .createState(0, productRules: true)
             .copyWith(message: _levelIntroMessage(0));
+    _currentLevel = widget.levelOverride ?? levels[_state.levelIndex];
+    _stageShotResults = List.of(widget.initialShotResults);
+    _restoreStageOutcomeHistory();
+    if (_state.levelIndex == 7 &&
+        _state.phase == GamePhase.success &&
+        _stageShotResults.isNotEmpty) {
+      _chainScoreAnalysis = const CreativeChainScoreAnalyzer().analyze(
+        _stageShotResults,
+        parShots: _currentLevel.parShots,
+        optionalChallengeIds: CreativeChainChallengeId.all,
+      );
+    }
     _stageCopyCoreAtStart = _state.copyCoreCount;
     _activeTutorialVariant = widget.tutorialVariant;
     _telemetry.sessionStart(
@@ -185,41 +235,71 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _recordHintExposureIfNeeded();
   }
 
-  Future<void> _loadBestShots() async {
-    final progress = await _progressStore.load();
-    if (!mounted) {
-      return;
+  void _restoreStageOutcomeHistory() {
+    for (final result in _stageShotResults) {
+      _bonusBumperHistory.insert(0, _bonusBumperHit);
+      _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
+      _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
+      _bonusBumperHit =
+          _bonusBumperHit ||
+          result.impacts.any(
+            (impact) => impact.entityType == EntityType.bumper,
+          );
+      _bonusSwitchPressed =
+          _bonusSwitchPressed || result.events.contains('switch_pressed');
+      final beforeShot = result.state.history.isEmpty
+          ? null
+          : result.state.history.first;
+      final drainedSourceIds = beforeShot?.entities
+          .where((entity) => entity.visualState == 'drained')
+          .map((entity) => entity.id)
+          .toSet();
+      _bonusDrainedSourceMoved =
+          _bonusDrainedSourceMoved ||
+          (drainedSourceIds != null &&
+              result.moves.any(
+                (move) =>
+                    drainedSourceIds.contains(move.entityId) &&
+                    move.from != move.to,
+              ));
     }
-    final loaded = progress.bestShots;
-    final loadedBonusGoals = <int, bool>{
-      for (final index in progress.bonusGoals) index: true,
-    };
-    _unlockedLevel = math.max(_unlockedLevel, progress.unlockedLevel).toInt();
-    setState(
-      () => _bestShots
+  }
+
+  Future<void> _loadBestShots() async {
+    try {
+      final progress = await _progressStore.load();
+      if (!mounted) {
+        return;
+      }
+      final loaded = progress.bestShots;
+      final loadedBonusGoals = <int, bool>{
+        for (final index in progress.bonusGoals) index: true,
+      };
+      _unlockedLevel = math.max(_unlockedLevel, progress.unlockedLevel).toInt();
+      setState(
+        () => _bestShots
+          ..clear()
+          ..addAll(loaded),
+      );
+      _bonusGoals
         ..clear()
-        ..addAll(loaded),
-    );
-    _bonusGoals
-      ..clear()
-      ..addAll(loadedBonusGoals);
-    _bonusChallengeAchieved = _bonusGoals[_state.levelIndex] ?? false;
-    _bestShotsLoaded = true;
+        ..addAll(loadedBonusGoals);
+      _bonusChallengeAchieved = _bonusGoals[_state.levelIndex] ?? false;
+    } on Object {
+      // 클리어 시 실제 기록 저장을 다시 시도할 수 있도록 초기 로드는 안전하게 끝낸다.
+    } finally {
+      _bestShotsLoaded = true;
+    }
   }
 
   Future<void> _recordBonusGoal(int levelIndex) async {
     if (_bonusGoals[levelIndex] == true) {
       return;
     }
+    await _progressStore.recordBonusGoal(levelIndex);
+    if (!mounted) return;
     _bonusGoals[levelIndex] = true;
-    if (mounted) {
-      setState(() => _bonusChallengeAchieved = true);
-    }
-    try {
-      await _progressStore.recordBonusGoal(levelIndex);
-    } on Exception {
-      // 기록 저장소 실패가 클리어 결과나 다음 단계 이동을 막지 않는다.
-    }
+    setState(() => _bonusChallengeAchieved = true);
   }
 
   Future<void> _recordBestShot(int levelIndex, int shotCount) async {
@@ -234,16 +314,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (current != null && current <= shotCount) {
       return;
     }
-    setState(() => _bestShots[levelIndex] = shotCount);
     await _progressStore.recordBestShot(levelIndex, shotCount);
+    if (!mounted) return;
+    setState(() => _bestShots[levelIndex] = shotCount);
   }
 
   Future<void> _unlockNextLevel(int levelIndex) async {
     final next = math.min(levels.length - 1, levelIndex + 1);
+    await _progressStore.recordStageClear(levelIndex);
     if (next > _unlockedLevel && mounted) {
       setState(() => _unlockedLevel = next);
     }
-    await _progressStore.recordStageClear(levelIndex);
   }
 
   void _setState(
@@ -280,6 +361,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _inspectedEntityId = null;
     _showClearPopup = false;
     _showFailurePopup = false;
+    _showClearPersistenceError = false;
+    _clearPersistenceErrorTitle = '클리어 기록을 저장하지 못했습니다';
+    _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
     _resetChargeGauge();
     _bonusBumperHit = false;
     _bonusSwitchPressed = false;
@@ -287,6 +371,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusBumperHistory.clear();
     _bonusSwitchHistory.clear();
     _bonusDrainedSourceHistory.clear();
+    _stageShotResults.clear();
+    _chainScoreAnalysis = null;
+    _clearPersistenceFuture = null;
+    _clearPersistenceRetry = null;
     _bonusChallengeAchieved = _bonusGoals[index] ?? false;
     final sameStage = index == _state.levelIndex;
     if (sameStage && _state.shotCount > 0) {
@@ -301,7 +389,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final availableCores = sameStage
         ? _stageCopyCoreAtStart
         : _state.copyCoreCount;
-    final next = levels[index]
+    final selectedLevel =
+        index == _state.levelIndex && widget.levelOverride != null
+        ? widget.levelOverride!
+        : levels[index];
+    _currentLevel = selectedLevel;
+    final next = selectedLevel
         .createState(
           index,
           productRules: !widget.showStageSelector,
@@ -314,20 +407,39 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _telemetry.record('단계 시작', stage: index);
   }
 
-  void _goNextLevel() {
-    _telemetry.record(
-      '단계 종료',
-      stage: _state.levelIndex,
-      result: '다음 단계 선택',
-      eventCode: 'stage_exit',
-    );
-    if (_state.levelIndex >= levels.length - 1) {
-      _selectLevel(0);
-      _setState(_state.copyWith(message: '모든 단계를 완료했습니다. 기록을 다시 도전하세요.'));
-      return;
+  Future<void> _goNextLevel() async {
+    final persisted = await (_clearPersistenceFuture ?? Future.value(true));
+    if (!persisted) return;
+    if (!mounted) return;
+    try {
+      _telemetry.record(
+        '단계 종료',
+        stage: _state.levelIndex,
+        result: '다음 단계 선택',
+        eventCode: 'stage_exit',
+      );
+      if (_state.levelIndex >= levels.length - 1) {
+        if (widget.onStageRequested != null) {
+          await widget.onStageRequested!(0);
+          return;
+        }
+        _selectLevel(0);
+        _setState(_state.copyWith(message: '모든 단계를 완료했습니다. 기록을 다시 도전하세요.'));
+        return;
+      }
+      if (widget.onStageRequested != null) {
+        await widget.onStageRequested!(_state.levelIndex + 1);
+        return;
+      }
+      await _unlockNextLevel(_state.levelIndex);
+      _selectLevel(_state.levelIndex + 1);
+    } on Object {
+      if (mounted) {
+        _setState(
+          _state.copyWith(message: '다음 단계 기록을 저장하지 못했습니다. 다시 시도해 주세요.'),
+        );
+      }
     }
-    _unlockNextLevel(_state.levelIndex);
-    _selectLevel(_state.levelIndex + 1);
   }
 
   void _selectTraitSource(String sourceId) {
@@ -343,11 +455,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _transferTrait() {
+    if (_isCommittingTraitAction) return;
+    unawaited(_transferTraitAfterCommit());
+  }
+
+  Future<void> _transferTraitAfterCommit() async {
     final sourceId = _inspectedEntityId;
     final source = sourceId == null ? null : _state.entityById(sourceId);
-    final sourceTrait = source == null || source.traits.isEmpty
-        ? null
-        : source.traits.first;
+    if (sourceId == null || source == null || source.traits.isEmpty) return;
+    final sourceTrait = source.traits.first;
+    _isCommittingTraitAction = true;
+    try {
+      await widget.onTraitActionCommitted?.call(
+        sourceId,
+        RunTraitAction.transfer,
+      );
+    } on Object {
+      _isCommittingTraitAction = false;
+      if (mounted) {
+        _setState(
+          _state.copyWith(message: '속성 옮기기 기록을 저장하지 못했습니다. 다시 시도해 주세요.'),
+        );
+      }
+      return;
+    }
+    if (!mounted || _state.entityById(sourceId) != source) {
+      _isCommittingTraitAction = false;
+      return;
+    }
     _feedback.traitTransferred();
     _showBallInfo = false;
     _inspectedEntityId = null;
@@ -356,8 +491,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         .copyWith(
           message: _state.levelIndex == 0
               ? '추천 경로를 준비했습니다. 공을 길게 눌렀다 손을 떼면 자동 발사됩니다.'
-              : '${sourceTrait?.label ?? '선택한'} 능력은 공으로 옮겨지고 원본에서는 사라졌습니다. '
-                    '${source?.movableWhenDrained == true ? '원본은 이제 움직일 수 있습니다.' : '원본의 위치와 형태는 남습니다.'}',
+              : '${sourceTrait.label} 능력은 공으로 옮겨지고 원본에서는 사라졌습니다. '
+                    '${source.movableWhenDrained ? '원본은 이제 움직일 수 있습니다.' : '원본의 위치와 형태는 남습니다.'}',
         );
     _telemetry.record(
       '속성 이전',
@@ -366,19 +501,40 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       action: '이전',
       eventCode: 'attribute_transferred',
       objectId: sourceId,
-      objectType: source?.type.name,
-      attributeBefore: sourceTrait?.label,
+      objectType: source.type.name,
+      attributeBefore: sourceTrait.label,
       attributeAfter: next.equippedTrait?.label,
     );
+    _isCommittingTraitAction = false;
     _setState(next);
   }
 
   void _copyTrait() {
+    if (_isCommittingTraitAction) return;
+    unawaited(_copyTraitAfterCommit());
+  }
+
+  Future<void> _copyTraitAfterCommit() async {
     final sourceId = _inspectedEntityId;
     final source = sourceId == null ? null : _state.entityById(sourceId);
-    final sourceTrait = source == null || source.traits.isEmpty
-        ? null
-        : source.traits.first;
+    if (sourceId == null || source == null || source.traits.isEmpty) return;
+    final sourceTrait = source.traits.first;
+    _isCommittingTraitAction = true;
+    try {
+      await widget.onTraitActionCommitted?.call(sourceId, RunTraitAction.copy);
+    } on Object {
+      _isCommittingTraitAction = false;
+      if (mounted) {
+        _setState(
+          _state.copyWith(message: '속성 복사 기록을 저장하지 못했습니다. 다시 시도해 주세요.'),
+        );
+      }
+      return;
+    }
+    if (!mounted || _state.entityById(sourceId) != source) {
+      _isCommittingTraitAction = false;
+      return;
+    }
     _feedback.traitCopied();
     _showBallInfo = false;
     _inspectedEntityId = null;
@@ -386,6 +542,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final remaining = _state.copyCoreCount > 0
         ? '복제 코어 ${next.copyCoreCount}개 남음'
         : '복사 ${next.copyCharges}회 남음';
+    _isCommittingTraitAction = false;
     _setState(
       next.copyWith(
         message:
@@ -399,19 +556,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       action: '복제 코어',
       eventCode: 'attribute_copied',
       objectId: sourceId,
-      objectType: source?.type.name,
-      attributeBefore: sourceTrait?.label,
+      objectType: source.type.name,
+      attributeBefore: sourceTrait.label,
       attributeAfter: next.equippedTrait?.label,
     );
   }
 
   void _launch({ShotInput? inputOverride, bool isReplay = false}) {
-    if (_state.phase != GamePhase.planning || _isAnimatingShot) {
+    if (_state.phase != GamePhase.planning ||
+        _isAnimatingShot ||
+        _isCommittingShot ||
+        _isCommittingTraitAction) {
       return;
     }
-    _bonusBumperHistory.insert(0, _bonusBumperHit);
-    _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
-    _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
+    _isCommittingShot = true;
+    unawaited(
+      _launchAfterCommit(inputOverride: inputOverride, isReplay: isReplay),
+    );
+  }
+
+  Future<void> _launchAfterCommit({
+    ShotInput? inputOverride,
+    required bool isReplay,
+  }) async {
     final input =
         inputOverride ??
         ShotInput(
@@ -420,11 +587,45 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           equippedTrait: _state.equippedTrait,
         );
     final normalizedInput = input.normalized();
+    if (!isReplay && widget.onShotCommitted != null) {
+      try {
+        await widget.onShotCommitted!(normalizedInput);
+      } on Object {
+        _isCommittingShot = false;
+        if (mounted) {
+          _setState(_state.copyWith(message: '발사 기록을 저장하지 못했습니다. 다시 시도해 주세요.'));
+        }
+        return;
+      }
+      if (!mounted || _state.phase != GamePhase.planning) {
+        _isCommittingShot = false;
+        return;
+      }
+    }
     if (widget.showDebugControls && _debugRecordReplay && !isReplay) {
       _debugReplayStartState = _state;
       _debugReplayInput = input;
+      _debugReplayPriorShotResults = List.of(_stageShotResults);
+      _debugReplayPriorBumperHit = _bonusBumperHit;
+      _debugReplayPriorSwitchPressed = _bonusSwitchPressed;
+      _debugReplayPriorDrainedSourceMoved = _bonusDrainedSourceMoved;
+      _debugReplayPriorBumperHistory = List.of(_bonusBumperHistory);
+      _debugReplayPriorSwitchHistory = List.of(_bonusSwitchHistory);
+      _debugReplayPriorDrainedHistory = List.of(_bonusDrainedSourceHistory);
     }
+    _bonusBumperHistory.insert(0, _bonusBumperHit);
+    _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
+    _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
     final result = _shotResolver.resolve(_state, normalizedInput);
+    _stageShotResults.add(result);
+    _chainScoreAnalysis =
+        result.state.levelIndex == 7 && result.state.phase == GamePhase.success
+        ? const CreativeChainScoreAnalyzer().analyze(
+            _stageShotResults,
+            parShots: _currentLevel.parShots,
+            optionalChallengeIds: CreativeChainChallengeId.all,
+          )
+        : null;
     _telemetry.record(
       '발사',
       stage: _state.levelIndex,
@@ -473,34 +674,129 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       physicsEvents: result.physicsEvents,
     );
     if (result.state.phase == GamePhase.success) {
-      unawaited(_persistClearResult(result));
+      final analysis = _chainScoreAnalysis;
+      final bonusAchieved = _bonusGoalReached(result);
+      final persistence = _persistClearResult(result, analysis, bonusAchieved);
+      _clearPersistenceFuture = persistence;
+      _clearPersistenceRetry = () =>
+          _persistClearResult(result, analysis, bonusAchieved);
+      unawaited(persistence);
     }
+    _isCommittingShot = false;
   }
 
-  Future<void> _persistClearResult(ShotResult result) async {
+  Future<bool> _persistClearResult(
+    ShotResult result,
+    CreativeChainScoreAnalysis? analysis,
+    bool bonusAchieved,
+  ) async {
     final levelIndex = result.state.levelIndex;
     try {
+      await widget.onLevelCleared?.call(
+        levelIndex,
+        analysis,
+        bonusAchieved,
+        result.state.shotCount,
+      );
+    } on Object {
+      if (mounted) {
+        setState(() {
+          _clearPersistenceErrorTitle = '클리어 기록을 저장하지 못했습니다';
+          _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
+          _state = _state.copyWith(message: '클리어 기록을 저장하지 못했습니다. 다시 시도해 주세요.');
+        });
+      }
+      return false;
+    }
+    try {
       await _unlockNextLevel(levelIndex);
-      if (_bonusGoalReached(result)) {
+      if (bonusAchieved) {
         await _recordBonusGoal(levelIndex);
       }
       await _recordBestShot(levelIndex, result.state.shotCount);
-    } on Exception {
+    } on Object {
       if (mounted) {
         setState(() {
+          _clearPersistenceErrorTitle = '클리어 기록을 저장하지 못했습니다';
+          _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
           _state = _state.copyWith(
             message: '클리어했지만 기록 저장이 지연되고 있어요. 잠시 후 다시 확인해 주세요.',
           );
         });
       }
-    } finally {
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _showClearPopupAfterPersistence() async {
+    final persisted = await (_clearPersistenceFuture ?? Future.value(true));
+    if (!persisted) return;
+    if (!mounted || _state.phase != GamePhase.success) return;
+    setState(() => _showClearPopup = true);
+  }
+
+  Future<void> _retryAfterClear() async {
+    final persisted = await (_clearPersistenceFuture ?? Future.value(true));
+    if (!persisted) return;
+    try {
+      await widget.onStageRestarted?.call();
+    } on Object {
       if (mounted) {
-        widget.onLevelCleared?.call(levelIndex);
+        _setState(_state.copyWith(message: '재도전 상태를 저장하지 못했습니다. 다시 시도해 주세요.'));
       }
+      return;
+    }
+    if (mounted) {
+      _selectLevel(_state.levelIndex);
+    }
+  }
+
+  void _retryClearPersistence() {
+    final retry = _clearPersistenceRetry;
+    if (retry == null || _isAnimatingShot) return;
+    final persistence = retry();
+    _clearPersistenceFuture = persistence;
+    setState(() {
+      _showClearPersistenceError = false;
+      _isAnimatingShot = true;
+    });
+    unawaited(_finishAnimationAfterPersistence());
+  }
+
+  void _restartCurrentStage() {
+    unawaited(_restartCurrentStageAfterPersist());
+  }
+
+  Future<void> _restartCurrentStageAfterPersist() async {
+    if (_isAnimatingShot || _isCommittingShot || _isCommittingTraitAction) {
+      return;
+    }
+    try {
+      await widget.onStageRestarted?.call();
+    } on Object {
+      if (mounted) {
+        _setState(_state.copyWith(message: '단계 초기화를 저장하지 못했습니다. 다시 시도해 주세요.'));
+      }
+      return;
+    }
+    if (mounted) {
+      _selectLevel(_state.levelIndex);
     }
   }
 
   bool _bonusGoalReached(ShotResult result) {
+    if (result.state.levelIndex == 7) {
+      final analysis = _chainScoreAnalysis;
+      final patternId = _currentLevel.patternId;
+      return analysis != null &&
+          patternId != null &&
+          const StageChainChallengeEvaluator().isAchieved(
+            patternId: patternId,
+            analysis: analysis,
+            results: _stageShotResults,
+          );
+    }
     return result.state.phase == GamePhase.success &&
         bonusGoalReached(
           levelIndex: result.state.levelIndex,
@@ -512,35 +808,77 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onAnimationFinished() {
+    unawaited(_finishAnimationAfterPersistence());
+  }
+
+  Future<void> _finishAnimationAfterPersistence() async {
     if (!mounted || !_isAnimatingShot) {
       return;
     }
     final cleared = _state.phase == GamePhase.success;
+    if (cleared) {
+      final persisted = await (_clearPersistenceFuture ?? Future.value(true));
+      if (!mounted || !_isAnimatingShot) return;
+      if (!persisted) {
+        setState(() {
+          _isAnimatingShot = false;
+          _showClearPopup = false;
+          _showFailurePopup = false;
+          _showClearPersistenceError = true;
+        });
+        return;
+      }
+    }
     final awardedStars = cleared
-        ? _starsForShot(_state.shotCount, levels[_state.levelIndex].parShots)
+        ? _starsForShot(_state.shotCount, _currentLevel.parShots)
         : 0;
     if (cleared &&
         !widget.showStageSelector &&
         !_state.copyCoreRewarded &&
-        levels[_state.levelIndex].copyCoreReward > 0) {
-      final reward = levels[_state.levelIndex].copyCoreReward;
+        _currentLevel.copyCoreReward > 0) {
+      final reward = _currentLevel.copyCoreReward;
+      var newlyAwarded = true;
+      try {
+        newlyAwarded =
+            await widget.onCopyCoreEarned?.call(_state.levelIndex, reward) ??
+            true;
+      } on Object {
+        if (mounted) {
+          setState(() {
+            _clearPersistenceErrorTitle = '복제 코어 보상을 저장하지 못했습니다';
+            _clearPersistenceErrorBody = '보상 저장이 끝나야 다음 단계로 이동할 수 있습니다.';
+            _state = _state.copyWith(
+              message: '복제 코어 보상을 저장하지 못했습니다. 다시 시도해 주세요.',
+            );
+            _isAnimatingShot = false;
+            _showClearPopup = false;
+            _showFailurePopup = false;
+            _showClearPersistenceError = true;
+          });
+        }
+        return;
+      }
+      if (!mounted || !_isAnimatingShot) return;
       _state = _state.copyWith(
-        copyCharges: _state.copyCharges + reward,
-        copyChargeLimit: _state.copyChargeLimit + reward,
-        copyCoreCount: _state.copyCoreCount + reward,
+        copyCharges: _state.copyCharges + (newlyAwarded ? reward : 0),
+        copyChargeLimit: _state.copyChargeLimit + (newlyAwarded ? reward : 0),
+        copyCoreCount: _state.copyCoreCount + (newlyAwarded ? reward : 0),
         copyCoreRewarded: true,
         message: '섬의 보상으로 복제 코어 $reward개를 얻었습니다.',
       );
       _stageCopyCoreAtStart = _state.copyCoreCount;
-      widget.onCopyCoreEarned?.call(reward);
       _feedback.copyCoreAwarded(reward);
+    }
+    if (cleared) {
+      _clearPersistenceRetry = null;
     }
     setState(() {
       _isAnimatingShot = false;
-      _showClearPopup = cleared;
+      _showClearPopup = false;
       _showFailurePopup = !cleared;
     });
     if (cleared) {
+      unawaited(_showClearPopupAfterPersistence());
       _telemetry.record(
         '클리어',
         stage: _state.levelIndex,
@@ -808,7 +1146,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         hapticsEnabled: GameFeedback.hapticsEnabled,
         tutorialVariant: _activeTutorialVariant,
         onSelectStage: _debugSelectStage,
-        onRestartStage: () => _selectLevel(_state.levelIndex),
+        onRestartStage: _restartCurrentStage,
         onResetProgress: _debugResetProgress,
         onUnlockAll: _debugUnlockAll,
         onSetCopyCore: _debugSetCopyCore,
@@ -864,7 +1202,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _debugResetProgress() async {
-    await _progressStore.reset();
+    try {
+      await _progressStore.reset();
+    } on Object {
+      if (mounted) {
+        _setState(_state.copyWith(message: '진행 초기화를 저장하지 못했습니다. 다시 시도해 주세요.'));
+      }
+      return;
+    }
     if (!mounted) {
       return;
     }
@@ -873,15 +1218,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _debugUnlockAll() async {
-    await _progressStore.unlockAll();
+    try {
+      await _progressStore.unlockAll();
+    } on Object {
+      if (mounted) {
+        _setState(
+          _state.copyWith(message: '전체 단계 해금을 저장하지 못했습니다. 다시 시도해 주세요.'),
+        );
+      }
+      return;
+    }
     if (!mounted) {
       return;
     }
     setState(() => _unlockedLevel = levels.length - 1);
   }
 
-  void _debugSetCopyCore(int count) {
+  Future<void> _debugSetCopyCore(int count) async {
     final normalized = count.clamp(0, 999);
+    try {
+      await _progressStore.recordCopyCore(normalized, normalized > 0);
+    } on Object {
+      if (mounted) {
+        _setState(
+          _state.copyWith(message: '복제 코어 설정을 저장하지 못했습니다. 다시 시도해 주세요.'),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     _setState(
       _state.copyWith(
         copyCoreCount: normalized,
@@ -890,7 +1255,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         message: '복제 코어 $normalized개를 설정했습니다.',
       ),
     );
-    unawaited(_progressStore.recordCopyCore(normalized, normalized > 0));
   }
 
   void _debugForceTrait(String sourceId) {
@@ -927,7 +1291,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_isAnimatingShot) {
       return;
     }
-    final base = levels[_state.levelIndex]
+    final base = _currentLevel
         .createState(_state.levelIndex)
         .entityById(sourceId);
     if (base == null) {
@@ -956,6 +1320,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_isAnimatingShot || start == null || input == null) {
       return;
     }
+    _stageShotResults
+      ..clear()
+      ..addAll(_debugReplayPriorShotResults);
+    _bonusBumperHit = _debugReplayPriorBumperHit;
+    _bonusSwitchPressed = _debugReplayPriorSwitchPressed;
+    _bonusDrainedSourceMoved = _debugReplayPriorDrainedSourceMoved;
+    _bonusBumperHistory
+      ..clear()
+      ..addAll(_debugReplayPriorBumperHistory);
+    _bonusSwitchHistory
+      ..clear()
+      ..addAll(_debugReplayPriorSwitchHistory);
+    _bonusDrainedSourceHistory
+      ..clear()
+      ..addAll(_debugReplayPriorDrainedHistory);
+    _chainScoreAnalysis = null;
     _setState(start.copyWith(message: '저장한 리플레이를 재생합니다.'));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -1005,9 +1385,26 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _rewind() {
-    if (_isAnimatingShot) {
+    unawaited(_rewindAfterPersist());
+  }
+
+  Future<void> _rewindAfterPersist() async {
+    if (_isAnimatingShot || _isCommittingShot || _isCommittingTraitAction) {
       return;
     }
+    if (_state.history.isNotEmpty) {
+      try {
+        await widget.onShotRewound?.call();
+      } on Object {
+        if (mounted) {
+          _setState(
+            _state.copyWith(message: '되감기 기록을 저장하지 못했습니다. 다시 시도해 주세요.'),
+          );
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
     _showFailurePopup = false;
     _telemetry.record(
       '재시도',
@@ -1026,6 +1423,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _bonusDrainedSourceMoved = _bonusDrainedSourceHistory.isEmpty
           ? false
           : _bonusDrainedSourceHistory.removeAt(0);
+      if (_stageShotResults.isNotEmpty) {
+        _stageShotResults.removeLast();
+      }
+      _chainScoreAnalysis = null;
     }
     _setState(_shotResolver.rewind(_state));
   }
@@ -1059,15 +1460,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         objectType: EntityType.ball.name,
       );
     }
+    final quantizedAim = quantizeAimDirection(aim);
     _telemetry.record(
       '조준 방향 변경',
       stage: _state.levelIndex,
       eventCode: 'aim_direction_changed',
-      angle: math.atan2(aim.y, aim.x),
+      angle: math.atan2(quantizedAim.y, quantizedAim.x),
     );
     _setState(
       _state.copyWith(
-        aimDirection: aim.normalized(),
+        aimDirection: quantizedAim,
         message: '방향 설정 완료 · 공을 길게 눌러 힘을 모으세요',
       ),
     );
@@ -1665,10 +2067,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final clearPopupOpen = _state.phase == GamePhase.success && _showClearPopup;
     final failurePopupOpen =
         _showFailurePopup && !_showBallInfo && inspectedEntity == null;
+    final persistenceErrorOpen = _showClearPersistenceError;
     final popupOpen =
         _showBallInfo ||
         inspectedEntity != null ||
         failurePopupOpen ||
+        persistenceErrorOpen ||
         clearPopupOpen;
     final tutorialTarget = _tutorialTarget;
     final inputBlocked = popupOpen || _isAnimatingShot;
@@ -1956,9 +2360,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                           null,
                                                   state: _state,
                                                   onRewind: _rewind,
-                                                  onReset: () => _selectLevel(
-                                                    _state.levelIndex,
-                                                  ),
+                                                  onReset: _restartCurrentStage,
                                                 ),
                                               ),
                                           ],
@@ -1974,7 +2376,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             _ControlPanel(
                               state: _state,
                               onRewind: _rewind,
-                              onReset: () => _selectLevel(_state.levelIndex),
+                              onReset: _restartCurrentStage,
                             ),
                         ],
                       ),
@@ -1998,13 +2400,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     copyCoreCount: _state.copyCoreCount,
                     onTransfer:
                         inspectedEntity.type == EntityType.ball ||
-                            inspectedEntity.traits.isEmpty
+                            inspectedEntity.traits.isEmpty ||
+                            _isCommittingTraitAction
                         ? null
                         : _transferTrait,
                     onCopy:
                         inspectedEntity.type == EntityType.ball ||
                             inspectedEntity.traits.isEmpty ||
-                            _state.copyCharges <= 0
+                            _state.copyCharges <= 0 ||
+                            _isCommittingTraitAction
                         ? null
                         : _copyTrait,
                   ),
@@ -2017,16 +2421,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   onRewind: _rewind,
                   onReset: () {
                     _showFailurePopup = false;
-                    _selectLevel(_state.levelIndex);
+                    _restartCurrentStage();
                   },
                 ),
+              if (persistenceErrorOpen)
+                _ClearPersistenceErrorPopup(
+                  title: _clearPersistenceErrorTitle,
+                  body: _clearPersistenceErrorBody,
+                  onRetry: _retryClearPersistence,
+                ),
               if (clearPopupOpen)
-                _ClearPopup(
+                ClearResultPopup(
                   state: _state,
+                  level: _currentLevel,
+                  chainScoreAnalysis: _chainScoreAnalysis,
                   bestShot: _bestShots[_state.levelIndex],
                   bonusAchieved: _bonusChallengeAchieved,
-                  onNext: _goNextLevel,
-                  onRetry: () => _selectLevel(_state.levelIndex),
+                  onNext: () => unawaited(_goNextLevel()),
+                  onRetry: () => unawaited(_retryAfterClear()),
                   isFinal: _state.levelIndex >= levels.length - 1,
                 ),
             ],
@@ -2304,27 +2716,31 @@ class GameplayBackdropPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _ClearPopup extends StatelessWidget {
-  const _ClearPopup({
+class ClearResultPopup extends StatelessWidget {
+  const ClearResultPopup({
+    super.key,
     required this.state,
+    required this.level,
     required this.onNext,
     required this.onRetry,
     required this.isFinal,
     required this.bonusAchieved,
+    this.chainScoreAnalysis,
     this.bestShot,
   });
 
   final GameState state;
+  final LevelDefinition level;
   final VoidCallback onNext;
   final VoidCallback onRetry;
   final bool isFinal;
   final bool bonusAchieved;
+  final CreativeChainScoreAnalysis? chainScoreAnalysis;
   final int? bestShot;
 
   @override
   Widget build(BuildContext context) {
     final rows = _leaderboardRows(state);
-    final level = levels[state.levelIndex];
     final stars = _starsForShot(state.shotCount, level.parShots);
     return FocusScope(
       autofocus: true,
@@ -2376,6 +2792,7 @@ class _ClearPopup extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: SingleChildScrollView(
+                                    key: const Key('clear_result_scroll'),
                                     padding: const EdgeInsets.fromLTRB(
                                       18,
                                       18,
@@ -2501,6 +2918,12 @@ class _ClearPopup extends StatelessWidget {
                                             ],
                                           ),
                                         ),
+                                        if (chainScoreAnalysis != null) ...[
+                                          const SizedBox(height: 10),
+                                          CreativeChainScoreSummary(
+                                            analysis: chainScoreAnalysis!,
+                                          ),
+                                        ],
                                         if (!isFinal) ...[
                                           const SizedBox(height: 4),
                                           Text(
@@ -2522,6 +2945,7 @@ class _ClearPopup extends StatelessWidget {
                                         ],
                                         const SizedBox(height: 14),
                                         Container(
+                                          key: const Key('clear_leaderboard'),
                                           width: double.infinity,
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
@@ -2617,6 +3041,76 @@ class _ClearPopup extends StatelessWidget {
                   ),
                 );
               },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClearPersistenceErrorPopup extends StatelessWidget {
+  const _ClearPersistenceErrorPopup({
+    required this.title,
+    required this.body,
+    required this.onRetry,
+  });
+
+  final String title;
+  final String body;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusScope(
+      autofocus: true,
+      child: Semantics(
+        container: true,
+        namesRoute: true,
+        label: title,
+        child: Container(
+          key: const Key('clear_persistence_error_popup'),
+          color: const Color(0x66000000),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.all(20),
+          child: SafeArea(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Material(
+                color: const Color(0xFFF7FAF3),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.cloud_off, color: Color(0xFFB34B36)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(body),
+                      const SizedBox(height: 14),
+                      FilledButton.icon(
+                        key: const Key('clear_persistence_retry_button'),
+                        autofocus: true,
+                        onPressed: onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('저장 다시 시도'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -2748,11 +3242,15 @@ String _levelObjective(int levelIndex) {
     3 => '풍선을 밀거나 터뜨린 뒤 여러 경로로 홀에 가 보세요. 터뜨리면 뒤의 스위치가 보여요.',
     4 => '속성을 옮기면 공은 능력을 얻고 원본은 능력을 잃습니다. 두 변화를 함께 이용해 보세요.',
     5 => '공은 처음 빠르고 점점 느려집니다. 약하게 쏜 뒤 발판으로 속도를 되살려 보세요.',
-    _ => '첫 공을 남겨 쿠션·스위치·스토퍼로 활용하며 여러 발의 인과를 만들어 보세요.',
+    6 => '첫 공을 남겨 쿠션·스위치·스토퍼로 활용하며 여러 발의 인과를 만들어 보세요.',
+    _ => '홀에 바로 넣어도 성공합니다. 벽과 기물을 더 많이 이으면 연쇄 점수가 높아집니다.',
   };
 }
 
 String _objectiveForState(GameState state) {
+  if (state.levelIndex == 7) {
+    return _levelObjective(state.levelIndex);
+  }
   if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
     return '파워 슬라이더로 공의 속력을 높여 여러 경로로 홀에 도전해 보세요.';
   }
@@ -2767,11 +3265,15 @@ String _compactLevelObjective(int levelIndex) {
     3 => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
     4 => '공과 비워진 원본을 함께 이용해 홀로 가기',
     5 => '감속·반사·발판으로 속도를 되살려 홀로 가기',
-    _ => '과거 공을 남겨 두 공으로 홀로 가기',
+    6 => '과거 공을 남겨 두 공으로 홀로 가기',
+    _ => '짧은 길로 성공하거나 기물을 이어 연쇄 점수 높이기',
   };
 }
 
 String _compactObjectiveForState(GameState state) {
+  if (state.levelIndex == 7) {
+    return _compactLevelObjective(state.levelIndex);
+  }
   if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
     return '파워 슬라이더 · 속력 높이기';
   }
@@ -2789,6 +3291,14 @@ int _starsForShot(int shotCount, int parShots) {
 }
 
 String? _levelProgressHint(GameState state) {
+  if (state.levelIndex == 7) {
+    final spentBalls = state.entities.where(
+      (entity) => entity.type == EntityType.ball && entity.id != 'active_ball',
+    );
+    return spentBalls.isEmpty
+        ? '직접 홀을 노려도 성공합니다. 첫 공을 남기면 더 긴 연쇄에도 도전할 수 있어요.'
+        : '과거 공과 벽·기물을 이어 보세요. 최종 홀까지 이어진 충돌만 연쇄 점수에 반영됩니다.';
+  }
   if (state.levelIndex == 5) {
     return state.shotCount > 0
         ? '발판과 벽의 결과를 확인했어요. 같은 각도와 우회 길도 비교해 보세요.'
@@ -2851,6 +3361,12 @@ String? _levelProgressHint(GameState state) {
 }
 
 String? _compactLevelProgressHint(GameState state) {
+  if (state.levelIndex == 7) {
+    final hasSpentBall = state.entities.any(
+      (entity) => entity.type == EntityType.ball && entity.id != 'active_ball',
+    );
+    return hasSpentBall ? '과거 공 · 벽 · 기물 이어 보기' : '직접 성공 · 연쇄 도전 모두 가능';
+  }
   if (state.levelIndex == 5) {
     return state.shotCount > 0 ? '발판 결과 · 우회 길 비교' : '감속 읽기 · 진입 각도 찾기';
   }
@@ -2904,7 +3420,8 @@ String _levelIntroMessage(int levelIndex) {
     3 => '풍선 확인 · 여러 경로로 도전',
     4 => '공과 원본의 변화를 함께 살펴보세요',
     5 => '감속 · 발판 진입 각도 · 여러 경로로 도전',
-    _ => '과거 공 · 쿠션 · 여러 발의 연쇄 경로',
+    6 => '과거 공 · 쿠션 · 여러 발의 연쇄 경로',
+    _ => '직접 경로 · 벽과 기물 · 연쇄 점수 비교',
   };
 }
 
