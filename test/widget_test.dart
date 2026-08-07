@@ -48,9 +48,11 @@ void main() {
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_7')), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_8')), findsOneWidget);
+    expect(find.byKey(const Key('stage_tile_9')), findsOneWidget);
     expect(find.text('풍선은 밀리고, 뾰족한 공에는 터집니다.'), findsOneWidget);
     expect(find.text('짧게 넣거나 벽과 기물을 이어 더 높은 연쇄 점수에 도전해 보세요.'), findsOneWidget);
     expect(find.text('반사판을 돌려 다음 공이 만날 면과 방향을 바꿔 보세요.'), findsOneWidget);
+    expect(find.text('배운 속성과 기물을 엮어 나만의 경로를 완성해 보세요.'), findsOneWidget);
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
 
     await tester.tap(find.byKey(const Key('stage_tile_0')));
@@ -116,6 +118,20 @@ void main() {
     expect(find.text('9. 판을 돌려 놓아라'), findsOneWidget);
     expect(find.text('반사판을 돌려 다음 공의 반사 방향 바꾸기'), findsOneWidget);
     expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsOneWidget);
+  });
+
+  testWidgets('10단계 화면은 새 기믹 없이 자유로운 종합 경로를 안내한다', (tester) async {
+    await tester.pumpWidget(
+      PropertyShotApp(
+        initialState: levels[9].createState(9, productRules: true),
+        showStageSelector: false,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('10. 속성 한방'), findsOneWidget);
+    expect(find.text('배운 속성과 기물을 엮어 나만의 경로 만들기'), findsOneWidget);
+    expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsOneWidget);
   });
 
   testWidgets('섬 지도는 진행 경로와 실제 한 번 탭 동작을 안내한다', (tester) async {

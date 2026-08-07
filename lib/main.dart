@@ -37,6 +37,7 @@ String _stageIntroMessage(int levelIndex) {
     6 => '첫 공을 남겨 다음 공의 쿠션과 스토퍼로 활용해 보세요',
     7 => '짧은 길과 여러 기물을 잇는 연쇄 길을 비교해 보세요',
     8 => '현재 면의 반사와 다음 충돌에 적용될 회전을 살펴보세요',
+    9 => '배운 속성과 기물을 엮어 나만의 경로를 만들어 보세요',
     _ => '기물의 상태 변화를 살펴보며 여러 경로로 도전해 보세요',
   };
 }
@@ -1140,8 +1141,10 @@ class _StageSelectScreen extends StatelessWidget {
                   ),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final cardWidth = constraints.maxWidth * 0.82;
-                      const cardStep = 116.0;
+                      final narrow = constraints.maxWidth < 500;
+                      final cardWidth =
+                          constraints.maxWidth * (narrow ? 0.92 : 0.82);
+                      final cardStep = narrow ? 136.0 : 120.0;
                       final mapHeight = math.max(
                         350.0,
                         8 + levels.length * cardStep,
@@ -1187,6 +1190,7 @@ class _StageSelectScreen extends StatelessWidget {
                                     child: CustomPaint(
                                       painter: _StageRoutePainter(
                                         unlockedLevel: unlockedLevel,
+                                        cardStep: cardStep,
                                       ),
                                     ),
                                   ),
@@ -1309,6 +1313,39 @@ class _StageReflectorIcon extends StatelessWidget {
   }
 }
 
+class _StageFinaleIcon extends StatelessWidget {
+  const _StageFinaleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        const Positioned.fill(
+          child: CustomPaint(painter: GameBallIconPainter(null)),
+        ),
+        for (final marker in const [
+          (alignment: Alignment(-0.58, -0.55), color: Color(0xFF58636B)),
+          (alignment: Alignment(0.58, -0.55), color: Color(0xFF78BFE8)),
+          (alignment: Alignment(-0.58, 0.55), color: Color(0xFF8F72B6)),
+          (alignment: Alignment(0.58, 0.55), color: Color(0xFFE99A78)),
+        ])
+          Align(
+            alignment: marker.alignment,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: marker.color,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: const SizedBox.square(dimension: 13),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _StageTile extends StatelessWidget {
   const _StageTile({
     required this.index,
@@ -1332,17 +1369,19 @@ class _StageTile extends StatelessWidget {
       '과거 공을 쿠션·스위치·스토퍼로 활용해 여러 발의 인과를 만들어 보세요.',
       '짧게 넣거나 벽과 기물을 이어 더 높은 연쇄 점수에 도전해 보세요.',
       '반사판을 돌려 다음 공이 만날 면과 방향을 바꿔 보세요.',
+      '배운 속성과 기물을 엮어 나만의 경로를 완성해 보세요.',
     ];
     final assets = [
       'assets/icons/stone_boulder.png',
       'assets/generated/jelly-bumper-v1.png',
       'assets/icons/crate.png',
-      '',
+      'assets/generated/jelly-bumper-v1.png',
+      'assets/generated/stone-v2.png',
       'assets/icons/stone_boulder.png',
       'assets/generated/crate-v2.png',
-      '',
+      'assets/icons/ball.png',
       'assets/icons/crate.png',
-      '',
+      'assets/icons/ball.png',
     ];
     final stageAsset = assets[index];
     return Padding(
@@ -1399,6 +1438,8 @@ class _StageTile extends StatelessWidget {
                                       )
                                     : index == 8
                                     ? const _StageReflectorIcon()
+                                    : index == 9
+                                    ? const _StageFinaleIcon()
                                     : Image.asset(
                                         stageAsset,
                                         fit: BoxFit.contain,
@@ -1499,16 +1540,22 @@ class _StageTile extends StatelessWidget {
 }
 
 class _StageRoutePainter extends CustomPainter {
-  const _StageRoutePainter({required this.unlockedLevel});
+  const _StageRoutePainter({
+    required this.unlockedLevel,
+    required this.cardStep,
+  });
 
   final int unlockedLevel;
+  final double cardStep;
 
   @override
   void paint(Canvas canvas, Size size) {
     final points = List.generate(
       levels.length,
-      (index) =>
-          Offset(size.width * (index.isEven ? 0.22 : 0.78), 58 + index * 116.0),
+      (index) => Offset(
+        size.width * (index.isEven ? 0.22 : 0.78),
+        58 + index * cardStep,
+      ),
     );
     if (points.isEmpty) {
       return;
@@ -1560,7 +1607,8 @@ class _StageRoutePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StageRoutePainter oldDelegate) =>
-      oldDelegate.unlockedLevel != unlockedLevel;
+      oldDelegate.unlockedLevel != unlockedLevel ||
+      oldDelegate.cardStep != cardStep;
 }
 
 class _IslandBackdrop extends StatelessWidget {

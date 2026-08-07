@@ -3245,12 +3245,13 @@ String _levelObjective(int levelIndex) {
     6 => '첫 공을 남겨 쿠션·스위치·스토퍼로 활용하며 여러 발의 인과를 만들어 보세요.',
     7 => '홀에 바로 넣어도 성공합니다. 벽과 기물을 더 많이 이으면 연쇄 점수가 높아집니다.',
     8 => '반사판은 현재 면으로 공을 튕긴 뒤 90도 돕니다. 바뀐 면은 다음 충돌부터 적용됩니다.',
+    9 => '새 규칙은 없습니다. 속성, 발판, 과거 공과 반사판을 원하는 순서로 엮어 보세요.',
     _ => '기물의 상태 변화를 살펴보며 여러 경로로 홀에 도전해 보세요.',
   };
 }
 
 String _objectiveForState(GameState state) {
-  if (state.levelIndex == 7 || state.levelIndex == 8) {
+  if (state.levelIndex == 7 || state.levelIndex == 8 || state.levelIndex == 9) {
     return _levelObjective(state.levelIndex);
   }
   if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
@@ -3270,12 +3271,13 @@ String _compactLevelObjective(int levelIndex) {
     6 => '과거 공을 남겨 두 공으로 홀로 가기',
     7 => '짧은 길로 성공하거나 기물을 이어 연쇄 점수 높이기',
     8 => '반사판을 돌려 다음 공의 반사 방향 바꾸기',
+    9 => '배운 속성과 기물을 엮어 나만의 경로 만들기',
     _ => '기물의 상태를 바꾸며 여러 경로로 홀에 가기',
   };
 }
 
 String _compactObjectiveForState(GameState state) {
-  if (state.levelIndex == 7 || state.levelIndex == 8) {
+  if (state.levelIndex == 7 || state.levelIndex == 8 || state.levelIndex == 9) {
     return _compactLevelObjective(state.levelIndex);
   }
   if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
@@ -3295,6 +3297,11 @@ int _starsForShot(int shotCount, int parShots) {
 }
 
 String? _levelProgressHint(GameState state) {
+  if (state.levelIndex == 9) {
+    return state.shotCount == 0
+        ? '짧은 직접 길과 여러 기물을 잇는 길이 함께 열려 있습니다. 원하는 전략으로 시도해 보세요.'
+        : '${state.shotCount}번의 결과가 보드에 남았습니다. 과거 공과 바뀐 기물 상태를 다음 샷에 활용할 수 있어요.';
+  }
   if (state.levelIndex == 8) {
     final reflectors = state.entities.where(
       (entity) => entity.type == EntityType.rotatingReflector,
@@ -3377,6 +3384,11 @@ String? _levelProgressHint(GameState state) {
 }
 
 String? _compactLevelProgressHint(GameState state) {
+  if (state.levelIndex == 9) {
+    return state.shotCount == 0
+        ? '직접 성공 · 속성 · 연쇄 모두 가능'
+        : '남은 공과 기물 상태로 다음 경로 만들기';
+  }
   if (state.levelIndex == 8) {
     final rotationCount = state.entities
         .where((entity) => entity.type == EntityType.rotatingReflector)
@@ -3447,6 +3459,7 @@ String _levelIntroMessage(int levelIndex) {
     6 => '과거 공 · 쿠션 · 여러 발의 연쇄 경로',
     7 => '직접 경로 · 벽과 기물 · 연쇄 점수 비교',
     8 => '현재 면 반사 · 충돌 뒤 회전 · 다음 샷 준비',
+    9 => '배운 속성 · 기물 상태 · 나만의 경로',
     _ => '기물 상태 살피기 · 여러 경로로 도전',
   };
 }
