@@ -763,7 +763,11 @@ void main() {
     expect(session.state?.phase, RunPhase.rewardSelectionCompleted);
     expect(session.state?.selectedRewardId, selected.id);
     expect(session.state?.cloneCoreCount, countAfterFirst);
-    expect(session.state?.acquiredRewards.length, acquiredAfterFirst);
+    expect(session.state?.acquiredRewards.length, acquiredAfterFirst + 1);
+    expect(
+      session.state?.acquiredRewards,
+      contains(runStageAttemptRecordId('stage_heavy', 1)),
+    );
   });
 
   test('일회성 보상은 한 번만 소모되고 재실행 뒤에도 사용 상태를 유지한다', () async {
@@ -838,6 +842,96 @@ void main() {
       isTrue,
     );
   });
+
+  test('첫 충돌 안내 사용과 발사 입력은 한 저장 상태에 함께 기록된다', () async {
+    final session = await _playingSessionWithReward(
+      runRewardFirstImpactGuideId,
+    );
+
+    final consumed = await session.recordShot(
+      input: const ShotInput(direction: Vec2(1, 0), power: 0.72),
+      consumeFirstImpactGuide: true,
+    );
+
+    expect(consumed, isTrue);
+    expect(session.currentShotInputs, hasLength(1));
+    expect(
+      session.rewardInventory.availableUseCount(runRewardFirstImpactGuideId),
+      0,
+    );
+  });
+
+  test('선택 도전 보호는 단계 완료와 같은 저장에서 달성으로 바뀐다', () async {
+    final session = await _playingSessionWithReward(
+      runRewardOptionalChallengeGuardId,
+    );
+
+    final completion = await session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      shotCount: 4,
+      applyOptionalChallengeGuard: true,
+    );
+
+    expect(completion.optionalChallengeAchieved, isTrue);
+    expect(
+      session
+          .state
+          ?.optionalChallenges['stage_bouncy:${session.state?.currentPatternId}'],
+      isTrue,
+    );
+    expect(
+      session.rewardInventory.availableUseCount(
+        runRewardOptionalChallengeGuardId,
+      ),
+      0,
+    );
+  });
+
+  test('기록 보호는 단계 완료와 같은 저장에서 발사 횟수를 줄인다', () async {
+    final session = await _playingSessionWithReward(
+      runRewardStageRecordGuardId,
+    );
+
+    final completion = await session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      shotCount: 4,
+      applyStageRecordGuard: true,
+    );
+
+    expect(completion.shotCount, 3);
+    expect(session.state?.shotsPerStage['stage_bouncy'], 3);
+    expect(
+      session.rewardInventory.canUseForStage(
+        runRewardStageRecordGuardId,
+        'stage_bouncy',
+      ),
+      isFalse,
+    );
+  });
+}
+
+Future<StagePatternSession> _playingSessionWithReward(String rewardId) async {
+  for (var offset = 0; offset < 128; offset++) {
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(backend: _MemoryRunStateBackend()),
+      now: () => DateTime.fromMicrosecondsSinceEpoch(offset, isUtc: true),
+    );
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 1,
+    );
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    if (!candidates.any((reward) => reward.id == rewardId)) continue;
+    await session.selectReward(rewardId);
+    await session.selectStage('stage_bouncy');
+    return session;
+  }
+  throw StateError('$rewardId 후보를 찾지 못했습니다.');
 }
 
 StagePatternSession _session(RunStateStore store) {

@@ -213,5 +213,17 @@ void main() {
         isTrue,
       );
     });
+
+    test('단계 재도전 번호는 같은 단계에서 단조 증가한다', () {
+      final records = {
+        runStageAttemptRecordId('stage_heavy', 1),
+        runStageAttemptRecordId('stage_heavy', 2),
+        runStageAttemptRecordId('stage_bouncy', 4),
+      };
+
+      expect(runStageAttemptNumber(records, 'stage_heavy'), 2);
+      expect(runStageAttemptNumber(records, 'stage_bouncy'), 4);
+      expect(runStageAttemptNumber(records, 'stage_sticky'), 0);
+    });
   });
 }

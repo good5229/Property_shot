@@ -8,6 +8,11 @@ import 'run_reward.dart';
 import 'run_state.dart';
 import 'stage_shuffle_bag.dart';
 
+typedef StageCompletionResult = ({
+  bool optionalChallengeAchieved,
+  int shotCount,
+});
+
 /// 스테이지 선택 화면과 결정론 패턴 런 상태를 연결한다.
 class StagePatternSession {
   StagePatternSession({
@@ -151,12 +156,14 @@ class StagePatternSession {
     return draw;
   }
 
-  Future<void> completeCurrentStage({
+  Future<StageCompletionResult> completeCurrentStage({
     required String stageId,
     required int shotCount,
     String? nextStageId,
     int? chainScore,
     bool optionalChallengeAchieved = false,
+    bool applyOptionalChallengeGuard = false,
+    bool applyStageRecordGuard = false,
   }) async {
     if (shotCount < 1) {
       throw ArgumentError.value(shotCount, 'shotCount', '1 이상이어야 합니다.');
@@ -173,7 +180,42 @@ class StagePatternSession {
         current.currentStageId != stageId ||
         (current.phase != RunPhase.playing &&
             current.phase != RunPhase.stageCompleted)) {
-      return;
+      return (
+        optionalChallengeAchieved: optionalChallengeAchieved,
+        shotCount: shotCount,
+      );
+    }
+    final acquiredRewards = current.acquiredRewards.toSet();
+    final inventory = RunRewardInventory(acquiredRewards);
+    var effectiveChallenge = optionalChallengeAchieved;
+    var effectiveShotCount = shotCount;
+    if (!effectiveChallenge && applyOptionalChallengeGuard) {
+      final available = inventory.availableSelections(
+        runRewardOptionalChallengeGuardId,
+      );
+      if (available.isNotEmpty) {
+        acquiredRewards.add(
+          runRewardUseRecordId(
+            available.first.recordId,
+            '$stageId:$shotCount:선택도전',
+          ),
+        );
+        effectiveChallenge = true;
+      }
+    }
+    if (applyStageRecordGuard) {
+      for (final selection in inventory.selections.where(
+        (record) => record.rewardId == runRewardStageRecordGuardId,
+      )) {
+        final useRecord = runRewardStageUseRecordId(
+          selection.recordId,
+          stageId,
+        );
+        if (acquiredRewards.contains(useRecord)) continue;
+        acquiredRewards.add(useRecord);
+        effectiveShotCount = math.max(1, shotCount - 1).toInt();
+        break;
+      }
     }
     final scores = Map<String, int>.from(current.chainScoresPerStage);
     if (chainScore != null) {
@@ -181,11 +223,11 @@ class StagePatternSession {
     }
     final shots = Map<String, int>.from(current.shotsPerStage)
       ..[stageId] = math.min(
-        current.shotsPerStage[stageId] ?? shotCount,
-        shotCount,
+        current.shotsPerStage[stageId] ?? effectiveShotCount,
+        effectiveShotCount,
       );
     final challenges = Map<String, bool>.from(current.optionalChallenges);
-    if (optionalChallengeAchieved) {
+    if (effectiveChallenge) {
       challenges['$stageId:${current.currentPatternId}'] = true;
     }
     StagePatternDraw? nextDraw;
@@ -221,10 +263,16 @@ class StagePatternSession {
       shotsPerStage: shots,
       chainScoresPerStage: scores,
       optionalChallenges: challenges,
+      acquiredRewards: acquiredRewards,
       totalScore: scores.values.fold<int>(0, (sum, score) => sum + score),
     );
     await store.save(next);
     _state = next;
+    return (
+      optionalChallengeAchieved:
+          challenges['$stageId:${current.currentPatternId}'] ?? false,
+      shotCount: shots[stageId] ?? effectiveShotCount,
+    );
   }
 
   Future<List<RunReward>> prepareRewardSelection({
@@ -484,7 +532,10 @@ class StagePatternSession {
     return true;
   }
 
-  Future<RunShotInput> recordShot({required ShotInput input}) async {
+  Future<bool> recordShot({
+    required ShotInput input,
+    bool consumeFirstImpactGuide = false,
+  }) async {
     await _loadOnce();
     final current = _state;
     if (current == null || current.phase != RunPhase.playing) {
@@ -497,6 +548,23 @@ class StagePatternSession {
       }
     }
     final normalized = input.normalized();
+    final acquiredRewards = current.acquiredRewards.toSet();
+    var guideConsumed = false;
+    if (consumeFirstImpactGuide) {
+      final available = RunRewardInventory(
+        acquiredRewards,
+      ).availableSelections(runRewardFirstImpactGuideId);
+      if (available.isEmpty) {
+        throw StateError('사용할 첫 충돌 안내 보상이 없습니다.');
+      }
+      acquiredRewards.add(
+        runRewardUseRecordId(
+          available.first.recordId,
+          '${current.currentStageId}:${current.currentPatternSeed}:${currentInputs.length}:첫충돌',
+        ),
+      );
+      guideConsumed = true;
+    }
     final entry = RunShotInput(
       stageId: current.currentStageId!,
       patternId: current.currentPatternId!,
@@ -513,10 +581,11 @@ class StagePatternSession {
       nextDraw: _savedNextDraw(current),
       shotInputLog: [...current.shotInputLog, entry],
       pendingTraitActions: const [],
+      acquiredRewards: acquiredRewards,
     );
     await store.save(next);
     _state = next;
-    return entry;
+    return guideConsumed;
   }
 
   Future<void> restartCurrentStage() async {
@@ -545,6 +614,17 @@ class StagePatternSession {
           if (!_belongsToCurrentDraw(input, current)) input,
       ],
       clearRewardSelection: true,
+      acquiredRewards: [
+        ...current.acquiredRewards,
+        runStageAttemptRecordId(
+          current.currentStageId!,
+          runStageAttemptNumber(
+                current.acquiredRewards,
+                current.currentStageId!,
+              ) +
+              1,
+        ),
+      ],
     );
     await store.save(next);
     _state = next;

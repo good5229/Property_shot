@@ -14,6 +14,7 @@ const String runRewardStageRecordGuardId = 'stage_record_guard_once';
 const String _selectionPrefix = 'run_reward:';
 const String _usedPrefix = 'run_reward_used:';
 const String _stageUsedPrefix = 'run_reward_stage_used:';
+const String _stageAttemptPrefix = 'run_stage_attempt:';
 
 /// 보상이 런에 제공할 효과의 안정적인 저장 종류다.
 enum RunRewardEffectKind {
@@ -119,7 +120,7 @@ final List<RunReward> initialRunRewards = List.unmodifiable([
   RunReward(
     id: runRewardBallAppearanceId,
     name: '공 꾸미기 묶음',
-    description: '공 표정과 잔상, 충돌 링의 외형을 바꿉니다.',
+    description: '공 둘레에 청록·금색 링과 반짝임을 더합니다.',
     effectKind: RunRewardEffectKind.ballAppearance,
   ),
   RunReward(
@@ -216,6 +217,20 @@ String runRewardUseRecordId(String selectionRecordId, String useKey) =>
 
 String runRewardStageUseRecordId(String selectionRecordId, String stageId) =>
     '$_stageUsedPrefix$selectionRecordId:$stageId';
+
+String runStageAttemptRecordId(String stageId, int attempt) =>
+    '$_stageAttemptPrefix$stageId:$attempt';
+
+int runStageAttemptNumber(Iterable<String> acquiredRewards, String stageId) {
+  final prefix = '$_stageAttemptPrefix$stageId:';
+  var latest = 0;
+  for (final value in acquiredRewards) {
+    if (!value.startsWith(prefix)) continue;
+    final attempt = int.tryParse(value.substring(prefix.length));
+    if (attempt != null && attempt > latest) latest = attempt;
+  }
+  return latest;
+}
 
 class RunRewardSelectionRecord {
   const RunRewardSelectionRecord({
