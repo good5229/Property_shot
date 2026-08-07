@@ -7,6 +7,7 @@ import 'package:property_shot/game/analysis/replay_signature.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
 import 'package:property_shot/game/run/run_state.dart';
+import 'package:property_shot/game/run/run_reward.dart';
 import 'package:property_shot/game/run/stage_pattern_session.dart';
 import 'package:property_shot/game/run/stage_shuffle_bag.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
@@ -574,7 +575,268 @@ void main() {
 
     expect(resumed.state?.phase, RunPhase.stageCompleted);
     expect(resumed.state?.updatedAt, originalUpdatedAt);
-    expect(resumed.state!.updatedAt.isBefore(resumed.state!.startedAt), isFalse);
+    expect(
+      resumed.state!.updatedAt.isBefore(resumed.state!.startedAt),
+      isFalse,
+    );
+  });
+
+  test('클리어 보상 후보는 저장 뒤 재실행해도 같은 세 개를 유지한다', () async {
+    final backend = _MemoryRunStateBackend();
+    final firstStore = RunStateStore(backend: backend);
+    final first = _session(firstStore);
+    await first.selectStage('stage_heavy');
+    await first.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 2,
+    );
+
+    final candidates = await first.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    final revision = firstStore.lastRevision;
+    final resumedStore = RunStateStore(backend: backend);
+    final resumed = _session(resumedStore);
+    final restored = await resumed.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+
+    expect(candidates, hasLength(3));
+    expect(candidates.map((reward) => reward.id).toSet(), hasLength(3));
+    expect(
+      restored.map((reward) => reward.id),
+      candidates.map((reward) => reward.id),
+    );
+    expect(resumed.state?.phase, RunPhase.rewardSelectionPending);
+    expect(resumedStore.lastRevision, revision);
+    await expectLater(
+      resumed.selectStage('stage_bouncy'),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('후보 중 하나를 선택해야 다음 단계로 이동할 수 있다', () async {
+    final backend = _MemoryRunStateBackend();
+    final session = _session(RunStateStore(backend: backend));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 2,
+    );
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    final selected = await session.selectReward(candidates[1].id);
+
+    expect(session.state?.phase, RunPhase.rewardSelectionCompleted);
+    expect(session.state?.selectedRewardId, selected.id);
+    expect(session.state?.acquiredRewards, contains(selected.id));
+    expect(
+      session.state?.acquiredRewards,
+      contains(
+        runRewardSelectionRecordId(
+          stageId: 'stage_heavy',
+          patternSeed: session.state!.currentPatternSeed!,
+          rewardId: selected.id,
+        ),
+      ),
+    );
+    await expectLater(
+      session.selectReward(candidates.first.id),
+      throwsA(isA<StateError>()),
+    );
+
+    final next = await session.selectStage('stage_bouncy');
+    expect(next.stageId, 'stage_bouncy');
+    expect(session.state?.phase, RunPhase.playing);
+    expect(session.state?.rewardCandidateIds, isEmpty);
+    expect(session.state?.selectedRewardId, isNull);
+    expect(session.state?.acquiredRewards, contains(selected.id));
+  });
+
+  test('복제 코어 후보 선택은 저장 상태의 코어를 정확히 하나 늘린다', () async {
+    StagePatternSession? matched;
+    List<RunReward>? matchedCandidates;
+    for (var offset = 0; offset < 64; offset++) {
+      final session = StagePatternSession(
+        catalog: generatedStageCatalog,
+        store: RunStateStore(backend: _MemoryRunStateBackend()),
+        now: () => DateTime.fromMicrosecondsSinceEpoch(offset, isUtc: true),
+      );
+      await session.selectStage('stage_heavy', initialCloneCoreCount: 2);
+      await session.completeCurrentStage(stageId: 'stage_heavy', shotCount: 1);
+      final candidates = await session.prepareRewardSelection(
+        stageId: 'stage_heavy',
+      );
+      if (candidates.any((reward) => reward.id == runRewardCloneCoreId)) {
+        matched = session;
+        matchedCandidates = candidates;
+        break;
+      }
+    }
+    expect(matched, isNotNull);
+    expect(matchedCandidates, isNotNull);
+
+    await matched!.selectReward(runRewardCloneCoreId);
+    expect(matched.state?.cloneCoreCount, 3);
+  });
+
+  test('보상 선택 저장 실패는 후보와 대기 상태를 보존하고 다시 선택할 수 있다', () async {
+    final backend = _MemoryRunStateBackend();
+    final session = _session(RunStateStore(backend: backend));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(stageId: 'stage_heavy', shotCount: 1);
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    backend.failNextWrite = true;
+
+    await expectLater(
+      session.selectReward(candidates.first.id),
+      throwsA(isA<StateError>()),
+    );
+    expect(session.state?.phase, RunPhase.rewardSelectionPending);
+    expect(
+      session.state?.rewardCandidateIds,
+      candidates.map((reward) => reward.id),
+    );
+
+    final resumed = _session(RunStateStore(backend: backend));
+    final restored = await resumed.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    expect(
+      restored.map((reward) => reward.id),
+      candidates.map((reward) => reward.id),
+    );
+    await resumed.selectReward(candidates.first.id);
+    expect(resumed.state?.phase, RunPhase.rewardSelectionCompleted);
+  });
+
+  test('마지막 단계 보상 선택 뒤 런 완료를 저장하고 새 런을 시작한다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_property_shot');
+    await session.completeCurrentStage(
+      stageId: 'stage_property_shot',
+      shotCount: 2,
+    );
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_property_shot',
+    );
+    await session.selectReward(candidates.last.id);
+    final completedRootSeed = session.state!.rootSeed;
+    await session.completeRun();
+    expect(session.state?.phase, RunPhase.runCompleted);
+
+    final first = await session.selectStage('stage_heavy');
+    expect(first.stageId, 'stage_heavy');
+    expect(session.state?.phase, RunPhase.playing);
+    expect(session.state?.currentStageId, 'stage_heavy');
+    expect(session.state?.rewardCandidateIds, isEmpty);
+    expect(session.state?.selectedRewardId, isNull);
+    expect(session.state?.rootSeed, isNot(completedRootSeed));
+  });
+
+  test('기록 재도전은 같은 패턴 보상을 다시 지급하지 않는다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_heavy', initialCloneCoreCount: 1);
+    await session.completeCurrentStage(stageId: 'stage_heavy', shotCount: 2);
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    final selected = candidates.first;
+    await session.selectReward(selected.id);
+    final countAfterFirst = session.state!.cloneCoreCount;
+    final acquiredAfterFirst = session.state!.acquiredRewards.length;
+    await session.restartCurrentStage();
+    await session.completeCurrentStage(stageId: 'stage_heavy', shotCount: 1);
+    final restoredCandidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+
+    expect(
+      restoredCandidates.map((reward) => reward.id),
+      candidates.map((reward) => reward.id),
+    );
+    expect(session.state?.phase, RunPhase.rewardSelectionCompleted);
+    expect(session.state?.selectedRewardId, selected.id);
+    expect(session.state?.cloneCoreCount, countAfterFirst);
+    expect(session.state?.acquiredRewards.length, acquiredAfterFirst);
+  });
+
+  test('일회성 보상은 한 번만 소모되고 재실행 뒤에도 사용 상태를 유지한다', () async {
+    final backend = _MemoryRunStateBackend();
+    final session = _session(RunStateStore(backend: backend));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 2,
+    );
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    final selected = await session.selectReward(candidates.first.id);
+    await session.selectStage('stage_bouncy');
+
+    expect(
+      await session.consumeRewardUse(
+        rewardId: selected.id,
+        useKey: 'stage_bouncy|첫사용',
+      ),
+      isTrue,
+    );
+    expect(
+      await session.consumeRewardUse(
+        rewardId: selected.id,
+        useKey: 'stage_bouncy|두번째사용',
+      ),
+      isFalse,
+    );
+
+    final resumed = _session(RunStateStore(backend: backend));
+    await resumed.loadState();
+    expect(resumed.rewardInventory.availableUseCount(selected.id), 0);
+    expect(resumed.rewardInventory.useKeys(selected.id), ['stage_bouncy|첫사용']);
+  });
+
+  test('단계 기록 보호는 단계마다 한 번씩 사용할 수 있다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 2,
+    );
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    final selected = await session.selectReward(candidates.first.id);
+    await session.selectStage('stage_bouncy');
+
+    expect(
+      await session.consumeStageRewardUse(
+        rewardId: selected.id,
+        stageId: 'stage_bouncy',
+      ),
+      isTrue,
+    );
+    expect(
+      await session.consumeStageRewardUse(
+        rewardId: selected.id,
+        stageId: 'stage_bouncy',
+      ),
+      isFalse,
+    );
+    expect(
+      await session.consumeStageRewardUse(
+        rewardId: selected.id,
+        stageId: 'stage_sticky',
+      ),
+      isTrue,
+    );
   });
 }
 
@@ -623,6 +885,7 @@ GameState _applyTraitActions(
 
 class _MemoryRunStateBackend implements RunStateKeyValueBackend {
   final values = <String, String>{};
+  bool failNextWrite = false;
 
   @override
   Future<String?> read(String key) async => values[key];
@@ -634,6 +897,10 @@ class _MemoryRunStateBackend implements RunStateKeyValueBackend {
 
   @override
   Future<void> write(String key, String value) async {
+    if (failNextWrite) {
+      failNextWrite = false;
+      throw StateError('보상 저장 실패 주입');
+    }
     values[key] = value;
   }
 }

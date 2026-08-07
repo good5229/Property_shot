@@ -11,6 +11,9 @@ const String runRewardOptionalChallengeGuardId =
 const String runRewardFailureCauseBoostId = 'failure_cause_boost';
 const String runRewardBallAppearanceId = 'ball_appearance_set';
 const String runRewardStageRecordGuardId = 'stage_record_guard_once';
+const String _selectionPrefix = 'run_reward:';
+const String _usedPrefix = 'run_reward_used:';
+const String _stageUsedPrefix = 'run_reward_stage_used:';
 
 /// 보상이 런에 제공할 효과의 안정적인 저장 종류다.
 enum RunRewardEffectKind {
@@ -110,7 +113,7 @@ final List<RunReward> initialRunRewards = List.unmodifiable([
   RunReward(
     id: runRewardFailureCauseBoostId,
     name: '실패 인과 표시 강화',
-    description: '일정 시간 동안 실패 원인과 충돌 순서를 더 선명하게 표시합니다.',
+    description: '런 동안 실패 원인과 충돌 순서를 더 선명하게 표시합니다.',
     effectKind: RunRewardEffectKind.failureCauseBoost,
   ),
   RunReward(
@@ -122,7 +125,7 @@ final List<RunReward> initialRunRewards = List.unmodifiable([
   RunReward(
     id: runRewardStageRecordGuardId,
     name: '스테이지 기록 보호',
-    description: '스테이지마다 한 번씩 현재 기록이 낮아지는 것을 막습니다.',
+    description: '스테이지마다 한 번, 클리어 발사 횟수를 1회 줄여 기록합니다.',
     effectKind: RunRewardEffectKind.stageRecordGuard,
   ),
 ]);
@@ -200,6 +203,116 @@ List<RunReward> generateRunRewardCandidates({
   return RunRewardCandidateGenerator(
     catalog: catalog,
   ).generate(rootSeed: rootSeed, stageId: stageId, patternSeed: patternSeed);
+}
+
+String runRewardSelectionRecordId({
+  required String stageId,
+  required int patternSeed,
+  required String rewardId,
+}) => '$_selectionPrefix$stageId:$patternSeed:$rewardId';
+
+String runRewardUseRecordId(String selectionRecordId, String useKey) =>
+    '$_usedPrefix$selectionRecordId:$useKey';
+
+String runRewardStageUseRecordId(String selectionRecordId, String stageId) =>
+    '$_stageUsedPrefix$selectionRecordId:$stageId';
+
+class RunRewardSelectionRecord {
+  const RunRewardSelectionRecord({
+    required this.recordId,
+    required this.stageId,
+    required this.patternSeed,
+    required this.rewardId,
+  });
+
+  final String recordId;
+  final String stageId;
+  final int patternSeed;
+  final String rewardId;
+}
+
+List<RunRewardSelectionRecord> runRewardSelectionRecords(
+  Iterable<String> acquiredRewards,
+) {
+  final records = <RunRewardSelectionRecord>[];
+  for (final value in acquiredRewards) {
+    if (!value.startsWith(_selectionPrefix) ||
+        value.startsWith(_usedPrefix) ||
+        value.startsWith(_stageUsedPrefix)) {
+      continue;
+    }
+    final parts = value.split(':');
+    if (parts.length != 4) continue;
+    final patternSeed = int.tryParse(parts[2]);
+    if (parts[1].isEmpty || patternSeed == null || parts[3].isEmpty) continue;
+    records.add(
+      RunRewardSelectionRecord(
+        recordId: value,
+        stageId: parts[1],
+        patternSeed: patternSeed,
+        rewardId: parts[3],
+      ),
+    );
+  }
+  records.sort((left, right) => left.recordId.compareTo(right.recordId));
+  return List.unmodifiable(records);
+}
+
+class RunRewardInventory {
+  RunRewardInventory(Iterable<String> acquiredRewards)
+    : acquiredRewards = Set.unmodifiable(acquiredRewards),
+      selections = runRewardSelectionRecords(acquiredRewards);
+
+  final Set<String> acquiredRewards;
+  final List<RunRewardSelectionRecord> selections;
+
+  bool has(String rewardId) =>
+      selections.any((record) => record.rewardId == rewardId);
+
+  RunRewardSelectionRecord? selectionFor({
+    required String stageId,
+    required int patternSeed,
+  }) {
+    for (final record in selections) {
+      if (record.stageId == stageId && record.patternSeed == patternSeed) {
+        return record;
+      }
+    }
+    return null;
+  }
+
+  List<RunRewardSelectionRecord> availableSelections(String rewardId) =>
+      List.unmodifiable(
+        selections.where(
+          (record) =>
+              record.rewardId == rewardId &&
+              !acquiredRewards.any(
+                (value) => value.startsWith('$_usedPrefix${record.recordId}:'),
+              ),
+        ),
+      );
+
+  int availableUseCount(String rewardId) =>
+      availableSelections(rewardId).length;
+
+  bool canUseForStage(String rewardId, String stageId) => selections.any(
+    (record) =>
+        record.rewardId == rewardId &&
+        !acquiredRewards.contains(
+          runRewardStageUseRecordId(record.recordId, stageId),
+        ),
+  );
+
+  Iterable<String> useKeys(String rewardId) sync* {
+    for (final record in selections.where(
+      (record) => record.rewardId == rewardId,
+    )) {
+      final prefix = '$_usedPrefix${record.recordId}:';
+      for (final value in acquiredRewards) {
+        if (value.startsWith(prefix)) yield value.substring(prefix.length);
+      }
+    }
+  }
 }
 
 String _requiredString(Map<String, dynamic> json, String key) {

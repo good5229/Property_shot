@@ -179,4 +179,39 @@ void main() {
       );
     });
   });
+
+  group('런 보상 보유 상태', () {
+    test('일회성 사용과 단계별 사용을 서로 구분해 복원한다', () {
+      final oneShotSelection = runRewardSelectionRecordId(
+        stageId: 'stage_heavy',
+        patternSeed: 17,
+        rewardId: runRewardSpentBallRecoveryId,
+      );
+      final stageSelection = runRewardSelectionRecordId(
+        stageId: 'stage_bouncy',
+        patternSeed: 29,
+        rewardId: runRewardStageRecordGuardId,
+      );
+      final inventory = RunRewardInventory({
+        oneShotSelection,
+        stageSelection,
+        runRewardUseRecordId(oneShotSelection, 'stage_heavy|spent_ball_2'),
+        runRewardStageUseRecordId(stageSelection, 'stage_sticky'),
+      });
+
+      expect(inventory.has(runRewardSpentBallRecoveryId), isTrue);
+      expect(inventory.availableUseCount(runRewardSpentBallRecoveryId), 0);
+      expect(inventory.useKeys(runRewardSpentBallRecoveryId), [
+        'stage_heavy|spent_ball_2',
+      ]);
+      expect(
+        inventory.canUseForStage(runRewardStageRecordGuardId, 'stage_sticky'),
+        isFalse,
+      );
+      expect(
+        inventory.canUseForStage(runRewardStageRecordGuardId, 'stage_speed'),
+        isTrue,
+      );
+    });
+  });
 }

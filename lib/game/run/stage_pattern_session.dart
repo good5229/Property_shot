@@ -4,6 +4,7 @@ import '../domain/stage_catalog.dart';
 import '../domain/stage_pattern.dart';
 import '../domain/shot_input.dart';
 import '../persistence/run_state_store.dart';
+import 'run_reward.dart';
 import 'run_state.dart';
 import 'stage_shuffle_bag.dart';
 
@@ -79,7 +80,14 @@ class StagePatternSession {
       return _restoreCurrentDraw(stage, current);
     }
     if (current != null &&
-        current.phase == RunPhase.stageCompleted &&
+        (current.phase == RunPhase.rewardSelectionPending ||
+            current.phase == RunPhase.rewardSelectionCompleted) &&
+        current.currentStageId == stageId) {
+      return _restoreCurrentDraw(stage, current);
+    }
+    if (current != null &&
+        (current.phase == RunPhase.stageCompleted ||
+            current.phase == RunPhase.rewardSelectionCompleted) &&
         current.nextStageId == stageId) {
       final draw = _restoreNextDraw(stage, current);
       final next = _withCurrentDraw(current, draw, appendHistory: false);
@@ -87,6 +95,9 @@ class StagePatternSession {
       _state = next;
       _clearLegacyShotAmbiguity();
       return draw;
+    }
+    if (current != null && current.phase == RunPhase.rewardSelectionPending) {
+      throw StateError('보상을 먼저 선택해 주세요.');
     }
     if (current != null &&
         current.phase == RunPhase.playing &&
@@ -100,9 +111,15 @@ class StagePatternSession {
       throw StateError('미리 준비된 다음 단계를 먼저 플레이해 주세요.');
     }
 
-    final rootSeed = current?.rootSeed ?? _newRootSeed();
+    final startingNewRun =
+        current == null || current.phase == RunPhase.runCompleted;
+    var rootSeed = startingNewRun ? _newRootSeed() : current.rootSeed;
+    if (current?.phase == RunPhase.runCompleted &&
+        rootSeed == current!.rootSeed) {
+      rootSeed = (rootSeed ^ 0x9e3779b9) & 0xffffffff;
+    }
     final bag =
-        current?.stageShuffleBags[stageId] ??
+        (startingNewRun ? null : current.stageShuffleBags[stageId]) ??
         StageShuffleBagState.initial(stageId);
     final draw = StageShuffleBag.draw(
       stage: stage,
@@ -112,7 +129,7 @@ class StagePatternSession {
     final initialRewardStageIds = initialCloneCoreRewardedStageIds
         .where((id) => id.isNotEmpty)
         .toSet();
-    final next = current == null
+    final next = startingNewRun
         ? RunState.initial(
             runId: 'run_${_now().toUtc().microsecondsSinceEpoch}',
             rootSeed: rootSeed,
@@ -205,6 +222,160 @@ class StagePatternSession {
       chainScoresPerStage: scores,
       optionalChallenges: challenges,
       totalScore: scores.values.fold<int>(0, (sum, score) => sum + score),
+    );
+    await store.save(next);
+    _state = next;
+  }
+
+  Future<List<RunReward>> prepareRewardSelection({
+    required String stageId,
+  }) async {
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.currentStageId != stageId) {
+      throw StateError('현재 단계의 보상 후보를 준비할 수 없습니다.');
+    }
+    if (current.phase == RunPhase.rewardSelectionPending ||
+        current.phase == RunPhase.rewardSelectionCompleted) {
+      return _rewardsByIds(current.rewardCandidateIds);
+    }
+    if (current.phase != RunPhase.stageCompleted) {
+      throw StateError('클리어가 저장된 뒤에만 보상 후보를 준비할 수 있습니다.');
+    }
+    final generator = RunRewardCandidateGenerator();
+    final rewards = generator.generate(
+      rootSeed: current.rootSeed,
+      stageId: stageId,
+      patternSeed: current.currentPatternSeed!,
+    );
+    final previousSelection = RunRewardInventory(
+      current.acquiredRewards,
+    ).selectionFor(stageId: stageId, patternSeed: current.currentPatternSeed!);
+    final previousRewardId = previousSelection?.rewardId;
+    final next = _copyState(
+      current,
+      phase: previousRewardId == null
+          ? RunPhase.rewardSelectionPending
+          : RunPhase.rewardSelectionCompleted,
+      nextDraw: _savedNextDraw(current),
+      rewardCandidateSeed: generator.candidateSeed(
+        rootSeed: current.rootSeed,
+        stageId: stageId,
+        patternSeed: current.currentPatternSeed!,
+      ),
+      rewardCandidateIds: rewards.map((reward) => reward.id),
+      selectedRewardId: previousRewardId,
+    );
+    await store.save(next);
+    _state = next;
+    return rewards;
+  }
+
+  Future<RunReward> selectReward(String rewardId) async {
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.phase != RunPhase.rewardSelectionPending) {
+      throw StateError('선택을 기다리는 보상 후보가 없습니다.');
+    }
+    if (!current.rewardCandidateIds.contains(rewardId)) {
+      throw StateError('현재 후보에 없는 보상은 선택할 수 없습니다.');
+    }
+    final reward = _rewardsByIds([rewardId]).single;
+    final selectionRecord = runRewardSelectionRecordId(
+      stageId: current.currentStageId!,
+      patternSeed: current.currentPatternSeed!,
+      rewardId: rewardId,
+    );
+    final alreadyAcquired = current.acquiredRewards.contains(selectionRecord);
+    final next = _copyState(
+      current,
+      phase: RunPhase.rewardSelectionCompleted,
+      nextDraw: _savedNextDraw(current),
+      selectedRewardId: rewardId,
+      cloneCoreCount:
+          current.cloneCoreCount +
+          (!alreadyAcquired &&
+                  reward.effectKind == RunRewardEffectKind.cloneCore
+              ? 1
+              : 0),
+      acquiredRewards: [...current.acquiredRewards, rewardId, selectionRecord],
+    );
+    await store.save(next);
+    _state = next;
+    return reward;
+  }
+
+  RunRewardInventory get rewardInventory =>
+      RunRewardInventory(_state?.acquiredRewards ?? const []);
+
+  Future<bool> consumeRewardUse({
+    required String rewardId,
+    required String useKey,
+  }) async {
+    if (useKey.isEmpty) {
+      throw ArgumentError.value(useKey, 'useKey', '비어 있을 수 없습니다.');
+    }
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.phase != RunPhase.playing) {
+      throw StateError('플레이 중에만 런 보상을 사용할 수 있습니다.');
+    }
+    final available = RunRewardInventory(
+      current.acquiredRewards,
+    ).availableSelections(rewardId);
+    if (available.isEmpty) return false;
+    final useRecord = runRewardUseRecordId(available.first.recordId, useKey);
+    final next = _copyState(
+      current,
+      phase: current.phase,
+      nextDraw: _savedNextDraw(current),
+      acquiredRewards: [...current.acquiredRewards, useRecord],
+    );
+    await store.save(next);
+    _state = next;
+    return true;
+  }
+
+  Future<bool> consumeStageRewardUse({
+    required String rewardId,
+    required String stageId,
+  }) async {
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.phase != RunPhase.playing) {
+      throw StateError('플레이 중에만 단계 보상을 사용할 수 있습니다.');
+    }
+    final inventory = RunRewardInventory(current.acquiredRewards);
+    for (final selection in inventory.selections.where(
+      (record) => record.rewardId == rewardId,
+    )) {
+      final useRecord = runRewardStageUseRecordId(selection.recordId, stageId);
+      if (current.acquiredRewards.contains(useRecord)) continue;
+      final next = _copyState(
+        current,
+        phase: current.phase,
+        nextDraw: _savedNextDraw(current),
+        acquiredRewards: [...current.acquiredRewards, useRecord],
+      );
+      await store.save(next);
+      _state = next;
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> completeRun() async {
+    await _loadOnce();
+    final current = _state;
+    if (current == null ||
+        current.phase != RunPhase.rewardSelectionCompleted ||
+        current.nextStageId != null) {
+      throw StateError('마지막 단계의 보상 선택 뒤에만 런을 완료할 수 있습니다.');
+    }
+    final next = _copyState(
+      current,
+      phase: RunPhase.runCompleted,
+      nextDraw: null,
     );
     await store.save(next);
     _state = next;
@@ -353,7 +524,8 @@ class StagePatternSession {
     final current = _state;
     if (current == null ||
         (current.phase != RunPhase.playing &&
-            current.phase != RunPhase.stageCompleted)) {
+            current.phase != RunPhase.stageCompleted &&
+            current.phase != RunPhase.rewardSelectionCompleted)) {
       return;
     }
     final next = _copyState(
@@ -372,6 +544,7 @@ class StagePatternSession {
         for (final input in current.shotInputLog)
           if (!_belongsToCurrentDraw(input, current)) input,
       ],
+      clearRewardSelection: true,
     );
     await store.save(next);
     _state = next;
@@ -570,6 +743,7 @@ class StagePatternSession {
       currentPatternSeed: draw.patternSeed,
       patternDrawHistory: history,
       stageShuffleBags: bags,
+      clearRewardSelection: true,
     );
   }
 
@@ -590,6 +764,10 @@ class StagePatternSession {
     int? cloneCoreCount,
     Iterable<RunTraitActionRecord>? pendingTraitActions,
     Iterable<String>? acquiredRewards,
+    int? rewardCandidateSeed,
+    Iterable<String>? rewardCandidateIds,
+    String? selectedRewardId,
+    bool clearRewardSelection = false,
   }) {
     final now = _now().toUtc();
     final updatedAt = now.isAfter(state.updatedAt) ? now : state.updatedAt;
@@ -607,9 +785,15 @@ class StagePatternSession {
       nextStagePatternSeed: nextDraw?.patternSeed,
       patternDrawHistory: patternDrawHistory ?? state.patternDrawHistory,
       stageShuffleBags: stageShuffleBags ?? state.stageShuffleBags,
-      rewardCandidateSeed: null,
-      rewardCandidateIds: const [],
-      selectedRewardId: null,
+      rewardCandidateSeed: clearRewardSelection
+          ? null
+          : rewardCandidateSeed ?? state.rewardCandidateSeed,
+      rewardCandidateIds: clearRewardSelection
+          ? const []
+          : rewardCandidateIds ?? state.rewardCandidateIds,
+      selectedRewardId: clearRewardSelection
+          ? null
+          : selectedRewardId ?? state.selectedRewardId,
       acquiredRewards: acquiredRewards ?? state.acquiredRewards,
       cloneCoreCount: cloneCoreCount ?? state.cloneCoreCount,
       pendingTraitActions: pendingTraitActions ?? state.pendingTraitActions,
@@ -630,5 +814,15 @@ class StagePatternSession {
     return actions
         .where((action) => action.action == RunTraitAction.copy)
         .length;
+  }
+
+  List<RunReward> _rewardsByIds(Iterable<String> ids) {
+    final byId = {
+      for (final reward in defaultRunRewardCatalog.rewards) reward.id: reward,
+    };
+    return List.unmodifiable([
+      for (final id in ids)
+        byId[id] ?? (throw StateError('저장된 보상 ID를 찾을 수 없습니다: $id')),
+    ]);
   }
 }
