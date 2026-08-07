@@ -6719,6 +6719,777 @@ const generatedStageCatalogJson = r'''
           "metadata": {}
         }
       ]
+    },
+    {
+      "stageId": "stage_rotating_reflector",
+      "title": "9. 판을 돌려 놓아라",
+      "patterns": [
+        {
+          "patternId": "stage_rotating_reflector_01",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "회전 입문",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 500.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 72.0,
+                "y": 110.0
+              },
+              "size": {
+                "x": 56.0,
+                "y": 56.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "reflector_a",
+              "type": "rotating_reflector",
+              "position": {
+                "x": 180.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 86.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "reflectorOrientation": 0,
+              "reflectorRotationCount": 0
+            },
+            {
+              "id": "guide_stone",
+              "type": "weight",
+              "position": {
+                "x": 270.0,
+                "y": 260.0
+              },
+              "size": {
+                "x": 44.0,
+                "y": 44.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "첫 번째 샷으로 반사판을 한 번 돌린 뒤 다음 샷의 방향을 바꿔 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "rotate_then_shoot",
+          "acceptedStrategyIds": [
+            "none",
+            "rotate_then_shoot"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "single_reflector_prepare"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "one_rotation"
+          ],
+          "metadata": {
+            "baseline": "true"
+          }
+        },
+        {
+          "patternId": "stage_rotating_reflector_02",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "순서 응용",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 500.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 110.0
+              },
+              "size": {
+                "x": 56.0,
+                "y": 56.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "reflector_a",
+              "type": "rotating_reflector",
+              "position": {
+                "x": 150.0,
+                "y": 360.0
+              },
+              "size": {
+                "x": 82.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "reflectorOrientation": 0,
+              "reflectorRotationCount": 0
+            },
+            {
+              "id": "reflector_b",
+              "type": "rotating_reflector",
+              "position": {
+                "x": 250.0,
+                "y": 260.0
+              },
+              "size": {
+                "x": 82.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "reflectorOrientation": 2,
+              "reflectorRotationCount": 0
+            },
+            {
+              "id": "order_crate",
+              "type": "crate",
+              "position": {
+                "x": 90.0,
+                "y": 250.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 48.0
+              },
+              "traits": [],
+              "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "두 반사판을 차례로 돌리면 다음 샷의 길이 달라집니다.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "ordered_reflectors",
+          "acceptedStrategyIds": [
+            "none",
+            "ordered_reflectors"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "two_reflector_order"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "ordered_rotation"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_rotating_reflector_03",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "과거 공 응용",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 500.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 120.0
+              },
+              "size": {
+                "x": 56.0,
+                "y": 56.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "reflector_a",
+              "type": "rotating_reflector",
+              "position": {
+                "x": 100.0,
+                "y": 330.0
+              },
+              "size": {
+                "x": 88.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "reflectorOrientation": 0,
+              "reflectorRotationCount": 0
+            },
+            {
+              "id": "past_anchor",
+              "type": "sticky_surface",
+              "position": {
+                "x": 70.0,
+                "y": 270.0
+              },
+              "size": {
+                "x": 48.0,
+                "y": 32.0
+              },
+              "traits": [
+                "sticky"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.94,
+              "restitution": 0.12,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "past_bumper",
+              "type": "bumper",
+              "position": {
+                "x": 285.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 54.0,
+                "y": 54.0
+              },
+              "traits": [
+                "bouncy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "남겨 둔 첫 공이 반사판을 작동시키는 순서를 찾아 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "past_ball_reflector",
+          "acceptedStrategyIds": [
+            "none",
+            "past_ball_reflector"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "past_ball_activation"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "past_ball_rotation"
+          ],
+          "metadata": {}
+        },
+        {
+          "patternId": "stage_rotating_reflector_04",
+          "weight": 1.0,
+          "parShots": 2,
+          "difficultyBand": "힘 발판 연계",
+          "ballSpawn": {
+            "x": 60.0,
+            "y": 500.0
+          },
+          "objects": [
+            {
+              "id": "hole",
+              "type": "hole",
+              "position": {
+                "x": 300.0,
+                "y": 120.0
+              },
+              "size": {
+                "x": 56.0,
+                "y": 56.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.06,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_top",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 12.0
+              },
+              "size": {
+                "x": 340.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_left",
+              "type": "wall",
+              "position": {
+                "x": 12.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "wall_right",
+              "type": "wall",
+              "position": {
+                "x": 348.0,
+                "y": 280.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 520.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "power_lane",
+              "type": "power_slider",
+              "position": {
+                "x": 118.0,
+                "y": 390.0
+              },
+              "size": {
+                "x": 76.0,
+                "y": 36.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 44.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            },
+            {
+              "id": "reflector_a",
+              "type": "rotating_reflector",
+              "position": {
+                "x": 230.0,
+                "y": 300.0
+              },
+              "size": {
+                "x": 88.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.82,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "reflectorOrientation": 1,
+              "reflectorRotationCount": 0
+            },
+            {
+              "id": "lane_stone",
+              "type": "weight",
+              "position": {
+                "x": 280.0,
+                "y": 420.0
+              },
+              "size": {
+                "x": 44.0,
+                "y": 44.0
+              },
+              "traits": [
+                "heavy"
+              ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.68,
+              "linkId": null,
+              "movableWhenDrained": false
+            }
+          ],
+          "copyCharges": 0,
+          "bonusGoal": "힘 발판을 지난 뒤 회전 반사판의 새 방향을 활용해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_then_reflector",
+          "acceptedStrategyIds": [
+            "none",
+            "slider_then_reflector"
+          ],
+          "solutionFamilies": [
+            "direct_bypass",
+            "slider_reflector_chain"
+          ],
+          "optionalChallenges": [
+            "direct_low_score",
+            "slider_rotation"
+          ],
+          "metadata": {}
+        }
+      ]
     }
   ]
 }

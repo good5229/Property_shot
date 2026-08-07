@@ -3749,6 +3749,107 @@
           ]
         }
       ]
+    },
+    {
+      "stageId": "stage_rotating_reflector",
+      "title": "9. 판을 돌려 놓아라",
+      "patterns": [
+        {
+          "patternId": "stage_rotating_reflector_01",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "회전 입문",
+          "ballSpawn": {"x":60,"y":500},
+          "copyCharges": 0,
+          "bonusGoal": "첫 번째 샷으로 반사판을 한 번 돌린 뒤 다음 샷의 방향을 바꿔 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "rotate_then_shoot",
+          "acceptedStrategyIds": ["rotate_then_shoot", "none"],
+          "solutionFamilies": ["single_reflector_prepare", "direct_bypass"],
+          "optionalChallenges": ["one_rotation", "direct_low_score"],
+          "metadata": {"baseline":"true"},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":72,"y":110},"size":{"x":56,"y":56},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"reflector_a","type":"rotating_reflector","position":{"x":180,"y":350},"size":{"x":86,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":0,"reflectorRotationCount":0},
+            {"id":"guide_stone","type":"weight","position":{"x":270,"y":260},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68}
+          ]
+        },
+        {
+          "patternId": "stage_rotating_reflector_02",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "순서 응용",
+          "ballSpawn": {"x":60,"y":500},
+          "copyCharges": 0,
+          "bonusGoal": "두 반사판을 차례로 돌리면 다음 샷의 길이 달라집니다.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "ordered_reflectors",
+          "acceptedStrategyIds": ["ordered_reflectors", "none"],
+          "solutionFamilies": ["two_reflector_order", "direct_bypass"],
+          "optionalChallenges": ["ordered_rotation", "direct_low_score"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":300,"y":110},"size":{"x":56,"y":56},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"reflector_a","type":"rotating_reflector","position":{"x":150,"y":360},"size":{"x":82,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":0,"reflectorRotationCount":0},
+            {"id":"reflector_b","type":"rotating_reflector","position":{"x":250,"y":260},"size":{"x":82,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":2,"reflectorRotationCount":0},
+            {"id":"order_crate","type":"crate","position":{"x":90,"y":250},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"restitution":0.66}
+          ]
+        },
+        {
+          "patternId": "stage_rotating_reflector_03",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "과거 공 응용",
+          "ballSpawn": {"x":60,"y":500},
+          "copyCharges": 0,
+          "bonusGoal": "남겨 둔 첫 공이 반사판을 작동시키는 순서를 찾아 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "past_ball_reflector",
+          "acceptedStrategyIds": ["past_ball_reflector", "none"],
+          "solutionFamilies": ["past_ball_activation", "direct_bypass"],
+          "optionalChallenges": ["past_ball_rotation", "direct_low_score"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":300,"y":120},"size":{"x":56,"y":56},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"reflector_a","type":"rotating_reflector","position":{"x":100,"y":330},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":0,"reflectorRotationCount":0},
+            {"id":"past_anchor","type":"sticky_surface","position":{"x":70,"y":270},"size":{"x":48,"y":32},"traits":["sticky"],"movable":false,"solid":true,"active":true,"hitboxScale":0.94,"restitution":0.12},
+            {"id":"past_bumper","type":"bumper","position":{"x":285,"y":350},"size":{"x":54,"y":54},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92}
+          ]
+        },
+        {
+          "patternId": "stage_rotating_reflector_04",
+          "weight": 1,
+          "parShots": 2,
+          "difficultyBand": "힘 발판 연계",
+          "ballSpawn": {"x":60,"y":500},
+          "copyCharges": 0,
+          "bonusGoal": "힘 발판을 지난 뒤 회전 반사판의 새 방향을 활용해 보세요.",
+          "copyCoreReward": 0,
+          "intendedStrategyId": "slider_then_reflector",
+          "acceptedStrategyIds": ["slider_then_reflector", "none"],
+          "solutionFamilies": ["slider_reflector_chain", "direct_bypass"],
+          "optionalChallenges": ["slider_rotation", "direct_low_score"],
+          "metadata": {},
+          "objects": [
+            {"id":"hole","type":"hole","position":{"x":300,"y":120},"size":{"x":56,"y":56},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"power_lane","type":"power_slider","position":{"x":118,"y":390},"size":{"x":76,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"]},
+            {"id":"reflector_a","type":"rotating_reflector","position":{"x":230,"y":300},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":1,"reflectorRotationCount":0},
+            {"id":"lane_stone","type":"weight","position":{"x":280,"y":420},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68}
+          ]
+        }
+      ]
     }
   ]
 }

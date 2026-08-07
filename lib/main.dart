@@ -35,7 +35,9 @@ String _stageIntroMessage(int levelIndex) {
     4 => '공과 원본의 변화를 함께 살펴보세요',
     5 => '감속을 읽고 발판으로 속도를 되살려 보세요',
     6 => '첫 공을 남겨 다음 공의 쿠션과 스토퍼로 활용해 보세요',
-    _ => '짧은 길과 여러 기물을 잇는 연쇄 길을 비교해 보세요',
+    7 => '짧은 길과 여러 기물을 잇는 연쇄 길을 비교해 보세요',
+    8 => '현재 면의 반사와 다음 충돌에 적용될 회전을 살펴보세요',
+    _ => '기물의 상태 변화를 살펴보며 여러 경로로 도전해 보세요',
   };
 }
 
@@ -1266,6 +1268,47 @@ class _StageBalloonPainter extends CustomPainter {
   bool shouldRepaint(covariant _StageBalloonPainter oldDelegate) => false;
 }
 
+class _StageReflectorIcon extends StatelessWidget {
+  const _StageReflectorIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Transform.rotate(
+          angle: -0.35,
+          child: Container(
+            width: 52,
+            height: 14,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2B66D),
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: const Color(0xFF5E4431), width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x443A2A20),
+                  offset: Offset(2, 3),
+                  blurRadius: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Positioned(
+          right: 5,
+          bottom: 4,
+          child: Icon(
+            Icons.rotate_right_rounded,
+            color: Color(0xFF397372),
+            size: 24,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StageTile extends StatelessWidget {
   const _StageTile({
     required this.index,
@@ -1288,6 +1331,7 @@ class _StageTile extends StatelessWidget {
       '약하게 쏜 뒤 발판에 들어가는 각도와 우회 길을 찾아 보세요.',
       '과거 공을 쿠션·스위치·스토퍼로 활용해 여러 발의 인과를 만들어 보세요.',
       '짧게 넣거나 벽과 기물을 이어 더 높은 연쇄 점수에 도전해 보세요.',
+      '반사판을 돌려 다음 공이 만날 면과 방향을 바꿔 보세요.',
     ];
     final assets = [
       'assets/icons/stone_boulder.png',
@@ -1298,6 +1342,7 @@ class _StageTile extends StatelessWidget {
       'assets/generated/crate-v2.png',
       '',
       'assets/icons/crate.png',
+      '',
     ];
     final stageAsset = assets[index];
     return Padding(
@@ -1352,6 +1397,8 @@ class _StageTile extends StatelessWidget {
                                     ? const CustomPaint(
                                         painter: GameBallIconPainter(null),
                                       )
+                                    : index == 8
+                                    ? const _StageReflectorIcon()
                                     : Image.asset(
                                         stageAsset,
                                         fit: BoxFit.contain,

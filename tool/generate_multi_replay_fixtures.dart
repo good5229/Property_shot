@@ -127,8 +127,13 @@ ShotSequencePlan? _validatedTwoShotSeed(int stageIndex) {
     stageIndex,
     productRules: true,
   );
+  final minimumPowerStep = stageIndex >= 6 ? 2 : 1;
   for (var firstDegree = 0; firstDegree < 360; firstDegree += 10) {
-    for (var firstPowerStep = 1; firstPowerStep <= 10; firstPowerStep++) {
+    for (
+      var firstPowerStep = minimumPowerStep;
+      firstPowerStep <= 10;
+      firstPowerStep++
+    ) {
       final firstInput = _gridInput(firstDegree, firstPowerStep);
       final first = resolver.resolve(initial, firstInput);
       if (first.state.phase == GamePhase.success) {
@@ -136,7 +141,7 @@ ShotSequencePlan? _validatedTwoShotSeed(int stageIndex) {
       }
       for (var secondDegree = 0; secondDegree < 360; secondDegree += 10) {
         for (
-          var secondPowerStep = 1;
+          var secondPowerStep = minimumPowerStep;
           secondPowerStep <= 10;
           secondPowerStep++
         ) {

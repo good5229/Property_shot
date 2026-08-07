@@ -47,8 +47,10 @@ void main() {
     expect(find.byKey(const Key('stage_tile_0')), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_7')), findsOneWidget);
+    expect(find.byKey(const Key('stage_tile_8')), findsOneWidget);
     expect(find.text('풍선은 밀리고, 뾰족한 공에는 터집니다.'), findsOneWidget);
     expect(find.text('짧게 넣거나 벽과 기물을 이어 더 높은 연쇄 점수에 도전해 보세요.'), findsOneWidget);
+    expect(find.text('반사판을 돌려 다음 공이 만날 면과 방향을 바꿔 보세요.'), findsOneWidget);
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
 
     await tester.tap(find.byKey(const Key('stage_tile_0')));
@@ -80,6 +82,8 @@ void main() {
           type: EntityType.rotatingReflector,
           position: Vec2(180, 280),
           size: Vec2(76, 12),
+          reflectorOrientation: 2,
+          reflectorRotationCount: 3,
         ),
       ],
     );
@@ -93,6 +97,25 @@ void main() {
     );
     expect(semantics.getSemanticsData().label, contains('다음 충돌부터 90도 방향 변경'));
     expect(semantics.getSemanticsData().label, isNot(contains('45도')));
+
+    await tester.tapAt(_logicalOffset(tester, 180, 280));
+    await tester.pump();
+    expect(find.byKey(const Key('entity_info_panel')), findsOneWidget);
+    expect(find.text('현재 세로 방향 · 3회 회전'), findsOneWidget);
+  });
+
+  testWidgets('9단계 화면은 현재 반사와 다음 충돌 회전을 한글로 안내한다', (tester) async {
+    await tester.pumpWidget(
+      PropertyShotApp(
+        initialState: levels[8].createState(8, productRules: true),
+        showStageSelector: false,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('9. 판을 돌려 놓아라'), findsOneWidget);
+    expect(find.text('반사판을 돌려 다음 공의 반사 방향 바꾸기'), findsOneWidget);
+    expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsOneWidget);
   });
 
   testWidgets('섬 지도는 진행 경로와 실제 한 번 탭 동작을 안내한다', (tester) async {

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "directAngleStepDegrees": 2,
+  "preparedAngleStepDegrees": 1,
+  "aimSnapDegrees": 1.0,
+  "powerStepPercent": 2,
+  "preparedNeighborhood": {
+    "angleRadiusDegrees": 4,
+    "powerRadiusPercent": 8
+  },
+  "patterns": [
+    {
+      "patternId": "stage_rotating_reflector_01",
+      "direct": {
+        "sampleCount": 8100,
+        "successCount": 750,
+        "largestConnectedRegion": 477
+      },
+      "prepared": {
+        "sampleCount": 3645,
+        "successCount": 378,
+        "largestConnectedRegion": 253,
+        "successfulFirstInputs": 21,
+        "successfulSecondInputs": 29,
+        "firstSelectableAngleBins": 4,
+        "secondSelectableAngleBins": 5,
+        "firstPowerSpanPercent": 8,
+        "secondPowerSpanPercent": 16
+      }
+    },
+    {
+      "patternId": "stage_rotating_reflector_02",
+      "direct": {
+        "sampleCount": 8100,
+        "successCount": 70,
+        "largestConnectedRegion": 48
+      },
+      "prepared": {
+        "sampleCount": 3645,
+        "successCount": 435,
+        "largestConnectedRegion": 435,
+        "successfulFirstInputs": 29,
+        "successfulSecondInputs": 15,
+        "firstSelectableAngleBins": 6,
+        "secondSelectableAngleBins": 3,
+        "firstPowerSpanPercent": 8,
+        "secondPowerSpanPercent": 8
+      }
+    },
+    {
+      "patternId": "stage_rotating_reflector_03",
+      "direct": {
+        "sampleCount": 8100,
+        "successCount": 484,
+        "largestConnectedRegion": 213
+      },
+      "prepared": {
+        "sampleCount": 6561,
+        "successCount": 18,
+        "largestConnectedRegion": 9,
+        "successfulFirstInputs": 2,
+        "successfulSecondInputs": 18,
+        "firstSelectableAngleBins": 2,
+        "secondSelectableAngleBins": 2,
+        "firstPowerSpanPercent": 0,
+        "secondPowerSpanPercent": 16
+      }
+    },
+    {
+      "patternId": "stage_rotating_reflector_04",
+      "direct": {
+        "sampleCount": 8100,
+        "successCount": 309,
+        "largestConnectedRegion": 180
+      },
+      "prepared": {
+        "sampleCount": 3645,
+        "successCount": 201,
+        "largestConnectedRegion": 89,
+        "successfulFirstInputs": 23,
+        "successfulSecondInputs": 11,
+        "firstSelectableAngleBins": 3,
+        "secondSelectableAngleBins": 2,
+        "firstPowerSpanPercent": 8,
+        "secondPowerSpanPercent": 10
+      }
+    }
+  ]
+}

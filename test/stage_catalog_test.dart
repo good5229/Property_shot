@@ -34,6 +34,7 @@ void main() {
       'stage_speed',
       'stage_persistent',
       'stage_chain_score',
+      'stage_rotating_reflector',
     ]);
     expect(
       sourceCatalog.stages.first.patterns.map((pattern) => pattern.patternId),
@@ -120,7 +121,7 @@ void main() {
   });
 
   test('levels는 각 단계의 기준 패턴을 동기식으로 노출한다', () {
-    expect(levels, hasLength(8));
+    expect(levels, hasLength(9));
     const expectedDifficultyBands = [
       '튜토리얼',
       '튜토리얼',
@@ -130,6 +131,7 @@ void main() {
       '기초 응용',
       '연쇄 응용',
       '연쇄 응용',
+      '회전 입문',
     ];
     for (var index = 0; index < levels.length; index++) {
       expect(levels[index].id, sourceCatalog.stages[index].stageId);

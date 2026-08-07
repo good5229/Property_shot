@@ -3243,12 +3243,14 @@ String _levelObjective(int levelIndex) {
     4 => '속성을 옮기면 공은 능력을 얻고 원본은 능력을 잃습니다. 두 변화를 함께 이용해 보세요.',
     5 => '공은 처음 빠르고 점점 느려집니다. 약하게 쏜 뒤 발판으로 속도를 되살려 보세요.',
     6 => '첫 공을 남겨 쿠션·스위치·스토퍼로 활용하며 여러 발의 인과를 만들어 보세요.',
-    _ => '홀에 바로 넣어도 성공합니다. 벽과 기물을 더 많이 이으면 연쇄 점수가 높아집니다.',
+    7 => '홀에 바로 넣어도 성공합니다. 벽과 기물을 더 많이 이으면 연쇄 점수가 높아집니다.',
+    8 => '반사판은 현재 면으로 공을 튕긴 뒤 90도 돕니다. 바뀐 면은 다음 충돌부터 적용됩니다.',
+    _ => '기물의 상태 변화를 살펴보며 여러 경로로 홀에 도전해 보세요.',
   };
 }
 
 String _objectiveForState(GameState state) {
-  if (state.levelIndex == 7) {
+  if (state.levelIndex == 7 || state.levelIndex == 8) {
     return _levelObjective(state.levelIndex);
   }
   if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
@@ -3266,12 +3268,14 @@ String _compactLevelObjective(int levelIndex) {
     4 => '공과 비워진 원본을 함께 이용해 홀로 가기',
     5 => '감속·반사·발판으로 속도를 되살려 홀로 가기',
     6 => '과거 공을 남겨 두 공으로 홀로 가기',
-    _ => '짧은 길로 성공하거나 기물을 이어 연쇄 점수 높이기',
+    7 => '짧은 길로 성공하거나 기물을 이어 연쇄 점수 높이기',
+    8 => '반사판을 돌려 다음 공의 반사 방향 바꾸기',
+    _ => '기물의 상태를 바꾸며 여러 경로로 홀에 가기',
   };
 }
 
 String _compactObjectiveForState(GameState state) {
-  if (state.levelIndex == 7) {
+  if (state.levelIndex == 7 || state.levelIndex == 8) {
     return _compactLevelObjective(state.levelIndex);
   }
   if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
@@ -3291,6 +3295,18 @@ int _starsForShot(int shotCount, int parShots) {
 }
 
 String? _levelProgressHint(GameState state) {
+  if (state.levelIndex == 8) {
+    final reflectors = state.entities.where(
+      (entity) => entity.type == EntityType.rotatingReflector,
+    );
+    final rotationCount = reflectors.fold<int>(
+      0,
+      (sum, entity) => sum + entity.reflectorRotationCount,
+    );
+    return rotationCount == 0
+        ? '반사판은 지금 보이는 면으로 먼저 튕긴 뒤 돌아갑니다. 직접 길과 준비 샷을 모두 시도할 수 있어요.'
+        : '반사판이 모두 $rotationCount회 돌았습니다. 바뀐 면은 다음 공의 충돌부터 적용됩니다.';
+  }
   if (state.levelIndex == 7) {
     final spentBalls = state.entities.where(
       (entity) => entity.type == EntityType.ball && entity.id != 'active_ball',
@@ -3361,6 +3377,14 @@ String? _levelProgressHint(GameState state) {
 }
 
 String? _compactLevelProgressHint(GameState state) {
+  if (state.levelIndex == 8) {
+    final rotationCount = state.entities
+        .where((entity) => entity.type == EntityType.rotatingReflector)
+        .fold<int>(0, (sum, entity) => sum + entity.reflectorRotationCount);
+    return rotationCount == 0
+        ? '현재 면 반사 · 충돌 뒤 90도 회전'
+        : '반사판 $rotationCount회 회전 · 다음 충돌에 적용';
+  }
   if (state.levelIndex == 7) {
     final hasSpentBall = state.entities.any(
       (entity) => entity.type == EntityType.ball && entity.id != 'active_ball',
@@ -3421,7 +3445,9 @@ String _levelIntroMessage(int levelIndex) {
     4 => '공과 원본의 변화를 함께 살펴보세요',
     5 => '감속 · 발판 진입 각도 · 여러 경로로 도전',
     6 => '과거 공 · 쿠션 · 여러 발의 연쇄 경로',
-    _ => '직접 경로 · 벽과 기물 · 연쇄 점수 비교',
+    7 => '직접 경로 · 벽과 기물 · 연쇄 점수 비교',
+    8 => '현재 면 반사 · 충돌 뒤 회전 · 다음 샷 준비',
+    _ => '기물 상태 살피기 · 여러 경로로 도전',
   };
 }
 
@@ -4146,6 +4172,18 @@ class _EntityInfoPanel extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (entity.type == EntityType.rotatingReflector) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '현재 ${_reflectorDirectionLabel(entity.reflectorOrientation)} · '
+                    '${entity.reflectorRotationCount}회 회전',
+                    key: const Key('reflector_state_label'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF405D52),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
                 if (trait != null && canManageTrait) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -4669,6 +4707,15 @@ String _entityDescription(EntityState entity) {
     case EntityType.rotatingReflector:
       return '맞은 방향으로 공을 반사한 뒤 90도 회전합니다. 다음 충돌부터 새 방향을 사용합니다.';
   }
+}
+
+String _reflectorDirectionLabel(int orientation) {
+  return switch (orientation % 4) {
+    0 => '가로 방향',
+    1 => '왼쪽 위에서 오른쪽 아래 대각선',
+    2 => '세로 방향',
+    _ => '오른쪽 위에서 왼쪽 아래 대각선',
+  };
 }
 
 Color _traitUiColor(TraitType trait) {
