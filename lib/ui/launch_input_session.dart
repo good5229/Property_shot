@@ -4,6 +4,28 @@ enum ChargeGaugeState { green, yellow, red, warningRed, cancelledGray }
 
 enum LaunchInputReleaseKind { ignored, tap, aimed, launch, overchargeCancelled }
 
+/// 손을 뗀 뒤 발사 판정이 준비될 때까지의 처리 시간을 단조 시계로 잰다.
+class LaunchInputLatencyTracker {
+  LaunchInputLatencyTracker({Duration Function()? now}) {
+    if (now != null) {
+      _now = now;
+      return;
+    }
+    final stopwatch = Stopwatch()..start();
+    _now = () => stopwatch.elapsed;
+  }
+
+  late final Duration Function() _now;
+
+  Duration markRelease() => _now();
+
+  double elapsedMillisecondsSince(Duration releasedAt) {
+    final elapsed = _now() - releasedAt;
+    if (elapsed.isNegative) return 0;
+    return elapsed.inMicroseconds / Duration.microsecondsPerMillisecond;
+  }
+}
+
 class LaunchInputRelease {
   const LaunchInputRelease({
     required this.kind,

@@ -3,6 +3,26 @@ import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/ui/launch_input_session.dart';
 
 void main() {
+  test('발사 입력 지연은 포인터 해제부터 판정 준비까지 단조 시계로 계산한다', () {
+    var now = const Duration(seconds: 3);
+    final tracker = LaunchInputLatencyTracker(now: () => now);
+
+    final releasedAt = tracker.markRelease();
+    now += const Duration(milliseconds: 37, microseconds: 500);
+
+    expect(tracker.elapsedMillisecondsSince(releasedAt), 37.5);
+  });
+
+  test('단조 시계가 역행하더라도 발사 입력 지연은 음수가 되지 않는다', () {
+    var now = const Duration(seconds: 3);
+    final tracker = LaunchInputLatencyTracker(now: () => now);
+    final releasedAt = tracker.markRelease();
+
+    now = const Duration(seconds: 2);
+
+    expect(tracker.elapsedMillisecondsSince(releasedAt), 0);
+  });
+
   test('최초 포인터가 세션을 독점하고 다른 포인터는 무시된다', () {
     final session = LaunchInputSession();
 

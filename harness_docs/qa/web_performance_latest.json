@@ -1,10 +1,10 @@
 {
-  "measured_at": "2026-08-08T14:17:27.766863+00:00",
+  "measured_at": "2026-08-08T15:19:16.949609+00:00",
   "url": "http://127.0.0.1:8080/",
   "runtime": "Chromium headless Web release proxy; not a physical-device result",
   "warmup_ms": {
-    "page": 5000,
-    "play": 5000
+    "page": 1800,
+    "play": 1200
   },
   "frame_target_ms": 16.667,
   "long_task_threshold_ms": 50.0,
@@ -25,60 +25,72 @@
       "console_errors": [],
       "idle": {
         "samples": 109,
-        "mean_ms": 16.661,
+        "mean_ms": 16.972,
         "p90_ms": 17.1,
-        "p95_ms": 17.3,
+        "p95_ms": 17.2,
         "p99_ms": 17.6,
-        "max_ms": 17.6,
-        "over_20ms_ratio": 0.0,
-        "over_50ms_count": 0,
-        "over_50ms_ratio": 0.0
+        "max_ms": 50.6,
+        "over_20ms_ratio": 0.0092,
+        "over_50ms_count": 1,
+        "over_50ms_ratio": 0.0092
       },
       "idle_long_tasks": [
         {
-          "duration_ms": 121,
-          "start_ms": 101.59999942779541
+          "duration_ms": 134,
+          "start_ms": 154.19999980926514
         },
         {
-          "duration_ms": 62,
-          "start_ms": 540.8000001907349
+          "duration_ms": 75,
+          "start_ms": 527.8000001907349
+        },
+        {
+          "duration_ms": 52,
+          "start_ms": 616
+        },
+        {
+          "duration_ms": 59,
+          "start_ms": 668.1000003814697
+        },
+        {
+          "duration_ms": 1215,
+          "start_ms": 727.6999998092651
+        },
+        {
+          "duration_ms": 138,
+          "start_ms": 1946.1999998092651
+        },
+        {
+          "duration_ms": 110,
+          "start_ms": 2128.5
+        },
+        {
+          "duration_ms": 517,
+          "start_ms": 2257.5
+        },
+        {
+          "duration_ms": 51,
+          "start_ms": 2982.5
+        },
+        {
+          "duration_ms": 220,
+          "start_ms": 3109.6000003814697
+        },
+        {
+          "duration_ms": 58,
+          "start_ms": 3329.8999996185303
         },
         {
           "duration_ms": 56,
-          "start_ms": 611.3000001907349
-        },
-        {
-          "duration_ms": 56,
-          "start_ms": 667.6999998092651
-        },
-        {
-          "duration_ms": 1008,
-          "start_ms": 723.8000001907349
-        },
-        {
-          "duration_ms": 109,
-          "start_ms": 1733.5999994277954
-        },
-        {
-          "duration_ms": 90,
-          "start_ms": 1868.0999994277954
-        },
-        {
-          "duration_ms": 495,
-          "start_ms": 5210
-        },
-        {
-          "duration_ms": 109,
-          "start_ms": 5724
+          "start_ms": 5298.5
         }
       ],
       "shot": {
-        "samples": 150,
-        "mean_ms": 16.778,
+        "samples": 149,
+        "mean_ms": 16.78,
         "p90_ms": 17.1,
-        "p95_ms": 17.4,
-        "p99_ms": 17.7,
-        "max_ms": 33.326,
+        "p95_ms": 17.3,
+        "p99_ms": 17.6,
+        "max_ms": 32.9,
         "over_20ms_ratio": 0.0067,
         "over_50ms_count": 0,
         "over_50ms_ratio": 0.0
@@ -101,44 +113,40 @@
       "console_errors": [],
       "idle": {
         "samples": 109,
-        "mean_ms": 16.669,
-        "p90_ms": 17.2,
-        "p95_ms": 17.4,
-        "p99_ms": 17.6,
-        "max_ms": 17.7,
+        "mean_ms": 16.667,
+        "p90_ms": 17.1,
+        "p95_ms": 17.3,
+        "p99_ms": 17.5,
+        "max_ms": 17.6,
         "over_20ms_ratio": 0.0,
         "over_50ms_count": 0,
         "over_50ms_ratio": 0.0
       },
       "idle_long_tasks": [
         {
-          "duration_ms": 120,
-          "start_ms": 81.89999961853027
+          "duration_ms": 130,
+          "start_ms": 102.39999961853027
         },
         {
-          "duration_ms": 849,
-          "start_ms": 564.6000003814697
+          "duration_ms": 778,
+          "start_ms": 571.5
         },
         {
-          "duration_ms": 74,
-          "start_ms": 1436.8999996185303
+          "duration_ms": 194,
+          "start_ms": 1383.5999994277954
         },
         {
-          "duration_ms": 461,
-          "start_ms": 5086.199999809265
-        },
-        {
-          "duration_ms": 72,
-          "start_ms": 5569.60000038147
+          "duration_ms": 618,
+          "start_ms": 1848
         }
       ],
       "shot": {
         "samples": 150,
         "mean_ms": 16.778,
-        "p90_ms": 17,
-        "p95_ms": 17.4,
+        "p90_ms": 17.3,
+        "p95_ms": 17.5,
         "p99_ms": 17.7,
-        "max_ms": 33.026,
+        "max_ms": 32.7,
         "over_20ms_ratio": 0.0067,
         "over_50ms_count": 0,
         "over_50ms_ratio": 0.0

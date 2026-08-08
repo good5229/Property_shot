@@ -1131,6 +1131,43 @@ void main() {
     expect(find.textContaining('시도 1'), findsOneWidget);
   });
 
+  testWidgets('발사 입력 지연은 손을 뗀 뒤 비동기 저장과 물리 판정을 포함한다', (tester) async {
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    final shotCommit = Completer<bool>();
+    var commitStarted = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          telemetry: telemetry,
+          onShotCommitted: (_, _) {
+            commitStarted = true;
+            return shotCommit.future;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
+    expect(commitStarted, isTrue);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 30)),
+    );
+    shotCommit.complete(true);
+    await _pumpForAsyncWork(tester, frames: 2);
+
+    final released = telemetry.events.lastWhere(
+      (event) => event['event_code'] == 'shot_released',
+    );
+    expect(released['input_latency_ms'], greaterThanOrEqualTo(20));
+  });
+
   testWidgets('멀티터치는 첫 포인터만 발사 입력으로 인정한다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
@@ -1614,6 +1651,8 @@ void main() {
     expect(released['resolver_version'], 'shot-resolver-v1');
     expect(released['causal_chain'], isA<List<Object?>>());
     expect(released['nearest_hole_distance'], isA<double>());
+    expect(released['input_latency_ms'], isA<double>());
+    expect(released['input_latency_ms'], greaterThanOrEqualTo(0));
   });
 
   testWidgets('1단계 직접 성공도 점수를 계산해 일반 런 저장 흐름에 전달한다', (tester) async {

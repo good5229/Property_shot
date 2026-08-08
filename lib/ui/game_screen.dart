@@ -140,6 +140,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final ProgressStore _progressStore;
   final _feedback = GameFeedback();
   final _launchInputSession = LaunchInputSession();
+  final _launchInputLatency = LaunchInputLatencyTracker();
   late final LocalPlayTelemetry _telemetry;
   late GameState _state;
   late LevelDefinition _currentLevel;
@@ -1057,7 +1058,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _recordTyped(PlayTelemetryEventType.propertyCopied);
   }
 
-  void _launch({ShotInput? inputOverride, bool isReplay = false}) {
+  void _launch({
+    ShotInput? inputOverride,
+    bool isReplay = false,
+    Duration? inputReleasedAt,
+  }) {
     if (!_shotResolver.canLaunch(_state) ||
         _isAnimatingShot ||
         _isCommittingShot ||
@@ -1068,14 +1073,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _isCommittingShot = true;
+    final latencyStartedAt =
+        inputReleasedAt ?? _launchInputLatency.markRelease();
     unawaited(
-      _launchAfterCommit(inputOverride: inputOverride, isReplay: isReplay),
+      _launchAfterCommit(
+        inputOverride: inputOverride,
+        isReplay: isReplay,
+        inputReleasedAt: latencyStartedAt,
+      ),
     );
   }
 
   Future<void> _launchAfterCommit({
     ShotInput? inputOverride,
     required bool isReplay,
+    required Duration inputReleasedAt,
   }) async {
     final input =
         inputOverride ??
@@ -1143,9 +1155,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
     _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
     final shotStartState = _state;
-    final inputProcessing = Stopwatch()..start();
     final result = _shotResolver.resolve(shotStartState, normalizedInput);
-    inputProcessing.stop();
+    final inputLatencyMs = _launchInputLatency.elapsedMillisecondsSince(
+      inputReleasedAt,
+    );
     if (result.state.phase != GamePhase.success) {
       _failureReplay = FailureReplayData(
         beforeState: shotStartState,
@@ -1165,7 +1178,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       input: normalizedInput,
       result: result,
       startState: shotStartState,
-      inputLatencyMs: inputProcessing.elapsedMicroseconds / 1000,
+      inputLatencyMs: inputLatencyMs,
     );
     _recordTyped(PlayTelemetryEventType.shotReleased, shot: _lastTypedShot);
     _telemetry.record(
@@ -2560,6 +2573,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (pointer != _launchInputSession.activePointer) {
       return;
     }
+    final inputReleasedAt = _launchInputLatency.markRelease();
     timeStamp = _effectivePointerTimeStamp(timeStamp);
     _lastPointerTimeStamp = timeStamp;
     final logical = _toLogicalPosition(localPosition, fieldSize);
@@ -2624,6 +2638,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           power: power,
           equippedTrait: _state.equippedTrait,
         ),
+        inputReleasedAt: inputReleasedAt,
       );
       return;
     }
