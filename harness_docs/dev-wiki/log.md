@@ -1829,3 +1829,10 @@ Use consistent headings so entries are easy to grep.
 - 섬 지도 단계 카드는 최종 돌·상자·젤리 스프라이트를 사용하고, 공 단계는 제품 게임 공 페인터를 공유한다. 390×844·768×1024와 9·10단계 스크롤 Golden을 직접 확인했다.
 - 실제 `AssetManifest`를 읽어 포함·제외 목록을 검사하는 회귀를 추가했다. 전체 Flutter 테스트 893개, 정적 분석 이슈 0건, Web Release와 Wasm 사전검사가 통과했다.
 - CC0 레거시 PNG 3개는 원본 ZIP 내부 파일과 SHA-256이 각각 일치하고 OpenGameArt·CC0 오프라인 증거도 확인했다. 이는 내부 기술 검토이며 최종 법무 승인은 아니다.
+
+## 2026-08-09 생산 패턴·Android 반복 메모리 재검증
+
+- 도구 제한으로 미뤄졌던 `dart run tool/generate_stage_catalog.dart --check --validate-runtime`을 현재 HEAD에서 다시 실행해 생산 40패턴 제한 실행과 생성본 일치를 확인했다.
+- 최신 Android Release APK 62.3MB를 ARM64 API 28 AVD에 재설치했다. 홈·1단계·무거운 돌 팝업·속성 이전·충전·자동 발사·실패 인과를 실제 입력했고 한글 접근성 라벨과 클릭 영역을 확인했다.
+- 단계 초기화 20회와 과거 공을 유지한 연속 재조준 20회×2주기를 실행했다. 두 번째 동일 부하는 PSS 122,944KB에서 122,517KB로 끝나 allocator 고수위를 재사용했고 앱 PID FATAL·Flutter 예외는 0건이었다.
+- iOS Simulator Runtime은 `xcrun simctl list runtimes`에서 0개로 재확인했다. Android 결과는 SwiftShader 에뮬레이터 대리 증거이며 실제 모바일 FPS·GPU·열·햅틱 판정은 아니다.

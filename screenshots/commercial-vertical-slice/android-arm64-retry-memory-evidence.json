@@ -1,0 +1,60 @@
+{
+  "measuredAt": "2026-08-09T00:03:00+09:00",
+  "commit": "80fe229d602fdec896b836003939fcf7a48197b4",
+  "build": {
+    "mode": "release",
+    "apkBytesLabel": "62.3MB",
+    "package": "com.example.property_shot"
+  },
+  "device": {
+    "kind": "Android 에뮬레이터",
+    "avd": "PropertyShot_ARM64",
+    "api": 28,
+    "abi": "arm64-v8a",
+    "resolution": "1080x1920",
+    "gpu": "SwiftShader",
+    "serial": "emulator-5554"
+  },
+  "flow": [
+    "Release APK 콜드 시작",
+    "1단계 무거운 돌 선택",
+    "무거움 속성 이전",
+    "1.1초 충전 뒤 자동 발사",
+    "실패 인과 화면 확인",
+    "단계 처음부터 20회 반복",
+    "과거 공을 유지한 다시 조준 20회 반복",
+    "단계 초기화 뒤 같은 다시 조준 20회 재반복"
+  ],
+  "memoryPssKb": {
+    "coldHome": 85229,
+    "firstShot": 92176,
+    "afterTwentyStageResets": 93517,
+    "firstContinuousRetryCycle": [
+      {"shots": 5, "pss": 101360, "nativeHeap": 47476},
+      {"shots": 10, "pss": 111124, "nativeHeap": 52128},
+      {"shots": 15, "pss": 110440, "nativeHeap": 55092},
+      {"shots": 20, "pss": 120520, "nativeHeap": 59004}
+    ],
+    "afterMemoryPressure": 117567,
+    "secondCycleStart": 122944,
+    "secondContinuousRetryCycle": [
+      {"shots": 5, "pss": 118835, "nativeHeap": 57056},
+      {"shots": 10, "pss": 112632, "nativeHeap": 57664},
+      {"shots": 15, "pss": 120703, "nativeHeap": 58448},
+      {"shots": 20, "pss": 122517, "nativeHeap": 59444}
+    ]
+  },
+  "result": {
+    "secondCyclePssDeltaKb": -427,
+    "fatalLogCount": 0,
+    "appErrorNote": "앱 PID에는 에뮬레이터 EGL 호환 경고만 있었고 Flutter 예외나 FATAL 로그는 없었습니다.",
+    "judgement": "에뮬레이터 반복 메모리 대리 게이트 통과, 실기기 장시간 검증은 남음"
+  },
+  "screenshots": [
+    "android-arm64-10stage-latest.png",
+    "android-arm64-stage1-start-latest.png",
+    "android-arm64-10stage-transferred-latest.png",
+    "android-arm64-10stage-after-shot-latest.png",
+    "android-arm64-20-retries-latest.png"
+  ]
+}

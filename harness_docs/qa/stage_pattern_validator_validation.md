@@ -1,7 +1,7 @@
 # 스테이지 패턴 검증기 실행 안전망 검증
 
 작업 ID: `PS-VALID-03`, `PS-VALID-04`
-검증 기준: 2026-08-08 KST
+검증 기준: 2026-08-09 KST
 
 ## 적용 범위
 
@@ -43,7 +43,7 @@
 | 카탈로그 runtime timing bound | 15초 미만 계약 통과 |
 | `git diff --check` | 통과 |
 
-PS-VALID-04 영향권에서는 validator·runtime probe 31개와 슬라이더·회전판·실제 UI 입력 139개, `flutter analyze`가 통과했다. 생산 40패턴 CLI 재실행은 2026-08-08 도구 사용량 제한으로 승인이 거절돼 이 반복에서 재확인하지 못했으며, 직전 기준선의 40패턴 통과 기록과 구분한다.
+PS-VALID-04 영향권에서는 validator·runtime probe 31개와 슬라이더·회전판·실제 UI 입력 139개, `flutter analyze`가 통과했다. 당시 도구 사용량 제한으로 미뤄졌던 생산 40패턴 CLI는 2026-08-09 현재 HEAD에서 다시 실행해 40개 제한 실행과 생성본 일치를 모두 확인했다.
 
 ## 불변 조건 확인
 
@@ -55,5 +55,4 @@ PS-VALID-04 영향권에서는 validator·runtime probe 31개와 슬라이더·�
 
 ## 남은 한계
 
-- 이번 반복의 생산 40패턴 runtime CLI는 도구 사용량 제한이 해제된 뒤 재실행해야 한다.
 - timing bound는 로컬 자동 테스트 상한이며 실기기 성능 증거가 아니다.
