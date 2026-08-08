@@ -3,15 +3,22 @@ import 'package:flutter/material.dart';
 import '../game/analysis/creative_chain_score.dart';
 
 class CreativeChainScoreSummary extends StatelessWidget {
-  const CreativeChainScoreSummary({super.key, required this.analysis});
+  const CreativeChainScoreSummary({
+    super.key,
+    required this.analysis,
+    this.showDetails = true,
+  });
 
   final CreativeChainScoreAnalysis analysis;
+  final bool showDetails;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
-      label: '연쇄 점수 ${analysis.totalScore}점과 점수 근거',
+      label: showDetails
+          ? '연쇄 점수 ${analysis.totalScore}점과 점수 근거'
+          : '연쇄 점수 ${analysis.totalScore}점',
       child: Container(
         key: const Key('creative_chain_score_summary'),
         width: double.infinity,
@@ -43,31 +50,33 @@ class CreativeChainScoreSummary extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            for (var index = 0; index < analysis.evidence.length; index++)
-              Padding(
-                key: Key('creative_chain_evidence_$index'),
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        analysis.evidence[index].label,
-                        style: Theme.of(context).textTheme.bodySmall,
+            if (showDetails) ...[
+              const SizedBox(height: 8),
+              for (var index = 0; index < analysis.evidence.length; index++)
+                Padding(
+                  key: Key('creative_chain_evidence_$index'),
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          analysis.evidence[index].label,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '+${analysis.evidence[index].points}점',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF2F7655),
-                        fontWeight: FontWeight.w900,
+                      const SizedBox(width: 8),
+                      Text(
+                        '+${analysis.evidence[index].points}점',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF2F7655),
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+            ],
           ],
         ),
       ),

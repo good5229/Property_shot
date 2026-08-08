@@ -29,6 +29,23 @@ void main() {
     await tester.pump();
 
     expect(find.text('효과음'), findsOneWidget);
+    for (final label in const [
+      '마지막 샷 슬로모션',
+      '충돌 순서 표시',
+      '마지막 접촉 대상 강조',
+      '홀 최근접 위치',
+      '속성 발동 표시',
+      '기믹 인과 표시',
+      '충돌 경로 아이콘',
+      '연쇄 점수 상세 표시',
+      '진동',
+      '저모션',
+      '화면 흔들림',
+      '강한 점멸 효과',
+      '배경 음악',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
     expect(
       find.byKey(const Key('screen_shake_strength_dropdown')),
       findsOneWidget,
@@ -50,12 +67,18 @@ void main() {
         .onPressed!();
     await tester.pump();
 
+    await tester.ensureVisible(
+      find.byKey(const Key('screen_shake_strength_dropdown')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('screen_shake_strength_dropdown')));
     await tester.pump();
     await tester.tap(find.text('강하게').last);
     await tester.pump();
     expect(GameFeedback.screenShakeStrength, 3);
 
+    await tester.ensureVisible(find.byKey(const Key('help_reset_button')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('help_reset_button')));
     await tester.pump();
     expect(GameFeedback.helpRevision, 1);
@@ -84,9 +107,7 @@ void main() {
     expect(find.text('게임 도움말'), findsOneWidget);
     final preferences = await SharedPreferences.getInstance();
     expect(
-      preferences.getInt(
-        GameFeedback.helpAcknowledgedRevisionPreferenceKey,
-      ),
+      preferences.getInt(GameFeedback.helpAcknowledgedRevisionPreferenceKey),
       1,
     );
     await tester.tap(find.byKey(const Key('game_help_close_button')));

@@ -216,3 +216,21 @@ flutter test test/creative_chain_score_test.dart --reporter compact
 - 부모 사건이 없는 활성 공 연속 사건은 경로 시점과 출발 ID로 보완한다. 이는 결정론적이지만, 향후 물리 엔진이 더 정밀한 교차 인과를 제공하면 직접 부모 ID를 우선 연결하는 후속 검토가 필요하다.
 - 점수의 저장·결과 UI·랭킹·8단계 설계는 다음 작업의 범위다. 이번 작업에서 사용자 화면이나 기본 점수 필드는 변경하지 않았다.
 - 실제 장치 프레임 속도와 네트워크 환경은 점수 분석 계층에 영향을 주지 않지만, 최종 제품 통합 때 리플레이 입력 저장과 함께 실기기 재현을 추가 검증해야 한다.
+
+## PS-SCORE-02 전 단계 제품 연결
+
+기준일: 2026-08-08 KST
+
+- `GameScreen`의 성공 분석을 단계 번호와 무관한 공통 경로로 바꿔 1~10단계 모든 성공 샷에 같은 `CreativeChainScoreAnalyzer`를 적용한다.
+- 일반 런과 오늘의 도전은 같은 분석 결과의 `totalScore`를 `StagePatternSession.completeCurrentStage()`에 넘긴다. 저장소는 단계별 최고 점수를 `chainScoresPerStage`에 기록하고 그 합을 `RunState.totalScore`로 원자 저장한다.
+- 모든 단계의 클리어 팝업이 기존 `CreativeChainScoreSummary`를 사용한다. 8단계의 전체 한글 근거·스크롤 UI와 공식 직접 경로 1,035점 및 고연쇄 기대값은 그대로 유지한다.
+- 직접 홀 성공은 기존 점수 공식의 홀 기본점과 최소 샷 보너스만 받는다. 기믹·과거 공·벽 반사 보너스는 최종 홀 인과 사슬에 실제 사건이 있을 때만 더하며, 특정 기믹을 성공 조건으로 만들지 않는다.
+- 복원된 성공 화면은 실제 `ShotResult`가 있을 때만 점수를 다시 계산한다. 결과가 없는 구형 성공 상태에 임의 점수를 만들지 않는다.
+
+집중 검증:
+
+- `test/creative_chain_score_summary_test.dart`: 1~10단계 성공 결과의 점수 요약 표시와 기존 8단계 상세 UI
+- `test/widget_test.dart`: 1단계 실제 발사의 분석 결과가 일반 런 저장 콜백까지 전달되는지 검증
+- `test/stage_pattern_session_test.dart`: 열 단계 점수의 단계별 저장, 총점 합산, 저장소 재개
+- `test/daily_challenge_test.dart`, `test/daily_challenge_widget_test.dart`: 오늘의 도전 누적·복원·표시 의미 유지
+- 점수·런·일일 도전·위젯 집중 162개와 기존 공식·파밍 방지·리플레이 점수 35개 통과

@@ -143,6 +143,44 @@ void main() {
     expect(restored.patternSeed, predrawnPatternSeed);
   });
 
+  test('1~10단계 점수는 단계별로 저장되고 총점으로 누적한 뒤 재개된다', () async {
+    final backend = _MemoryRunStateBackend();
+    final session = _session(RunStateStore(backend: backend));
+    var expectedTotal = 0;
+
+    for (var index = 0; index < generatedStageCatalog.stages.length; index++) {
+      final stage = generatedStageCatalog.stages[index];
+      final score = 1000 + index * 37;
+      expectedTotal += score;
+      await session.selectStage(stage.stageId);
+      await session.completeCurrentStage(
+        stageId: stage.stageId,
+        shotCount: index + 1,
+        chainScore: score,
+        nextStageId: index + 1 < generatedStageCatalog.stages.length
+            ? generatedStageCatalog.stages[index + 1].stageId
+            : null,
+      );
+
+      expect(session.state?.chainScoresPerStage[stage.stageId], score);
+      expect(session.state?.totalScore, expectedTotal);
+    }
+
+    final restored = await _session(
+      RunStateStore(backend: backend),
+    ).loadState();
+    expect(restored, isNotNull);
+    expect(restored!.chainScoresPerStage, hasLength(10));
+    expect(restored.totalScore, expectedTotal);
+    expect(
+      restored.totalScore,
+      restored.chainScoresPerStage.values.fold<int>(
+        0,
+        (sum, score) => sum + score,
+      ),
+    );
+  });
+
   test('발사 기록은 앱 재시작 뒤 속성 행동과 순서를 그대로 복원한다', () async {
     final backend = _MemoryRunStateBackend();
     final first = _session(RunStateStore(backend: backend));

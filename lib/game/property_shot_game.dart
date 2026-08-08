@@ -39,7 +39,13 @@ class PropertyShotGame extends FlameGame {
     this.reducedMotion = false,
     this.screenShake = true,
     this.screenShakeStrength = 2,
+    this.strongFlash = true,
     this.ballRewardAppearance = false,
+    this.replayCollisionMarkers = const [],
+    this.replayTraitMarkers = const [],
+    this.replayGimmickMarkers = const [],
+    this.replayLastContact,
+    this.replayNearestHole,
   });
 
   GameState state;
@@ -51,6 +57,12 @@ class PropertyShotGame extends FlameGame {
   final bool reducedMotion;
   final bool screenShake;
   final int screenShakeStrength;
+  final bool strongFlash;
+  final List<Vec2> replayCollisionMarkers;
+  final List<Vec2> replayTraitMarkers;
+  final List<Vec2> replayGimmickMarkers;
+  final Vec2? replayLastContact;
+  final Vec2? replayNearestHole;
   bool ballRewardAppearance;
   bool debugHitboxes = false;
   bool debugNormals = false;
@@ -363,7 +375,74 @@ class PropertyShotGame extends FlameGame {
     if (debugHitboxes || debugNormals || debugIds || debugStats) {
       _drawDebugOverlay(canvas, renderEntities);
     }
+    _drawReplayOverlay(canvas);
     canvas.restore();
+  }
+
+  void _drawReplayOverlay(Canvas canvas) {
+    for (var index = 0; index < replayCollisionMarkers.length; index++) {
+      final center = _project(replayCollisionMarkers[index]);
+      canvas.drawCircle(center, 9, Paint()..color = const Color(0xE6395D6F));
+      final label = TextPainter(
+        text: TextSpan(
+          text: '${index + 1}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      label.paint(canvas, center - Offset(label.width / 2, label.height / 2));
+    }
+    for (final position in replayTraitMarkers) {
+      final center = _project(position);
+      final path = Path()
+        ..moveTo(center.dx, center.dy - 10)
+        ..lineTo(center.dx + 10, center.dy)
+        ..lineTo(center.dx, center.dy + 10)
+        ..lineTo(center.dx - 10, center.dy)
+        ..close();
+      canvas.drawPath(path, Paint()..color = const Color(0xE67B3FA2));
+    }
+    for (final position in replayGimmickMarkers) {
+      final center = _project(position);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: center, width: 19, height: 19),
+          const Radius.circular(4),
+        ),
+        Paint()..color = const Color(0xE6E1882F),
+      );
+    }
+    if (replayLastContact != null) {
+      canvas.drawCircle(
+        _project(replayLastContact!),
+        16,
+        Paint()
+          ..color = const Color(0xFFFFC857)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4,
+      );
+    }
+    if (replayNearestHole != null) {
+      final center = _project(replayNearestHole!);
+      final paint = Paint()
+        ..color = const Color(0xFF187A62)
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(center.translate(-7, 0), center.translate(7, 0), paint);
+      canvas.drawLine(center.translate(0, -7), center.translate(0, 7), paint);
+      canvas.drawCircle(
+        center,
+        11,
+        Paint()
+          ..color = const Color(0xCCFFFFFF)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
   }
 
   void _drawDebugOverlay(Canvas canvas, List<EntityState> entities) {
@@ -1283,7 +1362,7 @@ class PropertyShotGame extends FlameGame {
       ring,
     );
     if (chargeGaugeState == ChargeGaugeState.warningRed) {
-      final pulse = reducedMotion
+      final pulse = reducedMotion || !strongFlash
           ? 0.0
           : (math.sin(_pulseClock * math.pi * 1.2) + 1) / 2;
       final warningRing = Paint()
@@ -2008,7 +2087,9 @@ class PropertyShotGame extends FlameGame {
 
   void _drawGoalBeacon(Canvas canvas, EntityState entity) {
     final center = _project(entity.position);
-    final pulse = (math.sin(_pulseClock * math.pi * 1.4) + 1) / 2;
+    final pulse = reducedMotion || !strongFlash
+        ? 0.5
+        : (math.sin(_pulseClock * math.pi * 1.4) + 1) / 2;
     canvas.drawCircle(
       center,
       entity.radius + 13 + pulse * 4,
@@ -2035,7 +2116,9 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawSelectablePulse(Canvas canvas, EntityState entity) {
-    final pulse = (math.sin(_pulseClock * math.pi * 1.05) + 1) / 2;
+    final pulse = reducedMotion || !strongFlash
+        ? 0.5
+        : (math.sin(_pulseClock * math.pi * 1.05) + 1) / 2;
     final paint = Paint()
       ..color = _traitColor(
         entity.traits.first,
@@ -2510,7 +2593,11 @@ class PropertyShotGame extends FlameGame {
   ) {
     final center = _project(entity.position);
     final pressed = entity.pressed || entity.visualState == 'pressed';
-    final pulse = pressed ? math.sin(_pulseClock * math.pi * 7).abs() : 0.0;
+    final pulse = pressed
+        ? (reducedMotion || !strongFlash
+              ? 0.55
+              : math.sin(_pulseClock * math.pi * 7).abs())
+        : 0.0;
     canvas.drawPath(
       topPath,
       Paint()
@@ -2883,7 +2970,9 @@ class PropertyShotGame extends FlameGame {
         }
       case EntityType.switchPad:
         final pulse = entity.pressed || entity.visualState == 'pressed'
-            ? (math.sin(_pulseClock * math.pi * 7).abs())
+            ? (reducedMotion || !strongFlash
+                  ? 0.55
+                  : math.sin(_pulseClock * math.pi * 7).abs())
             : 0.0;
         canvas.drawCircle(
           center,

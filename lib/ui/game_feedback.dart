@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
+import 'background_music.dart';
 import 'feedback_audio.dart';
 
 typedef SoundPlayer = Future<void> Function(SystemSoundType type);
@@ -17,22 +18,50 @@ class GameFeedback {
       _cuePlayer = cuePlayer ?? playFeedbackCue;
 
   static const soundPreferenceKey = 'property_shot_sound_enabled';
+  static const backgroundMusicPreferenceKey =
+      'property_shot_background_music_enabled';
   static const hapticsPreferenceKey = 'property_shot_haptics_enabled';
   static const reducedMotionPreferenceKey =
       'property_shot_reduced_motion_enabled';
   static const screenShakePreferenceKey = 'property_shot_screen_shake_enabled';
   static const screenShakeStrengthPreferenceKey =
       'property_shot_screen_shake_strength';
+  static const lastShotSlowMotionPreferenceKey =
+      'property_shot_last_shot_slow_motion_enabled';
+  static const collisionOrderPreferenceKey =
+      'property_shot_collision_order_enabled';
+  static const lastContactHighlightPreferenceKey =
+      'property_shot_last_contact_highlight_enabled';
+  static const nearestHolePreferenceKey = 'property_shot_nearest_hole_enabled';
+  static const traitActivationPreferenceKey =
+      'property_shot_trait_activation_enabled';
+  static const gimmickCausalityPreferenceKey =
+      'property_shot_gimmick_causality_enabled';
+  static const collisionPathIconsPreferenceKey =
+      'property_shot_collision_path_icons_enabled';
+  static const chainScoreDetailsPreferenceKey =
+      'property_shot_chain_score_details_enabled';
+  static const strongFlashPreferenceKey = 'property_shot_strong_flash_enabled';
   static const helpRevisionPreferenceKey = 'property_shot_help_revision';
   static const helpAcknowledgedRevisionPreferenceKey =
       'property_shot_help_acknowledged_revision';
   static const settingsSchemaVersionKey =
       'property_shot_settings_schema_version';
-  static const settingsSchemaVersion = 2;
+  static const settingsSchemaVersion = 3;
   static bool soundEnabled = true;
+  static bool backgroundMusicEnabled = true;
   static bool hapticsEnabled = true;
   static bool reducedMotionEnabled = false;
   static bool screenShakeEnabled = true;
+  static bool lastShotSlowMotionEnabled = true;
+  static bool collisionOrderEnabled = true;
+  static bool lastContactHighlightEnabled = true;
+  static bool nearestHoleEnabled = true;
+  static bool traitActivationEnabled = true;
+  static bool gimmickCausalityEnabled = true;
+  static bool collisionPathIconsEnabled = true;
+  static bool chainScoreDetailsEnabled = true;
+  static bool strongFlashEnabled = true;
   static int screenShakeStrength = 2;
   static int helpRevision = 0;
   static Future<void>? _preferenceWriteTail;
@@ -50,6 +79,8 @@ class GameFeedback {
     try {
       final preferences = await SharedPreferences.getInstance();
       soundEnabled = preferences.getBool(soundPreferenceKey) ?? true;
+      backgroundMusicEnabled =
+          preferences.getBool(backgroundMusicPreferenceKey) ?? true;
       hapticsEnabled = preferences.getBool(hapticsPreferenceKey) ?? true;
       reducedMotionEnabled =
           preferences.getBool(reducedMotionPreferenceKey) ?? false;
@@ -66,6 +97,24 @@ class GameFeedback {
           ? (storedScreenShakeEnabled ?? true)
           : (storedScreenShakeEnabled ?? screenShakeStrength > 0) &&
                 screenShakeStrength > 0;
+      lastShotSlowMotionEnabled =
+          preferences.getBool(lastShotSlowMotionPreferenceKey) ?? true;
+      collisionOrderEnabled =
+          preferences.getBool(collisionOrderPreferenceKey) ?? true;
+      lastContactHighlightEnabled =
+          preferences.getBool(lastContactHighlightPreferenceKey) ?? true;
+      nearestHoleEnabled =
+          preferences.getBool(nearestHolePreferenceKey) ?? true;
+      traitActivationEnabled =
+          preferences.getBool(traitActivationPreferenceKey) ?? true;
+      gimmickCausalityEnabled =
+          preferences.getBool(gimmickCausalityPreferenceKey) ?? true;
+      collisionPathIconsEnabled =
+          preferences.getBool(collisionPathIconsPreferenceKey) ?? true;
+      chainScoreDetailsEnabled =
+          preferences.getBool(chainScoreDetailsPreferenceKey) ?? true;
+      strongFlashEnabled =
+          preferences.getBool(strongFlashPreferenceKey) ?? true;
       helpRevision = (preferences.getInt(helpRevisionPreferenceKey) ?? 0)
           .clamp(0, 999999)
           .toInt();
@@ -79,6 +128,7 @@ class GameFeedback {
           screenShakeStrengthPreferenceKey,
           screenShakeStrength,
         );
+        await _writeCurrentSettings(preferences);
       }
     } on Exception {
       // 설정 저장소를 사용할 수 없는 환경에서도 기본값으로 계속 실행한다.
@@ -90,6 +140,16 @@ class GameFeedback {
     await _savePreference(soundPreferenceKey, enabled);
   }
 
+  static Future<void> setBackgroundMusicEnabled(bool enabled) async {
+    backgroundMusicEnabled = enabled;
+    await _savePreference(backgroundMusicPreferenceKey, enabled);
+    await setBackgroundMusicPlayback(enabled);
+  }
+
+  static Future<void> activateBackgroundMusic() async {
+    await setBackgroundMusicPlayback(backgroundMusicEnabled);
+  }
+
   static Future<void> setHapticsEnabled(bool enabled) async {
     hapticsEnabled = enabled;
     await _savePreference(hapticsPreferenceKey, enabled);
@@ -98,6 +158,60 @@ class GameFeedback {
   static Future<void> setReducedMotionEnabled(bool enabled) async {
     reducedMotionEnabled = enabled;
     await _savePreference(reducedMotionPreferenceKey, enabled);
+  }
+
+  static Future<void> setLastShotSlowMotionEnabled(bool enabled) =>
+      _setBoolean(lastShotSlowMotionPreferenceKey, enabled, (value) {
+        lastShotSlowMotionEnabled = value;
+      });
+
+  static Future<void> setCollisionOrderEnabled(bool enabled) =>
+      _setBoolean(collisionOrderPreferenceKey, enabled, (value) {
+        collisionOrderEnabled = value;
+      });
+
+  static Future<void> setLastContactHighlightEnabled(bool enabled) =>
+      _setBoolean(lastContactHighlightPreferenceKey, enabled, (value) {
+        lastContactHighlightEnabled = value;
+      });
+
+  static Future<void> setNearestHoleEnabled(bool enabled) =>
+      _setBoolean(nearestHolePreferenceKey, enabled, (value) {
+        nearestHoleEnabled = value;
+      });
+
+  static Future<void> setTraitActivationEnabled(bool enabled) =>
+      _setBoolean(traitActivationPreferenceKey, enabled, (value) {
+        traitActivationEnabled = value;
+      });
+
+  static Future<void> setGimmickCausalityEnabled(bool enabled) =>
+      _setBoolean(gimmickCausalityPreferenceKey, enabled, (value) {
+        gimmickCausalityEnabled = value;
+      });
+
+  static Future<void> setCollisionPathIconsEnabled(bool enabled) =>
+      _setBoolean(collisionPathIconsPreferenceKey, enabled, (value) {
+        collisionPathIconsEnabled = value;
+      });
+
+  static Future<void> setChainScoreDetailsEnabled(bool enabled) =>
+      _setBoolean(chainScoreDetailsPreferenceKey, enabled, (value) {
+        chainScoreDetailsEnabled = value;
+      });
+
+  static Future<void> setStrongFlashEnabled(bool enabled) =>
+      _setBoolean(strongFlashPreferenceKey, enabled, (value) {
+        strongFlashEnabled = value;
+      });
+
+  static Future<void> _setBoolean(
+    String key,
+    bool enabled,
+    void Function(bool) apply,
+  ) async {
+    apply(enabled);
+    await _savePreference(key, enabled);
   }
 
   static Future<void> setScreenShakeEnabled(bool enabled) async {
@@ -155,6 +269,30 @@ class GameFeedback {
       final preferences = await SharedPreferences.getInstance();
       await preferences.setInt(key, value);
     });
+  }
+
+  static Future<void> _writeCurrentSettings(
+    SharedPreferences preferences,
+  ) async {
+    final values = <String, bool>{
+      soundPreferenceKey: soundEnabled,
+      backgroundMusicPreferenceKey: backgroundMusicEnabled,
+      hapticsPreferenceKey: hapticsEnabled,
+      reducedMotionPreferenceKey: reducedMotionEnabled,
+      screenShakePreferenceKey: screenShakeEnabled,
+      lastShotSlowMotionPreferenceKey: lastShotSlowMotionEnabled,
+      collisionOrderPreferenceKey: collisionOrderEnabled,
+      lastContactHighlightPreferenceKey: lastContactHighlightEnabled,
+      nearestHolePreferenceKey: nearestHoleEnabled,
+      traitActivationPreferenceKey: traitActivationEnabled,
+      gimmickCausalityPreferenceKey: gimmickCausalityEnabled,
+      collisionPathIconsPreferenceKey: collisionPathIconsEnabled,
+      chainScoreDetailsPreferenceKey: chainScoreDetailsEnabled,
+      strongFlashPreferenceKey: strongFlashEnabled,
+    };
+    for (final entry in values.entries) {
+      await preferences.setBool(entry.key, entry.value);
+    }
   }
 
   static Future<void> _enqueuePreferenceWrite(
@@ -405,6 +543,9 @@ class GameFeedback {
     }
     if (sound && soundEnabled) {
       _queueAudio(cue: cue, alert: alert);
+    }
+    if (backgroundMusicEnabled) {
+      unawaited(setBackgroundMusicPlayback(true));
     }
   }
 

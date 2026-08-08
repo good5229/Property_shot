@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/analysis/creative_chain_score.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
@@ -917,10 +918,16 @@ void main() {
     await _pumpForAsyncWork(tester);
     expect(find.text('게임 설정'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('sound_toggle')));
-    await tester.tap(find.byKey(const Key('haptics_toggle')));
-    await tester.tap(find.byKey(const Key('screen_shake_toggle')));
-    await tester.tap(find.byKey(const Key('reduced_motion_toggle')));
+    for (final key in const [
+      Key('sound_toggle'),
+      Key('haptics_toggle'),
+      Key('screen_shake_toggle'),
+      Key('reduced_motion_toggle'),
+    ]) {
+      await tester.ensureVisible(find.byKey(key));
+      await tester.pump();
+      await tester.tap(find.byKey(key));
+    }
     await tester.pump();
 
     expect(GameFeedback.soundEnabled, isFalse);
@@ -1573,6 +1580,42 @@ void main() {
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
     expect(find.text('클리어!'), findsOneWidget);
+  });
+
+  testWidgets('1단계 직접 성공도 점수를 계산해 일반 런 저장 흐름에 전달한다', (tester) async {
+    CreativeChainScoreAnalysis? recordedAnalysis;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: _directClearState(),
+          loadGameAssets: false,
+          onLevelCleared: (_, analysis, _, _) async {
+            recordedAnalysis = analysis;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 2400));
+
+    final analysis = recordedAnalysis;
+    expect(analysis, isNotNull);
+    expect(analysis!.clearReached, isTrue);
+    expect(analysis.breakdown.clearBasePoints, 1000);
+    expect(analysis.breakdown.causalDepth, 0);
+    expect(analysis.breakdown.distinctEntityIds, 0);
+    expect(
+      analysis.totalScore,
+      analysis.breakdown.clearBasePoints + analysis.breakdown.minimumShotBonus,
+    );
+    expect(find.text('연쇄 점수 ${analysis.totalScore}점'), findsOneWidget);
   });
 
   testWidgets('클리어 팝업은 런과 다음 패턴 저장이 끝난 뒤 표시된다', (tester) async {

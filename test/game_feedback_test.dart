@@ -211,6 +211,74 @@ void main() {
     GameFeedback.screenShakeStrength = 2;
     GameFeedback.helpRevision = 0;
   });
+
+  test('스키마 3은 실패 인과와 점수·점멸·음악 설정을 모두 복원한다', () async {
+    SharedPreferences.setMockInitialValues({
+      GameFeedback.settingsSchemaVersionKey: 2,
+      GameFeedback.lastShotSlowMotionPreferenceKey: false,
+      GameFeedback.collisionOrderPreferenceKey: false,
+      GameFeedback.lastContactHighlightPreferenceKey: false,
+      GameFeedback.nearestHolePreferenceKey: false,
+      GameFeedback.traitActivationPreferenceKey: false,
+      GameFeedback.gimmickCausalityPreferenceKey: false,
+      GameFeedback.collisionPathIconsPreferenceKey: false,
+      GameFeedback.chainScoreDetailsPreferenceKey: false,
+      GameFeedback.strongFlashPreferenceKey: false,
+      GameFeedback.backgroundMusicPreferenceKey: false,
+    });
+
+    await GameFeedback.loadPreferences();
+    final preferences = await SharedPreferences.getInstance();
+
+    expect(GameFeedback.lastShotSlowMotionEnabled, isFalse);
+    expect(GameFeedback.collisionOrderEnabled, isFalse);
+    expect(GameFeedback.lastContactHighlightEnabled, isFalse);
+    expect(GameFeedback.nearestHoleEnabled, isFalse);
+    expect(GameFeedback.traitActivationEnabled, isFalse);
+    expect(GameFeedback.gimmickCausalityEnabled, isFalse);
+    expect(GameFeedback.collisionPathIconsEnabled, isFalse);
+    expect(GameFeedback.chainScoreDetailsEnabled, isFalse);
+    expect(GameFeedback.strongFlashEnabled, isFalse);
+    expect(GameFeedback.backgroundMusicEnabled, isFalse);
+    expect(
+      preferences.getInt(GameFeedback.settingsSchemaVersionKey),
+      GameFeedback.settingsSchemaVersion,
+    );
+  });
+
+  test('새 개별 설정 변경은 각각의 안정 키에 저장된다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    await GameFeedback.setLastShotSlowMotionEnabled(true);
+    await GameFeedback.setCollisionOrderEnabled(true);
+    await GameFeedback.setLastContactHighlightEnabled(true);
+    await GameFeedback.setNearestHoleEnabled(true);
+    await GameFeedback.setTraitActivationEnabled(true);
+    await GameFeedback.setGimmickCausalityEnabled(true);
+    await GameFeedback.setCollisionPathIconsEnabled(true);
+    await GameFeedback.setChainScoreDetailsEnabled(true);
+    await GameFeedback.setStrongFlashEnabled(true);
+    await GameFeedback.setBackgroundMusicEnabled(false);
+    final preferences = await SharedPreferences.getInstance();
+
+    for (final key in const [
+      GameFeedback.lastShotSlowMotionPreferenceKey,
+      GameFeedback.collisionOrderPreferenceKey,
+      GameFeedback.lastContactHighlightPreferenceKey,
+      GameFeedback.nearestHolePreferenceKey,
+      GameFeedback.traitActivationPreferenceKey,
+      GameFeedback.gimmickCausalityPreferenceKey,
+      GameFeedback.collisionPathIconsPreferenceKey,
+      GameFeedback.chainScoreDetailsPreferenceKey,
+      GameFeedback.strongFlashPreferenceKey,
+    ]) {
+      expect(preferences.getBool(key), isTrue, reason: key);
+    }
+    expect(
+      preferences.getBool(GameFeedback.backgroundMusicPreferenceKey),
+      isFalse,
+    );
+  });
 }
 
 Future<void> _flushFeedback() async {

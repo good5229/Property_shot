@@ -40,6 +40,21 @@ import 'failure_replay_dialog.dart';
 
 enum GameProgressPersistencePolicy { enabled, disabled }
 
+CreativeChainScoreAnalysis? _analyzeSuccessfulStage({
+  required GameState state,
+  required List<ShotResult> shotResults,
+  required int parShots,
+}) {
+  if (state.phase != GamePhase.success || shotResults.isEmpty) {
+    return null;
+  }
+  return const CreativeChainScoreAnalyzer().analyze(
+    shotResults,
+    parShots: parShots,
+    optionalChallengeIds: CreativeChainChallengeId.all,
+  );
+}
+
 class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
@@ -251,15 +266,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _selectedRewardId = widget.initialSelectedRewardId;
     _acquiredRewards = Set.of(widget.initialAcquiredRewards);
     _restoreStageOutcomeHistory();
-    if (_state.levelIndex == 7 &&
-        _state.phase == GamePhase.success &&
-        _stageShotResults.isNotEmpty) {
-      _chainScoreAnalysis = const CreativeChainScoreAnalyzer().analyze(
-        _stageShotResults,
-        parShots: _currentLevel.parShots,
-        optionalChallengeIds: CreativeChainChallengeId.all,
-      );
-    }
+    _chainScoreAnalysis = _analyzeSuccessfulStage(
+      state: _state,
+      shotResults: _stageShotResults,
+      parShots: _currentLevel.parShots,
+    );
     _stageCopyCoreAtStart = _state.copyCoreCount;
     _activeTutorialVariant = widget.tutorialVariant;
     _telemetry.sessionStart(
@@ -279,6 +290,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       reducedMotion: GameFeedback.reducedMotionEnabled,
       screenShake: GameFeedback.screenShakeEnabled,
       screenShakeStrength: GameFeedback.screenShakeStrength,
+      strongFlash: GameFeedback.strongFlashEnabled,
       ballRewardAppearance: _rewardInventory.ballAppearanceEnabled,
     );
     _game.setDebugOptions(
@@ -1024,14 +1036,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _failureReplay = null;
     }
     _stageShotResults.add(result);
-    _chainScoreAnalysis =
-        result.state.levelIndex == 7 && result.state.phase == GamePhase.success
-        ? const CreativeChainScoreAnalyzer().analyze(
-            _stageShotResults,
-            parShots: _currentLevel.parShots,
-            optionalChallengeIds: CreativeChainChallengeId.all,
-          )
-        : null;
+    _chainScoreAnalysis = _analyzeSuccessfulStage(
+      state: result.state,
+      shotResults: _stageShotResults,
+      parShots: _currentLevel.parShots,
+    );
     _telemetry.record(
       '발사',
       stage: _state.levelIndex,
@@ -3551,6 +3560,8 @@ class ClearResultPopup extends StatelessWidget {
                                           const SizedBox(height: 10),
                                           CreativeChainScoreSummary(
                                             analysis: chainScoreAnalysis!,
+                                            showDetails: GameFeedback
+                                                .chainScoreDetailsEnabled,
                                           ),
                                         ],
                                         if (rewardCandidates.isNotEmpty) ...[

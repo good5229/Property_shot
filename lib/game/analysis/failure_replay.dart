@@ -26,6 +26,8 @@ enum FailureCauseKind {
   stopped,
 }
 
+enum FailureReplayMarkerKind { collision, trait, gimmick }
+
 class FailureReplayMarker {
   const FailureReplayMarker({
     required this.pathIndex,
@@ -33,6 +35,7 @@ class FailureReplayMarker {
     required this.position,
     this.entityType,
     this.highlight = false,
+    this.kind = FailureReplayMarkerKind.collision,
   });
 
   final int pathIndex;
@@ -40,6 +43,7 @@ class FailureReplayMarker {
   final Vec2 position;
   final EntityType? entityType;
   final bool highlight;
+  final FailureReplayMarkerKind kind;
 }
 
 class FailureReplayAnalysis {
@@ -77,6 +81,27 @@ class FailureReplayAnalyzer {
             label: _entityLabel(impact.entityType),
             position: impact.position,
             entityType: impact.entityType,
+            kind: FailureReplayMarkerKind.collision,
+          ),
+        );
+      } else if (event.kind == PhysicsEventKind.powerSliderActivation) {
+        markers.add(
+          FailureReplayMarker(
+            pathIndex: event.pathIndex,
+            label: '파워 발판 작동',
+            position: event.position,
+            entityType: EntityType.powerSlider,
+            kind: FailureReplayMarkerKind.gimmick,
+          ),
+        );
+      } else if (event.kind == PhysicsEventKind.reflectorRotation) {
+        markers.add(
+          FailureReplayMarker(
+            pathIndex: event.pathIndex,
+            label: '회전 반사판 회전',
+            position: event.position,
+            entityType: EntityType.rotatingReflector,
+            kind: FailureReplayMarkerKind.gimmick,
           ),
         );
       } else if (event.kind == PhysicsEventKind.stateChange &&
@@ -87,6 +112,7 @@ class FailureReplayAnalyzer {
             label: _stateLabel(event.visualState!),
             position: event.position,
             entityType: event.targetType,
+            kind: _markerKindForState(event.visualState!),
           ),
         );
       }
@@ -139,6 +165,7 @@ class FailureReplayAnalyzer {
       position: impact.position,
       entityType: impact.entityType,
       highlight: highlight,
+      kind: FailureReplayMarkerKind.collision,
     );
   }
 
@@ -200,8 +227,21 @@ class FailureReplayAnalyzer {
     'sharpness_consumed' => '뾰족함 소모',
     'pressed' => '스위치 작동',
     'open' => '문 열림',
+    'opening' => '문 열리는 중',
+    'rotated' => '회전 반사판 회전',
+    'revealed' => '기믹 드러남',
     'stuck' => '점착',
     _ => '상태 변화',
+  };
+
+  FailureReplayMarkerKind _markerKindForState(String state) => switch (state) {
+    'sharpness_consumed' || 'stuck' => FailureReplayMarkerKind.trait,
+    'pressed' ||
+    'open' ||
+    'opening' ||
+    'rotated' ||
+    'revealed' => FailureReplayMarkerKind.gimmick,
+    _ => FailureReplayMarkerKind.collision,
   };
 
   String _entityLabel(EntityType type) => switch (type) {
