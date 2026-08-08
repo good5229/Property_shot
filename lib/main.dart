@@ -106,6 +106,7 @@ class PropertyShotApp extends StatelessWidget {
               showDebugControls: showDebugControls,
               tutorialVariant: tutorialVariant,
               progressStore: progressStore,
+              telemetry: telemetry,
             )
           : GameScreen(
               initialState: initialState,
@@ -124,11 +125,13 @@ class _PropertyShotRouter extends StatefulWidget {
     required this.showDebugControls,
     required this.tutorialVariant,
     this.progressStore,
+    this.telemetry,
   });
 
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
   final ProgressStore? progressStore;
+  final LocalPlayTelemetry? telemetry;
 
   @override
   State<_PropertyShotRouter> createState() => _PropertyShotRouterState();
@@ -136,6 +139,7 @@ class _PropertyShotRouter extends StatefulWidget {
 
 class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int? _activeStage;
+  int? _activePatternSeed;
   LevelDefinition? _activeLevel;
   GameState? _activeState;
   List<ShotResult> _activeShotResults = const [];
@@ -166,10 +170,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   late final Future<StagePatternSession> _patternSessionFuture;
   late final Future<ReplayLibraryStore> _replayLibraryFuture;
   late final Future<void> _progressLoadFuture;
+  late final LocalPlayTelemetry _telemetry;
+  bool _runStartedRecorded = false;
 
   @override
   void initState() {
     super.initState();
+    _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     _patternSessionFuture = _createPatternSession();
     _replayLibraryFuture = _createReplayLibrary();
     _progressLoadFuture = _loadCopyCore();
@@ -347,6 +354,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       setState(() {
         _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
         _activeStage = index;
+        _activePatternSeed = draw.patternSeed;
         _activeLevel = level;
         _activeState = restoredState;
         _activeShotResults = List.unmodifiable(restoredResults);
@@ -354,6 +362,23 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _activeSelectedRewardId = session.state?.selectedRewardId;
         _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
       });
+      final context = _normalTelemetryContext();
+      if (!_runStartedRecorded) {
+        _runStartedRecorded = true;
+        _telemetry.recordTyped(
+          TypedPlayTelemetryEvent(
+            type: PlayTelemetryEventType.runStarted,
+            context: context,
+            result: PlayTelemetryResult.continued,
+          ),
+        );
+      }
+      _telemetry.recordTyped(
+        TypedPlayTelemetryEvent(
+          type: PlayTelemetryEventType.stagePatternDrawn,
+          context: context,
+        ),
+      );
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -363,6 +388,24 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     } finally {
       _selectingStage = false;
     }
+  }
+
+  PlayTelemetryContext _normalTelemetryContext() {
+    final stageIndex = _activeStage ?? 0;
+    final level = _activeLevel ?? levels[stageIndex];
+    return PlayTelemetryContext(
+      stageIndex: stageIndex,
+      stageId: level.stageId ?? level.id,
+      patternId: level.patternId ?? '${level.id}_default',
+      seed: _activePatternSeed ?? 0,
+      resolverVersion: 'shot-resolver-v1',
+      rewardState: PlayTelemetryRewardState(
+        candidateIds: _activeRewardCandidates.map((reward) => reward.id),
+        selectedId: _activeSelectedRewardId,
+        acquiredIds: _activeAcquiredRewards,
+        cloneCoreCount: _copyCoreCount,
+      ),
+    );
   }
 
   Future<void> _startOrResume() async {
@@ -855,6 +898,27 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
             return ReplayLibraryScreen(
               store: snapshot.requireData,
               onBack: () => setState(() => _showReplayLibrary = false),
+              onReplayViewed: (document) {
+                _telemetry.recordTyped(
+                  TypedPlayTelemetryEvent(
+                    type: PlayTelemetryEventType.replayViewed,
+                    context: PlayTelemetryContext(
+                      stageIndex: generatedStageCatalog.stages.indexWhere(
+                        (stage) => stage.stageId == document.stageId,
+                      ),
+                      stageId: document.stageId,
+                      patternId: document.patternId,
+                      seed: document.patternSeed,
+                      resolverVersion: document.resolverVersion,
+                      rewardState: PlayTelemetryRewardState(
+                        acquiredIds: document.acquiredRewardIds,
+                        cloneCoreCount: document.initialCloneCoreCount,
+                      ),
+                      isReplay: true,
+                    ),
+                  ),
+                );
+              },
             );
           }
           return const Scaffold(
@@ -869,6 +933,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onExit: () => setState(() => _showDailyChallenge = false),
         showDebugControls: widget.showDebugControls,
         tutorialVariant: _tutorialVariant,
+        telemetry: _telemetry,
       );
     }
     final activeStage = _activeStage;
@@ -885,6 +950,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
+        telemetry: _telemetry,
+        telemetryContextBuilder: _normalTelemetryContext,
         onCopyCoreEarned: _earnCopyCore,
         onRunLevelCleared: _recordLevelClear,
         onRewardSelectionPrepared: _prepareRunRewards,

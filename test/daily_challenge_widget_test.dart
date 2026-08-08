@@ -10,6 +10,7 @@ import 'package:property_shot/game/run/daily_challenge.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/daily_challenge_screen.dart';
 import 'package:property_shot/ui/game_screen.dart';
+import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -57,11 +58,13 @@ void main() {
   testWidgets('오늘의 도전 플레이 중 메인 메뉴로 나가도 공식 진행은 보존된다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     var exited = false;
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
     await tester.pumpWidget(
       MaterialApp(
         home: DailyChallengeScreen(
           onExit: () => exited = true,
           now: () => DateTime.utc(2026, 8, 8, 12),
+          telemetry: telemetry,
         ),
       ),
     );
@@ -72,6 +75,15 @@ void main() {
     expect(find.byKey(const Key('home_button')), findsOneWidget);
     expect(find.byTooltip('메인 메뉴'), findsOneWidget);
     expect(find.text('점수 0'), findsOneWidget);
+    expect(
+      telemetry.events.map((event) => event['event_code']),
+      containsAllInOrder([
+        'daily_challenge_started',
+        'run_started',
+        'stage_pattern_drawn',
+        'stage_entered',
+      ]),
+    );
 
     await tester.tap(find.byKey(const Key('home_button')));
     await tester.pump();

@@ -35,7 +35,10 @@ void main() {
   });
 
   testWidgets('실제 시작 흐름은 홈·섬 지도·플레이를 연결한다', (tester) async {
-    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    await tester.pumpWidget(
+      PropertyShotApp(showHome: true, telemetry: telemetry),
+    );
     await tester.pump();
 
     expect(find.text('속성 한방'), findsOneWidget);
@@ -62,6 +65,19 @@ void main() {
     expect(find.byKey(const Key('aim_area')), findsOneWidget);
     expect(find.byKey(const Key('home_button')), findsOneWidget);
     expect(find.byKey(const Key('level_1')), findsNothing);
+    expect(
+      telemetry.events.map((event) => event['event_code']),
+      containsAllInOrder([
+        'run_started',
+        'stage_pattern_drawn',
+        'stage_entered',
+      ]),
+    );
+    final patternDrawn = telemetry.events.lastWhere(
+      (event) => event['event_code'] == 'stage_pattern_drawn',
+    );
+    expect(patternDrawn['pattern_id'], isNotEmpty);
+    expect(patternDrawn['seed'], isA<int>());
 
     await tester.tap(find.byKey(const Key('home_button')));
     await tester.pump();
@@ -1567,7 +1583,10 @@ void main() {
   });
 
   testWidgets('실제 발사로 홀에 들어가면 클리어 팝업이 표시된다', (tester) async {
-    await tester.pumpWidget(PropertyShotApp(initialState: _directClearState()));
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    await tester.pumpWidget(
+      PropertyShotApp(initialState: _directClearState(), telemetry: telemetry),
+    );
     await tester.pump();
 
     final gesture = await _startTimedGesture(
@@ -1580,6 +1599,21 @@ void main() {
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
     expect(find.text('클리어!'), findsOneWidget);
+    expect(
+      telemetry.events.map((event) => event['event_code']),
+      containsAllInOrder([
+        'shot_released',
+        'collision_chain_completed',
+        'stage_cleared',
+      ]),
+    );
+    final released = telemetry.events.lastWhere(
+      (event) => event['event_code'] == 'shot_released',
+    );
+    expect(released['pattern_id'], isNotEmpty);
+    expect(released['resolver_version'], 'shot-resolver-v1');
+    expect(released['causal_chain'], isA<List<Object?>>());
+    expect(released['nearest_hole_distance'], isA<double>());
   });
 
   testWidgets('1단계 직접 성공도 점수를 계산해 일반 런 저장 흐름에 전달한다', (tester) async {
@@ -2023,6 +2057,14 @@ void main() {
     expect(
       telemetry.events.map((event) => event['유형']),
       containsAllInOrder(['단계 시작', '속성 이전']),
+    );
+    expect(
+      telemetry.events.map((event) => event['event_code']),
+      containsAllInOrder([
+        'stage_entered',
+        'property_popup_opened',
+        'property_transferred',
+      ]),
     );
     final transfer = telemetry.events.lastWhere(
       (event) => event['event_code'] == 'attribute_transferred',

@@ -61,6 +61,7 @@ class GameScreen extends StatefulWidget {
     this.initialState,
     this.showStageSelector = true,
     this.telemetry,
+    this.telemetryContextBuilder,
     this.onExit,
     this.exitToMainMenu = false,
     this.hudScore,
@@ -91,6 +92,7 @@ class GameScreen extends StatefulWidget {
   final GameState? initialState;
   final bool showStageSelector;
   final LocalPlayTelemetry? telemetry;
+  final PlayTelemetryContext Function()? telemetryContextBuilder;
   final VoidCallback? onExit;
   final bool exitToMainMenu;
   final int? hudScore;
@@ -193,6 +195,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _guidedImpactLabel;
   bool _challengeGuardAppliedForClear = false;
   bool _recordGuardAppliedForClear = false;
+  PlayTelemetryShotPayload? _lastTypedShot;
 
   RunRewardInventory get _rewardInventory =>
       RunRewardInventory(_acquiredRewards);
@@ -302,8 +305,105 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
     _telemetry.record('단계 시작', stage: _state.levelIndex);
+    _recordTyped(PlayTelemetryEventType.stageEntered);
     _recordHintExposureIfNeeded();
     unawaited(_showRequestedHelp());
+  }
+
+  PlayTelemetryContext _telemetryContext() {
+    final supplied = widget.telemetryContextBuilder?.call();
+    if (supplied != null) return supplied;
+    return PlayTelemetryContext(
+      stageIndex: _state.levelIndex,
+      stageId: _currentLevel.stageId ?? _currentLevel.id,
+      patternId: _currentLevel.patternId ?? '${_currentLevel.id}_default',
+      seed: 0,
+      resolverVersion: 'shot-resolver-v1',
+      rewardState: PlayTelemetryRewardState(
+        candidateIds: _rewardCandidates.map((reward) => reward.id),
+        selectedId: _selectedRewardId,
+        acquiredIds: _acquiredRewards,
+        cloneCoreCount: _state.copyCoreCount,
+      ),
+    );
+  }
+
+  void _recordTyped(
+    PlayTelemetryEventType type, {
+    PlayTelemetryShotPayload? shot,
+    PlayTelemetryResult? result,
+  }) {
+    _telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: type,
+        context: _telemetryContext(),
+        shot: shot,
+        result: result,
+      ),
+    );
+  }
+
+  PlayTelemetryShotPayload _typedShotPayload({
+    required ShotInput input,
+    required ShotResult result,
+    required GameState startState,
+    required double inputLatencyMs,
+  }) {
+    final impacts = result.impacts;
+    final distinctTypes = impacts.map((impact) => impact.entityType).toSet();
+    final distinctObjects = impacts.map((impact) => impact.entityId).toSet();
+    final holePositions = startState.entities
+        .where((entity) => entity.type == EntityType.hole)
+        .map((entity) => entity.position)
+        .toList(growable: false);
+    var nearestHoleDistance = double.maxFinite;
+    for (final point in result.path) {
+      for (final hole in holePositions) {
+        nearestHoleDistance = math.min(
+          nearestHoleDistance,
+          point.distanceTo(hole),
+        );
+      }
+    }
+    if (nearestHoleDistance == double.maxFinite) nearestHoleDistance = 0;
+    final score = _chainScoreAnalysis;
+    return PlayTelemetryShotPayload(
+      shotId: startState.shotCount + 1,
+      angle: math.atan2(input.direction.y, input.direction.x),
+      power: input.power,
+      ballTraits: input.equippedTrait == null
+          ? const []
+          : [input.equippedTrait!.name],
+      causalChain: [
+        for (var index = 0; index < impacts.length; index++)
+          impacts[index].contactId ?? '${impacts[index].entityId}:$index',
+      ],
+      causalDepth: impacts.length,
+      effectiveChainLength: score?.causalEventIds.length ?? impacts.length,
+      distinctObjectTypeCount: distinctTypes.length,
+      distinctObjectCount: distinctObjects.length,
+      wallUseCount: impacts
+          .where((impact) => impact.entityType == EntityType.wall)
+          .length,
+      ballUseCount: impacts
+          .where((impact) => impact.entityType == EntityType.ball)
+          .length,
+      objectUseCount: impacts
+          .where(
+            (impact) =>
+                impact.entityType != EntityType.wall &&
+                impact.entityType != EntityType.ball &&
+                impact.entityType != EntityType.hole,
+          )
+          .length,
+      scoreDamped: (score?.breakdown.dampedImpactCount ?? 0) > 0,
+      nearestHoleDistance: nearestHoleDistance,
+      frameDurationMs: _game.lastFrameTimeMs,
+      inputLatencyMs: inputLatencyMs,
+      result: result.state.phase == GamePhase.success
+          ? PlayTelemetryResult.cleared
+          : PlayTelemetryResult.continued,
+    );
   }
 
   Future<void> _showRequestedHelp() async {
@@ -538,6 +638,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         result: '단계 다시 시작',
         eventCode: 'retry_pressed',
       );
+      _recordTyped(
+        PlayTelemetryEventType.stageRetried,
+        result: PlayTelemetryResult.continued,
+      );
     }
     final availableCores = sameStage
         ? _stageCopyCoreAtStart
@@ -574,6 +678,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
       if (_state.levelIndex >= levels.length - 1) {
         if (widget.onRunCompleted != null) {
+          _recordTyped(
+            PlayTelemetryEventType.runCompleted,
+            result: PlayTelemetryResult.cleared,
+          );
           await widget.onRunCompleted!();
           return;
         }
@@ -638,6 +746,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           _feedback.copyCoreAwarded(1);
         }
       });
+      _recordTyped(
+        PlayTelemetryEventType.rewardSelected,
+        result: PlayTelemetryResult.continued,
+      );
     } on Object {
       if (!mounted) return;
       setState(() {
@@ -687,6 +799,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         '${_state.levelIndex}:${_state.shotCount}:발사취소',
       );
       if (!used || !mounted) return;
+      _recordTyped(
+        PlayTelemetryEventType.chargeCancelled,
+        result: PlayTelemetryResult.cancelled,
+      );
       _setState(_state.copyWith(message: '발사 취소 보조를 사용해 다시 조준할 수 있습니다.'));
     } finally {
       _isCommittingRewardAction = false;
@@ -877,6 +993,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       attributeBefore: sourceTrait.label,
       attributeAfter: next.equippedTrait?.label,
     );
+    _recordTyped(PlayTelemetryEventType.propertyTransferred);
     _isCommittingTraitAction = false;
     _setState(next);
   }
@@ -937,6 +1054,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       attributeBefore: sourceTrait.label,
       attributeAfter: next.equippedTrait?.label,
     );
+    _recordTyped(PlayTelemetryEventType.propertyCopied);
   }
 
   void _launch({ShotInput? inputOverride, bool isReplay = false}) {
@@ -1025,7 +1143,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
     _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
     final shotStartState = _state;
+    final inputProcessing = Stopwatch()..start();
     final result = _shotResolver.resolve(shotStartState, normalizedInput);
+    inputProcessing.stop();
     if (result.state.phase != GamePhase.success) {
       _failureReplay = FailureReplayData(
         beforeState: shotStartState,
@@ -1041,6 +1161,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       shotResults: _stageShotResults,
       parShots: _currentLevel.parShots,
     );
+    _lastTypedShot = _typedShotPayload(
+      input: normalizedInput,
+      result: result,
+      startState: shotStartState,
+      inputLatencyMs: inputProcessing.elapsedMicroseconds / 1000,
+    );
+    _recordTyped(PlayTelemetryEventType.shotReleased, shot: _lastTypedShot);
     _telemetry.record(
       '발사',
       stage: _state.levelIndex,
@@ -1386,6 +1513,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _rewardCandidates = await widget.onRewardSelectionPrepared!(
           _state.levelIndex,
         );
+        _recordTyped(PlayTelemetryEventType.rewardOffered);
       } on Object {
         if (mounted) {
           setState(() {
@@ -1415,6 +1543,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         attempt: _state.shotCount,
         result: '성공',
       );
+      _recordTyped(
+        PlayTelemetryEventType.collisionChainCompleted,
+        shot: _lastTypedShot,
+      );
+      if (_bonusChallengeAchieved) {
+        _recordTyped(PlayTelemetryEventType.optionalChallengeCompleted);
+      }
+      _recordTyped(
+        PlayTelemetryEventType.stageCleared,
+        shot: _lastTypedShot,
+        result: PlayTelemetryResult.cleared,
+      );
       _feedback.shotCleared();
       _feedback.medalAwarded(awardedStars);
     } else {
@@ -1423,6 +1563,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         stage: _state.levelIndex,
         attempt: _state.shotCount,
         result: '재도전 가능',
+      );
+      _recordTyped(
+        PlayTelemetryEventType.collisionChainCompleted,
+        shot: _lastTypedShot,
+        result: PlayTelemetryResult.failed,
       );
       _feedback.shotFailed();
     }
@@ -2009,6 +2154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         objectId: _state.activeBall.id,
         objectType: EntityType.ball.name,
       );
+      _recordTyped(PlayTelemetryEventType.aimStarted);
     }
     final quantizedAim = quantizeAimDirection(aim);
     final guidedImpactLabel = _previewFirstImpact(
@@ -2213,6 +2359,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       result: '섬 지도 복귀',
       eventCode: 'stage_exit',
     );
+    _recordTyped(
+      PlayTelemetryEventType.stageAbandoned,
+      result: PlayTelemetryResult.abandoned,
+    );
     widget.onExit!();
   }
 
@@ -2280,6 +2430,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       objectType: entity.type.name,
       trait: trait?.label,
     );
+    _recordTyped(PlayTelemetryEventType.propertyPopupOpened);
     if (trait != null) {
       _telemetry.record(
         '속성 이전 열기',
@@ -2436,6 +2587,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         eventCode: 'charge_cancelled_overcharge',
         power: LaunchInputSession.maximumPower,
       );
+      _recordTyped(
+        PlayTelemetryEventType.chargeCancelled,
+        result: PlayTelemetryResult.cancelled,
+      );
       if (mounted && _state.phase == GamePhase.planning) {
         _setState(
           _state.copyWith(message: '과충전되어 발사를 취소했습니다. 새로 눌러 다시 시작하세요.'),
@@ -2500,6 +2655,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _chargeStartRecorded = false;
     _setChargeGauge(ChargeGaugeState.green, active: false);
     if (wasCharging) {
+      _recordTyped(
+        PlayTelemetryEventType.chargeCancelled,
+        result: PlayTelemetryResult.cancelled,
+      );
       if (showCancellation) {
         _feedback.cancelled();
       }
@@ -2618,6 +2777,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _chargeGaugeState = next;
     _chargeGaugeActive = active;
     _game.setChargeGaugeState(next, active: active);
+    if (changed && active) {
+      _recordTyped(PlayTelemetryEventType.chargeStageChanged);
+    }
     if (next == ChargeGaugeState.cancelledGray &&
         !_overchargeFeedbackRecorded) {
       _overchargeFeedbackRecorded = true;

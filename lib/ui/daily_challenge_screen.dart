@@ -22,6 +22,7 @@ import '../game/run/stage_shuffle_bag.dart';
 import '../game/simulation/trait_resolver.dart';
 import '../game/simulation/shot_resolver.dart';
 import 'game_screen.dart';
+import 'play_telemetry.dart';
 import 'tutorial_experiment.dart';
 
 typedef SharedPreferencesLoader = Future<SharedPreferences> Function();
@@ -72,6 +73,7 @@ class DailyChallengeScreen extends StatefulWidget {
     this.loadPreferences,
     this.showDebugControls = false,
     this.tutorialVariant = TutorialExperimentVariant.guided,
+    this.telemetry,
   });
 
   final VoidCallback? onExit;
@@ -79,6 +81,7 @@ class DailyChallengeScreen extends StatefulWidget {
   final SharedPreferencesLoader? loadPreferences;
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
+  final LocalPlayTelemetry? telemetry;
 
   @override
   State<DailyChallengeScreen> createState() => _DailyChallengeScreenState();
@@ -114,12 +117,15 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   int _completedShots = 0;
   int _completedRewardCount = 0;
   String? _error;
+  late final LocalPlayTelemetry _telemetry;
+  bool _runStartedRecorded = false;
 
   @override
   void initState() {
     super.initState();
     _now = widget.now ?? DateTime.now;
     _loadPreferences = widget.loadPreferences ?? SharedPreferences.getInstance;
+    _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_enqueueTransition(() => _refreshDateUnqueued(force: true)));
   }
@@ -316,6 +322,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     String? attemptId,
     DailyChallengeRecord? record,
   }) async {
+    _runStartedRecorded = false;
     final storage = await _createStorage(mode, attemptId: attemptId);
     final session = storage.createSession(
       catalog: generatedStageCatalog,
@@ -447,6 +454,49 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       _activeTotalScore = session.state?.totalScore ?? 0;
       _view = _DailyScreenView.playing;
     });
+    final context = _dailyTelemetryContext();
+    if (!_runStartedRecorded) {
+      _runStartedRecorded = true;
+      _telemetry.recordTyped(
+        TypedPlayTelemetryEvent(
+          type: PlayTelemetryEventType.dailyChallengeStarted,
+          context: context,
+        ),
+      );
+      _telemetry.recordTyped(
+        TypedPlayTelemetryEvent(
+          type: PlayTelemetryEventType.runStarted,
+          context: context,
+        ),
+      );
+    }
+    _telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.stagePatternDrawn,
+        context: context,
+      ),
+    );
+  }
+
+  PlayTelemetryContext _dailyTelemetryContext() {
+    final stageIndex = _activeStage ?? 0;
+    final level = _activeLevel;
+    final state = _session?.state;
+    return PlayTelemetryContext(
+      stageIndex: stageIndex,
+      stageId:
+          level?.stageId ?? generatedStageCatalog.stages[stageIndex].stageId,
+      patternId: level?.patternId ?? state?.currentPatternId ?? '패턴_미정',
+      seed: state?.currentPatternSeed ?? 0,
+      resolverVersion:
+          state?.resolverVersion ?? dailyChallengePhysicsResolverVersion,
+      rewardState: PlayTelemetryRewardState(
+        candidateIds: _activeRewardCandidates.map((reward) => reward.id),
+        selectedId: _activeSelectedRewardId,
+        acquiredIds: _activeAcquiredRewards,
+        cloneCoreCount: state?.cloneCoreCount ?? 0,
+      ),
+    );
   }
 
   GameState _restoreTraitActions(
@@ -780,6 +830,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         initialAcquiredRewards: _activeAcquiredRewards,
         levelOverride: _activeLevel,
         showStageSelector: false,
+        telemetry: _telemetry,
+        telemetryContextBuilder: _dailyTelemetryContext,
         onExit: _exitToMainMenu,
         exitToMainMenu: true,
         hudScore: _activeTotalScore,
