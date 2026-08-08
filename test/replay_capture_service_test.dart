@@ -59,6 +59,38 @@ void main() {
     expect(replayed.finalState.shotCount, 2);
   });
 
+  test('같은 리플레이를 100회 반복 재생해도 지문과 문서가 변하지 않는다', () async {
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(backend: MemoryRunStateBackend()),
+      fixedRootSeed: 170,
+      fixedRunId: 'replay-stress-run',
+      now: () => DateTime.utc(2026, 8, 8),
+    );
+    await session.selectStage('stage_heavy');
+    await session.recordShot(
+      input: const ShotInput(direction: Vec2(1, 0), power: 0.7),
+    );
+    const service = ReplayCaptureService();
+    final document = service.capture(
+      runState: session.state!,
+      catalog: generatedStageCatalog,
+    );
+    final canonicalBefore = replayCanonicalJson(document.toJson());
+
+    for (var replay = 0; replay < 100; replay++) {
+      final result = service.playback(
+        document,
+        generatedStageCatalog,
+        expectedRunState: session.state,
+      );
+      expect(result.fingerprints, document.outcomeFingerprints);
+      expect(result.finalState.shotCount, 1);
+    }
+
+    expect(replayCanonicalJson(document.toJson()), canonicalBefore);
+  });
+
   test('resolver 버전 불일치와 catalog fingerprint 불일치를 조용히 허용하지 않는다', () async {
     final session = StagePatternSession(
       catalog: generatedStageCatalog,

@@ -281,6 +281,47 @@ void main() {
       isFalse,
     );
   });
+
+  test('14개 설정을 30회 반복 변경해도 마지막 상태를 정확히 복원한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    for (var round = 0; round < 30; round++) {
+      final enabled = round.isEven;
+      await GameFeedback.setSoundEnabled(enabled);
+      await GameFeedback.setBackgroundMusicEnabled(enabled);
+      await GameFeedback.setHapticsEnabled(enabled);
+      await GameFeedback.setReducedMotionEnabled(enabled);
+      await GameFeedback.setScreenShakeStrength(enabled ? 3 : 0);
+      await GameFeedback.setLastShotSlowMotionEnabled(enabled);
+      await GameFeedback.setCollisionOrderEnabled(enabled);
+      await GameFeedback.setLastContactHighlightEnabled(enabled);
+      await GameFeedback.setNearestHoleEnabled(enabled);
+      await GameFeedback.setTraitActivationEnabled(enabled);
+      await GameFeedback.setGimmickCausalityEnabled(enabled);
+      await GameFeedback.setCollisionPathIconsEnabled(enabled);
+      await GameFeedback.setChainScoreDetailsEnabled(enabled);
+      await GameFeedback.setStrongFlashEnabled(enabled);
+    }
+
+    GameFeedback.resetForTesting();
+    await GameFeedback.loadPreferences();
+
+    expect(GameFeedback.soundEnabled, isFalse);
+    expect(GameFeedback.backgroundMusicEnabled, isFalse);
+    expect(GameFeedback.hapticsEnabled, isFalse);
+    expect(GameFeedback.reducedMotionEnabled, isFalse);
+    expect(GameFeedback.screenShakeEnabled, isFalse);
+    expect(GameFeedback.screenShakeStrength, 0);
+    expect(GameFeedback.lastShotSlowMotionEnabled, isFalse);
+    expect(GameFeedback.collisionOrderEnabled, isFalse);
+    expect(GameFeedback.lastContactHighlightEnabled, isFalse);
+    expect(GameFeedback.nearestHoleEnabled, isFalse);
+    expect(GameFeedback.traitActivationEnabled, isFalse);
+    expect(GameFeedback.gimmickCausalityEnabled, isFalse);
+    expect(GameFeedback.collisionPathIconsEnabled, isFalse);
+    expect(GameFeedback.chainScoreDetailsEnabled, isFalse);
+    expect(GameFeedback.strongFlashEnabled, isFalse);
+  });
 }
 
 Future<void> _flushFeedback() async {
