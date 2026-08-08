@@ -43,12 +43,9 @@ void main() {
       );
       await tester.runAsync(() async {
         for (final asset in const [
-          'assets/icons/stone_boulder.png',
           'assets/generated/jelly-bumper-v1.png',
-          'assets/icons/crate.png',
           'assets/generated/crate-v2.png',
           'assets/generated/stone-v2.png',
-          'assets/icons/ball.png',
         ]) {
           await precacheImage(AssetImage(asset), context);
         }

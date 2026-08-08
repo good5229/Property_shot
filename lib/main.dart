@@ -1956,6 +1956,34 @@ class _StageFinaleIcon extends StatelessWidget {
   }
 }
 
+class _StageScoreIcon extends StatelessWidget {
+  const _StageScoreIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        const Positioned.fill(
+          child: Padding(
+            padding: EdgeInsets.all(3),
+            child: CustomPaint(painter: GameBallIconPainter(null)),
+          ),
+        ),
+        const Align(
+          alignment: Alignment(0.78, -0.78),
+          child: Icon(
+            Icons.auto_awesome_rounded,
+            size: 22,
+            color: Color(0xFFFFB629),
+            shadows: [Shadow(color: Colors.white, blurRadius: 3)],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StageTile extends StatelessWidget {
   const _StageTile({
     required this.index,
@@ -1982,16 +2010,16 @@ class _StageTile extends StatelessWidget {
       '배운 속성과 기물을 엮어 나만의 경로를 완성해 보세요.',
     ];
     final assets = [
-      'assets/icons/stone_boulder.png',
+      'assets/generated/stone-v2.png',
       'assets/generated/jelly-bumper-v1.png',
-      'assets/icons/crate.png',
+      'assets/generated/crate-v2.png',
       'assets/generated/jelly-bumper-v1.png',
       'assets/generated/stone-v2.png',
-      'assets/icons/stone_boulder.png',
+      'assets/generated/jelly-bumper-v1.png',
       'assets/generated/crate-v2.png',
-      'assets/icons/ball.png',
-      'assets/icons/crate.png',
-      'assets/icons/ball.png',
+      'assets/generated/stone-v2.png',
+      'assets/generated/crate-v2.png',
+      'assets/generated/stone-v2.png',
     ];
     final stageAsset = assets[index];
     return Padding(
@@ -2046,6 +2074,8 @@ class _StageTile extends StatelessWidget {
                                     ? const CustomPaint(
                                         painter: GameBallIconPainter(null),
                                       )
+                                    : index == 7
+                                    ? const _StageScoreIcon()
                                     : index == 8
                                     ? const _StageReflectorIcon()
                                     : index == 9

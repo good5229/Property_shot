@@ -1822,3 +1822,10 @@ Use consistent headings so entries are easy to grep.
 - 최초 감사에서 오래된 Web build cache의 plugin registrant가 `audioplayers_web`을 누락해 두 뷰포트 모두 `MissingPluginException`을 기록했다. 기존 서버를 종료하고 `flutter clean`·`flutter pub get`·Release 재빌드를 수행해 생성 registrant에 `AudioplayersPlugin.registerWith`가 포함됨을 확인했다.
 - 최신 PID 88129 서버에서 동일한 5초·5초 워밍업 감사를 재실행했다. 390×844·768×1024 발사 p90은 17.1ms·17.0ms, p99는 모두 17.7ms이며 50ms 초과·발사 Long Task·콘솔 오류는 0건이다.
 - 엄격 16.7ms p90 목표는 0.3~0.4ms 미달하고 실기기 증거가 없으므로 `Conditional Go`를 유지한다.
+
+## 2026-08-08 제품 자산 번들 경계
+
+- `pubspec.yaml`의 디렉터리 단위 자산 선언을 최종 실행 파일 단위 선언으로 바꿨다. 생성 원본·앱 아이콘 작업 원본·CC0 레거시 PNG·README는 저장소 증거로 보존하되 Flutter 제품 번들에서는 제외한다.
+- 섬 지도 단계 카드는 최종 돌·상자·젤리 스프라이트를 사용하고, 공 단계는 제품 게임 공 페인터를 공유한다. 390×844·768×1024와 9·10단계 스크롤 Golden을 직접 확인했다.
+- 실제 `AssetManifest`를 읽어 포함·제외 목록을 검사하는 회귀를 추가했다. 전체 Flutter 테스트 893개, 정적 분석 이슈 0건, Web Release와 Wasm 사전검사가 통과했다.
+- CC0 레거시 PNG 3개는 원본 ZIP 내부 파일과 SHA-256이 각각 일치하고 OpenGameArt·CC0 오프라인 증거도 확인했다. 이는 내부 기술 검토이며 최종 법무 승인은 아니다.

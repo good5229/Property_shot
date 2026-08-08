@@ -57,7 +57,7 @@ Web Release 대리 측정은 안정적이지만, 발사 구간 p90이 17.0~17.1m
 
 - `flutter analyze`: 통과, 오류 0건
 - 스테이지 카탈로그: 생산 패턴 40개 제한 실행 검증 및 생성본 일치 통과
-- 전체 `flutter test`: 최신 기준 이미지 반영 후 892개 통과
+- 전체 `flutter test`: 최신 자산 번들 계약과 기준 이미지 반영 후 893개 통과
 - `flutter build web --release`: 최신 제품 소스 클린 빌드와 Wasm dry run 통과
 
 ## 기존 빌드·실행 증거
