@@ -58,7 +58,7 @@ Web Release 대리 측정의 발사 구간 p90이 17.1~17.3ms로 엄격 목표 1
 
 ## 최신 데모 서버
 
-기존 PID 79482를 먼저 종료하고 최신 Web Release를 PID 796으로 교체했다. `http://127.0.0.1:8080/`의 루트, `main.dart.js`, 실제 번들 음악 `property_shot_island_loop.wav`가 모두 HTTP 200이며 앱 번들 SHA-256은 `ccf9b216d38098d45486429a652be2604435598378aa36a3a54e9dbbc8a3cd59`다.
+기존 PID 79482를 먼저 종료하고 Web Release를 PID 796으로 교체했다. 입력 지연 p95 진단 기능을 추가한 뒤 Release에서 진단 문구가 제거되고 앱 번들 해시가 바뀌지 않음을 확인했으며, PID 796을 종료한 다음 최신 서버 PID 21973으로 다시 교체했다. `http://127.0.0.1:8080/`의 루트, `main.dart.js`, 실제 번들 음악 `property_shot_island_loop.wav`가 모두 HTTP 200이며 앱 번들 SHA-256은 `ccf9b216d38098d45486429a652be2604435598378aa36a3a54e9dbbc8a3cd59`다.
 
 ## 확보된 기타 측정
 
