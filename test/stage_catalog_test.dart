@@ -10,9 +10,12 @@ import 'package:property_shot/game/domain/stage_catalog.dart';
 import 'package:property_shot/game/domain/stage_pattern.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/validation/stage_pattern_runtime_probe.dart';
+import 'package:property_shot/game/validation/stage_pattern_validator.dart';
 
 import 'fixtures/legacy_levels.dart';
 import '../tool/generate_stage_catalog.dart' as stage_catalog_generator;
+import '../tool/stage_pattern_runtime_manifest.dart';
 
 void main() {
   late StageCatalog sourceCatalog;
@@ -396,6 +399,77 @@ void main() {
     expect(formatted, contains('스테이지=stage_invalid'));
     expect(formatted, contains('패턴=pattern_invalid'));
     expect(formatted, contains('양수여야 합니다'));
+  });
+
+  test('생산 40패턴은 대표 fixture 실행 계약과 시간 상한을 통과한다', () {
+    final manifest = buildRuntimeValidationManifest();
+    final patternIds = sourceCatalog.stages
+        .expand((stage) => stage.patterns)
+        .map((pattern) => pattern.patternId)
+        .toSet();
+    expect(manifest.keys.toSet(), patternIds);
+
+    final stopwatch = Stopwatch()..start();
+    final issues = stage_catalog_generator.validateRuntimeCatalog(
+      sourceCatalog,
+      manifest: manifest,
+    );
+    stopwatch.stop();
+
+    expect(issues, isEmpty, reason: issues.join('\n'));
+    expect(
+      stopwatch.elapsed,
+      lessThan(const Duration(seconds: 15)),
+      reason: '40패턴 실행 검증 시간=${stopwatch.elapsedMilliseconds}ms',
+    );
+  });
+
+  test('대표 fixture 누락과 무보상 성공 누락을 카탈로그 게이트가 거부한다', () {
+    final manifest = buildRuntimeValidationManifest();
+    final firstPattern = sourceCatalog.stages.first.patterns.first;
+    final missing = {
+      for (final entry in manifest.entries)
+        if (entry.key != firstPattern.patternId) entry.key: entry.value,
+    };
+    final missingIssues = stage_catalog_generator.validateRuntimeCatalog(
+      sourceCatalog,
+      manifest: missing,
+    );
+    expect(
+      missingIssues
+          .where((issue) => issue.patternId == firstPattern.patternId)
+          .map((issue) => issue.code)
+          .toSet(),
+      containsAll({
+        ValidationIssueCode.runtimeMissingSolutionEvidence,
+        ValidationIssueCode.runtimeRewardFreeRouteMissing,
+      }),
+    );
+
+    final original = manifest[firstPattern.patternId]!.first;
+    final rewardOnly = {
+      ...manifest,
+      firstPattern.patternId: [
+        PatternRuntimeScenario(
+          id: original.id,
+          familyId: original.familyId,
+          inputs: original.inputs,
+          rewardFree: false,
+        ),
+      ],
+    };
+    final rewardIssues = stage_catalog_generator.validateRuntimeCatalog(
+      sourceCatalog,
+      manifest: rewardOnly,
+    );
+    expect(
+      rewardIssues.any(
+        (issue) =>
+            issue.patternId == firstPattern.patternId &&
+            issue.code == ValidationIssueCode.runtimeRewardFreeRouteMissing,
+      ),
+      isTrue,
+    );
   });
 }
 

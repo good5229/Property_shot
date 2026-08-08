@@ -1282,6 +1282,8 @@ String _evidenceFingerprint(PatternRuntimeEvidence evidence) {
     evidence.routeObserved,
     evidence.definitiveNoRoute,
     evidence.observedSolutionFamilies.toList()..sort(),
+    evidence.rewardFreeRouteObserved,
+    evidence.solutionContractRequired,
     evidence.safetyStop,
     evidence.infiniteBounce,
     evidence.finiteCoordinates,

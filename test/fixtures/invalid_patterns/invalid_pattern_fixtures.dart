@@ -1,7 +1,12 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
+import 'package:property_shot/game/domain/game_state.dart';
+import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/domain/stage_pattern.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/validation/stage_pattern_runtime_probe.dart';
 import 'package:property_shot/game/validation/stage_pattern_validator.dart';
 
@@ -68,24 +73,15 @@ List<InvalidPatternFixture> buildInvalidPatternFixtures() {
         json['objects'] = [hole, barrier];
       },
     ),
-    _staticFixture(
+    _mutatedRuntimeFixture(
       'invalid_wall_moves',
-      expectedCodes: {ValidationIssueCode.wallIsMovable},
-      mutate: (json) {
-        _objectById(_objects(json), 'wall_left')['movable'] = true;
-      },
+      expectedCodes: {ValidationIssueCode.runtimeWallMoved},
+      resolver: _WallMovingResolver(),
     ),
-    _runtimeFixture(
+    _mutatedRuntimeFixture(
       'invalid_infinite_bounce',
       expectedCodes: {ValidationIssueCode.runtimeInfiniteBounce},
-      evidence: const PatternRuntimeEvidence(
-        probeCount: 3,
-        maxProbeCount: 3,
-        shotCount: 6,
-        maxShots: 6,
-        safetyStop: true,
-        infiniteBounce: true,
-      ),
+      resolver: const _SafetyStopResolver(),
     ),
     _runtimeFixture(
       'invalid_slider_tunneling',
@@ -99,27 +95,18 @@ List<InvalidPatternFixture> buildInvalidPatternFixtures() {
         sliderTunneling: true,
       ),
     ),
-    _runtimeFixture(
+    _mutatedRuntimeFixture(
       'invalid_non_deterministic',
       expectedCodes: {ValidationIssueCode.runtimeNonDeterministic},
-      evidence: const PatternRuntimeEvidence(
-        probeCount: 2,
-        maxProbeCount: 2,
-        shotCount: 4,
-        maxShots: 4,
-        nonDeterministic: true,
-      ),
+      resolver: _NonDeterministicResolver(),
     ),
-    _runtimeFixture(
+    _mutatedRuntimeFixture(
       'invalid_hole_pass_through',
       expectedCodes: {ValidationIssueCode.runtimeHolePassThrough},
-      evidence: const PatternRuntimeEvidence(
-        probeCount: 2,
-        maxProbeCount: 2,
-        shotCount: 4,
-        maxShots: 4,
-        holePassThrough: true,
-      ),
+      resolver: const _HolePassThroughResolver(),
+      representativeInputs: [
+        ShotInput(direction: _directionFor(62), power: 0.70),
+      ],
     ),
     _staticFixture(
       'invalid_reward_required',
@@ -215,6 +202,28 @@ InvalidPatternFixture _actualRuntimeFixture(
   );
 }
 
+InvalidPatternFixture _mutatedRuntimeFixture(
+  String name, {
+  required Set<ValidationIssueCode> expectedCodes,
+  required ShotResolver resolver,
+  List<ShotInput> representativeInputs =
+      ShotResolverPatternRuntimeProbe.defaultRepresentativeInputs,
+}) {
+  final pattern = StagePattern.fromJson(_baseJson(name));
+  return InvalidPatternFixture(
+    name: name,
+    stage: _stage(pattern),
+    pattern: pattern,
+    expectedCodes: expectedCodes,
+    runtimeProbe: ShotResolverPatternRuntimeProbe(
+      shotResolver: resolver,
+      representativeInputs: representativeInputs,
+      maxProbeCount: representativeInputs.length,
+      maxShots: representativeInputs.length * 2,
+    ),
+  );
+}
+
 Map<String, dynamic> _baseJson(String patternId) {
   final pattern = StagePattern.fromLevelDefinition(
     levels.first,
@@ -242,4 +251,104 @@ Map<String, dynamic> _objectById(
   String id,
 ) {
   return objects.firstWhere((object) => object['id'] == id);
+}
+
+Vec2 _directionFor(int degree) {
+  final radians = degree * math.pi / 180;
+  return Vec2(math.cos(radians), math.sin(radians));
+}
+
+class _WallMovingResolver extends ShotResolver {
+  _WallMovingResolver();
+
+  @override
+  ShotResult resolve(GameState state, ShotInput rawInput) {
+    final result = super.resolve(state, rawInput);
+    final movedState = result.state.copyWith(
+      entities: [
+        for (final entity in result.state.entities)
+          if (entity.type.name == 'wall')
+            entity.copyWith(position: entity.position + const Vec2(1, 0))
+          else
+            entity,
+      ],
+    );
+    return _copyResult(result, state: movedState);
+  }
+}
+
+class _NonDeterministicResolver extends ShotResolver {
+  _NonDeterministicResolver();
+
+  var _callCount = 0;
+
+  @override
+  ShotResult resolve(GameState state, ShotInput rawInput) {
+    final result = super.resolve(state, rawInput);
+    _callCount++;
+    if (_callCount.isOdd) return result;
+    return _copyResult(
+      result,
+      state: result.state.copyWith(message: '${result.state.message} 변이'),
+    );
+  }
+}
+
+class _HolePassThroughResolver extends ShotResolver {
+  const _HolePassThroughResolver();
+
+  @override
+  ShotResult resolve(GameState state, ShotInput rawInput) {
+    final result = super.resolve(state, rawInput);
+    return _copyResult(
+      result,
+      events: result.events
+          .where((event) => event != 'hole_entered')
+          .toList(growable: false),
+    );
+  }
+}
+
+class _SafetyStopResolver extends ShotResolver {
+  const _SafetyStopResolver();
+
+  @override
+  ShotResult resolve(GameState state, ShotInput rawInput) {
+    final result = super.resolve(state, rawInput);
+    return _copyResult(
+      result,
+      events: [...result.events, 'chain_safety_stop'],
+      chainSafetyDiagnostics: [
+        ...result.chainSafetyDiagnostics,
+        const ChainSafetyDiagnostic(
+          targetEntityId: 'active_ball',
+          pathIndex: 0,
+          depth: 1,
+          iterations: 1,
+          remainingDistance: 1,
+          remainingSpeed: 1,
+        ),
+      ],
+    );
+  }
+}
+
+ShotResult _copyResult(
+  ShotResult result, {
+  GameState? state,
+  List<String>? events,
+  List<ChainSafetyDiagnostic>? chainSafetyDiagnostics,
+}) {
+  return ShotResult(
+    state: state ?? result.state,
+    path: result.path,
+    events: events ?? result.events,
+    moves: result.moves,
+    impacts: result.impacts,
+    powerSliderActivations: result.powerSliderActivations,
+    reflectorRotations: result.reflectorRotations,
+    physicsEvents: result.physicsEvents,
+    chainSafetyDiagnostics:
+        chainSafetyDiagnostics ?? result.chainSafetyDiagnostics,
+  );
 }

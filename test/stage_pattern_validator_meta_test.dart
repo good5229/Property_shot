@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/stage_pattern.dart';
 import 'package:property_shot/game/levels/levels.dart';
@@ -60,51 +58,26 @@ void main() {
     expect(report.isValid, isTrue, reason: '${report.issues}');
   });
 
-  test('scripted evidence 기반 mutation-style audit는 기대 오류 누락을 거부한다', () {
-    final json = _basePatternJson('multi_invalid_fixture');
-    final objects = (json['objects'] as List).cast<Map<String, dynamic>>();
-    final crate = objects.firstWhere((object) => object['id'] == 'crate_a');
-    final anvil = objects.firstWhere((object) => object['id'] == 'anvil');
-    anvil['position'] = crate['position'];
-    (json['metadata'] as Map<String, dynamic>)['required_reward'] =
-        'heavy_core';
-    final pattern = StagePattern.fromJson(json);
-    final stage = StageDefinition(
-      stageId: 'mutation_stage',
-      title: '복합 오류',
-      patterns: [pattern],
+  test('홀 통과 규칙을 실제로 끄면 fixture 계약이 변이를 잡는다', () {
+    final fixture = fixtures.singleWhere(
+      (candidate) => candidate.name == 'invalid_hole_pass_through',
     );
-    const evidence = PatternRuntimeEvidence(
-      probeCount: 1,
-      maxProbeCount: 1,
-      shotCount: 2,
-      maxShots: 2,
-      nonDeterministic: true,
-    );
-    final validator = StagePatternValidator();
-    final report = validator.validatePatternWithRuntimeEvidence(
-      stage,
-      pattern,
-      evidence,
-      enforceProductionPolicy: false,
-    );
-    final expected = <ValidationIssueCode>{
-      ValidationIssueCode.initialObjectOverlap,
-      ValidationIssueCode.requiredReward,
-      ValidationIssueCode.runtimeNonDeterministic,
-    };
-    expect(_missingExpectedCodes(report, expected), isEmpty);
+    final normal = _validateFixture(StagePatternValidator(), fixture);
+    expect(_missingExpectedCodes(normal, fixture.expectedCodes), isEmpty);
 
-    for (final removedCode in expected) {
-      final mutated = ValidationReport(
-        report.issues.where((issue) => issue.code != removedCode),
-      );
-      expect(
-        _missingExpectedCodes(mutated, expected),
-        contains(removedCode),
-        reason: '제거한 ${removedCode.schemaName}를 audit이 탐지해야 합니다.',
-      );
-    }
+    final mutated = _validateFixture(
+      StagePatternValidator(
+        runtimeRulePolicy: const RuntimeValidationRulePolicy(
+          disabledCodes: {ValidationIssueCode.runtimeHolePassThrough},
+        ),
+      ),
+      fixture,
+    );
+    expect(
+      _missingExpectedCodes(mutated, fixture.expectedCodes),
+      {ValidationIssueCode.runtimeHolePassThrough},
+      reason: '실제 검증 규칙을 비활성화한 변이는 fixture 계약을 통과하면 안 됩니다.',
+    );
   });
 
   test('no-route와 신규 기물 오류는 명시적 evidence가 있을 때만 생긴다', () {
@@ -237,12 +210,4 @@ Set<ValidationIssueCode> _missingExpectedCodes(
   Set<ValidationIssueCode> expected,
 ) {
   return expected.where((code) => !report.hasCode(code)).toSet();
-}
-
-Map<String, dynamic> _basePatternJson(String patternId) {
-  final pattern = StagePattern.fromLevelDefinition(
-    levels.first,
-    patternId: patternId,
-  );
-  return jsonDecode(jsonEncode(pattern.toJson())) as Map<String, dynamic>;
 }

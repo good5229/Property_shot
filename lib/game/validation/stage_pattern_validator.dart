@@ -74,6 +74,8 @@ enum ValidationIssueCode {
   runtimeNonFinite,
   runtimeNegativeTime,
   runtimeProbeBudget,
+  runtimeMissingSolutionEvidence,
+  runtimeRewardFreeRouteMissing,
 }
 
 extension ValidationIssueCodeSchema on ValidationIssueCode {
@@ -194,6 +196,10 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'invalid_negative_time';
       case ValidationIssueCode.runtimeProbeBudget:
         return 'invalid_probe_budget';
+      case ValidationIssueCode.runtimeMissingSolutionEvidence:
+        return 'missing_solution_family_evidence';
+      case ValidationIssueCode.runtimeRewardFreeRouteMissing:
+        return 'missing_reward_free_route_evidence';
     }
   }
 }
@@ -246,6 +252,18 @@ class ValidationReport {
       Set.unmodifiable(issues.map((issue) => issue.code));
 }
 
+/// validator 메타 테스트에서 실제 런타임 규칙을 하나씩 변이하기 위한 정책이다.
+///
+/// 제품 기본값은 모든 규칙 활성화다. 비활성 정책은 검증기 자체가 결함을
+/// 놓칠 때 계약 테스트가 이를 잡는지 확인하는 용도로만 사용한다.
+class RuntimeValidationRulePolicy {
+  const RuntimeValidationRulePolicy({this.disabledCodes = const {}});
+
+  final Set<ValidationIssueCode> disabledCodes;
+
+  bool isEnabled(ValidationIssueCode code) => !disabledCodes.contains(code);
+}
+
 /// 데이터 파싱 이후에 실행하는 순수 정적 패턴 검증기다.
 ///
 /// 이 클래스는 JSON 파서의 [FormatException]을 삼키지 않는다. 파싱에
@@ -258,6 +276,7 @@ class StagePatternValidator {
     this.maxObjectCount = 64,
     this.minSolutionFamilyCount = 2,
     this.maxRestitution = 1,
+    this.runtimeRulePolicy = const RuntimeValidationRulePolicy(),
   }) : assert(boardSize.x.isFinite && boardSize.x > 0),
        assert(boardSize.y.isFinite && boardSize.y > 0),
        assert(minPatternCount >= 0),
@@ -272,6 +291,7 @@ class StagePatternValidator {
   final int maxObjectCount;
   final int minSolutionFamilyCount;
   final double maxRestitution;
+  final RuntimeValidationRulePolicy runtimeRulePolicy;
 
   /// production 정책까지 포함해 하나의 스테이지를 검사한다.
   ValidationReport validate(StageDefinition stage) {
@@ -1238,6 +1258,7 @@ class StagePatternValidator {
     List<ValidationIssue> issues,
   ) {
     void add(ValidationIssueCode code, String message) {
+      if (!runtimeRulePolicy.isEnabled(code)) return;
       issues.add(
         _issue(
           code,
@@ -1310,6 +1331,23 @@ class StagePatternValidator {
         ValidationIssueCode.runtimeProbeBudget,
         '실행 검증이 공개된 입력 또는 샷 상한을 초과했습니다.',
       );
+    }
+    if (evidence.solutionContractRequired) {
+      final declaredFamilyObserved = evidence.observedSolutionFamilies.any(
+        pattern.solutionFamilies.contains,
+      );
+      if (!declaredFamilyObserved) {
+        add(
+          ValidationIssueCode.runtimeMissingSolutionEvidence,
+          '선언된 풀이 계열을 실제 성공으로 재현한 대표 입력 증거가 없습니다.',
+        );
+      }
+      if (!evidence.rewardFreeRouteObserved) {
+        add(
+          ValidationIssueCode.runtimeRewardFreeRouteMissing,
+          '런 보상 없이 성공하는 대표 입력 증거가 없습니다.',
+        );
+      }
     }
   }
 }
@@ -1430,6 +1468,10 @@ String _defaultMessage(ValidationIssueCode code) {
       return '실행 중 음수 이벤트 순서 또는 반복 횟수가 발생했습니다.';
     case ValidationIssueCode.runtimeProbeBudget:
       return '실행 검증 상한을 초과했습니다.';
+    case ValidationIssueCode.runtimeMissingSolutionEvidence:
+      return '선언된 풀이 계열의 실행 증거가 없습니다.';
+    case ValidationIssueCode.runtimeRewardFreeRouteMissing:
+      return '런 보상 없는 대표 성공 증거가 없습니다.';
   }
 }
 

@@ -20,6 +20,26 @@ abstract interface class PatternRuntimeProbe {
   });
 }
 
+/// 생산 패턴의 대표 해법을 실제 물리로 재생하기 위한 제한된 시나리오다.
+///
+/// [familyId]는 정답 추천이 아니라 선언된 풀이 계열에 실행 증거를 연결하는
+/// QA 식별자다. [rewardFree]는 런 보상을 주입하지 않은 해법임을 뜻한다.
+class PatternRuntimeScenario {
+  const PatternRuntimeScenario({
+    required this.id,
+    required this.familyId,
+    required this.inputs,
+    this.rewardFree = true,
+  }) : assert(id != ''),
+       assert(familyId != ''),
+       assert(inputs.length > 0);
+
+  final String id;
+  final String familyId;
+  final List<ShotInput> inputs;
+  final bool rewardFree;
+}
+
 /// 패턴 실행 검증에서 관찰된 사실이다.
 ///
 /// `definitiveNoRoute`와 신규 기물 적용 여부는 반드시 probe가 명시적으로
@@ -33,6 +53,8 @@ class PatternRuntimeEvidence {
     this.routeObserved = false,
     this.definitiveNoRoute = false,
     this.observedSolutionFamilies = const {},
+    this.rewardFreeRouteObserved = false,
+    this.solutionContractRequired = false,
     this.safetyStop = false,
     this.infiniteBounce = false,
     this.finiteCoordinates = true,
@@ -62,6 +84,8 @@ class PatternRuntimeEvidence {
   final bool routeObserved;
   final bool definitiveNoRoute;
   final Set<String> observedSolutionFamilies;
+  final bool rewardFreeRouteObserved;
+  final bool solutionContractRequired;
   final bool safetyStop;
   final bool infiniteBounce;
 
@@ -104,6 +128,8 @@ class PatternRuntimeEvidence {
     bool? routeObserved,
     bool? definitiveNoRoute,
     Set<String>? observedSolutionFamilies,
+    bool? rewardFreeRouteObserved,
+    bool? solutionContractRequired,
     bool? safetyStop,
     bool? infiniteBounce,
     bool? finiteCoordinates,
@@ -129,6 +155,10 @@ class PatternRuntimeEvidence {
       definitiveNoRoute: definitiveNoRoute ?? this.definitiveNoRoute,
       observedSolutionFamilies:
           observedSolutionFamilies ?? this.observedSolutionFamilies,
+      rewardFreeRouteObserved:
+          rewardFreeRouteObserved ?? this.rewardFreeRouteObserved,
+      solutionContractRequired:
+          solutionContractRequired ?? this.solutionContractRequired,
       safetyStop: safetyStop ?? this.safetyStop,
       infiniteBounce: infiniteBounce ?? this.infiniteBounce,
       finiteCoordinates: finiteCoordinates ?? this.finiteCoordinates,
@@ -174,6 +204,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
   ShotResolverPatternRuntimeProbe({
     this.shotResolver = const ShotResolver(),
     this.representativeInputs = defaultRepresentativeInputs,
+    this.representativeScenarios = const [],
+    this.requireSolutionContract = false,
     this.boardSize = const Vec2(360, 560),
     this.maxProbeCount = 24,
     this.maxShots = 48,
@@ -198,6 +230,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
 
   final ShotResolver shotResolver;
   final List<ShotInput> representativeInputs;
+  final List<PatternRuntimeScenario> representativeScenarios;
+  final bool requireSolutionContract;
   final Vec2 boardSize;
   final int maxProbeCount;
   final int maxShots;
@@ -213,18 +247,15 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     final hasRotatingReflector = pattern.objects.any(
       (object) => object.type == EntityType.rotatingReflector && object.active,
     );
-    final inputCount = math.min(
-      math.min(representativeInputs.length, maxProbeCount),
-      maxShots ~/ 2,
-    );
-    final inputs = representativeInputs.take(inputCount).toList();
-    if (inputs.isEmpty) {
+    final scenarios = _boundedScenarios();
+    if (scenarios.isEmpty) {
       return PatternRuntimeEvidence(
         maxProbeCount: maxProbeCount,
         maxShots: maxShots,
         sliderApplicable: hasPowerSlider,
         rotatorApplicable: hasRotatingReflector,
         allRepresentativeInputsNoMovement: true,
+        solutionContractRequired: requireSolutionContract,
       );
     }
 
@@ -245,19 +276,37 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     var sliderTunneling = false;
     var rotatorOrderViolation = false;
     var routeObserved = false;
+    var rewardFreeRouteObserved = false;
     final autoClearDetected = _initialBallOverlapsHole(initial);
     final definitiveNoRoute = !_hasStaticWallRoute(initial, boardSize);
     final families = <String>{};
 
-    for (final input in inputs) {
-      final first = shotResolver.resolve(initial, input);
-      final second = shotResolver.resolve(initial, input);
-      results.add(first);
-      results.add(second);
-      if (_fingerprint(first) != _fingerprint(second)) {
+    var shotCount = 0;
+    for (final scenario in scenarios) {
+      final firstRun = _resolveScenario(initial, scenario);
+      final secondRun = _resolveScenario(initial, scenario);
+      shotCount += scenario.inputs.length * 2;
+      results
+        ..addAll(firstRun)
+        ..addAll(secondRun);
+      if (_resultListFingerprint(firstRun) !=
+          _resultListFingerprint(secondRun)) {
         nonDeterministic = true;
       }
-      for (final result in [first, second]) {
+      final scenarioSucceeded =
+          firstRun.isNotEmpty &&
+          secondRun.isNotEmpty &&
+          firstRun.last.state.phase == GamePhase.success &&
+          secondRun.last.state.phase == GamePhase.success;
+      if (scenarioSucceeded) {
+        routeObserved = true;
+        if (representativeScenarios.isNotEmpty) {
+          families.add(scenario.familyId);
+        }
+        rewardFreeRouteObserved =
+            rewardFreeRouteObserved || scenario.rewardFree;
+      }
+      for (final result in [...firstRun, ...secondRun]) {
         finiteCoordinates = finiteCoordinates && _hasFiniteCoordinates(result);
         negativeTime = negativeTime || _hasNegativeEventOrder(result);
         safetyStop =
@@ -270,7 +319,12 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
             result.events.contains('chain_safety_stop');
         routeObserved =
             routeObserved || result.state.phase == GamePhase.success;
-        families.addAll(_familiesFor(result));
+        if (representativeScenarios.isEmpty) {
+          families.addAll(_familiesFor(result));
+          rewardFreeRouteObserved =
+              rewardFreeRouteObserved ||
+              result.state.phase == GamePhase.success;
+        }
         wallMoved = wallMoved || _wallMoved(initial, result.state);
         holePassThrough =
             holePassThrough || _holeWasPassedWithoutCapture(initial, result);
@@ -284,13 +338,15 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
 
     final allNoMovement = results.every((result) => !_pathMoved(result));
     return PatternRuntimeEvidence(
-      probeCount: inputs.length,
+      probeCount: scenarios.length,
       maxProbeCount: maxProbeCount,
-      shotCount: inputs.length * 2,
+      shotCount: shotCount,
       maxShots: maxShots,
       routeObserved: routeObserved,
       definitiveNoRoute: definitiveNoRoute,
       observedSolutionFamilies: Set.unmodifiable(families),
+      rewardFreeRouteObserved: rewardFreeRouteObserved,
+      solutionContractRequired: requireSolutionContract,
       safetyStop: safetyStop,
       infiniteBounce: infiniteBounce,
       finiteCoordinates: finiteCoordinates,
@@ -307,7 +363,49 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       autoClearDetected: autoClearDetected,
     );
   }
+
+  List<PatternRuntimeScenario> _boundedScenarios() {
+    final source = representativeScenarios.isEmpty
+        ? [
+            for (var index = 0; index < representativeInputs.length; index++)
+              PatternRuntimeScenario(
+                id: '기본 입력 ${index + 1}',
+                familyId: '기본 탐색',
+                inputs: [representativeInputs[index]],
+              ),
+          ]
+        : representativeScenarios;
+    final selected = <PatternRuntimeScenario>[];
+    var shots = 0;
+    for (final scenario in source) {
+      final requiredShots = scenario.inputs.length * 2;
+      if (selected.length >= maxProbeCount ||
+          shots + requiredShots > maxShots) {
+        break;
+      }
+      selected.add(scenario);
+      shots += requiredShots;
+    }
+    return selected;
+  }
+
+  List<ShotResult> _resolveScenario(
+    GameState initial,
+    PatternRuntimeScenario scenario,
+  ) {
+    var state = initial;
+    final results = <ShotResult>[];
+    for (final input in scenario.inputs) {
+      final result = shotResolver.resolve(state, input);
+      results.add(result);
+      state = result.state;
+    }
+    return results;
+  }
 }
+
+String _resultListFingerprint(List<ShotResult> results) =>
+    results.map(_fingerprint).join('\u0000');
 
 bool _hasSliderTunneling(GameState initial, ShotResult result) {
   final sliders = initial.entities.where(
