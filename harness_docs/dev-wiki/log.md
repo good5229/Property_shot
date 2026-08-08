@@ -1816,3 +1816,9 @@ Use consistent headings so entries are easy to grep.
 - `flutter test --concurrency=1`을 약 3분 37초 실행해 892개가 실패 없이 통과했다. 물리, 생산 패턴 관련 회귀, RunState·진행 저장, 오늘의 도전, 보상, 리플레이, 14개 설정, 전체 Golden과 반복 스트레스가 포함된다.
 - 10단계와 결정론 문서에 남아 있던 `+330/-9`, 252개 수치를 역사 기록으로 명시하고 최신 종합 판정에서 분리했다.
 - 같은 HEAD에서 Flutter Web Release와 Wasm dry run이 통과했다. `main.dart.js`와 자체 생성 WAV가 번들에 있으며 WAV SHA-256은 권리대장 값 `f1328bfc58c40556ea004fd9780da82089e5df2ace7069bbe9bcd3b0c8f41cb1`과 일치한다.
+
+## 2026-08-08 최신 Web 클린 빌드·성능 재감사
+
+- 최초 감사에서 오래된 Web build cache의 plugin registrant가 `audioplayers_web`을 누락해 두 뷰포트 모두 `MissingPluginException`을 기록했다. 기존 서버를 종료하고 `flutter clean`·`flutter pub get`·Release 재빌드를 수행해 생성 registrant에 `AudioplayersPlugin.registerWith`가 포함됨을 확인했다.
+- 최신 PID 88129 서버에서 동일한 5초·5초 워밍업 감사를 재실행했다. 390×844·768×1024 발사 p90은 17.1ms·17.0ms, p99는 모두 17.7ms이며 50ms 초과·발사 Long Task·콘솔 오류는 0건이다.
+- 엄격 16.7ms p90 목표는 0.3~0.4ms 미달하고 실기기 증거가 없으므로 `Conditional Go`를 유지한다.
