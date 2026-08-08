@@ -7,6 +7,8 @@ import 'package:property_shot/ui/game_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(GameFeedback.resetForTesting);
+  tearDown(GameFeedback.resetForTesting);
   testWidgets('설정 메뉴는 작은 화면과 큰 글자에서 스크롤된다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.binding.setSurfaceSize(const Size(320, 568));

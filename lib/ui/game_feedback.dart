@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
@@ -65,6 +66,27 @@ class GameFeedback {
   static int screenShakeStrength = 2;
   static int helpRevision = 0;
   static Future<void>? _preferenceWriteTail;
+
+  @visibleForTesting
+  static void resetForTesting() {
+    soundEnabled = true;
+    backgroundMusicEnabled = true;
+    hapticsEnabled = true;
+    reducedMotionEnabled = false;
+    screenShakeEnabled = true;
+    lastShotSlowMotionEnabled = true;
+    collisionOrderEnabled = true;
+    lastContactHighlightEnabled = true;
+    nearestHoleEnabled = true;
+    traitActivationEnabled = true;
+    gimmickCausalityEnabled = true;
+    collisionPathIconsEnabled = true;
+    chainScoreDetailsEnabled = true;
+    strongFlashEnabled = true;
+    screenShakeStrength = 2;
+    helpRevision = 0;
+    _preferenceWriteTail = null;
+  }
 
   final SoundPlayer _soundPlayer;
   final SoundCuePlayer _cuePlayer;

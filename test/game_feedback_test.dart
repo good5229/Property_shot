@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(GameFeedback.resetForTesting);
+  tearDown(GameFeedback.resetForTesting);
 
   test('충돌 재질에 따라 플랫폼 사운드 강도가 구분된다', () async {
     final cues = <SystemSoundType>[];
