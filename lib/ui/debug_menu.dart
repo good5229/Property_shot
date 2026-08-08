@@ -7,6 +7,7 @@ import '../game/domain/trait.dart';
 import '../game/levels/levels.dart';
 import '../game/simulation/shot_resolver.dart';
 import 'debug_labels.dart';
+import 'play_telemetry.dart';
 import 'tutorial_experiment.dart';
 
 class DebugMenu extends StatefulWidget {
@@ -27,6 +28,7 @@ class DebugMenu extends StatefulWidget {
     required this.soundEnabled,
     required this.hapticsEnabled,
     required this.tutorialVariant,
+    required this.inputLatencyReport,
     required this.onSelectStage,
     required this.onRestartStage,
     required this.onResetProgress,
@@ -42,6 +44,7 @@ class DebugMenu extends StatefulWidget {
     required this.onTutorialVariantChanged,
     required this.onCopyState,
     required this.onCopyEvents,
+    required this.onCopyInputLatencyReport,
     required this.onToggleReplayRecording,
     required this.onPlayReplay,
     required this.onToggleSound,
@@ -63,6 +66,7 @@ class DebugMenu extends StatefulWidget {
   final bool soundEnabled;
   final bool hapticsEnabled;
   final TutorialExperimentVariant tutorialVariant;
+  final InputLatencyReport inputLatencyReport;
   final ValueChanged<int> onSelectStage;
   final VoidCallback onRestartStage;
   final VoidCallback onResetProgress;
@@ -78,6 +82,7 @@ class DebugMenu extends StatefulWidget {
   final ValueChanged<TutorialExperimentVariant> onTutorialVariantChanged;
   final VoidCallback onCopyState;
   final VoidCallback onCopyEvents;
+  final VoidCallback onCopyInputLatencyReport;
   final ValueChanged<bool> onToggleReplayRecording;
   final VoidCallback onPlayReplay;
   final ValueChanged<bool> onToggleSound;
@@ -328,6 +333,19 @@ class _DebugMenuState extends State<DebugMenu> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 6),
+                  OutlinedButton.icon(
+                    key: const Key('debug_copy_input_latency_report'),
+                    onPressed: widget.onCopyInputLatencyReport,
+                    icon: const Icon(Icons.speed),
+                    label: const Text('입력 지연 보고서 복사'),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.inputLatencyReport.summaryLabel,
+                    key: const Key('debug_input_latency_summary'),
+                    style: const TextStyle(fontSize: 12),
                   ),
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,

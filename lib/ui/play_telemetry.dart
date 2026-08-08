@@ -9,6 +9,99 @@ import 'play_telemetry_schema.dart';
 
 export 'play_telemetry_schema.dart';
 
+enum InputLatencyGateStatus { insufficientSamples, passed, failed }
+
+class InputLatencyReport {
+  const InputLatencyReport._({
+    required this.sampleCount,
+    required this.invalidSampleCount,
+    required this.replaySampleCount,
+    required this.p95Milliseconds,
+    required this.maximumMilliseconds,
+    required this.status,
+  });
+
+  static const minimumSampleCount = 20;
+  static const targetP95Milliseconds = 50.0;
+
+  factory InputLatencyReport.fromEvents(Iterable<Map<String, Object?>> events) {
+    final samples = <double>[];
+    var invalidSampleCount = 0;
+    var replaySampleCount = 0;
+    for (final event in events) {
+      if (event['event_code'] != PlayTelemetryEventType.shotReleased.code) {
+        continue;
+      }
+      if (event['is_replay'] == true) {
+        replaySampleCount++;
+        continue;
+      }
+      final raw = event['input_latency_ms'];
+      if (raw is! num || !raw.isFinite || raw < 0) {
+        invalidSampleCount++;
+        continue;
+      }
+      samples.add(raw.toDouble());
+    }
+    samples.sort();
+    final p95 = samples.isEmpty ? null : _nearestRank(samples, 0.95);
+    final status = samples.length < minimumSampleCount
+        ? InputLatencyGateStatus.insufficientSamples
+        : p95! <= targetP95Milliseconds
+        ? InputLatencyGateStatus.passed
+        : InputLatencyGateStatus.failed;
+    return InputLatencyReport._(
+      sampleCount: samples.length,
+      invalidSampleCount: invalidSampleCount,
+      replaySampleCount: replaySampleCount,
+      p95Milliseconds: p95,
+      maximumMilliseconds: samples.isEmpty ? null : samples.last,
+      status: status,
+    );
+  }
+
+  final int sampleCount;
+  final int invalidSampleCount;
+  final int replaySampleCount;
+  final double? p95Milliseconds;
+  final double? maximumMilliseconds;
+  final InputLatencyGateStatus status;
+
+  String get statusLabel => switch (status) {
+    InputLatencyGateStatus.insufficientSamples => '표본 부족',
+    InputLatencyGateStatus.passed => '기준 통과',
+    InputLatencyGateStatus.failed => '기준 미통과',
+  };
+
+  String get summaryLabel {
+    if (p95Milliseconds == null) {
+      return '입력 지연 표본 0/$minimumSampleCount개 · 더 수집 필요';
+    }
+    if (status == InputLatencyGateStatus.insufficientSamples) {
+      return '입력 지연 표본 $sampleCount/$minimumSampleCount개 · '
+          'p95 ${p95Milliseconds!.toStringAsFixed(1)}밀리초';
+    }
+    return '입력 지연 p95 ${p95Milliseconds!.toStringAsFixed(1)}밀리초 · '
+        '$statusLabel';
+  }
+
+  Map<String, Object?> toJson() => {
+    '판정': statusLabel,
+    '유효표본수': sampleCount,
+    '최소표본수': minimumSampleCount,
+    '제외된잘못된표본수': invalidSampleCount,
+    '제외된리플레이표본수': replaySampleCount,
+    '입력지연p95밀리초': p95Milliseconds,
+    '입력지연최대밀리초': maximumMilliseconds,
+    '목표p95밀리초': targetP95Milliseconds,
+  };
+
+  static double _nearestRank(List<double> sorted, double ratio) {
+    final rank = (sorted.length * ratio).ceil().clamp(1, sorted.length).toInt();
+    return sorted[rank - 1];
+  }
+}
+
 class LocalPlayTelemetryStore {
   LocalPlayTelemetryStore({this.maxEvents = 2000});
 
@@ -265,6 +358,12 @@ class LocalPlayTelemetry {
   }
 
   String exportJson() => const JsonEncoder.withIndent('  ').convert(_events);
+
+  InputLatencyReport get inputLatencyReport =>
+      InputLatencyReport.fromEvents(_events);
+
+  String exportInputLatencyReportJson() =>
+      const JsonEncoder.withIndent('  ').convert(inputLatencyReport.toJson());
 
   String exportCsv() {
     const columns = [

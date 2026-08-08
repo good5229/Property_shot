@@ -35,6 +35,12 @@ void main() {
     expect(find.text('햅틱 켜기'), findsOneWidget);
     expect(find.text('상태 데이터 복사'), findsOneWidget);
     expect(find.text('이벤트 복사'), findsOneWidget);
+    expect(find.text('입력 지연 보고서 복사'), findsOneWidget);
+    expect(find.text('입력 지연 표본 0/20개 · 더 수집 필요'), findsOneWidget);
+    expect(
+      find.byKey(const Key('debug_copy_input_latency_report')),
+      findsOneWidget,
+    );
     expect(find.textContaining('anvil'), findsNothing);
     expect(find.textContaining('spike_source'), findsNothing);
     expect(find.textContaining('무거운 돌'), findsWidgets);

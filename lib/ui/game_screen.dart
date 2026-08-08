@@ -1833,6 +1833,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         soundEnabled: GameFeedback.soundEnabled,
         hapticsEnabled: GameFeedback.hapticsEnabled,
         tutorialVariant: _activeTutorialVariant,
+        inputLatencyReport: _telemetry.inputLatencyReport,
         onSelectStage: _debugSelectStage,
         onRestartStage: _restartCurrentStage,
         onResetProgress: _debugResetProgress,
@@ -1867,6 +1868,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         },
         onCopyState: _copyDebugState,
         onCopyEvents: _copyDebugEvents,
+        onCopyInputLatencyReport: _copyInputLatencyReport,
         onToggleReplayRecording: (value) {
           setState(() => _debugRecordReplay = value);
         },
@@ -2082,6 +2084,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         },
     ];
     Clipboard.setData(ClipboardData(text: jsonEncode(payload)));
+  }
+
+  void _copyInputLatencyReport() {
+    Clipboard.setData(
+      ClipboardData(text: _telemetry.exportInputLatencyReportJson()),
+    );
   }
 
   void _rewind() {

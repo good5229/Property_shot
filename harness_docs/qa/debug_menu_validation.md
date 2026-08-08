@@ -15,6 +15,7 @@
 - 공 질량·속도·운동량·샷·충돌 식별자 표시
 - 최근 물리 이벤트 최대 100개 확인
 - 상태 JSON·물리 이벤트 JSON 클립보드 복사
+- 현재 세션 비리플레이 발사의 입력 지연 표본 수·p95·50밀리초 판정 확인 및 한글 JSON 복사
 - 마지막 발사 리플레이 녹화·재생
 - 사운드·햅틱 개별 토글
 - 안내형·행동 유도형·무설명형 조건 전환
@@ -26,6 +27,7 @@
 - `test/debug_menu_test.dart`: 개발 메뉴의 한글 항목과 닫기 구조
 - `test/progress_store_test.dart`: 전체 해금·저장 키 초기화
 - `test/debug_menu_test.dart`: 원본 조작·물리량·리플레이·사운드·햅틱 메뉴 항목
+- `test/play_telemetry_test.dart`: 입력 지연 최소 20표본·최근접 순위 p95·리플레이 제외·표본 부족·미통과 판정
 - `test/tutorial_experiment_test.dart`: 튜토리얼 조건 선택기
 - `flutter analyze`: 통과
 - Release Web 번들 문자열 검사: 개발 진단 라벨 미포함

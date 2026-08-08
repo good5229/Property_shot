@@ -24,9 +24,15 @@
 - 일반 제품 흐름의 `run_started → stage_pattern_drawn → stage_entered` 순서 테스트 통과
 - 성공 샷의 `shot_released → collision_chain_completed → stage_cleared` 순서와 샷 지표 테스트 통과
 - 30ms 지연 저장을 주입한 실제 발사 회귀에서 `input_latency_ms`가 비동기 경계를 포함하고 음수가 되지 않음을 확인
+- 현재 앱 세션의 비리플레이 발사만 모아 최소 20표본 최근접 순위 p95를 계산하며, 50밀리초 이하만 통과로 판정
+- 20표본 미만·잘못된 수치·리플레이 혼입·p95 50밀리초 초과를 각각 표본 부족·제외·미통과로 처리하는 회귀 통과
 - 오늘의 도전의 시작 수명주기와 속성 팝업·이전 제품 이벤트 테스트 통과
 - 집중 회귀 104개와 전체 정적 분석 통과
 
 이 자동 검증은 값의 의미와 전달 경계를 고정한다. 실제 iPhone·Android에서 여러 샷을 수집해 p95 50ms 이하를 판정하는 작업은 별도 실기기 성능 검증으로 남긴다.
 
 2026-08-09 교정 후 전체 `flutter test --concurrency=1` 896개와 `flutter analyze`가 통과했다.
+
+개발 진단 메뉴의 `입력 지연 보고서 복사`는 현재 세션 보고서를 한글 JSON으로 복사한다. 과거 실행의 교정 전 값은 자동 판정에 섞지 않는다.
+
+p95 판정 추가 후 전체 `flutter test --concurrency=1` 898개가 약 4분 2초에 통과했고 `flutter analyze`는 문제 0건이다.

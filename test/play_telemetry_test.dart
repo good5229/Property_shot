@@ -207,6 +207,53 @@ void main() {
     expect(telemetry.exportCsv(), contains('collision_chain_completed'));
   });
 
+  test('입력 지연 보고서는 비리플레이 20표본의 최근접 순위 p95를 판정한다', () {
+    final events = <Map<String, Object?>>[
+      for (var index = 1; index <= 20; index++)
+        {
+          'event_code': 'shot_released',
+          'is_replay': false,
+          'input_latency_ms': index.toDouble(),
+        },
+      {
+        'event_code': 'shot_released',
+        'is_replay': true,
+        'input_latency_ms': 900.0,
+      },
+      {'event_code': 'shot_released', 'input_latency_ms': '잘못된 값'},
+      {'event_code': 'stage_cleared', 'input_latency_ms': 900.0},
+    ];
+
+    final report = InputLatencyReport.fromEvents(events);
+
+    expect(report.sampleCount, 20);
+    expect(report.replaySampleCount, 1);
+    expect(report.invalidSampleCount, 1);
+    expect(report.p95Milliseconds, 19);
+    expect(report.maximumMilliseconds, 20);
+    expect(report.status, InputLatencyGateStatus.passed);
+    expect(report.summaryLabel, '입력 지연 p95 19.0밀리초 · 기준 통과');
+  });
+
+  test('입력 지연 보고서는 표본 부족과 50밀리초 초과를 통과로 오인하지 않는다', () {
+    final insufficient = InputLatencyReport.fromEvents([
+      for (var index = 0; index < 19; index++)
+        {'event_code': 'shot_released', 'input_latency_ms': 3.0},
+    ]);
+    final failed = InputLatencyReport.fromEvents([
+      for (var index = 0; index < 18; index++)
+        {'event_code': 'shot_released', 'input_latency_ms': 4.0},
+      {'event_code': 'shot_released', 'input_latency_ms': 51.0},
+      {'event_code': 'shot_released', 'input_latency_ms': 70.0},
+    ]);
+
+    expect(insufficient.status, InputLatencyGateStatus.insufficientSamples);
+    expect(insufficient.summaryLabel, '입력 지연 표본 19/20개 · p95 3.0밀리초');
+    expect(failed.p95Milliseconds, 51);
+    expect(failed.status, InputLatencyGateStatus.failed);
+    expect(failed.toJson()['판정'], '기준 미통과');
+  });
+
   test('타입 payload는 비유한 수와 잘못된 범위 및 빈 식별자를 거부한다', () {
     PlayTelemetryShotPayload validShot({
       double angle = 0,
