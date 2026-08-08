@@ -105,6 +105,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   List<RunReward> _activeRewardCandidates = const [];
   String? _activeSelectedRewardId;
   Set<String> _activeAcquiredRewards = const {};
+  int _activeTotalScore = 0;
   int _completedScore = 0;
   int _completedShots = 0;
   int _completedRewardCount = 0;
@@ -163,6 +164,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         _activeRewardCandidates = const [];
         _activeSelectedRewardId = null;
         _activeAcquiredRewards = const {};
+        _activeTotalScore = 0;
         _view = _DailyScreenView.overview;
         _loading = true;
         _error = null;
@@ -434,6 +436,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       _activeRewardCandidates = List.unmodifiable(rewards);
       _activeSelectedRewardId = session.state?.selectedRewardId;
       _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+      _activeTotalScore = session.state?.totalScore ?? 0;
       _view = _DailyScreenView.playing;
     });
   }
@@ -509,6 +512,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     if (mounted) {
       setState(() {
         _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+        _activeTotalScore = session.state?.totalScore ?? 0;
       });
     }
     return completion;
@@ -728,7 +732,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         _activeLevel != null &&
         _activeStage != null) {
       return GameScreen(
-        key: ValueKey('daily_stage_${_activeStage}_${_activeLevel!.patternId}'),
+        key: ValueKey(
+          'daily_stage_${_activeStage}_${_activeLevel!.patternId}',
+        ),
         initialState: _activeState,
         initialShotResults: _activeShotResults,
         initialRewardCandidates: _activeRewardCandidates,
@@ -736,7 +742,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         initialAcquiredRewards: _activeAcquiredRewards,
         levelOverride: _activeLevel,
         showStageSelector: false,
-        onExit: _returnToOverview,
+        onExit: _exitToMainMenu,
+        exitToMainMenu: true,
+        hudScore: _activeTotalScore,
         onCopyCoreEarned: _earnCopyCore,
         onRunLevelCleared: _recordStageClear,
         onRewardSelectionPrepared: _prepareRewards,
@@ -789,7 +797,17 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       _activeShotResults = const [];
       _activeRewardCandidates = const [];
       _activeSelectedRewardId = null;
+      _activeTotalScore = 0;
     });
+  }
+
+  void _exitToMainMenu() {
+    final onExit = widget.onExit;
+    if (onExit != null) {
+      onExit();
+      return;
+    }
+    _returnToOverview();
   }
 
   Future<void> _newAttemptFromResult() async {

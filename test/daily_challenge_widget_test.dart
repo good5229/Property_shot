@@ -54,6 +54,39 @@ void main() {
     expect(record.activeAttemptId, 'attempt_1');
   });
 
+  testWidgets('오늘의 도전 플레이 중 메인 메뉴로 나가도 공식 진행은 보존된다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    var exited = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DailyChallengeScreen(
+          onExit: () => exited = true,
+          now: () => DateTime.utc(2026, 8, 8, 12),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('daily_official_button')));
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.byKey(const Key('home_button')), findsOneWidget);
+    expect(find.byTooltip('메인 메뉴'), findsOneWidget);
+    expect(find.text('점수 0'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('home_button')));
+    await tester.pump();
+
+    expect(exited, isTrue);
+    final preferences = await SharedPreferences.getInstance();
+    final definition = DailyChallengeDefinition.fromDateKey('2026-08-08');
+    final record = await DailyChallengeRecordStore(
+      backend: SharedPreferencesRunStateBackend(preferences),
+      definition: definition,
+    ).load();
+    expect(record.activeAttemptId, 'attempt_1');
+    expect(record.completed, isFalse);
+  });
+
   testWidgets('연습은 공식 기록과 일반 진행 기록을 남기지 않는다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.pumpWidget(const MaterialApp(home: DailyChallengeScreen()));

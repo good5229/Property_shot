@@ -47,6 +47,8 @@ class GameScreen extends StatefulWidget {
     this.showStageSelector = true,
     this.telemetry,
     this.onExit,
+    this.exitToMainMenu = false,
+    this.hudScore,
     this.onCopyCoreEarned,
     this.onLevelCleared,
     this.onRunLevelCleared,
@@ -75,6 +77,8 @@ class GameScreen extends StatefulWidget {
   final bool showStageSelector;
   final LocalPlayTelemetry? telemetry;
   final VoidCallback? onExit;
+  final bool exitToMainMenu;
+  final int? hudScore;
   final Future<bool> Function(int, int)? onCopyCoreEarned;
   final Future<void> Function(int, CreativeChainScoreAnalysis?, bool, int)?
   onLevelCleared;
@@ -2692,6 +2696,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               showStageSelector: widget.showStageSelector,
                               onPause: _togglePause,
                               onExit: widget.onExit == null ? null : _exitStage,
+                              exitToMainMenu: widget.exitToMainMenu,
+                              hudScore: widget.hudScore,
                               onDebug: widget.showDebugControls
                                   ? _openDebugMenu
                                   : null,
@@ -2710,6 +2716,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 onExit: widget.onExit == null
                                     ? null
                                     : _exitStage,
+                                exitToMainMenu: widget.exitToMainMenu,
+                                hudScore: widget.hudScore,
                                 onDebug: widget.showDebugControls
                                     ? _openDebugMenu
                                     : null,
@@ -4359,6 +4367,8 @@ class _Hud extends StatelessWidget {
     this.showStageSelector = true,
     required this.onPause,
     this.onExit,
+    this.exitToMainMenu = false,
+    this.hudScore,
     this.onDebug,
   });
 
@@ -4370,6 +4380,8 @@ class _Hud extends StatelessWidget {
   final bool showStageSelector;
   final VoidCallback onPause;
   final VoidCallback? onExit;
+  final bool exitToMainMenu;
+  final int? hudScore;
   final VoidCallback? onDebug;
 
   @override
@@ -4411,13 +4423,15 @@ class _Hud extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text('시도 ${state.shotCount}'),
                 const SizedBox(width: 6),
-                Text('점수 ${state.score}'),
+                Text('점수 ${hudScore ?? state.score}'),
                 if (!showStageSelector && onExit != null)
                   IconButton(
                     key: const Key('home_button'),
-                    tooltip: '섬 지도',
+                    tooltip: exitToMainMenu ? '메인 메뉴' : '섬 지도',
                     onPressed: onExit,
-                    icon: const Icon(Icons.map_outlined),
+                    icon: Icon(
+                      exitToMainMenu ? Icons.home_rounded : Icons.map_outlined,
+                    ),
                     visualDensity: VisualDensity.compact,
                   ),
                 if (!showStageSelector)
@@ -4536,13 +4550,15 @@ class _Hud extends StatelessWidget {
               ),
               Text('시도 ${state.shotCount}'),
               const SizedBox(width: 12),
-              Text('점수 ${state.score}'),
+              Text('점수 ${hudScore ?? state.score}'),
               if (!showStageSelector && onExit != null)
                 IconButton(
                   key: const Key('home_button'),
-                  tooltip: '섬 지도',
+                  tooltip: exitToMainMenu ? '메인 메뉴' : '섬 지도',
                   onPressed: onExit,
-                  icon: const Icon(Icons.map_outlined),
+                  icon: Icon(
+                    exitToMainMenu ? Icons.home_rounded : Icons.map_outlined,
+                  ),
                   visualDensity: VisualDensity.compact,
                 ),
               if (!showStageSelector)

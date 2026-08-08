@@ -71,6 +71,47 @@ void main() {
     expect(first.state!.resolverVersion, dailyChallengePhysicsResolverVersion);
   });
 
+  test('단계별 chain score는 RunState totalScore에 누적되고 재개 뒤에도 유지된다', () async {
+    final definition = DailyChallengeDefinition.fromDateKey('2026-08-08');
+    final backend = _MemoryBackend();
+    final storage = DailyChallengeRunStateStorage.official(
+      backend: backend,
+      definition: definition,
+      attemptId: 'attempt_1',
+    );
+    final session = storage.createSession(catalog: generatedStageCatalog);
+
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      shotCount: 2,
+      chainScore: 120,
+      nextStageId: 'stage_bouncy',
+    );
+    expect(session.state!.totalScore, 120);
+    await session.prepareRewardSelection(stageId: 'stage_heavy');
+    await session.selectReward(session.state!.rewardCandidateIds.first);
+
+    await session.selectStage('stage_bouncy');
+    await session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      shotCount: 1,
+      chainScore: 280,
+      nextStageId: 'stage_chain_gate',
+    );
+    expect(session.state!.chainScoresPerStage, {
+      'stage_heavy': 120,
+      'stage_bouncy': 280,
+    });
+    expect(session.state!.totalScore, 400);
+
+    final resumed = storage.createSession(catalog: generatedStageCatalog);
+    final restored = await resumed.loadState();
+    expect(restored!.totalScore, 400);
+    expect(restored.chainScoresPerStage['stage_heavy'], 120);
+    expect(restored.chainScoresPerStage['stage_bouncy'], 280);
+  });
+
   test('일반·정식·연습 RunState namespace가 서로 침범하지 않는다', () async {
     final backend = _MemoryBackend();
     final definition = DailyChallengeDefinition.fromDateKey('2026-08-08');
