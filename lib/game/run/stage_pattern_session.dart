@@ -17,13 +17,38 @@ typedef StageCompletionResult = ({
 class StagePatternSession {
   StagePatternSession({
     required this.catalog,
-    required this.store,
+    required this._store,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now;
+    this.fixedRootSeed,
+    this.fixedRunId,
+    this.fixedResolverVersion,
+  }) : _now = now ?? DateTime.now {
+    if (fixedRootSeed != null &&
+        (fixedRootSeed! < 0 || fixedRootSeed! > 0xffffffff)) {
+      throw ArgumentError.value(
+        fixedRootSeed,
+        'fixedRootSeed',
+        '0 이상 32비트 이하의 값이어야 합니다.',
+      );
+    }
+    if (fixedRunId != null && fixedRunId!.trim().isEmpty) {
+      throw ArgumentError.value(fixedRunId, 'fixedRunId', '비어 있을 수 없습니다.');
+    }
+    if (fixedResolverVersion != null && fixedResolverVersion!.trim().isEmpty) {
+      throw ArgumentError.value(
+        fixedResolverVersion,
+        'fixedResolverVersion',
+        '비어 있을 수 없습니다.',
+      );
+    }
+  }
 
   final StageCatalog catalog;
-  final RunStateStore store;
+  final RunStateStore _store;
   final DateTime Function() _now;
+  final int? fixedRootSeed;
+  final String? fixedRunId;
+  final String? fixedResolverVersion;
   RunState? _state;
   bool _loaded = false;
   Future<void> _operationTail = Future<void>.value();
@@ -95,6 +120,11 @@ class StagePatternSession {
     final stage = catalog.stageById(stageId);
     final current = _state;
     if (current != null &&
+        current.phase == RunPhase.runCompleted &&
+        fixedRunId != null) {
+      throw StateError('완료된 고정 도전은 같은 시도로 다시 시작할 수 없습니다.');
+    }
+    if (current != null &&
         current.phase == RunPhase.playing &&
         current.currentStageId == stageId) {
       return _restoreCurrentDraw(stage, current);
@@ -111,7 +141,7 @@ class StagePatternSession {
         current.nextStageId == stageId) {
       final draw = _restoreNextDraw(stage, current);
       final next = _withCurrentDraw(current, draw, appendHistory: false);
-      await store.save(next);
+      await _store.save(next);
       _state = next;
       _clearLegacyShotAmbiguity();
       return draw;
@@ -133,8 +163,11 @@ class StagePatternSession {
 
     final startingNewRun =
         current == null || current.phase == RunPhase.runCompleted;
-    var rootSeed = startingNewRun ? _newRootSeed() : current.rootSeed;
-    if (current?.phase == RunPhase.runCompleted &&
+    var rootSeed = startingNewRun
+        ? (fixedRootSeed ?? _newRootSeed())
+        : current.rootSeed;
+    if (fixedRootSeed == null &&
+        current?.phase == RunPhase.runCompleted &&
         rootSeed == current!.rootSeed) {
       rootSeed = (rootSeed ^ 0x9e3779b9) & 0xffffffff;
     }
@@ -151,9 +184,9 @@ class StagePatternSession {
         .toSet();
     final next = startingNewRun
         ? RunState.initial(
-            runId: 'run_${_now().toUtc().microsecondsSinceEpoch}',
+            runId: fixedRunId ?? 'run_${_now().toUtc().microsecondsSinceEpoch}',
             rootSeed: rootSeed,
-            resolverVersion: 'shot-resolver-v1',
+            resolverVersion: fixedResolverVersion ?? 'shot-resolver-v1',
             currentDraw: draw,
             cloneCoreCount: initialCloneCoreCount,
             acquiredRewards: {
@@ -165,7 +198,7 @@ class StagePatternSession {
             now: _now().toUtc(),
           )
         : _withCurrentDraw(current, draw);
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     _clearLegacyShotAmbiguity();
     return draw;
@@ -313,7 +346,7 @@ class StagePatternSession {
       acquiredRewards: acquiredRewards,
       totalScore: scores.values.fold<int>(0, (sum, score) => sum + score),
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     return (
       optionalChallengeAchieved:
@@ -376,7 +409,7 @@ class StagePatternSession {
       rewardCandidateIds: rewards.map((reward) => reward.id),
       selectedRewardId: restoredRewardId,
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     return rewards;
   }
@@ -413,7 +446,7 @@ class StagePatternSession {
               : 0),
       acquiredRewards: [...current.acquiredRewards, rewardId, selectionRecord],
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     return reward;
   }
@@ -451,7 +484,7 @@ class StagePatternSession {
       nextDraw: _savedNextDraw(current),
       acquiredRewards: [...current.acquiredRewards, useRecord],
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     return true;
   }
@@ -490,7 +523,7 @@ class StagePatternSession {
         nextDraw: _savedNextDraw(current),
         acquiredRewards: [...current.acquiredRewards, useRecord],
       );
-      await store.save(next);
+      await _store.save(next);
       _state = next;
       return true;
     }
@@ -512,7 +545,7 @@ class StagePatternSession {
       phase: RunPhase.runCompleted,
       nextDraw: null,
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
   }
 
@@ -561,7 +594,7 @@ class StagePatternSession {
         RunTraitActionRecord(sourceId: sourceId, action: action),
       ],
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
   }
 
@@ -601,7 +634,7 @@ class StagePatternSession {
       cloneCoreCount: current.cloneCoreCount + amount,
       acquiredRewards: [...current.acquiredRewards, rewardId],
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     return true;
   }
@@ -631,7 +664,7 @@ class StagePatternSession {
       nextDraw: _savedNextDraw(current),
       acquiredRewards: rewards,
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     return true;
   }
@@ -697,7 +730,7 @@ class StagePatternSession {
       pendingTraitActions: const [],
       acquiredRewards: acquiredRewards,
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
     return guideConsumed;
   }
@@ -742,7 +775,7 @@ class StagePatternSession {
         ),
       ],
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
   }
 
@@ -784,13 +817,26 @@ class StagePatternSession {
         ),
       ],
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
   }
 
   Future<void> _loadOnce() async {
     if (_loaded) return;
-    _state = await store.load();
+    _state = await _store.load();
+    final current = _state;
+    if (current != null) {
+      if (fixedRootSeed != null && current.rootSeed != fixedRootSeed) {
+        throw StateError('고정된 오늘의 도전 루트 시드와 저장 상태가 다릅니다.');
+      }
+      if (fixedRunId != null && current.runId != fixedRunId) {
+        throw StateError('고정된 오늘의 도전 런 ID와 저장 상태가 다릅니다.');
+      }
+      if (fixedResolverVersion != null &&
+          current.resolverVersion != fixedResolverVersion) {
+        throw StateError('고정된 오늘의 도전 해석기 버전과 저장 상태가 다릅니다.');
+      }
+    }
     await _migrateCurrentLegacyShotSeeds();
     _loaded = true;
   }
@@ -857,7 +903,7 @@ class StagePatternSession {
       nextDraw: _savedNextDraw(current),
       shotInputLog: migrated,
     );
-    await store.save(next);
+    await _store.save(next);
     _state = next;
   }
 

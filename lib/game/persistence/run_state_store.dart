@@ -15,11 +15,82 @@ abstract interface class RunStateKeyValueBackend {
   Future<void> remove(String key);
 }
 
+/// 같은 실제 저장소를 감싼 여러 adapter가 공유 잠금을 찾기 위한 식별 계약이다.
+abstract interface class RunStateBackendSynchronizationIdentity {
+  Object get synchronizationIdentity;
+}
+
+/// 앱 종료와 함께 사라지는 비영속 저장소다.
+///
+/// 오늘의 도전 연습처럼 복원되면 안 되는 흐름에서 사용한다.
+class MemoryRunStateBackend
+    implements RunStateKeyValueBackend, RunStateBackendSynchronizationIdentity {
+  final Map<String, String> _values = <String, String>{};
+
+  @override
+  Object get synchronizationIdentity => this;
+
+  @override
+  Future<String?> read(String key) async => _values[key];
+
+  @override
+  Future<void> write(String key, String value) async {
+    _values[key] = value;
+  }
+
+  @override
+  Future<void> remove(String key) async {
+    _values.remove(key);
+  }
+}
+
+/// 기존 저장소의 키를 독립된 영역으로 감싼다.
+///
+/// [RunStateStore]의 슬롯·pointer 이름은 일반 런과 공유하지만, 이 래퍼를
+/// 통과하면 실제 key-value 저장소에는 namespace가 붙은 별도 키로 기록된다.
+class NamespacedRunStateBackend
+    implements RunStateKeyValueBackend, RunStateBackendSynchronizationIdentity {
+  NamespacedRunStateBackend({required this.delegate, required this.namespace}) {
+    if (namespace.trim().isEmpty) {
+      throw ArgumentError.value(namespace, 'namespace', '비어 있을 수 없습니다.');
+    }
+    if (namespace.contains('\u0000')) {
+      throw ArgumentError.value(namespace, 'namespace', '제어 문자를 포함할 수 없습니다.');
+    }
+  }
+
+  final RunStateKeyValueBackend delegate;
+  final String namespace;
+
+  @override
+  Object get synchronizationIdentity =>
+      delegate is RunStateBackendSynchronizationIdentity
+      ? (delegate as RunStateBackendSynchronizationIdentity)
+            .synchronizationIdentity
+      : delegate;
+
+  String keyFor(String key) => '$namespace$key';
+
+  @override
+  Future<String?> read(String key) => delegate.read(keyFor(key));
+
+  @override
+  Future<void> write(String key, String value) =>
+      delegate.write(keyFor(key), value);
+
+  @override
+  Future<void> remove(String key) => delegate.remove(keyFor(key));
+}
+
 /// 실제 앱에서는 SharedPreferences를 별도 key 영역으로 감싼다.
-class SharedPreferencesRunStateBackend implements RunStateKeyValueBackend {
+class SharedPreferencesRunStateBackend
+    implements RunStateKeyValueBackend, RunStateBackendSynchronizationIdentity {
   const SharedPreferencesRunStateBackend(this.preferences);
 
   final SharedPreferences preferences;
+
+  @override
+  Object get synchronizationIdentity => preferences;
 
   @override
   Future<String?> read(String key) async => preferences.getString(key);
@@ -53,20 +124,29 @@ class RunStateStore {
   static const slotAKey = 'property_shot_run_state_slot_a';
   static const slotBKey = 'property_shot_run_state_slot_b';
   static const activePointerKey = 'property_shot_run_state_active_pointer';
+  static final Expando<_RunStateStoreOperationCoordinator> _coordinators =
+      Expando<_RunStateStoreOperationCoordinator>();
 
   final RunStateKeyValueBackend backend;
-  Future<void> _writeTail = Future<void>.value();
+  late final _RunStateStoreOperationCoordinator _coordinator = _coordinatorFor(
+    backend,
+  );
   int? _lastRevision;
 
   int? get lastRevision => _lastRevision;
 
   Future<T> _enqueue<T>(Future<T> Function() operation) {
-    final next = _writeTail.then((_) => operation());
-    _writeTail = next.then<void>(
-      (_) {},
-      onError: (Object error, StackTrace stackTrace) {},
-    );
-    return next;
+    return _coordinator.enqueue(operation);
+  }
+
+  static _RunStateStoreOperationCoordinator _coordinatorFor(
+    RunStateKeyValueBackend backend,
+  ) {
+    final identity = backend is RunStateBackendSynchronizationIdentity
+        ? (backend as RunStateBackendSynchronizationIdentity)
+              .synchronizationIdentity
+        : backend;
+    return _coordinators[identity] ??= _RunStateStoreOperationCoordinator();
   }
 
   Future<RunState?> load() => _enqueue(_loadUnqueued);
@@ -270,6 +350,19 @@ class _RunStateEnvelope {
   final String payload;
   final String checksum;
   final RunState state;
+}
+
+class _RunStateStoreOperationCoordinator {
+  Future<void> _tail = Future<void>.value();
+
+  Future<T> enqueue<T>(Future<T> Function() operation) {
+    final next = _tail.then((_) => operation());
+    _tail = next.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return next;
+  }
 }
 
 String runStatePayloadChecksum(String canonicalPayload) {

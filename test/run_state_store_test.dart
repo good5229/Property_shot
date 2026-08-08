@@ -34,6 +34,19 @@ void main() {
     expect((await store.load())?.rootSeed, 3);
   });
 
+  test('같은 backend의 여러 store 인스턴스도 revision 갱신을 직렬화한다', () async {
+    final backend = MemoryRunStateBackend();
+    final first = RunStateStore(backend: backend);
+    final second = RunStateStore(backend: backend);
+
+    await Future.wait([first.save(_state(1)), second.save(_state(2))]);
+
+    final restored = await RunStateStore(backend: backend).load();
+    expect(restored?.rootSeed, 2);
+    expect(first.lastRevision, 1);
+    expect(second.lastRevision, 2);
+  });
+
   test('후보 슬롯 기록 후 pointer 단계가 실패해도 높은 revision을 복구한다', () async {
     final backend = MemoryRunStateBackend();
     final store = RunStateStore(backend: backend);
