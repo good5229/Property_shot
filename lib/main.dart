@@ -22,6 +22,7 @@ import 'game/simulation/shot_resolver.dart';
 import 'game/simulation/trait_resolver.dart';
 import 'ui/game_feedback.dart';
 import 'ui/game_screen.dart';
+import 'ui/daily_challenge_screen.dart';
 import 'ui/game_ball_painter.dart';
 import 'ui/bonus_goal.dart';
 import 'ui/play_telemetry.dart';
@@ -143,6 +144,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int _completedRunBestShots = 0;
   int _completedRunRewardCount = 0;
   bool _showStageSelect = false;
+  bool _showDailyChallenge = false;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
   bool _copyCoreRewarded = false;
@@ -805,6 +807,14 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showDailyChallenge) {
+      return DailyChallengeScreen(
+        key: const Key('daily_challenge_flow'),
+        onExit: () => setState(() => _showDailyChallenge = false),
+        showDebugControls: widget.showDebugControls,
+        tutorialVariant: _tutorialVariant,
+      );
+    }
     final activeStage = _activeStage;
     final activeLevel = _activeLevel;
     final activeState = _activeState;
@@ -857,6 +867,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return _HomeScreen(
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => setState(() => _showStageSelect = true),
+      onDailyChallenge: () => setState(() => _showDailyChallenge = true),
       showDebugControls: widget.showDebugControls,
       tutorialVariant: _tutorialVariant,
       onTutorialVariantChanged: (variant) {
@@ -986,6 +997,7 @@ class _HomeScreen extends StatelessWidget {
   const _HomeScreen({
     required this.onStart,
     required this.onStageSelect,
+    required this.onDailyChallenge,
     required this.showDebugControls,
     required this.tutorialVariant,
     required this.onTutorialVariantChanged,
@@ -993,6 +1005,7 @@ class _HomeScreen extends StatelessWidget {
 
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
+  final VoidCallback onDailyChallenge;
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
   final ValueChanged<TutorialExperimentVariant> onTutorialVariantChanged;
@@ -1092,6 +1105,18 @@ class _HomeScreen extends StatelessWidget {
                           minimumSize: const Size.fromHeight(50),
                           foregroundColor: const Color(0xFF245B60),
                           side: const BorderSide(color: Color(0xFF4D8580)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('daily_challenge_entry_button'),
+                        onPressed: onDailyChallenge,
+                        icon: const Icon(Icons.today_rounded),
+                        label: const Text('오늘의 도전'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          foregroundColor: const Color(0xFF9A5D35),
+                          side: const BorderSide(color: Color(0xFFC9875A)),
                         ),
                       ),
                     ],

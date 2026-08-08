@@ -36,6 +36,8 @@ import 'play_telemetry.dart';
 import 'launch_input_session.dart';
 import 'tutorial_experiment.dart';
 
+enum GameProgressPersistencePolicy { enabled, disabled }
+
 class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
@@ -64,6 +66,7 @@ class GameScreen extends StatefulWidget {
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.showDebugControls = false,
     this.progressStore,
+    this.progressPersistencePolicy = GameProgressPersistencePolicy.enabled,
   });
 
   final GameState? initialState;
@@ -100,6 +103,9 @@ class GameScreen extends StatefulWidget {
   final TutorialExperimentVariant tutorialVariant;
   final bool showDebugControls;
   final ProgressStore? progressStore;
+
+  /// 오늘의 도전처럼 일반 섬 진행을 오염시키면 안 되는 흐름은 disabled로 둔다.
+  final GameProgressPersistencePolicy progressPersistencePolicy;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -333,6 +339,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadBestShots() async {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      _bestShotsLoaded = true;
+      return;
+    }
     try {
       final progress = await _progressStore.load();
       if (!mounted) {
@@ -360,6 +371,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _recordBonusGoal(int levelIndex) async {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      return;
+    }
     if (_bonusGoals[levelIndex] == true) {
       return;
     }
@@ -370,6 +385,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _recordBestShot(int levelIndex, int shotCount) async {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      return;
+    }
     if (!_bestShotsLoaded) {
       _bestShotsLoadFuture ??= _loadBestShots();
       await _bestShotsLoadFuture;
@@ -387,6 +406,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _unlockNextLevel(int levelIndex) async {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      return;
+    }
     final next = math.min(levels.length - 1, levelIndex + 1);
     await _progressStore.recordStageClear(levelIndex);
     if (next > _unlockedLevel && mounted) {
@@ -1643,6 +1666,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _debugResetProgress() async {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      return;
+    }
     try {
       await _progressStore.reset();
     } on Object {
@@ -1659,6 +1686,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _debugUnlockAll() async {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      return;
+    }
     try {
       await _progressStore.unlockAll();
     } on Object {
@@ -1676,6 +1707,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _debugSetCopyCore(int count) async {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      return;
+    }
     final normalized = count.clamp(0, 999);
     try {
       await _progressStore.recordCopyCore(normalized, normalized > 0);
