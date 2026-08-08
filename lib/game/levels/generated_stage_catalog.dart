@@ -7555,7 +7555,7 @@ const generatedStageCatalogJson = r'''
               "id": "wall_left",
               "type": "wall",
               "position": {
-                "x": 12.0,
+                "x": 24.0,
                 "y": 280.0
               },
               "size": {
@@ -7713,6 +7713,9 @@ const generatedStageCatalogJson = r'''
           ],
           "metadata": {
             "baseline": "true",
+            "bypassDifficulty": "precision",
+            "bypassGrid": "angle±4/power±8",
+            "bypassSuccessCeiling": "18",
             "contract": "A"
           }
         },

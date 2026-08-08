@@ -44,6 +44,16 @@ void main() {
       'C',
       'D',
     ]);
+    final contractA = stage.patternById('stage_property_shot_a');
+    expect(contractA.metadata['bypassDifficulty'], 'precision');
+    expect(contractA.metadata['bypassGrid'], 'angle±4/power±8');
+    expect(contractA.metadata['bypassSuccessCeiling'], '18');
+    final leftWall = contractA.objects.firstWhere(
+      (object) => object.id == 'wall_left',
+    );
+    expect(leftWall.position, const Vec2(24, 280));
+    expect(leftWall.size, const Vec2(24, 520));
+    expect(leftWall.movable, isFalse);
     for (final pattern in stage.patterns) {
       final keyTypes = {
         for (final object in pattern.objects)
@@ -61,6 +71,31 @@ void main() {
       expect(pattern.solutionFamilies.length, greaterThanOrEqualTo(2));
       expect(pattern.metadata, isNot(contains('required_reward')));
     }
+  });
+
+  test('첨부 A의 홀은 가장자리 접촉을 포획하고 시각 판정 크기를 축소하지 않는다', () {
+    final pattern = stage.patternById('stage_property_shot_a');
+    final holeDefinition = pattern.objects.firstWhere(
+      (object) => object.type == EntityType.hole,
+    );
+    final hole = holeDefinition.toEntityState();
+    expect(hole.hitboxScale, 1.06);
+
+    final ballRadius = 12 * 0.88;
+    final captureRadius = hole.radius + ballRadius;
+    final edge = const ShotResolver().resolve(
+      _holeEdgeState(hole, captureRadius - 0.25, const Vec2(1, 0)),
+      const ShotInput(direction: Vec2(1, 0), power: 0.12),
+    );
+    final miss = const ShotResolver().resolve(
+      _holeEdgeState(hole, captureRadius + 0.25, const Vec2(-1, 0)),
+      const ShotInput(direction: Vec2(1, 0), power: 0.12),
+    );
+
+    expect(edge.events, contains('hole_entered'));
+    expect(edge.state.phase, GamePhase.success);
+    expect(miss.events, isNot(contains('hole_entered')));
+    expect(miss.state.phase, isNot(GamePhase.success));
   });
 
   test('모든 배치는 production Validator·유한값·고정 벽 계약을 통과한다', () {
@@ -244,6 +279,23 @@ void main() {
         greaterThanOrEqualTo(3),
         reason: '${solution.patternId} 직접 연결 영역=${directRegion}',
       );
+      final directSuccessUpperBound = solution.directSuccessUpperBound;
+      if (directSuccessUpperBound != null) {
+        expect(
+          directRegion.successCount,
+          lessThanOrEqualTo(directSuccessUpperBound),
+          reason: '${solution.patternId} 기믹 없는 직행이 너무 넓습니다: $directRegion',
+        );
+      }
+      final directConnectedUpperBound = solution.directConnectedUpperBound;
+      if (directConnectedUpperBound != null) {
+        expect(
+          directRegion.largestConnectedRegion,
+          lessThanOrEqualTo(directConnectedUpperBound),
+          reason:
+              '${solution.patternId} 기믹 없는 직행 연결 영역이 너무 넓습니다: $directRegion',
+        );
+      }
 
       final prepared = _preparedState(pattern, solution);
       final preparedRegion = _preparedNeighborhood(
@@ -263,9 +315,46 @@ void main() {
       );
       expect(preparedRegion.firstInputCount, greaterThanOrEqualTo(2));
       expect(preparedRegion.secondInputCount, greaterThanOrEqualTo(2));
+      final chainSuccessLowerBound = solution.chainSuccessLowerBound;
+      if (chainSuccessLowerBound != null) {
+        expect(
+          preparedRegion.successCount,
+          greaterThanOrEqualTo(chainSuccessLowerBound),
+          reason: '${solution.patternId} 대표 연쇄 성공 영역이 좁습니다: $preparedRegion',
+        );
+      }
+      final chainConnectedLowerBound = solution.chainConnectedLowerBound;
+      if (chainConnectedLowerBound != null) {
+        expect(
+          preparedRegion.largestConnectedRegion,
+          greaterThanOrEqualTo(chainConnectedLowerBound),
+          reason: '${solution.patternId} 대표 연쇄 연결 영역이 좁습니다: $preparedRegion',
+        );
+      }
       print('${solution.patternId}: 직접 ${directRegion}, 연쇄 ${preparedRegion}');
     });
   }
+}
+
+GameState _holeEdgeState(EntityState hole, double distance, Vec2 direction) {
+  final position = hole.position - direction.normalized() * distance;
+  const ball = EntityState(
+    id: 'active_ball',
+    type: EntityType.ball,
+    position: Vec2(0, 0),
+    size: Vec2(24, 24),
+    movable: true,
+    hitboxScale: 0.88,
+  );
+  return GameState(
+    levelIndex: 9,
+    levelName: '10. 속성 한방 홀 경계',
+    ballSpawn: position,
+    entities: [
+      ball.copyWith(position: position),
+      hole,
+    ],
+  );
 }
 
 GameState _state(StagePattern pattern) => pattern

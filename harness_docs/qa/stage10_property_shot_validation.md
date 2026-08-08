@@ -1,14 +1,16 @@
-# PS-STAGE-07: 10단계 속성 한방 데이터·물리 검증
+# PS-STAGE-08: 10단계 A 패턴 기믹 우회 난이도 검증
 
 ## 범위와 불변 조건
 
 - 안정 단계 ID: `stage_property_shot`
 - 제목: `10. 속성 한방`
 - 패턴: `stage_property_shot_a`~`stage_property_shot_d`
-- 새 기믹과 공통 물리 코드는 추가하거나 수정하지 않았다.
+- PS-STAGE-07의 10단계 A~D 배치와 공통 물리 코드는 유지하고, 첨부 배치인 A의 왼쪽 외곽 벽만 x=12에서 x=24로 12px 이동했다.
 - 모든 패턴은 `copyCharges=0`, `copyCoreReward=0`이며 `none` 직접 우회 계열을 함께 선언한다.
+- 첨부 배치와 일치하는 `stage_property_shot_a`는 초보자의 무속성 외곽 반사 직행을 좁은 정밀 조준으로 제한하되, 무거움 연쇄를 넉넉한 대표 해법으로 유지한다. 특정 기믹은 여전히 필수 조건이 아니다.
 - 벽은 `solid=true`, `movable=false`이고 대표 연쇄 뒤 위치가 변하지 않는다.
 - 대표 입력의 힘은 모두 실제 UI 최소값인 12% 이상이다.
+- A 홀은 시각 크기 `80×80`과 기존 `hitboxScale=1.06`을 유지한다. 직행 난이도는 보이지 않는 판정을 줄이지 않고 왼쪽 외곽 벽의 가시 배치만 최소 조정해 제한한다.
 
 ## 패턴 계약
 
@@ -27,7 +29,7 @@
 
 | 패턴 | 의도 경로 | 직접 우회 | 실제 사건 근거 |
 | --- | --- | --- | --- |
-| A | `27도/86% → 43도/88%` | `266도/20%` | 속성 공이 `a_crate → a_switch`를 만들고 스위치·문 상태 유지 |
+| A | `28도/84% → 43도/88%` | `40도/96%` | 속성 공이 `a_crate → a_switch`를 만들고 스위치·문 상태 유지 |
 | B | `312도/12% → 203도/70%` | `239도/74%` | 슬라이더로 판 회전, 다음 공이 `b_reflector → b_bumper → 홀` |
 | C | `0도/12% → 346도/86%` | `298도/38%` | 첫 공 점착, 과거 공 쿠션, `c_crate → c_balloon` 탄성 연쇄 |
 | D | `280도/42% → 312도/84%` | `266도/32%` | 슬라이더, `d_stone`·`d_wall`·`spent_ball_1`, 과거 공 홀 진입 |
@@ -40,7 +42,7 @@ A와 C는 각각 `a_stone`, `c_sticky`를 `TraitResolver`로 한 번 이전해 �
 
 | 패턴 | 직접 성공/최대 연결 | 연쇄 성공/최대 연결 | 연쇄 첫 입력 수/둘째 입력 수 |
 | --- | ---: | ---: | ---: |
-| A | 56 / 56 | 67 / 25 | 5 / 15 |
+| A | 13 / 13 | 124 / 30 | 11 / 22 |
 | B | 33 / 33 | 210 / 84 | 35 / 6 |
 | C | 37 / 37 | 14 / 7 | 7 / 2 |
 | D | 58 / 58 | 407 / 156 | 27 / 27 |
@@ -51,22 +53,19 @@ A와 C는 각각 `a_stone`, `c_sticky`를 `TraitResolver`로 한 번 이전해 �
 
 - `assets/stages/chapter_1.json`: 10단계 원본 데이터와 A~D 배치
 - `lib/game/levels/generated_stage_catalog.dart`: 카탈로그 생성 스냅샷
-- `test/fixtures/stage10_property_shot_patterns.dart`: 대표 입력·계열·사건 fixture
-- `test/stage10_property_shot_patterns_test.dart`: 구조, 기물 수, 보상 없음, Validator, 유한값, 벽 불변, 대표 인과, 무속성 반례, 기믹 미사용 직접 경로, 허용 폭·연결 영역, A~D 동일 초기 상태 결정론 검증
+- `test/fixtures/stage10_property_shot_patterns.dart`: 대표 입력·계열·사건 fixture와 A의 직행 성공 상한 18개·연쇄 성공 하한 100개 계약
+- `test/stage10_property_shot_patterns_test.dart`: 구조, 기물 수, 보상 없음, Validator, 유한값, 가시 벽 배치·불변, 대표 인과, 무속성 반례, 기믹 미사용 직접 경로, 홀 가장자리 접촉, 허용 폭·연결 영역, A 직행 폭 상한·대표 연쇄 폭 하한, A~D 동일 초기 상태 결정론 검증
 - `tool/stage10_solution_search.dart`: 실제 `ShotResolver` 기반 대표 입력 탐색기
 - `test/stage_catalog_test.dart`: 10단계 순서·패턴·levels 길이 회귀
 
 실행 결과:
 
-- `/Users/bellhundred/flutter_3_44_0/bin/dart run tool/generate_stage_catalog.dart`: 통과
-- 10단계·카탈로그·공용 리플레이·UI·지도 Golden 집중 회귀: 107개 통과
-- 단일 샷 40개·다중 샷 50개 리플레이 픽스처 재생: 통과
-- A~D 전용 대표 연쇄는 같은 초기 패턴에서 두 번 실행한 사건·충돌·경로·최종 엔티티 서명이 일치. 실제 저장·복원은 공용 RunState·리플레이 회귀가 담당한다.
-- `/Users/bellhundred/flutter_3_44_0/bin/flutter test`: 724개 통과
-- `/Users/bellhundred/flutter_3_44_0/bin/flutter analyze`: 이슈 없음
-- `/Users/bellhundred/flutter_3_44_0/bin/flutter build web --release`: 통과
-- `jq empty assets/stages/chapter_1.json`: 통과
-- `git diff --check`: 통과
+- `dart run tool/generate_stage_catalog.dart --check`: 통과
+- `test/stage10_property_shot_patterns_test.dart`, `test/stage_catalog_test.dart`, `test/stage_pattern_validator_test.dart` 집중 회귀: 50개 통과
+- `jq empty assets/stages/chapter_1.json`, `git diff --check`: 통과
+- A~D 전용 대표 연쇄는 같은 초기 패턴에서 두 번 실행한 사건·충돌·경로·최종 엔티티 서명이 일치한다. A의 직행은 `±4도·±8%` 81점 격자에서 `13/81` 성공, 최대 연결 `13`으로 측정되며, 대표 무거움 연쇄는 첫·둘째 샷 각각 `±3도·±6%` 49점 격자에서 `124` 성공, 최대 연결 `30`이다. 실제 저장·복원은 공용 RunState·리플레이 회귀가 담당한다.
+- `flutter analyze`: 이슈 없음
+- 전체 회귀는 기존 작업 트리의 화면 Golden 9건 불일치가 확인된 뒤, 지속 애니메이션 테스트가 진행되지 않아 `+330/-9` 시점에 중단했다. 이번 작업에서는 변경 범위 밖 Golden을 갱신하지 않았으며, 해당 실패는 A 집중 게이트와 분리된 잔여 위험으로 남긴다.
 
 서버는 최종 통합 단계 전에는 실행하지 않는 작업 규칙에 따라 띄우지 않았다.
 
@@ -75,4 +74,4 @@ A와 C는 각각 `a_stone`, `c_sticky`를 `TraitResolver`로 한 번 이전해 �
 - 섬 지도 10단계 카드·설명·잠금 해제 표시와 게임 화면 목표 문구를 연결했고 390×844·768×1024 지도, 5개 화면 크기 플레이 Golden으로 확인했다.
 - 공용 리플레이 fixture는 카탈로그 전체의 기준 패턴 저장·복원 회귀이고, A~D의 핵심 인과 결정론은 전용 동일 초기 상태 반복 테스트가 담당한다.
 - 이번 검증은 대표 2계열과 대표 주변 격자까지만 수행했다. 실제 기기 조준 오차, 첫 플레이에서 기물 역할을 알아채는지, 특히 C의 점착·과거 공·상자·풍선 인과 발견성은 수동 플레이테스트가 필요하다.
-- 스테이지 추가로 기존보다 전체 자동 검증 시간이 늘었다. 빠른 반복에서는 10단계 전용 테스트를 먼저 실행하고, 커밋 전 724개 전체 회귀를 유지한다.
+- 스테이지 추가로 기존보다 전체 자동 검증 시간이 늘었다. 이번 변경은 요청된 10단계·카탈로그·Validator 집중 게이트만 실행했으며, 전체 회귀와 실제 기기 플레이테스트는 별도 통합 단계에서 수행한다.

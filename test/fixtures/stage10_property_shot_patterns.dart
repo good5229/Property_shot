@@ -18,6 +18,10 @@ class Stage10PropertyShotSolution {
     this.transferTrait,
     this.expectedImpactIds = const [],
     this.expectedEvents = const [],
+    this.directSuccessUpperBound,
+    this.directConnectedUpperBound,
+    this.chainSuccessLowerBound,
+    this.chainConnectedLowerBound,
   });
 
   final String patternId;
@@ -32,6 +36,10 @@ class Stage10PropertyShotSolution {
   final TraitType? transferTrait;
   final List<String> expectedImpactIds;
   final List<String> expectedEvents;
+  final int? directSuccessUpperBound;
+  final int? directConnectedUpperBound;
+  final int? chainSuccessLowerBound;
+  final int? chainConnectedLowerBound;
 
   // 실제 UI는 이전된 속성을 첫 발사 입력에 싣고, 실패 공이 남은 뒤에는
   // 장착을 해제한다. 대표 두 발도 같은 한 번 이전 계약을 재생한다.
@@ -44,16 +52,20 @@ const stage10PropertyShotSolutions = <Stage10PropertyShotSolution>[
   Stage10PropertyShotSolution(
     patternId: 'stage_property_shot_a',
     contract: 'A',
-    firstDegree: 27,
-    firstPower: 0.86,
+    firstDegree: 28,
+    firstPower: 0.84,
     secondDegree: 43,
     secondPower: 0.88,
-    directDegree: 266,
-    directPower: 0.20,
+    directDegree: 40,
+    directPower: 0.96,
     familyId: 'heavy_transfer_switch',
     transferTrait: TraitType.heavy,
     expectedImpactIds: ['a_crate', 'a_switch'],
     expectedEvents: ['crate_pushed', 'switch_pressed'],
+    directSuccessUpperBound: 18,
+    directConnectedUpperBound: 18,
+    chainSuccessLowerBound: 100,
+    chainConnectedLowerBound: 25,
   ),
   Stage10PropertyShotSolution(
     patternId: 'stage_property_shot_b',

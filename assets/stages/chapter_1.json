@@ -3868,11 +3868,11 @@
           "acceptedStrategyIds": ["heavy_transfer_switch", "none"],
           "solutionFamilies": ["heavy_transfer_switch", "direct_bypass"],
           "optionalChallenges": ["drained_weight_push", "heavy_crate_switch", "direct_low_score"],
-          "metadata": {"baseline":"true", "contract":"A"},
+          "metadata": {"baseline":"true", "contract":"A", "bypassDifficulty":"precision", "bypassGrid":"angle±4/power±8", "bypassSuccessCeiling":"18"},
           "objects": [
             {"id":"hole","type":"hole","position":{"x":72,"y":132},"size":{"x":80,"y":80},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
-            {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
+            {"id":"wall_left","type":"wall","position":{"x":24,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"a_crate","type":"crate","position":{"x":180,"y":245},"size":{"x":72,"y":64},"traits":["heavy"],"movable":true,"solid":true,"restitution":0.66},
             {"id":"a_stone","type":"weight","position":{"x":250,"y":80},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68,"movableWhenDrained":true},
