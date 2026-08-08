@@ -1058,7 +1058,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _launch({ShotInput? inputOverride, bool isReplay = false}) {
-    if (_state.phase != GamePhase.planning ||
+    if (!_shotResolver.canLaunch(_state) ||
         _isAnimatingShot ||
         _isCommittingShot ||
         _isCommittingTraitAction ||
@@ -2142,7 +2142,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _updateAim(Vec2 logical) {
-    if (_state.phase != GamePhase.planning || _isAnimatingShot) {
+    if (!_shotResolver.canLaunch(_state) || _isAnimatingShot) {
       return;
     }
     final aim = logical - _state.activeBall.position;
@@ -2473,7 +2473,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     Size fieldSize,
     Duration timeStamp,
   ) {
-    if (_state.phase != GamePhase.planning ||
+    if (!_shotResolver.canLaunch(_state) ||
         _isAnimatingShot ||
         _isCommittingShot ||
         _isCommittingTraitAction ||

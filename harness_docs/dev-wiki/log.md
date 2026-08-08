@@ -1796,3 +1796,10 @@ Use consistent headings so entries are easy to grep.
 - 실제 `StagePatternSession`에서 10단계를 완료하고 보상을 선택한 뒤 A/B `RunState`를 앱 시작 흐름에서 복원해 런 결과 화면을 검증한다. 점수 1,970점, 3회 발사, 보상 1개는 임의 UI fixture가 아니라 저장 계층의 완료 결과다.
 - 실패 재생과 런 결과를 390×844·768×1024에서 각각 Golden으로 고정했다. 태블릿 실패 패널의 마지막 설명이 잘리던 테스트 화면 제약을 실제 기기 크기의 `MediaQuery`로 교정했고 두 해상도에서 닫기·행동 버튼과 모든 설명을 직접 확인했다.
 - 관련 위젯·실패 분석·최종 흐름 86개와 `flutter analyze`가 통과했다. Golden은 레이아웃 회귀 증거이며 실제 iOS·Android의 글꼴·색·터치 검증을 대체하지 않는다.
+
+## 2026-08-08 PS-VALID-04 실제 결함 변이
+
+- 이름 있는 슬라이더 터널링 fixture는 실제 슬라이더 횡단 결과에서 작동 payload·사건을 제거하고, 회전 순서 fixture는 실제 반사판 충돌 결과에서 회전 payload·사건을 제거해 생산 runtime probe가 각각 결함을 검출한다.
+- `ShotResolver.canLaunch`에 계획 상태·활성 공·이동 가능한 공·유한 위치의 최소 발사 계약을 추가했다. UI의 발사·조준·충전 입구가 같은 계약을 사용하고, 소프트락 fixture는 이 계약만 거부하는 resolver 변이로 `launchUnavailable`을 실제 생성한다.
+- 대표 입력 전체 무이동은 여전히 소프트락 증거가 아니다. validator·runtime probe 31개와 슬라이더·회전판·실제 UI 입력 139개, `flutter analyze`가 통과했다.
+- 생산 40패턴 runtime CLI 재실행은 도구 사용량 제한으로 승인이 거절돼 이번 반복의 통과 증거로 기록하지 않는다.

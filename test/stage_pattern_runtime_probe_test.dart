@@ -751,6 +751,46 @@ void main() {
     expect(evidence.launchUnavailable, isFalse);
   });
 
+  test('생산 발사 가능성 계약은 계획 상태의 활성 이동 공만 허용한다', () {
+    const resolver = ShotResolver();
+    final state = basePattern
+        .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+        .createState(0);
+
+    expect(resolver.canLaunch(state), isTrue);
+    expect(
+      resolver.canLaunch(state.copyWith(phase: GamePhase.paused)),
+      isFalse,
+    );
+    expect(
+      resolver.canLaunch(
+        state.copyWith(
+          entities: [
+            for (final entity in state.entities)
+              if (entity.id == 'active_ball')
+                entity.copyWith(active: false)
+              else
+                entity,
+          ],
+        ),
+      ),
+      isFalse,
+    );
+  });
+
+  test('발사 불가 resolver 변이는 실제 probe에서 soft lock을 만든다', () {
+    final evidence = ShotResolverPatternRuntimeProbe(
+      shotResolver: const _AlwaysLaunchUnavailableResolver(),
+      representativeInputs: const [
+        ShotInput(direction: Vec2(1, 0), power: 0.5),
+      ],
+      maxProbeCount: 1,
+      maxShots: 2,
+    ).probe(stage: stage, pattern: basePattern);
+
+    expect(evidence.launchUnavailable, isTrue);
+  });
+
   test('GameState 전체 필드와 중첩 이벤트 차이는 비결정성으로 관찰된다', () {
     final baseState = basePattern
         .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
@@ -1117,6 +1157,13 @@ class _AlternatingShotResolver extends ShotResolver {
     callCount++;
     return result;
   }
+}
+
+class _AlwaysLaunchUnavailableResolver extends ShotResolver {
+  const _AlwaysLaunchUnavailableResolver();
+
+  @override
+  bool canLaunch(GameState state) => false;
 }
 
 PatternRuntimeEvidence _probeAlternating(

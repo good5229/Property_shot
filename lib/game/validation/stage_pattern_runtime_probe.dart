@@ -102,7 +102,7 @@ class PatternRuntimeEvidence {
   final bool holePassThrough;
   final bool nonDeterministic;
 
-  /// 현재 EntityType에 없는 신규 기물은 적용 여부를 먼저 보고해야 한다.
+  /// 패턴에 해당 기물이 있을 때만 결함 판정을 적용한다.
   final bool sliderApplicable;
   final bool sliderTunneling;
   final bool rotatorApplicable;
@@ -264,6 +264,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       stageTitle: stage.title,
     );
     final initial = level.createState(0);
+    final launchUnavailable =
+        initial.phase == GamePhase.planning && !shotResolver.canLaunch(initial);
     final results = <ShotResult>[];
     var nonDeterministic = false;
     var finiteCoordinates = true;
@@ -360,6 +362,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       rotatorApplicable: hasRotatingReflector,
       rotatorOrderViolation: rotatorOrderViolation,
       allRepresentativeInputsNoMovement: allNoMovement,
+      launchUnavailable: launchUnavailable,
       autoClearDetected: autoClearDetected,
     );
   }

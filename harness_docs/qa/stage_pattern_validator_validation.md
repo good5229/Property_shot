@@ -1,6 +1,6 @@
 # 스테이지 패턴 검증기 실행 안전망 검증
 
-작업 ID: `PS-VALID-03`  
+작업 ID: `PS-VALID-03`, `PS-VALID-04`
 검증 기준: 2026-08-08 KST
 
 ## 적용 범위
@@ -16,11 +16,10 @@
 | 구분 | fixture | 증거 |
 |---|---|---|
 | 실제 배치와 실제 resolver | `invalid_auto_clear`, `invalid_no_route` | 깨진 배치를 실제 `ShotResolver` probe가 실행해 자동 클리어와 완전 차단을 관찰 |
-| 실제 resolver 기반 결함 변이 | `invalid_wall_moves`, `invalid_infinite_bounce`, `invalid_non_deterministic`, `invalid_hole_pass_through` | 정상 resolver 결과에 한 종류의 결함만 주입하고 실제 probe 판정기가 이를 검출 |
+| 실제 resolver 기반 결함 변이 | `invalid_wall_moves`, `invalid_infinite_bounce`, `invalid_slider_tunneling`, `invalid_non_deterministic`, `invalid_hole_pass_through`, `invalid_rotator_order`, `invalid_soft_lock` | 정상 resolver 결과 또는 생산 발사 가능성 계약에 한 종류의 결함만 주입하고 실제 probe 판정기가 이를 검출 |
 | 정적 fixture | `invalid_overlap`, `invalid_reward_required`, `invalid_duplicate_object_id` | 구조·메타데이터 규칙으로 결정적으로 검출 |
-| scripted evidence 유지 | `invalid_slider_tunneling`, `invalid_rotator_order`, `invalid_soft_lock` | 안정 오류 코드 매핑 계약만 검증 |
 
-`invalid_soft_lock`은 현재 `GameState`와 `ShotResult`에 발사 가능 여부를 나타내는 생산 필드가 없어 실제 probe가 `launchUnavailable=true`를 만들 수 없다. 파워 슬라이더와 회전 반사판의 실제 판정기는 별도 runtime probe 테스트에서 고장 resolver 결과를 검출하지만, 이름 있는 invalid fixture는 이번 작업 범위에서 scripted 상태를 유지한다.
+`invalid_slider_tunneling`은 실제 슬라이더를 통과한 결과에서 작동 payload와 사건만 제거하고, `invalid_rotator_order`는 실제 반사판 충돌 결과에서 회전 payload와 사건만 제거한다. `invalid_soft_lock`은 생산 `ShotResolver.canLaunch` 계약을 거부하는 단일 변이를 사용한다. 대표 입력 무이동만으로는 소프트락을 만들지 않는다.
 
 ## 생산 카탈로그 계약
 
@@ -44,16 +43,17 @@
 | 카탈로그 runtime timing bound | 15초 미만 계약 통과 |
 | `git diff --check` | 통과 |
 
+PS-VALID-04 영향권에서는 validator·runtime probe 31개와 슬라이더·회전판·실제 UI 입력 139개, `flutter analyze`가 통과했다. 생산 40패턴 CLI 재실행은 2026-08-08 도구 사용량 제한으로 승인이 거절돼 이 반복에서 재확인하지 못했으며, 직전 기준선의 40패턴 통과 기록과 구분한다.
+
 ## 불변 조건 확인
 
-- `ShotResolver` 물리 공식과 스테이지 배치를 변경하지 않았다.
+- `ShotResolver` 물리 공식과 스테이지 배치를 변경하지 않았다. 계획 상태의 활성·이동 가능한 공만 발사할 수 있다는 순수 판정만 추가했다.
 - 정상 10단계×4패턴의 runtime 오탐은 0건이다.
 - 벽 불변·홀 우선·복수 해법·무보상 기본 성공 조건을 유지한다.
 - 기존 오류 코드 이름은 바꾸지 않았고, 신규 실행 증거 누락 코드만 추가했다.
-- 사용자 대상 UI 변경은 없다.
+- UI 발사·조준·충전 입구가 같은 생산 발사 가능성 판정을 사용한다.
 
 ## 남은 한계
 
-- 실제 발사 불가 상태 모델이 생기기 전까지 soft lock은 scripted evidence 계약이다.
-- 이름 있는 슬라이더 터널링·회전 순서 invalid fixture의 완전한 실제 배치 전환은 후속 validator 작업 대상이다.
+- 이번 반복의 생산 40패턴 runtime CLI는 도구 사용량 제한이 해제된 뒤 재실행해야 한다.
 - timing bound는 로컬 자동 테스트 상한이며 실기기 성능 증거가 아니다.

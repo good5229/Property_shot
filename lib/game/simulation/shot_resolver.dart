@@ -686,6 +686,17 @@ class _ReflectorSatContact {
 class ShotResolver {
   const ShotResolver();
 
+  bool canLaunch(GameState state) {
+    if (state.phase != GamePhase.planning) return false;
+    final ball = state.entityById('active_ball');
+    return ball != null &&
+        ball.type == EntityType.ball &&
+        ball.active &&
+        ball.movable &&
+        ball.position.x.isFinite &&
+        ball.position.y.isFinite;
+  }
+
   ShotResult resolve(GameState state, ShotInput rawInput) {
     final input = rawInput.normalized();
     final beforeShot = state.copyWith(history: const []);

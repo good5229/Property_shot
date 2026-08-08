@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
@@ -29,7 +30,7 @@ class InvalidPatternFixture {
   /// 값이 있으면 실제 probe를 실행한다. [evidence]와 동시에 사용하지 않는다.
   final PatternRuntimeProbe? runtimeProbe;
 
-  /// EntityType이 아직 없는 기능은 scripted evidence 계약으로만 검증한다.
+  /// 정적 패턴만으로 표현할 수 없는 계약은 명시 evidence로 검증한다.
   final PatternRuntimeEvidence? evidence;
 }
 
@@ -83,17 +84,14 @@ List<InvalidPatternFixture> buildInvalidPatternFixtures() {
       expectedCodes: {ValidationIssueCode.runtimeInfiniteBounce},
       resolver: const _SafetyStopResolver(),
     ),
-    _runtimeFixture(
+    _patternRuntimeFixture(
       'invalid_slider_tunneling',
       expectedCodes: {ValidationIssueCode.runtimeSliderTunneling},
-      evidence: const PatternRuntimeEvidence(
-        probeCount: 1,
-        maxProbeCount: 1,
-        shotCount: 2,
-        maxShots: 2,
-        sliderApplicable: true,
-        sliderTunneling: true,
-      ),
+      pattern: _sliderPattern('invalid_slider_tunneling'),
+      resolver: const _NoSliderActivationResolver(),
+      representativeInputs: const [
+        ShotInput(direction: Vec2(1, 0), power: 1),
+      ],
     ),
     _mutatedRuntimeFixture(
       'invalid_non_deterministic',
@@ -127,31 +125,80 @@ List<InvalidPatternFixture> buildInvalidPatternFixtures() {
         objects.add(duplicate);
       },
     ),
-    _runtimeFixture(
+    _patternRuntimeFixture(
       'invalid_rotator_order',
       expectedCodes: {ValidationIssueCode.runtimeRotatorOrder},
-      evidence: const PatternRuntimeEvidence(
-        probeCount: 1,
-        maxProbeCount: 1,
-        shotCount: 2,
-        maxShots: 2,
-        rotatorApplicable: true,
-        rotatorOrderViolation: true,
-      ),
+      pattern: _reflectorPattern('invalid_rotator_order'),
+      resolver: const _MissingReflectorRotationResolver(),
+      representativeInputs: const [
+        ShotInput(direction: Vec2(0, -1), power: 1),
+      ],
     ),
-    _runtimeFixture(
+    _mutatedRuntimeFixture(
       'invalid_soft_lock',
       expectedCodes: {ValidationIssueCode.runtimeSoftLock},
-      evidence: const PatternRuntimeEvidence(
-        probeCount: 4,
-        maxProbeCount: 4,
-        shotCount: 8,
-        maxShots: 8,
-        allRepresentativeInputsNoMovement: true,
-        launchUnavailable: true,
-      ),
+      resolver: const _LaunchUnavailableResolver(),
+      representativeInputs: const [
+        ShotInput(direction: Vec2(1, 0), power: 0.5),
+      ],
     ),
   ];
+}
+
+StagePattern _sliderPattern(String patternId) {
+  return StagePattern(
+    patternId: patternId,
+    weight: 1,
+    parShots: 3,
+    difficultyBand: '중급',
+    ballSpawn: const Vec2(40, 280),
+    solutionFamilies: const {'직접 진입'},
+    objects: const [
+      PatternObjectDefinition(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(320, 480),
+        size: Vec2(36, 36),
+        solid: false,
+      ),
+      PatternObjectDefinition(
+        id: 'slider',
+        type: EntityType.powerSlider,
+        position: Vec2(180, 280),
+        size: Vec2(72, 48),
+        solid: false,
+        direction: Vec2(1, 0),
+        referenceSpeed: 30,
+        allowedTargets: {EntityType.ball},
+      ),
+    ],
+  );
+}
+
+StagePattern _reflectorPattern(String patternId) {
+  return StagePattern(
+    patternId: patternId,
+    weight: 1,
+    parShots: 3,
+    difficultyBand: '중급',
+    ballSpawn: const Vec2(180, 440),
+    solutionFamilies: const {'반사'},
+    objects: const [
+      PatternObjectDefinition(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(320, 100),
+        size: Vec2(36, 36),
+        solid: false,
+      ),
+      PatternObjectDefinition(
+        id: 'reflector',
+        type: EntityType.rotatingReflector,
+        position: Vec2(180, 280),
+        size: Vec2(76, 12),
+      ),
+    ],
+  );
 }
 
 InvalidPatternFixture _staticFixture(
@@ -167,21 +214,6 @@ InvalidPatternFixture _staticFixture(
     stage: _stage(pattern),
     pattern: pattern,
     expectedCodes: expectedCodes,
-  );
-}
-
-InvalidPatternFixture _runtimeFixture(
-  String name, {
-  required Set<ValidationIssueCode> expectedCodes,
-  required PatternRuntimeEvidence evidence,
-}) {
-  final pattern = StagePattern.fromJson(_baseJson(name));
-  return InvalidPatternFixture(
-    name: name,
-    stage: _stage(pattern),
-    pattern: pattern,
-    expectedCodes: expectedCodes,
-    evidence: evidence,
   );
 }
 
@@ -210,6 +242,27 @@ InvalidPatternFixture _mutatedRuntimeFixture(
       ShotResolverPatternRuntimeProbe.defaultRepresentativeInputs,
 }) {
   final pattern = StagePattern.fromJson(_baseJson(name));
+  return InvalidPatternFixture(
+    name: name,
+    stage: _stage(pattern),
+    pattern: pattern,
+    expectedCodes: expectedCodes,
+    runtimeProbe: ShotResolverPatternRuntimeProbe(
+      shotResolver: resolver,
+      representativeInputs: representativeInputs,
+      maxProbeCount: representativeInputs.length,
+      maxShots: representativeInputs.length * 2,
+    ),
+  );
+}
+
+InvalidPatternFixture _patternRuntimeFixture(
+  String name, {
+  required Set<ValidationIssueCode> expectedCodes,
+  required StagePattern pattern,
+  required ShotResolver resolver,
+  required List<ShotInput> representativeInputs,
+}) {
   return InvalidPatternFixture(
     name: name,
     stage: _stage(pattern),
@@ -333,10 +386,54 @@ class _SafetyStopResolver extends ShotResolver {
   }
 }
 
+class _NoSliderActivationResolver extends ShotResolver {
+  const _NoSliderActivationResolver();
+
+  @override
+  ShotResult resolve(GameState state, ShotInput rawInput) {
+    final result = super.resolve(state, rawInput);
+    return _copyResult(
+      result,
+      powerSliderActivations: const [],
+      physicsEvents: result.physicsEvents
+          .where(
+            (event) => event.kind != PhysicsEventKind.powerSliderActivation,
+          )
+          .toList(growable: false),
+    );
+  }
+}
+
+class _MissingReflectorRotationResolver extends ShotResolver {
+  const _MissingReflectorRotationResolver();
+
+  @override
+  ShotResult resolve(GameState state, ShotInput rawInput) {
+    final result = super.resolve(state, rawInput);
+    return _copyResult(
+      result,
+      reflectorRotations: const [],
+      physicsEvents: result.physicsEvents
+          .where((event) => event.kind != PhysicsEventKind.reflectorRotation)
+          .toList(growable: false),
+    );
+  }
+}
+
+class _LaunchUnavailableResolver extends ShotResolver {
+  const _LaunchUnavailableResolver();
+
+  @override
+  bool canLaunch(GameState state) => false;
+}
+
 ShotResult _copyResult(
   ShotResult result, {
   GameState? state,
   List<String>? events,
+  List<PowerSliderActivation>? powerSliderActivations,
+  List<ReflectorRotation>? reflectorRotations,
+  List<PhysicsEvent>? physicsEvents,
   List<ChainSafetyDiagnostic>? chainSafetyDiagnostics,
 }) {
   return ShotResult(
@@ -345,9 +442,10 @@ ShotResult _copyResult(
     events: events ?? result.events,
     moves: result.moves,
     impacts: result.impacts,
-    powerSliderActivations: result.powerSliderActivations,
-    reflectorRotations: result.reflectorRotations,
-    physicsEvents: result.physicsEvents,
+    powerSliderActivations:
+        powerSliderActivations ?? result.powerSliderActivations,
+    reflectorRotations: reflectorRotations ?? result.reflectorRotations,
+    physicsEvents: physicsEvents ?? result.physicsEvents,
     chainSafetyDiagnostics:
         chainSafetyDiagnostics ?? result.chainSafetyDiagnostics,
   );
