@@ -10,6 +10,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import '../game/analysis/creative_chain_score.dart';
+import '../game/analysis/failure_replay.dart';
 import '../game/analysis/stage_chain_challenge.dart';
 import '../game/domain/entity_state.dart';
 import '../game/domain/game_state.dart';
@@ -35,6 +36,7 @@ import 'debug_labels.dart';
 import 'play_telemetry.dart';
 import 'launch_input_session.dart';
 import 'tutorial_experiment.dart';
+import 'failure_replay_dialog.dart';
 
 enum GameProgressPersistencePolicy { enabled, disabled }
 
@@ -146,6 +148,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
   bool _hintWasVisible = false;
   String _failureAdvice = '';
+  FailureReplayData? _failureReplay;
   bool _bestShotsLoaded = false;
   Future<void>? _bestShotsLoadFuture;
   final Map<int, int> _bestShots = {};
@@ -271,6 +274,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       loadVisualAssets: widget.loadGameAssets,
       reducedMotion: GameFeedback.reducedMotionEnabled,
       screenShake: GameFeedback.screenShakeEnabled,
+      screenShakeStrength: GameFeedback.screenShakeStrength,
       ballRewardAppearance: _rewardInventory.has(runRewardBallAppearanceId),
     );
     _game.setDebugOptions(
@@ -451,6 +455,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _inspectedEntityId = null;
     _showClearPopup = false;
     _showFailurePopup = false;
+    _failureReplay = null;
     _showClearPersistenceError = false;
     _clearPersistenceErrorTitle = '클리어 기록을 저장하지 못했습니다';
     _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
@@ -965,7 +970,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusBumperHistory.insert(0, _bonusBumperHit);
     _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
     _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
-    final result = _shotResolver.resolve(_state, normalizedInput);
+    final shotStartState = _state;
+    final result = _shotResolver.resolve(shotStartState, normalizedInput);
+    if (result.state.phase != GamePhase.success) {
+      _failureReplay = FailureReplayData(
+        beforeState: shotStartState,
+        input: normalizedInput,
+        result: result,
+      );
+    } else {
+      _failureReplay = null;
+    }
     _stageShotResults.add(result);
     _chainScoreAnalysis =
         result.state.levelIndex == 7 && result.state.phase == GamePhase.success
@@ -1026,7 +1041,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _setState(
       result.state,
       path: result.path,
-      transitionStart: _state,
+      transitionStart: shotStartState,
       moves: result.moves,
       impacts: result.impacts,
       physicsEvents: result.physicsEvents,
@@ -2943,6 +2958,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 _FailurePopup(
                   state: _state,
                   advice: _failureAdvice,
+                  failureReplay: _failureReplay,
+                  onReplay: _openFailureReplay,
                   onRetry: () => setState(() => _showFailurePopup = false),
                   onRewind: _rewind,
                   onRecoverPastBall:
@@ -2989,6 +3006,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
+    );
+  }
+
+  void _openFailureReplay() {
+    final replay = _failureReplay;
+    if (replay == null || !mounted || _isAnimatingShot) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => FailureReplayDialog(data: replay),
     );
   }
 
@@ -3830,6 +3857,8 @@ class _FailurePopup extends StatelessWidget {
   const _FailurePopup({
     required this.state,
     required this.advice,
+    required this.failureReplay,
+    required this.onReplay,
     required this.onRetry,
     required this.onRewind,
     required this.onReset,
@@ -3838,6 +3867,8 @@ class _FailurePopup extends StatelessWidget {
 
   final GameState state;
   final String advice;
+  final FailureReplayData? failureReplay;
+  final VoidCallback onReplay;
   final VoidCallback onRetry;
   final VoidCallback onRewind;
   final VoidCallback onReset;
@@ -3898,6 +3929,17 @@ class _FailurePopup extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      if (failureReplay != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '원인: ${const FailureReplayAnalyzer().analyze(failureReplay!).title}',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF8B402D),
+                              ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 6,
@@ -3910,6 +3952,13 @@ class _FailurePopup extends StatelessWidget {
                             icon: const Icon(Icons.ads_click, size: 16),
                             label: const Text('다시 조준'),
                           ),
+                          if (failureReplay != null)
+                            OutlinedButton.icon(
+                              key: const Key('failure_replay_button'),
+                              onPressed: onReplay,
+                              icon: const Icon(Icons.replay, size: 16),
+                              label: const Text('인과 재생'),
+                            ),
                           OutlinedButton.icon(
                             key: const Key('failure_rewind_button'),
                             onPressed: onRewind,

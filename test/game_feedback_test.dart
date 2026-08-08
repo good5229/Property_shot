@@ -135,6 +135,7 @@ void main() {
     GameFeedback.soundEnabled = true;
     GameFeedback.hapticsEnabled = true;
     GameFeedback.screenShakeEnabled = true;
+    GameFeedback.screenShakeStrength = 2;
     GameFeedback.reducedMotionEnabled = false;
 
     await GameFeedback.loadPreferences();
@@ -164,7 +165,45 @@ void main() {
     GameFeedback.soundEnabled = true;
     GameFeedback.hapticsEnabled = true;
     GameFeedback.screenShakeEnabled = true;
+    GameFeedback.screenShakeStrength = 2;
     GameFeedback.reducedMotionEnabled = false;
+  });
+
+  test('기존 화면 흔들림 설정을 새 강도와 스키마로 마이그레이션한다', () async {
+    SharedPreferences.setMockInitialValues({
+      GameFeedback.soundPreferenceKey: true,
+      GameFeedback.screenShakePreferenceKey: false,
+    });
+
+    await GameFeedback.loadPreferences();
+    final preferences = await SharedPreferences.getInstance();
+
+    expect(GameFeedback.screenShakeStrength, 0);
+    expect(
+      preferences.getInt(GameFeedback.settingsSchemaVersionKey),
+      GameFeedback.settingsSchemaVersion,
+    );
+    expect(
+      preferences.getInt(GameFeedback.screenShakeStrengthPreferenceKey),
+      0,
+    );
+  });
+
+  test('화면 흔들림 강도와 도움말 다시 보기를 저장한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    await GameFeedback.setScreenShakeStrength(3);
+    await GameFeedback.resetHelpPreferences();
+    final preferences = await SharedPreferences.getInstance();
+
+    expect(GameFeedback.screenShakeEnabled, isTrue);
+    expect(
+      preferences.getInt(GameFeedback.screenShakeStrengthPreferenceKey),
+      3,
+    );
+    expect(preferences.getInt(GameFeedback.helpRevisionPreferenceKey), 1);
+    GameFeedback.screenShakeStrength = 2;
+    GameFeedback.helpRevision = 0;
   });
 }
 

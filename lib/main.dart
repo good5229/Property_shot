@@ -1279,51 +1279,93 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('소리와 진동'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SwitchListTile.adaptive(
-            key: const Key('sound_toggle'),
-            contentPadding: EdgeInsets.zero,
-            title: const Text('효과음'),
-            value: GameFeedback.soundEnabled,
-            onChanged: (enabled) async {
-              setState(() => GameFeedback.soundEnabled = enabled);
-              await GameFeedback.setSoundEnabled(enabled);
-            },
-          ),
-          SwitchListTile.adaptive(
-            key: const Key('haptics_toggle'),
-            contentPadding: EdgeInsets.zero,
-            title: const Text('진동'),
-            value: GameFeedback.hapticsEnabled,
-            onChanged: (enabled) async {
-              setState(() => GameFeedback.hapticsEnabled = enabled);
-              await GameFeedback.setHapticsEnabled(enabled);
-            },
-          ),
-          SwitchListTile.adaptive(
-            key: const Key('screen_shake_toggle'),
-            contentPadding: EdgeInsets.zero,
-            title: const Text('화면 흔들림'),
-            value: GameFeedback.screenShakeEnabled,
-            onChanged: (enabled) async {
-              setState(() => GameFeedback.screenShakeEnabled = enabled);
-              await GameFeedback.setScreenShakeEnabled(enabled);
-            },
-          ),
-          SwitchListTile.adaptive(
-            key: const Key('reduced_motion_toggle'),
-            contentPadding: EdgeInsets.zero,
-            title: const Text('저모션 효과'),
-            subtitle: const Text('충돌 인과는 유지하고 흔들림과 반복 효과를 줄입니다.'),
-            value: GameFeedback.reducedMotionEnabled,
-            onChanged: (enabled) async {
-              setState(() => GameFeedback.reducedMotionEnabled = enabled);
-              await GameFeedback.setReducedMotionEnabled(enabled);
-            },
-          ),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile.adaptive(
+              key: const Key('sound_toggle'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('효과음'),
+              value: GameFeedback.soundEnabled,
+              onChanged: (enabled) async {
+                setState(() => GameFeedback.soundEnabled = enabled);
+                await GameFeedback.setSoundEnabled(enabled);
+              },
+            ),
+            SwitchListTile.adaptive(
+              key: const Key('haptics_toggle'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('진동'),
+              value: GameFeedback.hapticsEnabled,
+              onChanged: (enabled) async {
+                setState(() => GameFeedback.hapticsEnabled = enabled);
+                await GameFeedback.setHapticsEnabled(enabled);
+              },
+            ),
+            SwitchListTile.adaptive(
+              key: const Key('screen_shake_toggle'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('화면 흔들림'),
+              value: GameFeedback.screenShakeEnabled,
+              onChanged: (enabled) {
+                setState(() {
+                  GameFeedback.screenShakeEnabled = enabled;
+                  if (!enabled) GameFeedback.screenShakeStrength = 0;
+                  if (enabled && GameFeedback.screenShakeStrength == 0) {
+                    GameFeedback.screenShakeStrength = 2;
+                  }
+                });
+                unawaited(GameFeedback.setScreenShakeEnabled(enabled));
+              },
+            ),
+            DropdownButtonFormField<int>(
+              key: const Key('screen_shake_strength_dropdown'),
+              decoration: const InputDecoration(labelText: '화면 흔들림 강도'),
+              initialValue: GameFeedback.screenShakeStrength,
+              items: const [
+                DropdownMenuItem(value: 0, child: Text('끔')),
+                DropdownMenuItem(value: 1, child: Text('약하게')),
+                DropdownMenuItem(value: 2, child: Text('보통')),
+                DropdownMenuItem(value: 3, child: Text('강하게')),
+              ],
+              onChanged: (strength) {
+                if (strength == null) return;
+                setState(() {
+                  GameFeedback.screenShakeStrength = strength;
+                  GameFeedback.screenShakeEnabled = strength > 0;
+                });
+                unawaited(GameFeedback.setScreenShakeStrength(strength));
+              },
+            ),
+            SwitchListTile.adaptive(
+              key: const Key('reduced_motion_toggle'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('저모션 효과'),
+              subtitle: const Text('충돌 인과는 유지하고 흔들림과 반복 효과를 줄입니다.'),
+              value: GameFeedback.reducedMotionEnabled,
+              onChanged: (enabled) async {
+                setState(() => GameFeedback.reducedMotionEnabled = enabled);
+                await GameFeedback.setReducedMotionEnabled(enabled);
+              },
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('help_reset_button'),
+                onPressed: () async {
+                  await GameFeedback.resetHelpPreferences();
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('도움말을 다음 화면에서 다시 보여 드립니다.')),
+                  );
+                },
+                icon: const Icon(Icons.help_outline),
+                label: const Text('도움말 다시 보기'),
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

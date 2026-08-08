@@ -38,6 +38,7 @@ class PropertyShotGame extends FlameGame {
     this.loadVisualAssets = true,
     this.reducedMotion = false,
     this.screenShake = true,
+    this.screenShakeStrength = 2,
     this.ballRewardAppearance = false,
   });
 
@@ -49,12 +50,14 @@ class PropertyShotGame extends FlameGame {
   final bool loadVisualAssets;
   final bool reducedMotion;
   final bool screenShake;
+  final int screenShakeStrength;
   bool ballRewardAppearance;
   bool debugHitboxes = false;
   bool debugNormals = false;
   bool debugIds = false;
   bool debugStats = false;
   double lastFrameTimeMs = 0;
+  double playbackSpeed = 1;
   ChargeGaugeState chargeGaugeState = ChargeGaugeState.green;
   bool chargeGaugeActive = false;
 
@@ -84,6 +87,16 @@ class PropertyShotGame extends FlameGame {
   void setAnimationCursorForTest(double cursor) {
     _animationCursor = cursor;
     _emitDueAnimationEvents();
+  }
+
+  /// 실패 장면처럼 확정된 결과를 다시 그릴 때 사용할 읽기 전용 시작 위치다.
+  void setAnimationCursorForReplay(double cursor) {
+    _animationCursor = cursor.clamp(0, _animationEndCursor).toDouble();
+    _emitDueAnimationEvents();
+  }
+
+  void setPlaybackSpeed(double speed) {
+    playbackSpeed = speed.clamp(0, 2.0).toDouble();
   }
 
   double reflectorRenderOrientationForTest(String entityId) {
@@ -197,7 +210,8 @@ class PropertyShotGame extends FlameGame {
       // 한 프레임에 남은 충돌을 모두 소비하면 물체 이동과 타격 피드백의
       // 인과가 사라지므로, 다음 정상 프레임부터 시간축을 이어간다.
       final boundedDt = dt > 0.5 ? 0.0 : dt.clamp(0.0, 1 / 30).toDouble();
-      _animationCursor += boundedDt * animationCursorUnitsPerSecond;
+      _animationCursor +=
+          boundedDt * animationCursorUnitsPerSecond * playbackSpeed;
       _emitDueAnimationEvents();
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
@@ -475,7 +489,8 @@ class PropertyShotGame extends FlameGame {
     }
     final strength = (latestImpact.impulse / 2.4).clamp(0.0, 1.0);
     final fade = 1 - (elapsed / 5).clamp(0.0, 1.0);
-    final amplitude = 0.9 + strength * 1.8;
+    final amplitude =
+        (0.9 + strength * 1.8) * (screenShakeStrength.clamp(0, 3) / 2);
     canvas.translate(
       math.sin(elapsed * 5.6) * amplitude * fade,
       math.cos(elapsed * 6.4) * amplitude * fade,

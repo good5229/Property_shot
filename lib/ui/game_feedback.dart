@@ -21,10 +21,19 @@ class GameFeedback {
   static const reducedMotionPreferenceKey =
       'property_shot_reduced_motion_enabled';
   static const screenShakePreferenceKey = 'property_shot_screen_shake_enabled';
+  static const screenShakeStrengthPreferenceKey =
+      'property_shot_screen_shake_strength';
+  static const helpRevisionPreferenceKey = 'property_shot_help_revision';
+  static const settingsSchemaVersionKey =
+      'property_shot_settings_schema_version';
+  static const settingsSchemaVersion = 2;
   static bool soundEnabled = true;
   static bool hapticsEnabled = true;
   static bool reducedMotionEnabled = false;
   static bool screenShakeEnabled = true;
+  static int screenShakeStrength = 2;
+  static int helpRevision = 0;
+  static Future<void>? _preferenceWriteTail;
 
   final SoundPlayer _soundPlayer;
   final SoundCuePlayer _cuePlayer;
@@ -42,8 +51,33 @@ class GameFeedback {
       hapticsEnabled = preferences.getBool(hapticsPreferenceKey) ?? true;
       reducedMotionEnabled =
           preferences.getBool(reducedMotionPreferenceKey) ?? false;
-      screenShakeEnabled =
-          preferences.getBool(screenShakePreferenceKey) ?? true;
+      final storedScreenShakeEnabled = preferences.getBool(
+        screenShakePreferenceKey,
+      );
+      final storedStrength = preferences.getInt(
+        screenShakeStrengthPreferenceKey,
+      );
+      screenShakeStrength = storedStrength == null
+          ? ((storedScreenShakeEnabled ?? true) ? 2 : 0)
+          : storedStrength.clamp(0, 3).toInt();
+      screenShakeEnabled = storedStrength == null
+          ? (storedScreenShakeEnabled ?? true)
+          : (storedScreenShakeEnabled ?? screenShakeStrength > 0) &&
+                screenShakeStrength > 0;
+      helpRevision = (preferences.getInt(helpRevisionPreferenceKey) ?? 0)
+          .clamp(0, 999999)
+          .toInt();
+      if (preferences.getInt(settingsSchemaVersionKey) !=
+          settingsSchemaVersion) {
+        await preferences.setInt(
+          settingsSchemaVersionKey,
+          settingsSchemaVersion,
+        );
+        await preferences.setInt(
+          screenShakeStrengthPreferenceKey,
+          screenShakeStrength,
+        );
+      }
     } on Exception {
       // 설정 저장소를 사용할 수 없는 환경에서도 기본값으로 계속 실행한다.
     }
@@ -66,16 +100,57 @@ class GameFeedback {
 
   static Future<void> setScreenShakeEnabled(bool enabled) async {
     screenShakeEnabled = enabled;
+    if (!enabled) screenShakeStrength = 0;
+    if (enabled && screenShakeStrength == 0) screenShakeStrength = 2;
     await _savePreference(screenShakePreferenceKey, enabled);
+    await _savePreferenceInt(
+      screenShakeStrengthPreferenceKey,
+      screenShakeStrength,
+    );
+  }
+
+  static Future<void> setScreenShakeStrength(int strength) async {
+    screenShakeStrength = strength.clamp(0, 3).toInt();
+    screenShakeEnabled = screenShakeStrength > 0;
+    await _savePreferenceInt(
+      screenShakeStrengthPreferenceKey,
+      screenShakeStrength,
+    );
+    await _savePreference(screenShakePreferenceKey, screenShakeEnabled);
+  }
+
+  static Future<void> resetHelpPreferences() async {
+    helpRevision = (helpRevision + 1).clamp(0, 999999).toInt();
+    await _savePreferenceInt(helpRevisionPreferenceKey, helpRevision);
   }
 
   static Future<void> _savePreference(String key, bool value) async {
-    try {
+    await _enqueuePreferenceWrite(() async {
       final preferences = await SharedPreferences.getInstance();
       await preferences.setBool(key, value);
-    } on Exception {
-      // 웹·테스트 환경의 저장소 실패는 피드백 자체를 중단시키지 않는다.
-    }
+    });
+  }
+
+  static Future<void> _savePreferenceInt(String key, int value) async {
+    await _enqueuePreferenceWrite(() async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setInt(key, value);
+    });
+  }
+
+  static Future<void> _enqueuePreferenceWrite(
+    Future<void> Function() action,
+  ) async {
+    final previous = _preferenceWriteTail ?? Future<void>.value();
+    final next = previous.then((_) async {
+      try {
+        await action();
+      } on Exception {
+        // 웹·테스트 환경의 저장소 실패는 피드백 자체를 중단시키지 않는다.
+      }
+    });
+    _preferenceWriteTail = next;
+    await next;
   }
 
   void traitSelected() {

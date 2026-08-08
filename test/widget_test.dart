@@ -1188,8 +1188,16 @@ void main() {
 
     expect(find.byKey(const Key('failure_popup')), findsOneWidget);
     expect(find.text('다시 조준'), findsOneWidget);
+    expect(find.byKey(const Key('failure_replay_button')), findsOneWidget);
     expect(find.text('되감기'), findsOneWidget);
     expect(find.text('단계 처음부터'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('failure_replay_button')));
+    await tester.pump();
+    expect(find.byKey(const Key('failure_replay_dialog')), findsOneWidget);
+    expect(find.text('충돌 순서'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('failure_replay_close_button')));
+    await tester.pump();
 
     await tester.tap(find.byKey(const Key('failure_retry_button')));
     await tester.pump();
