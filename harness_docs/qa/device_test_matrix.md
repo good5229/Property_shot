@@ -5,7 +5,7 @@
 | Flutter 위젯 320x568 | 축약 HUD·팝업 경계·한글 오버플로 회귀 | 통과 |
 | Flutter 위젯 390x844 | 일반 모바일 레이아웃·팝업·접근성 회귀 | 통과 |
 | Web release | `flutter build web --release`, 루트·번들 HTTP 200 | 통과 |
-| Headless Chromium Web 390×844·768×1024 | 최신 5초 워밍업 발사 rAF 감사, p90 17.1·17.0ms, p99 17.7ms, 50ms 초과·콘솔 오류 0건 | 엄격 p90 16.7ms 미통과, 실기기 대체 아님 |
+| Headless Chromium Web 390×844·768×1024 | 5초·5초 워밍업, 독립 컨텍스트 3회 발사 입력 rAF 감사. p90 18.1·17.9ms, p99 18.6·18.5ms, 발사 누락 프레임·50ms 초과·Long Task·콘솔 오류 0건 | rAF는 Flutter build/raster 시간이 아님. 엄격 p90 16.7ms 미통과, 실기기 대체 아님 |
 | Android Debug APK | `flutter build apk --debug` 성공 | 컴파일 통과, 실기기 미검증 |
 | Android Release APK | 최신 `flutter build apk --release` 성공, 62.3MB, ARM64 에뮬레이터 재설치·시작 | 컴파일·에뮬레이터 시작 통과, 서명·실기기 미검증 |
 | Android ARM64 API 28 AVD | 최신 10단계 Release의 홈·속성 이전·충전·발사·실패 인과, 단계 초기화 20회와 연속 재조준 20회×2주기 실제 입력 | 기능·반복 메모리 대리 통과, SwiftShader 에뮬레이터이며 실기기 대체 아님 |

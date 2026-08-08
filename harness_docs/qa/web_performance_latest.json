@@ -1,12 +1,16 @@
 {
-  "measured_at": "2026-08-08T15:19:16.949609+00:00",
+  "measured_at": "2026-08-08T15:35:01.201220+00:00",
   "url": "http://127.0.0.1:8080/",
   "runtime": "Chromium headless Web release proxy; not a physical-device result",
+  "frame_metric": "requestAnimationFrame callback interval; includes browser display scheduler jitter and is not Flutter build/raster duration",
   "warmup_ms": {
-    "page": 1800,
-    "play": 1200
+    "page": 5000,
+    "play": 5000
   },
+  "repetitions": 3,
+  "shot_window_ms": 3150,
   "frame_target_ms": 16.667,
+  "missed_vsync_threshold": "interval > per-section median * 1.5",
   "long_task_threshold_ms": 50.0,
   "records": [
     {
@@ -14,97 +18,162 @@
         "width": 390,
         "height": 844
       },
-      "start_button": {
-        "x": 194.5,
-        "y": 549.5
-      },
       "launch_point": {
         "x": 60,
         "y": 580
       },
       "console_errors": [],
       "idle": {
-        "samples": 109,
-        "mean_ms": 16.972,
-        "p90_ms": 17.1,
-        "p95_ms": 17.2,
-        "p99_ms": 17.6,
-        "max_ms": 50.6,
-        "over_20ms_ratio": 0.0092,
-        "over_50ms_count": 1,
-        "over_50ms_ratio": 0.0092
-      },
-      "idle_long_tasks": [
-        {
-          "duration_ms": 134,
-          "start_ms": 154.19999980926514
-        },
-        {
-          "duration_ms": 75,
-          "start_ms": 527.8000001907349
-        },
-        {
-          "duration_ms": 52,
-          "start_ms": 616
-        },
-        {
-          "duration_ms": 59,
-          "start_ms": 668.1000003814697
-        },
-        {
-          "duration_ms": 1215,
-          "start_ms": 727.6999998092651
-        },
-        {
-          "duration_ms": 138,
-          "start_ms": 1946.1999998092651
-        },
-        {
-          "duration_ms": 110,
-          "start_ms": 2128.5
-        },
-        {
-          "duration_ms": 517,
-          "start_ms": 2257.5
-        },
-        {
-          "duration_ms": 51,
-          "start_ms": 2982.5
-        },
-        {
-          "duration_ms": 220,
-          "start_ms": 3109.6000003814697
-        },
-        {
-          "duration_ms": 58,
-          "start_ms": 3329.8999996185303
-        },
-        {
-          "duration_ms": 56,
-          "start_ms": 5298.5
-        }
-      ],
-      "shot": {
-        "samples": 149,
-        "mean_ms": 16.78,
-        "p90_ms": 17.1,
-        "p95_ms": 17.3,
-        "p99_ms": 17.6,
-        "max_ms": 32.9,
-        "over_20ms_ratio": 0.0067,
+        "samples": 325,
+        "mean_ms": 16.775,
+        "median_ms": 16.7,
+        "p90_ms": 18.1,
+        "p95_ms": 18.2,
+        "p99_ms": 18.6,
+        "max_ms": 33.5,
+        "over_20ms_ratio": 0.0062,
         "over_50ms_count": 0,
-        "over_50ms_ratio": 0.0
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 2,
+        "missed_vsync_ratio": 0.0062
       },
-      "shot_long_tasks": []
+      "idle_long_tasks": [],
+      "shot": {
+        "samples": 568,
+        "mean_ms": 16.662,
+        "median_ms": 16.7,
+        "p90_ms": 18.1,
+        "p95_ms": 18.2,
+        "p99_ms": 18.6,
+        "max_ms": 18.7,
+        "over_20ms_ratio": 0.0,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 0,
+        "missed_vsync_ratio": 0.0
+      },
+      "shot_long_tasks": [],
+      "trials": [
+        {
+          "trial": 1,
+          "start_button": {
+            "x": 194.5,
+            "y": 549.5
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.668,
+            "median_ms": 16.7,
+            "p90_ms": 18,
+            "p95_ms": 18.2,
+            "p99_ms": 18.4,
+            "max_ms": 18.6,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 189,
+            "mean_ms": 16.661,
+            "median_ms": 16.7,
+            "p90_ms": 18.1,
+            "p95_ms": 18.2,
+            "p99_ms": 18.6,
+            "max_ms": 18.7,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 2,
+          "start_button": {
+            "x": 194.5,
+            "y": 549.5
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.822,
+            "median_ms": 16.7,
+            "p90_ms": 18.1,
+            "p95_ms": 18.2,
+            "p99_ms": 18.7,
+            "max_ms": 32,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 190,
+            "mean_ms": 16.667,
+            "median_ms": 16.7,
+            "p90_ms": 18.1,
+            "p95_ms": 18.2,
+            "p99_ms": 18.5,
+            "max_ms": 18.6,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 3,
+          "start_button": {
+            "x": 194.5,
+            "y": 549.5
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.835,
+            "median_ms": 16.7,
+            "p90_ms": 18.1,
+            "p95_ms": 18.3,
+            "p99_ms": 18.6,
+            "max_ms": 33.5,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 189,
+            "mean_ms": 16.658,
+            "median_ms": 16.7,
+            "p90_ms": 18,
+            "p95_ms": 18.3,
+            "p99_ms": 18.6,
+            "max_ms": 18.7,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "shot_long_tasks": []
+        }
+      ]
     },
     {
       "viewport": {
         "width": 768,
         "height": 1024
-      },
-      "start_button": {
-        "x": 383.5,
-        "y": 653.5
       },
       "launch_point": {
         "x": 176,
@@ -112,46 +181,151 @@
       },
       "console_errors": [],
       "idle": {
-        "samples": 109,
-        "mean_ms": 16.667,
-        "p90_ms": 17.1,
-        "p95_ms": 17.3,
-        "p99_ms": 17.5,
-        "max_ms": 17.6,
+        "samples": 327,
+        "mean_ms": 16.672,
+        "median_ms": 16.7,
+        "p90_ms": 18,
+        "p95_ms": 18.1,
+        "p99_ms": 18.5,
+        "max_ms": 18.7,
         "over_20ms_ratio": 0.0,
         "over_50ms_count": 0,
-        "over_50ms_ratio": 0.0
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 0,
+        "missed_vsync_ratio": 0.0
       },
-      "idle_long_tasks": [
-        {
-          "duration_ms": 130,
-          "start_ms": 102.39999961853027
-        },
-        {
-          "duration_ms": 778,
-          "start_ms": 571.5
-        },
-        {
-          "duration_ms": 194,
-          "start_ms": 1383.5999994277954
-        },
-        {
-          "duration_ms": 618,
-          "start_ms": 1848
-        }
-      ],
+      "idle_long_tasks": [],
       "shot": {
-        "samples": 150,
-        "mean_ms": 16.778,
-        "p90_ms": 17.3,
-        "p95_ms": 17.5,
-        "p99_ms": 17.7,
-        "max_ms": 32.7,
-        "over_20ms_ratio": 0.0067,
+        "samples": 569,
+        "mean_ms": 16.67,
+        "median_ms": 16.7,
+        "p90_ms": 17.9,
+        "p95_ms": 18.2,
+        "p99_ms": 18.5,
+        "max_ms": 18.6,
+        "over_20ms_ratio": 0.0,
         "over_50ms_count": 0,
-        "over_50ms_ratio": 0.0
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 0,
+        "missed_vsync_ratio": 0.0
       },
-      "shot_long_tasks": []
+      "shot_long_tasks": [],
+      "trials": [
+        {
+          "trial": 1,
+          "start_button": {
+            "x": 383.5,
+            "y": 653.5
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.678,
+            "median_ms": 16.7,
+            "p90_ms": 18,
+            "p95_ms": 18.1,
+            "p99_ms": 18.2,
+            "max_ms": 18.5,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 191,
+            "mean_ms": 16.676,
+            "median_ms": 16.7,
+            "p90_ms": 18,
+            "p95_ms": 18.2,
+            "p99_ms": 18.6,
+            "max_ms": 18.6,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 2,
+          "start_button": {
+            "x": 383.5,
+            "y": 653.5
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.669,
+            "median_ms": 16.7,
+            "p90_ms": 17.9,
+            "p95_ms": 18.2,
+            "p99_ms": 18.5,
+            "max_ms": 18.6,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 189,
+            "mean_ms": 16.67,
+            "median_ms": 16.7,
+            "p90_ms": 17.9,
+            "p95_ms": 18.2,
+            "p99_ms": 18.4,
+            "max_ms": 18.4,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 3,
+          "start_button": {
+            "x": 383.5,
+            "y": 653.5
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.668,
+            "median_ms": 16.7,
+            "p90_ms": 17.9,
+            "p95_ms": 18.1,
+            "p99_ms": 18.5,
+            "max_ms": 18.7,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 189,
+            "mean_ms": 16.665,
+            "median_ms": 16.7,
+            "p90_ms": 17.9,
+            "p95_ms": 18.1,
+            "p99_ms": 18.5,
+            "max_ms": 18.5,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "shot_long_tasks": []
+        }
+      ]
     }
   ]
 }

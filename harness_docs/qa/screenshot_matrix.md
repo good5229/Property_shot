@@ -75,7 +75,7 @@
 ## 2026-08-02 최신 Web release 시각·성능 증거
 
 - `390x844-audio-release-home.png`, `390x844-audio-release-play.png`, `768x1024-audio-release-home.png`, `768x1024-audio-release-play.png`는 최신 오디오 코드가 포함된 Web release의 변경 후 캡처다.
-- `harness_docs/qa/web_performance_latest.json`은 Chromium 390×844·768×1024에서 idle·발사 구간을 측정한 결과로, 콘솔 오류 0건·평균 약 16.67ms·20ms 초과 프레임 0%를 기록한다.
+- `harness_docs/qa/web_performance_latest.json`은 Chromium 390×844·768×1024의 독립 컨텍스트 3회에서 유휴·발사 입력 구간을 측정한 결과다. 발사 입력 구간은 콘솔 오류·Long Task·누락 프레임·50ms 초과 0건이며 평균 약 16.67ms다.
 - 이 자료는 Web 보조 측정이며 실제 iPhone/iPad GPU·메모리·터치·햅틱 결과로 해석하지 않는다.
 
 ## 2026-08-03 최신 Web 성능 재측정

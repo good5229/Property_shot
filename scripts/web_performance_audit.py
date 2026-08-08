@@ -88,6 +88,41 @@ def _measure_frames(page, duration_ms: int) -> list[float]:
     )
 
 
+def _start_frame_capture(page) -> None:
+    page.evaluate(
+        """
+        () => {
+          window.__propertyShotFrameSamples = [];
+          window.__propertyShotPreviousFrame = null;
+          const frame = now => {
+            if (window.__propertyShotPreviousFrame !== null) {
+              window.__propertyShotFrameSamples.push(
+                now - window.__propertyShotPreviousFrame
+              );
+            }
+            window.__propertyShotPreviousFrame = now;
+            window.__propertyShotFrameCapture = requestAnimationFrame(frame);
+          };
+          window.__propertyShotFrameCapture = requestAnimationFrame(frame);
+        }
+        """
+    )
+
+
+def _stop_frame_capture(page) -> list[float]:
+    return page.evaluate(
+        """
+        () => {
+          cancelAnimationFrame(window.__propertyShotFrameCapture);
+          const samples = window.__propertyShotFrameSamples || [];
+          window.__propertyShotFrameSamples = [];
+          window.__propertyShotPreviousFrame = null;
+          return samples;
+        }
+        """
+    )
+
+
 def _start_long_task_capture(page) -> None:
     page.evaluate(
         """
@@ -103,7 +138,7 @@ def _start_long_task_capture(page) -> None:
             }
           });
           try {
-            observer.observe({type: 'longtask', buffered: true});
+            observer.observe({type: 'longtask'});
             window.__propertyShotLongTaskObserver = observer;
           } catch (_) {
             window.__propertyShotLongTasks = [];
@@ -130,6 +165,7 @@ def _stats(samples: list[float]) -> dict[str, float | int | None]:
         return {
             "samples": 0,
             "mean_ms": None,
+            "median_ms": None,
             "p90_ms": None,
             "p95_ms": None,
             "p99_ms": None,
@@ -137,6 +173,8 @@ def _stats(samples: list[float]) -> dict[str, float | int | None]:
             "over_20ms_ratio": None,
             "over_50ms_count": 0,
             "over_50ms_ratio": None,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": None,
         }
     ordered = sorted(samples)
 
@@ -145,9 +183,12 @@ def _stats(samples: list[float]) -> dict[str, float | int | None]:
         return round(ordered[index], 3)
 
     over_50ms_count = sum(value > 50 for value in samples)
+    cadence = statistics.median(samples)
+    missed_vsync_count = sum(value > cadence * 1.5 for value in samples)
     return {
         "samples": len(samples),
         "mean_ms": round(statistics.fmean(samples), 3),
+        "median_ms": round(cadence, 3),
         "p90_ms": percentile(0.90),
         "p95_ms": percentile(0.95),
         "p99_ms": percentile(0.99),
@@ -155,7 +196,18 @@ def _stats(samples: list[float]) -> dict[str, float | int | None]:
         "over_20ms_ratio": round(sum(value > 20 for value in samples) / len(samples), 4),
         "over_50ms_count": over_50ms_count,
         "over_50ms_ratio": round(over_50ms_count / len(samples), 4),
+        "missed_vsync_count": missed_vsync_count,
+        "missed_vsync_ratio": round(missed_vsync_count / len(samples), 4),
     }
+
+
+def _aggregate_trials(trials: list[dict], section: str) -> dict:
+    samples = [
+        sample
+        for trial in trials
+        for sample in trial[f"{section}_samples"]
+    ]
+    return _stats(samples)
 
 
 def main() -> int:
@@ -166,58 +218,120 @@ def main() -> int:
         type=Path,
         default=Path("harness_docs/qa/web_performance_latest.json"),
     )
-    parser.add_argument("--page-warmup-ms", type=int, default=1800)
-    parser.add_argument("--play-warmup-ms", type=int, default=1200)
+    parser.add_argument("--page-warmup-ms", type=int, default=5000)
+    parser.add_argument("--play-warmup-ms", type=int, default=5000)
+    parser.add_argument("--repetitions", type=int, default=3)
     args = parser.parse_args()
+    if args.repetitions < 1:
+        parser.error("반복 횟수는 1 이상이어야 합니다.")
 
     records = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         for width, height in VIEWPORTS:
-            page = browser.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
-            errors: list[str] = []
-            page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
-            page.goto(args.url)
-            page.wait_for_timeout(args.page_warmup_ms)
-            try:
-                start = _start_button_center(page.screenshot())
-            except RuntimeError:
-                start = START_POINTS[(width, height)]
-            page.mouse.click(*start)
-            page.wait_for_timeout(args.play_warmup_ms)
-            _start_long_task_capture(page)
-            idle = _measure_frames(page, 1800)
-            idle_long_tasks = _drain_long_tasks(page)
-            page.mouse.move(*BALL_POINTS[(width, height)])
-            page.mouse.down()
-            page.wait_for_timeout(650)
-            page.mouse.up()
-            shot = _measure_frames(page, 2500)
-            shot_long_tasks = _drain_long_tasks(page)
+            trials = []
+            for trial_index in range(args.repetitions):
+                context = browser.new_context(
+                    viewport={"width": width, "height": height},
+                    device_scale_factor=1,
+                )
+                page = context.new_page()
+                errors: list[str] = []
+                page.on(
+                    "console",
+                    lambda message, errors=errors: errors.append(message.text)
+                    if message.type == "error"
+                    else None,
+                )
+                page.goto(args.url)
+                page.wait_for_timeout(args.page_warmup_ms)
+                try:
+                    start = _start_button_center(page.screenshot())
+                except RuntimeError:
+                    start = START_POINTS[(width, height)]
+                page.mouse.click(*start)
+                page.wait_for_timeout(args.play_warmup_ms)
+                _start_long_task_capture(page)
+
+                idle = _measure_frames(page, 1800)
+                idle_long_tasks = _drain_long_tasks(page)
+
+                _start_frame_capture(page)
+                page.mouse.move(*BALL_POINTS[(width, height)])
+                page.mouse.down()
+                page.wait_for_timeout(650)
+                page.mouse.up()
+                page.wait_for_timeout(2500)
+                shot = _stop_frame_capture(page)
+                shot_long_tasks = _drain_long_tasks(page)
+                trials.append(
+                    {
+                        "trial": trial_index + 1,
+                        "start_button": {
+                            "x": round(start[0], 1),
+                            "y": round(start[1], 1),
+                        },
+                        "console_errors": errors,
+                        "idle": _stats(idle),
+                        "idle_samples": idle,
+                        "idle_long_tasks": idle_long_tasks,
+                        "shot": _stats(shot),
+                        "shot_samples": shot,
+                        "shot_long_tasks": shot_long_tasks,
+                    }
+                )
+                context.close()
+            errors = [error for trial in trials for error in trial["console_errors"]]
+            idle_long_tasks = [
+                {"trial": trial["trial"], **task}
+                for trial in trials
+                for task in trial["idle_long_tasks"]
+            ]
+            shot_long_tasks = [
+                {"trial": trial["trial"], **task}
+                for trial in trials
+                for task in trial["shot_long_tasks"]
+            ]
             records.append(
                 {
                     "viewport": {"width": width, "height": height},
-                    "start_button": {"x": round(start[0], 1), "y": round(start[1], 1)},
-                    "launch_point": {"x": BALL_POINTS[(width, height)][0], "y": BALL_POINTS[(width, height)][1]},
+                    "launch_point": {
+                        "x": BALL_POINTS[(width, height)][0],
+                        "y": BALL_POINTS[(width, height)][1],
+                    },
                     "console_errors": errors,
-                    "idle": _stats(idle),
+                    "idle": _aggregate_trials(trials, "idle"),
                     "idle_long_tasks": idle_long_tasks,
-                    "shot": _stats(shot),
+                    "shot": _aggregate_trials(trials, "shot"),
                     "shot_long_tasks": shot_long_tasks,
+                    "trials": [
+                        {
+                            key: value
+                            for key, value in trial.items()
+                            if not key.endswith("_samples")
+                        }
+                        for trial in trials
+                    ],
                 }
             )
-            page.close()
         browser.close()
 
     payload = {
         "measured_at": datetime.now(timezone.utc).isoformat(),
         "url": args.url,
         "runtime": "Chromium headless Web release proxy; not a physical-device result",
+        "frame_metric": (
+            "requestAnimationFrame callback interval; includes browser display "
+            "scheduler jitter and is not Flutter build/raster duration"
+        ),
         "warmup_ms": {
             "page": args.page_warmup_ms,
             "play": args.play_warmup_ms,
         },
+        "repetitions": args.repetitions,
+        "shot_window_ms": 3150,
         "frame_target_ms": 16.667,
+        "missed_vsync_threshold": "interval > per-section median * 1.5",
         "long_task_threshold_ms": 50.0,
         "records": records,
     }
