@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
+import 'package:property_shot/ui/game_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -57,6 +59,38 @@ void main() {
     await tester.tap(find.byKey(const Key('help_reset_button')));
     await tester.pump();
     expect(GameFeedback.helpRevision, 1);
+  });
+
+  testWidgets('도움말 다시 보기는 다음 플레이에서 한 번만 열린다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      GameFeedback.helpRevisionPreferenceKey: 1,
+      GameFeedback.helpAcknowledgedRevisionPreferenceKey: 0,
+    });
+    GameFeedback.helpRevision = 1;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: levels.first.createState(0, productRules: true),
+          loadGameAssets: false,
+          showStageSelector: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byKey(const Key('game_help_dialog')), findsOneWidget);
+    expect(find.text('게임 도움말'), findsOneWidget);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getInt(
+        GameFeedback.helpAcknowledgedRevisionPreferenceKey,
+      ),
+      1,
+    );
+    await tester.tap(find.byKey(const Key('game_help_close_button')));
+    await tester.pump();
   });
 }
 

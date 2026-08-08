@@ -287,6 +287,44 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bestShotsLoadFuture = _loadBestShots();
     _telemetry.record('단계 시작', stage: _state.levelIndex);
     _recordHintExposureIfNeeded();
+    unawaited(_showRequestedHelp());
+  }
+
+  Future<void> _showRequestedHelp() async {
+    final requested = await GameFeedback.consumeHelpReplayRequest();
+    if (!requested || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('game_help_dialog'),
+        title: const Text('게임 도움말'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _currentLevel.name,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(_state.message),
+              const SizedBox(height: 12),
+              const Text('방향을 정한 뒤 공을 길게 눌러 힘을 모으면 자동으로 발사됩니다.'),
+              const SizedBox(height: 8),
+              const Text('공이나 물체를 누르면 속성과 현재 상태를 확인할 수 있습니다.'),
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            key: const Key('game_help_close_button'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

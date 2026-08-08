@@ -1278,7 +1278,7 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('소리와 진동'),
+      title: const Text('게임 설정'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,

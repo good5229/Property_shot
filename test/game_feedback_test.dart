@@ -202,6 +202,12 @@ void main() {
       3,
     );
     expect(preferences.getInt(GameFeedback.helpRevisionPreferenceKey), 1);
+    expect(await GameFeedback.consumeHelpReplayRequest(), isTrue);
+    expect(await GameFeedback.consumeHelpReplayRequest(), isFalse);
+    expect(
+      preferences.getInt(GameFeedback.helpAcknowledgedRevisionPreferenceKey),
+      1,
+    );
     GameFeedback.screenShakeStrength = 2;
     GameFeedback.helpRevision = 0;
   });

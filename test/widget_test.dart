@@ -915,7 +915,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('feedback_settings_button')));
     await _pumpForAsyncWork(tester);
-    expect(find.text('소리와 진동'), findsOneWidget);
+    expect(find.text('게임 설정'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('sound_toggle')));
     await tester.tap(find.byKey(const Key('haptics_toggle')));

@@ -24,6 +24,8 @@ class GameFeedback {
   static const screenShakeStrengthPreferenceKey =
       'property_shot_screen_shake_strength';
   static const helpRevisionPreferenceKey = 'property_shot_help_revision';
+  static const helpAcknowledgedRevisionPreferenceKey =
+      'property_shot_help_acknowledged_revision';
   static const settingsSchemaVersionKey =
       'property_shot_settings_schema_version';
   static const settingsSchemaVersion = 2;
@@ -122,6 +124,23 @@ class GameFeedback {
   static Future<void> resetHelpPreferences() async {
     helpRevision = (helpRevision + 1).clamp(0, 999999).toInt();
     await _savePreferenceInt(helpRevisionPreferenceKey, helpRevision);
+  }
+
+  /// 설정에서 요청한 도움말을 다음 플레이 진입에서 정확히 한 번 소비한다.
+  static Future<bool> consumeHelpReplayRequest() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final acknowledged =
+          preferences.getInt(helpAcknowledgedRevisionPreferenceKey) ?? 0;
+      if (helpRevision <= acknowledged) return false;
+      await preferences.setInt(
+        helpAcknowledgedRevisionPreferenceKey,
+        helpRevision,
+      );
+      return true;
+    } on Exception {
+      return false;
+    }
   }
 
   static Future<void> _savePreference(String key, bool value) async {
