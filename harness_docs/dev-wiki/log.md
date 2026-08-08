@@ -1845,3 +1845,4 @@ Use consistent headings so entries are easy to grep.
 - 실제 모바일 샷 분포가 없으므로 p95 50ms 목표는 통과로 선언하지 않고 실기기 미검증으로 유지한다.
 - 교정 후 전체 Flutter 회귀 896개가 약 3분 56초에 통과했고 정적 분석 문제는 0건이다.
 - 최신 Web Release 감사는 발사 p90 17.1ms·17.3ms, p99 17.6ms·17.7ms, 발사 중 50ms 초과·Long Task·콘솔 오류 0건을 기록했다. 390×844 유휴 구간의 50.6ms 프레임 1건과 엄격 p90 초과를 그대로 보존해 성능 게이트 미통과를 유지한다.
+- 기존 데모 PID 79482를 종료한 뒤 최신 Web Release를 PID 796으로 교체했다. 루트·`main.dart.js`·실제 번들 음악 `property_shot_island_loop.wav`의 HTTP 200과 앱 번들 SHA-256 `ccf9b216...cd59`를 확인했다.
