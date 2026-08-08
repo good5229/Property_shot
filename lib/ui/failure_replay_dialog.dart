@@ -8,9 +8,14 @@ import '../game/property_shot_game.dart';
 import 'game_feedback.dart';
 
 class FailureReplayDialog extends StatefulWidget {
-  const FailureReplayDialog({super.key, required this.data});
+  const FailureReplayDialog({
+    super.key,
+    required this.data,
+    this.autoplay = true,
+  });
 
   final FailureReplayData data;
+  final bool autoplay;
 
   @override
   State<FailureReplayDialog> createState() => _FailureReplayDialogState();
@@ -63,13 +68,13 @@ class _FailureReplayDialogState extends State<FailureReplayDialog> {
           _finished = true;
         });
       },
-    )..setPlaybackSpeed(_replaySpeed);
-    _startReplay();
+    );
+    _startReplay(playing: widget.autoplay);
   }
 
   double get _replaySpeed => GameFeedback.lastShotSlowMotionEnabled ? 0.5 : 1.0;
 
-  void _startReplay() {
+  void _startReplay({bool playing = true}) {
     _game.setStateSnapshot(
       widget.data.result.state,
       path: widget.data.result.path,
@@ -85,8 +90,9 @@ class _FailureReplayDialogState extends State<FailureReplayDialog> {
           PropertyShotGame.animationCursorUnitsPerSecond * 3,
     );
     _game.setAnimationCursorForReplay(start.toDouble());
-    _playing = true;
+    _playing = playing;
     _finished = false;
+    _game.setPlaybackSpeed(playing ? _replaySpeed : 0);
   }
 
   void _togglePlayback() {
@@ -104,10 +110,11 @@ class _FailureReplayDialogState extends State<FailureReplayDialog> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final width = math.min(520.0, math.max(280.0, size.width - 32));
-    final height = math.min(560.0, math.max(300.0, size.height - 48));
+    final height = math.min(680.0, math.max(300.0, size.height - 48));
     return Dialog(
       key: const Key('failure_replay_dialog'),
       child: SizedBox(
+        key: const Key('failure_replay_panel'),
         width: width,
         height: height,
         child: Padding(
