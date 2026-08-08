@@ -1441,134 +1441,137 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('게임 설정'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _settingSwitch(
-              key: const Key('last_shot_slow_motion_toggle'),
-              title: '마지막 샷 슬로모션',
-              subtitle: '실패 장면을 반속도로 되돌려 봅니다.',
-              value: GameFeedback.lastShotSlowMotionEnabled,
-              onChanged: GameFeedback.setLastShotSlowMotionEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('collision_order_toggle'),
-              title: '충돌 순서 표시',
-              value: GameFeedback.collisionOrderEnabled,
-              onChanged: GameFeedback.setCollisionOrderEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('last_contact_highlight_toggle'),
-              title: '마지막 접촉 대상 강조',
-              value: GameFeedback.lastContactHighlightEnabled,
-              onChanged: GameFeedback.setLastContactHighlightEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('nearest_hole_toggle'),
-              title: '홀 최근접 위치',
-              value: GameFeedback.nearestHoleEnabled,
-              onChanged: GameFeedback.setNearestHoleEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('trait_activation_toggle'),
-              title: '속성 발동 표시',
-              value: GameFeedback.traitActivationEnabled,
-              onChanged: GameFeedback.setTraitActivationEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('gimmick_causality_toggle'),
-              title: '기믹 인과 표시',
-              value: GameFeedback.gimmickCausalityEnabled,
-              onChanged: GameFeedback.setGimmickCausalityEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('collision_path_icons_toggle'),
-              title: '충돌 경로 아이콘',
-              value: GameFeedback.collisionPathIconsEnabled,
-              onChanged: GameFeedback.setCollisionPathIconsEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('chain_score_details_toggle'),
-              title: '연쇄 점수 상세 표시',
-              subtitle: '끄더라도 획득한 총점은 그대로 유지됩니다.',
-              value: GameFeedback.chainScoreDetailsEnabled,
-              onChanged: GameFeedback.setChainScoreDetailsEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('haptics_toggle'),
-              title: '진동',
-              value: GameFeedback.hapticsEnabled,
-              onChanged: GameFeedback.setHapticsEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('reduced_motion_toggle'),
-              title: '저모션',
-              subtitle: '충돌 인과는 유지하고 흔들림과 반복 효과를 줄입니다.',
-              value: GameFeedback.reducedMotionEnabled,
-              onChanged: GameFeedback.setReducedMotionEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('screen_shake_toggle'),
-              title: '화면 흔들림',
-              value: GameFeedback.screenShakeEnabled,
-              onChanged: GameFeedback.setScreenShakeEnabled,
-            ),
-            DropdownButtonFormField<int>(
-              key: const Key('screen_shake_strength_dropdown'),
-              decoration: const InputDecoration(labelText: '화면 흔들림 강도'),
-              initialValue: GameFeedback.screenShakeStrength,
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('끔')),
-                DropdownMenuItem(value: 1, child: Text('약하게')),
-                DropdownMenuItem(value: 2, child: Text('보통')),
-                DropdownMenuItem(value: 3, child: Text('강하게')),
-              ],
-              onChanged: (strength) {
-                if (strength == null) return;
-                setState(() {
-                  GameFeedback.screenShakeStrength = strength;
-                  GameFeedback.screenShakeEnabled = strength > 0;
-                });
-                unawaited(GameFeedback.setScreenShakeStrength(strength));
-              },
-            ),
-            _settingSwitch(
-              key: const Key('strong_flash_toggle'),
-              title: '강한 점멸 효과',
-              subtitle: '끄면 반복 점멸을 정적인 밝기와 윤곽으로 바꿉니다.',
-              value: GameFeedback.strongFlashEnabled,
-              onChanged: GameFeedback.setStrongFlashEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('sound_toggle'),
-              title: '효과음',
-              value: GameFeedback.soundEnabled,
-              onChanged: GameFeedback.setSoundEnabled,
-            ),
-            _settingSwitch(
-              key: const Key('background_music_toggle'),
-              title: '배경 음악',
-              subtitle: '웹 데모의 합성음을 잔잔한 간격으로 반복합니다.',
-              value: GameFeedback.backgroundMusicEnabled,
-              onChanged: GameFeedback.setBackgroundMusicEnabled,
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                key: const Key('help_reset_button'),
-                onPressed: () async {
-                  await GameFeedback.resetHelpPreferences();
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('도움말을 다음 화면에서 다시 보여 드립니다.')),
-                  );
-                },
-                icon: const Icon(Icons.help_outline),
-                label: const Text('도움말 다시 보기'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 620),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _settingSwitch(
+                key: const Key('last_shot_slow_motion_toggle'),
+                title: '마지막 샷 슬로모션',
+                subtitle: '실패 장면을 반속도로 되돌려 봅니다.',
+                value: GameFeedback.lastShotSlowMotionEnabled,
+                onChanged: GameFeedback.setLastShotSlowMotionEnabled,
               ),
-            ),
-          ],
+              _settingSwitch(
+                key: const Key('collision_order_toggle'),
+                title: '충돌 순서 표시',
+                value: GameFeedback.collisionOrderEnabled,
+                onChanged: GameFeedback.setCollisionOrderEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('last_contact_highlight_toggle'),
+                title: '마지막 접촉 대상 강조',
+                value: GameFeedback.lastContactHighlightEnabled,
+                onChanged: GameFeedback.setLastContactHighlightEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('nearest_hole_toggle'),
+                title: '홀 최근접 위치',
+                value: GameFeedback.nearestHoleEnabled,
+                onChanged: GameFeedback.setNearestHoleEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('trait_activation_toggle'),
+                title: '속성 발동 표시',
+                value: GameFeedback.traitActivationEnabled,
+                onChanged: GameFeedback.setTraitActivationEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('gimmick_causality_toggle'),
+                title: '기믹 인과 표시',
+                value: GameFeedback.gimmickCausalityEnabled,
+                onChanged: GameFeedback.setGimmickCausalityEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('collision_path_icons_toggle'),
+                title: '충돌 경로 아이콘',
+                value: GameFeedback.collisionPathIconsEnabled,
+                onChanged: GameFeedback.setCollisionPathIconsEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('chain_score_details_toggle'),
+                title: '연쇄 점수 상세 표시',
+                subtitle: '끄더라도 획득한 총점은 그대로 유지됩니다.',
+                value: GameFeedback.chainScoreDetailsEnabled,
+                onChanged: GameFeedback.setChainScoreDetailsEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('haptics_toggle'),
+                title: '진동',
+                value: GameFeedback.hapticsEnabled,
+                onChanged: GameFeedback.setHapticsEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('reduced_motion_toggle'),
+                title: '저모션',
+                subtitle: '충돌 인과는 유지하고 흔들림과 반복 효과를 줄입니다.',
+                value: GameFeedback.reducedMotionEnabled,
+                onChanged: GameFeedback.setReducedMotionEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('screen_shake_toggle'),
+                title: '화면 흔들림',
+                value: GameFeedback.screenShakeEnabled,
+                onChanged: GameFeedback.setScreenShakeEnabled,
+              ),
+              DropdownButtonFormField<int>(
+                key: const Key('screen_shake_strength_dropdown'),
+                decoration: const InputDecoration(labelText: '화면 흔들림 강도'),
+                initialValue: GameFeedback.screenShakeStrength,
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('끔')),
+                  DropdownMenuItem(value: 1, child: Text('약하게')),
+                  DropdownMenuItem(value: 2, child: Text('보통')),
+                  DropdownMenuItem(value: 3, child: Text('강하게')),
+                ],
+                onChanged: (strength) {
+                  if (strength == null) return;
+                  setState(() {
+                    GameFeedback.screenShakeStrength = strength;
+                    GameFeedback.screenShakeEnabled = strength > 0;
+                  });
+                  unawaited(GameFeedback.setScreenShakeStrength(strength));
+                },
+              ),
+              _settingSwitch(
+                key: const Key('strong_flash_toggle'),
+                title: '강한 점멸 효과',
+                subtitle: '끄면 반복 점멸을 정적인 밝기와 윤곽으로 바꿉니다.',
+                value: GameFeedback.strongFlashEnabled,
+                onChanged: GameFeedback.setStrongFlashEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('sound_toggle'),
+                title: '효과음',
+                value: GameFeedback.soundEnabled,
+                onChanged: GameFeedback.setSoundEnabled,
+              ),
+              _settingSwitch(
+                key: const Key('background_music_toggle'),
+                title: '배경 음악',
+                subtitle: '잔잔한 섬 테마를 반복 재생합니다.',
+                value: GameFeedback.backgroundMusicEnabled,
+                onChanged: GameFeedback.setBackgroundMusicEnabled,
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const Key('help_reset_button'),
+                  onPressed: () async {
+                    await GameFeedback.resetHelpPreferences();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('도움말을 다음 화면에서 다시 보여 드립니다.')),
+                    );
+                  },
+                  icon: const Icon(Icons.help_outline),
+                  label: const Text('도움말 다시 보기'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

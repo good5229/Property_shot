@@ -37,6 +37,7 @@ dependencies:
   flame: ^1.38.0
   shared_preferences: ^2.5.3
   crypto: ^3.0.7
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +64,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/generated/
+    - assets/audio/
     - assets/stages/
 
   fonts:

@@ -17,11 +17,12 @@
 | `ios/Runner/Assets.xcassets/AppIcon.appiconset/` | iOS 아이콘 파생 파일 | 원본에서 규격별 생성 |
 | `ios/Runner/Assets.xcassets/LaunchImage.imageset/` | 런치 화면 | 프로젝트 전용 구성 |
 | `assets/fonts/NanumGothic-*.ttf` | 한글 UI 글꼴 | OFL-1.1, `assets/fonts/OFL.txt` 보관 |
+| `assets/audio/property_shot_island_loop.wav` | 모바일·Web 배경 음악 | 프로젝트 자체 합성·생성 스크립트와 SHA-256 보관 |
 
 ## 재현 명령
 
 ```bash
-find assets/icons assets/generated assets/fonts ios/Runner/Assets.xcassets -type f -print0 | sort -z | xargs -0 shasum -a 256
+find assets/icons assets/generated assets/audio assets/fonts ios/Runner/Assets.xcassets -type f -print0 | sort -z | xargs -0 shasum -a 256
 
 # 저장소에 고정한 자산 해시를 검증한다.
 shasum -a 256 -c assets/licenses/asset_hashes.txt
