@@ -3,6 +3,20 @@ import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  PlayTelemetryContext context() => PlayTelemetryContext(
+    stageIndex: 0,
+    stageId: 'stage_heavy',
+    patternId: 'stage_heavy_a',
+    seed: 42,
+    resolverVersion: '판정기-1',
+    rewardState: PlayTelemetryRewardState(
+      candidateIds: const ['무거운 시작'],
+      selectedId: '무거운 시작',
+      acquiredIds: const ['무거운 시작'],
+      cloneCoreCount: 1,
+    ),
+  );
+
   test('로컬 플레이 계측은 개인정보 없이 JSON과 CSV로 내보낼 수 있다', () {
     final telemetry = LocalPlayTelemetry();
     telemetry.record(
@@ -96,6 +110,243 @@ void main() {
     }
 
     expect(telemetry.events.map((event) => event['event_code']), types.values);
+  });
+
+  test('총괄 계약의 타입 이벤트 20개를 빠짐없이 안정 코드와 한글 표시명으로 정의한다', () {
+    const expectedCodes = {
+      'run_started',
+      'stage_pattern_drawn',
+      'stage_entered',
+      'property_popup_opened',
+      'property_transferred',
+      'property_copied',
+      'aim_started',
+      'charge_stage_changed',
+      'charge_cancelled',
+      'shot_released',
+      'collision_chain_completed',
+      'reward_offered',
+      'reward_selected',
+      'optional_challenge_completed',
+      'stage_cleared',
+      'stage_retried',
+      'stage_abandoned',
+      'replay_viewed',
+      'daily_challenge_started',
+      'run_completed',
+    };
+
+    expect(PlayTelemetryEventType.values, hasLength(20));
+    expect(
+      PlayTelemetryEventType.values.map((type) => type.code).toSet(),
+      expectedCodes,
+    );
+    expect(
+      PlayTelemetryEventType.values.every(
+        (type) =>
+            type.displayName.isNotEmpty &&
+            !RegExp(r'[A-Za-z]').hasMatch(type.displayName),
+      ),
+      isTrue,
+    );
+  });
+
+  test('타입 이벤트는 공통 문맥과 필수 샷 지표를 JSON과 CSV에 직렬화한다', () {
+    final telemetry = LocalPlayTelemetry(
+      sessionId: '익명 세션',
+      persistLocally: false,
+    );
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.collisionChainCompleted,
+        context: context(),
+        shot: PlayTelemetryShotPayload(
+          shotId: 3,
+          angle: -1.2,
+          power: 0.85,
+          ballTraits: const ['무거움'],
+          causalChain: const ['충돌-1', '반사-2', '홀-3'],
+          causalDepth: 2,
+          effectiveChainLength: 3,
+          distinctObjectTypeCount: 2,
+          distinctObjectCount: 3,
+          wallUseCount: 1,
+          ballUseCount: 1,
+          objectUseCount: 1,
+          scoreDamped: true,
+          nearestHoleDistance: 0.25,
+          frameDurationMs: 16.7,
+          inputLatencyMs: 8.3,
+          result: PlayTelemetryResult.cleared,
+        ),
+      ),
+    );
+
+    final event = telemetry.events.single;
+    expect(event['event_code'], 'collision_chain_completed');
+    expect(event['유형'], '충돌 연쇄 완료');
+    expect(event['pattern_id'], 'stage_heavy_a');
+    expect(event['seed'], 42);
+    expect(event['resolver_version'], '판정기-1');
+    expect(event['reward_selected_id'], '무거운 시작');
+    expect(event['causal_chain'], ['충돌-1', '반사-2', '홀-3']);
+    expect(event['causal_depth'], 2);
+    expect(event['effective_chain_length'], 3);
+    expect(event['distinct_object_type_count'], 2);
+    expect(event['distinct_object_count'], 3);
+    expect(event['wall_use_count'], 1);
+    expect(event['ball_use_count'], 1);
+    expect(event['object_use_count'], 1);
+    expect(event['score_damped'], isTrue);
+    expect(event['nearest_hole_distance'], 0.25);
+    expect(event['frame_duration_ms'], 16.7);
+    expect(event['input_latency_ms'], 8.3);
+    expect(event['result_code'], 'cleared');
+    expect(telemetry.exportJson(), contains('stage_heavy_a'));
+    expect(telemetry.exportCsv(), contains('pattern_id'));
+    expect(telemetry.exportCsv(), contains('collision_chain_completed'));
+  });
+
+  test('타입 payload는 비유한 수와 잘못된 범위 및 빈 식별자를 거부한다', () {
+    PlayTelemetryShotPayload validShot({
+      double angle = 0,
+      double power = 0.5,
+      double nearestHoleDistance = 1,
+      double frameDurationMs = 16,
+      double inputLatencyMs = 4,
+      int causalDepth = 1,
+      int effectiveChainLength = 1,
+    }) => PlayTelemetryShotPayload(
+      shotId: 1,
+      angle: angle,
+      power: power,
+      causalChain: const ['충돌-1'],
+      causalDepth: causalDepth,
+      effectiveChainLength: effectiveChainLength,
+      distinctObjectTypeCount: 1,
+      distinctObjectCount: 1,
+      wallUseCount: 0,
+      ballUseCount: 1,
+      objectUseCount: 0,
+      scoreDamped: false,
+      nearestHoleDistance: nearestHoleDistance,
+      frameDurationMs: frameDurationMs,
+      inputLatencyMs: inputLatencyMs,
+      result: PlayTelemetryResult.continued,
+    );
+
+    expect(() => validShot(angle: double.nan), throwsArgumentError);
+    expect(() => validShot(power: 1.01), throwsArgumentError);
+    expect(
+      () => validShot(nearestHoleDistance: double.infinity),
+      throwsArgumentError,
+    );
+    expect(() => validShot(frameDurationMs: -1), throwsArgumentError);
+    expect(() => validShot(inputLatencyMs: double.nan), throwsArgumentError);
+    expect(() => validShot(causalDepth: -1), throwsArgumentError);
+    expect(() => validShot(effectiveChainLength: -1), throwsArgumentError);
+    expect(
+      () => PlayTelemetryContext(
+        stageIndex: 0,
+        stageId: '',
+        patternId: '패턴',
+        seed: 1,
+        resolverVersion: '1',
+        rewardState: PlayTelemetryRewardState(),
+      ),
+      throwsArgumentError,
+    );
+    for (final invalidSeed in [-1, 0x100000000]) {
+      expect(
+        () => PlayTelemetryContext(
+          stageIndex: 0,
+          stageId: '단계',
+          patternId: '패턴',
+          seed: invalidSeed,
+          resolverVersion: '1',
+          rewardState: PlayTelemetryRewardState(),
+        ),
+        throwsArgumentError,
+      );
+    }
+  });
+
+  test('타입 스키마와 저장 결과는 개인정보 필드를 수집하지 않는다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final telemetry = LocalPlayTelemetry(sessionId: '무작위 세션');
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.runStarted,
+        context: context(),
+        result: PlayTelemetryResult.continued,
+      ),
+    );
+    await telemetry.flush();
+
+    const forbiddenKeys = {
+      'name',
+      'email',
+      'phone',
+      'address',
+      'user_id',
+      'device_id',
+      'advertising_id',
+      '이름',
+      '이메일',
+      '전화번호',
+      '주소',
+    };
+    final stored = (await telemetry.loadPersisted()).single;
+    expect(stored.keys.toSet().intersection(forbiddenKeys), isEmpty);
+  });
+
+  test('기존 CSV 열은 같은 순서의 접두부로 유지된다', () {
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.shotReleased,
+        context: context(),
+      ),
+    );
+
+    const legacyHeader =
+        '시간,유형,단계,stage_id,시도,행동,속성,각도,힘,대상,결과,'
+        'result_code,route_tag,event_code,session_id,build_id,shot_id,'
+        'object_id,object_type,contact_id,attribute_before,attribute_after,'
+        'position,velocity,collision_normal,speed,speed_before,speed_after,'
+        'reference_speed,mass,impulse,is_replay,fps_bucket,elapsed_ms';
+    expect(telemetry.exportCsv(), startsWith('$legacyHeader,'));
+  });
+
+  test('구형 저장 JSON을 그대로 복원하고 새 이벤트와 함께 저장 상한을 지킨다', () async {
+    SharedPreferences.setMockInitialValues({
+      LocalPlayTelemetryStore.storageKey:
+          '[{"시간":"과거","유형":"발사","단계":1,"event_code":"shot_fired"}]',
+    });
+    final store = LocalPlayTelemetryStore(maxEvents: 2);
+    final telemetry = LocalPlayTelemetry(store: store);
+
+    expect((await store.load()).single['event_code'], 'shot_fired');
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.stageEntered,
+        context: context(),
+      ),
+    );
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.aimStarted,
+        context: context(),
+      ),
+    );
+    await telemetry.flush();
+
+    final restored = await store.load();
+    expect(restored, hasLength(2));
+    expect(restored.map((event) => event['event_code']), [
+      'stage_entered',
+      'aim_started',
+    ]);
   });
 
   test('플레이 계측은 개인정보 없이 로컬 저장소에 보관되고 복원된다', () async {

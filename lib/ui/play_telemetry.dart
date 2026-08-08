@@ -5,6 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/geometry.dart';
 import '../game/levels/levels.dart';
+import 'play_telemetry_schema.dart';
+
+export 'play_telemetry_schema.dart';
 
 class LocalPlayTelemetryStore {
   LocalPlayTelemetryStore({this.maxEvents = 2000});
@@ -177,9 +180,32 @@ class LocalPlayTelemetry {
     if (isReplay != null) event['is_replay'] = isReplay;
     if (fpsBucket != null) event['fps_bucket'] = fpsBucket;
     if (elapsedMs != null) event['elapsed_ms'] = elapsedMs;
+    _appendEvent(event);
+  }
+
+  void recordTyped(TypedPlayTelemetryEvent typedEvent) {
+    final context = typedEvent.context;
+    final result = typedEvent.result ?? typedEvent.shot?.result;
+    final event = <String, Object?>{
+      '시간': DateTime.now().toUtc().toIso8601String(),
+      '유형': typedEvent.type.displayName,
+      '단계': context.stageIndex + 1,
+      'stage_id': context.stageId,
+      'session_id': sessionId,
+      'build_id': buildId,
+      'event_code': typedEvent.type.code,
+      if (result != null) '결과': result.displayName,
+      if (result != null) 'result_code': result.code,
+      ...context.toJson(),
+      if (typedEvent.shot != null) ...typedEvent.shot!.toJson(),
+    };
+    _appendEvent(event);
+  }
+
+  void _appendEvent(Map<String, Object?> event) {
     _events.add(event);
     if (persistLocally) {
-      _pendingPersistence.add(event);
+      _pendingPersistence.add(Map<String, Object?>.from(event));
       _schedulePersistence();
     }
   }
@@ -276,6 +302,27 @@ class LocalPlayTelemetry {
       'is_replay',
       'fps_bucket',
       'elapsed_ms',
+      'pattern_id',
+      'seed',
+      'resolver_version',
+      'reward_candidate_ids',
+      'reward_selected_id',
+      'reward_acquired_ids',
+      'clone_core_count',
+      'ball_traits',
+      'causal_chain',
+      'causal_depth',
+      'effective_chain_length',
+      'distinct_object_type_count',
+      'distinct_object_count',
+      'wall_use_count',
+      'ball_use_count',
+      'object_use_count',
+      'score_damped',
+      'nearest_hole_distance',
+      'frame_duration_ms',
+      'input_latency_ms',
+      'telemetry_result',
     ];
     final rows = <String>[columns.join(',')];
     for (final event in _events) {
