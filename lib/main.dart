@@ -14,7 +14,9 @@ import 'game/domain/shot_input.dart';
 import 'game/levels/generated_stage_catalog.dart';
 import 'game/levels/levels.dart';
 import 'game/persistence/progress_store.dart';
+import 'game/persistence/replay_library_store.dart';
 import 'game/persistence/run_state_store.dart';
+import 'game/replay/replay_capture_service.dart';
 import 'game/run/stage_pattern_session.dart';
 import 'game/run/run_state.dart';
 import 'game/run/run_reward.dart';
@@ -26,6 +28,7 @@ import 'ui/daily_challenge_screen.dart';
 import 'ui/game_ball_painter.dart';
 import 'ui/bonus_goal.dart';
 import 'ui/play_telemetry.dart';
+import 'ui/replay_library_screen.dart';
 import 'ui/tutorial_experiment.dart';
 
 String _stageIntroMessage(int levelIndex) {
@@ -145,6 +148,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int _completedRunRewardCount = 0;
   bool _showStageSelect = false;
   bool _showDailyChallenge = false;
+  bool _showReplayLibrary = false;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
   bool _copyCoreRewarded = false;
@@ -160,12 +164,14 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         stageIds: levels.map((level) => level.id),
       );
   late final Future<StagePatternSession> _patternSessionFuture;
+  late final Future<ReplayLibraryStore> _replayLibraryFuture;
   late final Future<void> _progressLoadFuture;
 
   @override
   void initState() {
     super.initState();
     _patternSessionFuture = _createPatternSession();
+    _replayLibraryFuture = _createReplayLibrary();
     _progressLoadFuture = _loadCopyCore();
   }
 
@@ -176,6 +182,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       store: RunStateStore(
         backend: SharedPreferencesRunStateBackend(preferences),
       ),
+    );
+  }
+
+  Future<ReplayLibraryStore> _createReplayLibrary() async {
+    final preferences = await SharedPreferences.getInstance();
+    return ReplayLibraryStore(
+      backend: SharedPreferencesRunStateBackend(preferences),
     );
   }
 
@@ -442,6 +455,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       applyOptionalChallengeGuard: applyOptionalChallengeGuard,
       applyStageRecordGuard: applyStageRecordGuard,
     );
+    await _saveCurrentReplay(session, totalScore: chainScore?.totalScore ?? 0);
     await _progressStore.recordStageClear(levelIndex);
     await _progressStore.recordBestShot(levelIndex, completion.shotCount);
     if (completion.optionalChallengeAchieved) {
@@ -454,6 +468,31 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       });
     }
     return completion;
+  }
+
+  Future<void> _saveCurrentReplay(
+    StagePatternSession session, {
+    required int totalScore,
+  }) async {
+    final runState = session.state;
+    if (runState == null) return;
+    try {
+      final document = const ReplayCaptureService().capture(
+        runState: runState,
+        catalog: generatedStageCatalog,
+      );
+      final store = await _replayLibraryFuture;
+      final entry = await store.save(
+        document: document,
+        totalScore: totalScore,
+      );
+      await session.recordCurrentStageReplayReference(
+        stageId: document.stageId,
+        replayId: entry.replayId,
+      );
+    } on Object catch (error) {
+      debugPrint('리플레이 자동 저장 실패: $error');
+    }
   }
 
   Future<List<RunReward>> _prepareRunRewards(int levelIndex) async {
@@ -808,6 +847,22 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showReplayLibrary) {
+      return FutureBuilder<ReplayLibraryStore>(
+        future: _replayLibraryFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return ReplayLibraryScreen(
+              store: snapshot.requireData,
+              onBack: () => setState(() => _showReplayLibrary = false),
+            );
+          }
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      );
+    }
     if (_showDailyChallenge) {
       return DailyChallengeScreen(
         key: const Key('daily_challenge_flow'),
@@ -869,6 +924,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => setState(() => _showStageSelect = true),
       onDailyChallenge: () => setState(() => _showDailyChallenge = true),
+      onReplayLibrary: () => setState(() => _showReplayLibrary = true),
       showDebugControls: widget.showDebugControls,
       tutorialVariant: _tutorialVariant,
       onTutorialVariantChanged: (variant) {
@@ -999,6 +1055,7 @@ class _HomeScreen extends StatelessWidget {
     required this.onStart,
     required this.onStageSelect,
     required this.onDailyChallenge,
+    required this.onReplayLibrary,
     required this.showDebugControls,
     required this.tutorialVariant,
     required this.onTutorialVariantChanged,
@@ -1007,6 +1064,7 @@ class _HomeScreen extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onDailyChallenge;
+  final VoidCallback onReplayLibrary;
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
   final ValueChanged<TutorialExperimentVariant> onTutorialVariantChanged;
@@ -1106,6 +1164,18 @@ class _HomeScreen extends StatelessWidget {
                           minimumSize: const Size.fromHeight(50),
                           foregroundColor: const Color(0xFF245B60),
                           side: const BorderSide(color: Color(0xFF4D8580)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('replay_library_entry_button'),
+                        onPressed: onReplayLibrary,
+                        icon: const Icon(Icons.movie_filter_outlined),
+                        label: const Text('나의 리플레이'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          foregroundColor: const Color(0xFF5A536F),
+                          side: const BorderSide(color: Color(0xFF81779B)),
                         ),
                       ),
                       const SizedBox(height: 10),

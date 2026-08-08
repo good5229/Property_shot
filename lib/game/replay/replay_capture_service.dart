@@ -256,6 +256,7 @@ class ReplayCaptureService {
     }
     state = _applyTraitActions(state, pendingTraitActions, traits);
     return ReplayPlaybackResult(
+      initialState: initial,
       shotResults: List.unmodifiable(results),
       finalState: state,
       fingerprints: List.unmodifiable(fingerprints),
@@ -415,11 +416,13 @@ class ReplayCaptureService {
 
 class ReplayPlaybackResult {
   const ReplayPlaybackResult({
+    required this.initialState,
     required this.shotResults,
     required this.finalState,
     required this.fingerprints,
   });
 
+  final GameState initialState;
   final List<ShotResult> shotResults;
   final GameState finalState;
   final List<String> fingerprints;

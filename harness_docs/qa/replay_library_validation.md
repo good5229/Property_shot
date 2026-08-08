@@ -1,4 +1,4 @@
-# PS-REPLAY-02A 로컬 리플레이 라이브러리 검증
+# PS-REPLAY-02 로컬 리플레이 제품 흐름 검증
 
 기준일: 2026-08-08 KST
 
@@ -19,18 +19,17 @@
 - resolver·카탈로그 불일치는 저장 문서를 재생할 때 기존 `ReplayCaptureService`의 명시 실패로 처리한다.
 - UI 연결 순서는 반드시 `ReplayLibraryStore.save` 후 `StagePatternSession.recordCurrentStageReplayReference`다. 두 저장소는 교차 트랜잭션이 아니므로 이 순서로 dangling reference를 막는다.
 
-## 후속 UI 연결 API
+## 제품 연결
 
-- 목록: `ReplayLibraryStore.load()`
-- 문서 읽기: `ReplayLibraryStore.readDocument(replayId)`
-- 저장: `ReplayLibraryStore.save(document: ..., totalScore: ...)`
-- 삭제: `ReplayLibraryStore.delete(replayId)`
-- 현재 런 연결: `StagePatternSession.recordCurrentStageReplayReference(stageId: ..., replayId: ...)`
-
-이번 작업은 `main.dart`, `game_screen.dart`, `daily_challenge_screen.dart`, 클립보드와 재생 화면을 수정하지 않는다.
+- 일반 런과 오늘의 도전의 단계 완료 직후 캡처 문서를 자동 저장하고 RunState 참조를 연결한다.
+- 오늘의 도전은 정식과 연습 모드, 날짜, 도전 버전을 문서에 구분해 저장한다.
+- 홈의 `나의 리플레이`에서 목록·최고 기록·삭제·재생·공유 코드 복사를 제공한다.
+- 받은 한글 공유 코드는 무결성, 문서 규격, 카탈로그, resolver, 결과 지문을 모두 검증한 뒤에만 저장한다.
+- 재생 화면은 검증된 초기 상태에서 샷별 경로·이동·충돌 이벤트를 기존 Flame 렌더러로 순차 재생하며 플레이 입력을 받지 않는다.
+- 리플레이 저장 실패는 정상 클리어 저장을 되돌리거나 다음 진행을 막지 않고 진단 로그로 격리한다.
 
 ## 자동 검증
 
-- 전용 저장·복구·통합 테스트 7개 통과
-- 지정 변경 파일 `flutter analyze` 이슈 0건
-- 저장된 실제 캡처 문서의 playback 결과 지문 재검증 통과
+- 저장·복구·실제 캡처·화면 재생·오늘의 도전·제품 라우터 집중 테스트 106개 통과
+- 전체 `flutter analyze` 이슈 0건
+- 저장된 실제 캡처 문서와 가져온 공유 코드의 playback 결과 지문 재검증 통과

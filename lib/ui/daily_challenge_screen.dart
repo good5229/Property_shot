@@ -10,7 +10,10 @@ import '../game/domain/shot_input.dart';
 import '../game/domain/stage_catalog.dart';
 import '../game/levels/generated_stage_catalog.dart';
 import '../game/persistence/daily_challenge_record_store.dart';
+import '../game/persistence/replay_library_store.dart';
 import '../game/persistence/run_state_store.dart';
+import '../game/replay/replay_capture_service.dart';
+import '../game/replay/replay_document.dart';
 import '../game/run/daily_challenge.dart';
 import '../game/run/run_reward.dart';
 import '../game/run/run_state.dart';
@@ -87,6 +90,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   late final SharedPreferencesLoader _loadPreferences;
   late DailyChallengeDefinition _definition;
   DailyChallengeRecordStore? _recordStore;
+  ReplayLibraryStore? _replayLibraryStore;
   DailyChallengeRecord _record = DailyChallengeRecord.empty(
     DailyChallengeDefinition.fromDateKey('2000-01-01'),
   );
@@ -180,10 +184,14 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         definition: _definition,
         now: _now,
       );
+      final replayStore = ReplayLibraryStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      );
       final record = await store.load();
       if (!mounted) return;
       setState(() {
         _recordStore = store;
+        _replayLibraryStore = replayStore;
         _record = record;
         _loading = false;
       });
@@ -509,6 +517,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       applyOptionalChallengeGuard: applyOptionalChallengeGuard,
       applyStageRecordGuard: applyStageRecordGuard,
     );
+    await _saveCurrentReplay(session, totalScore: analysis?.totalScore ?? 0);
     if (mounted) {
       setState(() {
         _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
@@ -516,6 +525,37 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       });
     }
     return completion;
+  }
+
+  Future<void> _saveCurrentReplay(
+    StagePatternSession session, {
+    required int totalScore,
+  }) async {
+    final state = session.state;
+    final store = _replayLibraryStore;
+    final mode = _activeMode;
+    if (state == null || store == null || mode == null) return;
+    try {
+      final document = const ReplayCaptureService().capture(
+        runState: state,
+        catalog: generatedStageCatalog,
+        mode: mode == DailyChallengeMode.official
+            ? ReplayMode.dailyOfficial
+            : ReplayMode.dailyPractice,
+        dateKey: _definition.dateKey,
+        challengeVersion: _definition.challengeVersion,
+      );
+      final entry = await store.save(
+        document: document,
+        totalScore: totalScore,
+      );
+      await session.recordCurrentStageReplayReference(
+        stageId: document.stageId,
+        replayId: entry.replayId,
+      );
+    } on Object catch (error) {
+      debugPrint('오늘의 도전 리플레이 자동 저장 실패: $error');
+    }
   }
 
   Future<bool> _earnCopyCore(int levelIndex, int amount) =>
@@ -732,9 +772,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         _activeLevel != null &&
         _activeStage != null) {
       return GameScreen(
-        key: ValueKey(
-          'daily_stage_${_activeStage}_${_activeLevel!.patternId}',
-        ),
+        key: ValueKey('daily_stage_${_activeStage}_${_activeLevel!.patternId}'),
         initialState: _activeState,
         initialShotResults: _activeShotResults,
         initialRewardCandidates: _activeRewardCandidates,
