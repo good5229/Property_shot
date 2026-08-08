@@ -7,20 +7,28 @@ iPad performance evidence.
 
 import argparse
 import json
+import math
 import statistics
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 
-from PIL import Image
 from playwright.sync_api import sync_playwright
+
+try:
+    from PIL import Image
+except (ImportError, OSError):
+    Image = None
 
 
 VIEWPORTS = ((390, 844), (768, 1024))
 BALL_POINTS = {(390, 844): (60, 580), (768, 1024): (176, 850)}
+START_POINTS = {(390, 844): (194.5, 549.5), (768, 1024): (383.5, 653.5)}
 
 
 def _start_button_center(image_bytes: bytes) -> tuple[float, float]:
+    if Image is None:
+        raise RuntimeError("Pillow 이미지 디코더를 사용할 수 없습니다.")
     image = Image.open(BytesIO(image_bytes)).convert("RGB")
     width, height = image.size
     row_counts = []
@@ -119,15 +127,34 @@ def _drain_long_tasks(page) -> list[dict[str, float]]:
 
 def _stats(samples: list[float]) -> dict[str, float | int | None]:
     if not samples:
-        return {"samples": 0, "mean_ms": None, "p95_ms": None, "max_ms": None, "over_20ms_ratio": None}
+        return {
+            "samples": 0,
+            "mean_ms": None,
+            "p90_ms": None,
+            "p95_ms": None,
+            "p99_ms": None,
+            "max_ms": None,
+            "over_20ms_ratio": None,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": None,
+        }
     ordered = sorted(samples)
-    percentile_index = min(len(ordered) - 1, int(len(ordered) * 0.95))
+
+    def percentile(ratio: float) -> float:
+        index = min(len(ordered) - 1, max(0, math.ceil(len(ordered) * ratio) - 1))
+        return round(ordered[index], 3)
+
+    over_50ms_count = sum(value > 50 for value in samples)
     return {
         "samples": len(samples),
         "mean_ms": round(statistics.fmean(samples), 3),
-        "p95_ms": round(ordered[percentile_index], 3),
+        "p90_ms": percentile(0.90),
+        "p95_ms": percentile(0.95),
+        "p99_ms": percentile(0.99),
         "max_ms": round(max(samples), 3),
         "over_20ms_ratio": round(sum(value > 20 for value in samples) / len(samples), 4),
+        "over_50ms_count": over_50ms_count,
+        "over_50ms_ratio": round(over_50ms_count / len(samples), 4),
     }
 
 
@@ -152,7 +179,10 @@ def main() -> int:
             page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
             page.goto(args.url)
             page.wait_for_timeout(args.page_warmup_ms)
-            start = _start_button_center(page.screenshot())
+            try:
+                start = _start_button_center(page.screenshot())
+            except RuntimeError:
+                start = START_POINTS[(width, height)]
             page.mouse.click(*start)
             page.wait_for_timeout(args.play_warmup_ms)
             _start_long_task_capture(page)
