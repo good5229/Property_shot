@@ -279,7 +279,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       reducedMotion: GameFeedback.reducedMotionEnabled,
       screenShake: GameFeedback.screenShakeEnabled,
       screenShakeStrength: GameFeedback.screenShakeStrength,
-      ballRewardAppearance: _rewardInventory.has(runRewardBallAppearanceId),
+      ballRewardAppearance: _rewardInventory.ballAppearanceEnabled,
     );
     _game.setDebugOptions(
       hitboxes: _debugShowHitboxes,
@@ -339,9 +339,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       widget.initialAcquiredRewards,
     )) {
       _acquiredRewards = Set.of(widget.initialAcquiredRewards);
-      _game.setBallRewardAppearance(
-        _rewardInventory.has(runRewardBallAppearanceId),
-      );
+      _game.setBallRewardAppearance(_rewardInventory.ballAppearanceEnabled);
     }
     if (!listEquals(
       oldWidget.initialRewardCandidates,
@@ -612,6 +610,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       setState(() {
         _selectedRewardId = selected.id;
         _isSelectingReward = false;
+        // 저장 콜백과 같은 프레임에 현재 화면의 순수 시각 효과를 갱신한다.
+        _acquiredRewards = {..._acquiredRewards, selected.id};
         if (selected.effectKind == RunRewardEffectKind.ballAppearance) {
           _game.setBallRewardAppearance(true);
         }

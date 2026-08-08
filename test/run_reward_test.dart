@@ -181,6 +181,13 @@ void main() {
   });
 
   group('런 보상 보유 상태', () {
+    test('공 꾸미기는 선택 ID만 남은 복원 상태에서도 활성화된다', () {
+      final inventory = RunRewardInventory({runRewardBallAppearanceId});
+
+      expect(inventory.ballAppearanceEnabled, isTrue);
+      expect(inventory.has(runRewardBallAppearanceId), isFalse);
+    });
+
     test('일회성 사용과 단계별 사용을 서로 구분해 복원한다', () {
       final oneShotSelection = runRewardSelectionRecordId(
         stageId: 'stage_heavy',

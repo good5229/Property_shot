@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/run/run_reward.dart';
@@ -86,6 +87,53 @@ void main() {
       find.byType(GameWidget<PropertyShotGame>),
     );
     expect(gameWidget.game!.ballRewardAppearance, isTrue);
+  });
+
+  testWidgets('공 꾸미기 보상 선택 직후 현재 공과 다음 발사 렌더가 활성화된다', (tester) async {
+    final appearance = initialRunRewards.firstWhere(
+      (reward) => reward.id == runRewardBallAppearanceId,
+    );
+    final state = _directClearState().copyWith(equippedTrait: TraitType.heavy);
+    await tester.pumpWidget(
+      _gameApp(
+        state: state.copyWith(phase: GamePhase.success),
+        acquiredRewards: const {},
+        rewardCandidates: [appearance],
+        onRewardSelected: (_) async => appearance,
+        onRewardUsed: (_, _, _) async => true,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(Key('run_reward_$runRewardBallAppearanceId')));
+    await _pumpAsync(tester);
+
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(game.ballRewardAppearance, isTrue);
+    expect(game.state.activeBall.traits, isEmpty);
+    expect(game.state.equippedTrait, TraitType.heavy);
+  });
+
+  testWidgets('선택 ID만 있는 복원 런도 게임판 공 외형을 유지한다', (tester) async {
+    await tester.pumpWidget(
+      _gameApp(
+        state: levels.first.createState(0, productRules: true),
+        acquiredRewards: {runRewardBallAppearanceId},
+        onRewardUsed: (_, _, _) async => true,
+      ),
+    );
+    await tester.pump();
+
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(game.ballRewardAppearance, isTrue);
   });
 
   testWidgets('공 꾸미기 보상은 같은 화면의 기록 재도전에도 즉시 반영된다', (tester) async {
@@ -336,6 +384,8 @@ Widget _gameApp({
   Future<StageCompletionResult> Function(int, dynamic, bool, int, bool, bool)?
   onRunLevelCleared,
   Future<Set<String>> Function()? onShotRewound,
+  Future<RunReward> Function(String)? onRewardSelected,
+  List<RunReward> rewardCandidates = const [],
 }) {
   return MaterialApp(
     home: GameScreen(
@@ -346,6 +396,8 @@ Widget _gameApp({
       onLevelCleared: onLevelCleared,
       onRunLevelCleared: onRunLevelCleared,
       onShotRewound: onShotRewound,
+      initialRewardCandidates: rewardCandidates,
+      onRewardSelected: onRewardSelected,
     ),
   );
 }

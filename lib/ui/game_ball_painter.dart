@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../game/domain/trait.dart';
@@ -93,6 +95,45 @@ class GameBallIconPainter extends CustomPainter {
       center.translate(-4.2 * scale, -6.3 * scale),
       2.6 * scale,
       Paint()..color = const Color(0x88FFFFFF),
+    );
+  }
+
+  /// 런 보상으로 얻는 공 외형을 공 본체와 분리해 그린다.
+  /// 물리 속성·반지름·충돌 판정에는 관여하지 않는 순수 시각 효과다.
+  static void drawRewardAppearance(
+    Canvas canvas, {
+    required Offset center,
+    required double radius,
+  }) {
+    final ringRadius = radius + 3.8;
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.8, radius * 0.105)
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: ringRadius),
+      -math.pi * 0.9,
+      math.pi * 0.82,
+      false,
+      ring..color = const Color(0xFF27A8A1),
+    );
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: ringRadius),
+      math.pi * 0.08,
+      math.pi * 0.82,
+      false,
+      ring..color = const Color(0xFFFFC857),
+    );
+    final sparkle = Paint()..color = const Color(0xFFFFC857);
+    canvas.drawCircle(
+      center + Offset(ringRadius * 0.72, -ringRadius * 0.72),
+      math.max(1.5, radius * 0.096),
+      sparkle,
+    );
+    canvas.drawCircle(
+      center + Offset(-ringRadius * 0.78, ringRadius * 0.5),
+      math.max(1.0, radius * 0.061),
+      sparkle,
     );
   }
 

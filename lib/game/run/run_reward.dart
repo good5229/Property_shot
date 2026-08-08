@@ -284,6 +284,12 @@ class RunRewardInventory {
   bool has(String rewardId) =>
       selections.any((record) => record.rewardId == rewardId);
 
+  /// 현재 런에서 공 외형을 그릴 수 있는지 반환한다.
+  /// 이전 버전이나 부분 복원 데이터의 ID-only 보상도 허용한다.
+  bool get ballAppearanceEnabled =>
+      acquiredRewards.contains(runRewardBallAppearanceId) ||
+      has(runRewardBallAppearanceId);
+
   RunRewardSelectionRecord? selectionFor({
     required String stageId,
     required int patternSeed,

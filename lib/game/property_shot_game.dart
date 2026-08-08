@@ -2754,36 +2754,10 @@ class PropertyShotGame extends FlameGame {
 
   void _drawRewardBallAppearance(Canvas canvas, EntityState entity) {
     if (!ballRewardAppearance) return;
-    final center = _project(entity.position);
-    final radius = entity.radius + 3.8;
-    final ring = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi * 0.9,
-      math.pi * 0.82,
-      false,
-      ring..color = const Color(0xFF27A8A1),
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      math.pi * 0.08,
-      math.pi * 0.82,
-      false,
-      ring..color = const Color(0xFFFFC857),
-    );
-    final sparkle = Paint()..color = const Color(0xFFFFC857);
-    canvas.drawCircle(
-      center + Offset(radius * 0.72, -radius * 0.72),
-      2.2,
-      sparkle,
-    );
-    canvas.drawCircle(
-      center + Offset(-radius * 0.78, radius * 0.5),
-      1.4,
-      sparkle,
+    GameBallIconPainter.drawRewardAppearance(
+      canvas,
+      center: _project(entity.position),
+      radius: entity.radius,
     );
   }
 
