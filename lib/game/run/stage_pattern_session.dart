@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../domain/stage_catalog.dart';
 import '../domain/stage_pattern.dart';
 import '../domain/shot_input.dart';
+import '../persistence/replay_library_store.dart';
 import '../persistence/run_state_store.dart';
 import 'run_reward.dart';
 import 'run_state.dart';
@@ -737,6 +738,48 @@ class StagePatternSession {
 
   Future<void> restartCurrentStage() => _enqueueOperation(_restartCurrentStage);
 
+  /// 라이브러리에 먼저 저장된 현재 단계 리플레이를 RunState에 연결한다.
+  Future<void> recordCurrentStageReplayReference({
+    required String stageId,
+    required String replayId,
+  }) => _enqueueOperation(
+    () => _recordCurrentStageReplayReference(
+      stageId: stageId,
+      replayId: replayId,
+    ),
+  );
+
+  Future<void> _recordCurrentStageReplayReference({
+    required String stageId,
+    required String replayId,
+  }) async {
+    if (!isReplayLibraryId(replayId)) {
+      throw ArgumentError.value(
+        replayId,
+        'replayId',
+        '리플레이 식별자 형식이 올바르지 않습니다.',
+      );
+    }
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.currentStageId == null) {
+      throw StateError('리플레이를 연결할 진행 중인 단계가 없습니다.');
+    }
+    if (current.currentStageId != stageId) {
+      throw StateError('현재 단계와 리플레이 참조 단계가 일치하지 않습니다.');
+    }
+    if (current.replayReferences[stageId] == replayId) return;
+    final references = Map<String, String>.from(current.replayReferences)
+      ..[stageId] = replayId;
+    final next = _copyState(
+      current,
+      phase: current.phase,
+      replayReferences: references,
+    );
+    await _store.save(next);
+    _state = next;
+  }
+
   Future<void> _restartCurrentStage() async {
     await _loadOnce();
     final current = _state;
@@ -1019,6 +1062,7 @@ class StagePatternSession {
     int? cloneCoreCount,
     Iterable<RunTraitActionRecord>? pendingTraitActions,
     Iterable<String>? acquiredRewards,
+    Map<String, String>? replayReferences,
     int? rewardCandidateSeed,
     Iterable<String>? rewardCandidateIds,
     String? selectedRewardId,
@@ -1056,7 +1100,7 @@ class StagePatternSession {
       chainScoresPerStage: chainScoresPerStage ?? state.chainScoresPerStage,
       optionalChallenges: optionalChallenges ?? state.optionalChallenges,
       totalScore: totalScore ?? state.totalScore,
-      replayReferences: state.replayReferences,
+      replayReferences: replayReferences ?? state.replayReferences,
       shotInputLog: shotInputLog ?? state.shotInputLog,
       startedAt: state.startedAt,
       updatedAt: updatedAt,
