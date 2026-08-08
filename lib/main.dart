@@ -17,6 +17,7 @@ import 'game/persistence/progress_store.dart';
 import 'game/persistence/run_state_store.dart';
 import 'game/run/stage_pattern_session.dart';
 import 'game/run/run_state.dart';
+import 'game/run/run_reward.dart';
 import 'game/simulation/shot_resolver.dart';
 import 'game/simulation/trait_resolver.dart';
 import 'ui/game_feedback.dart';
@@ -134,6 +135,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   LevelDefinition? _activeLevel;
   GameState? _activeState;
   List<ShotResult> _activeShotResults = const [];
+  List<RunReward> _activeRewardCandidates = const [];
+  String? _activeSelectedRewardId;
+  Set<String> _activeAcquiredRewards = const {};
+  bool _showRunResult = false;
+  int _completedRunScore = 0;
+  int _completedRunBestShots = 0;
+  int _completedRunRewardCount = 0;
   bool _showStageSelect = false;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
@@ -206,6 +214,18 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       await _adoptCloneCoreState(session);
       await _recoverCompletedProgress(session);
       await _recoverPendingCopyCoreReward(session);
+      final restoringCompletedStage =
+          session.state?.currentStageId == levels[index].id &&
+          switch (session.state?.phase) {
+            RunPhase.stageCompleted ||
+            RunPhase.rewardSelectionPending ||
+            RunPhase.rewardSelectionCompleted => true,
+            _ => false,
+          };
+      if (session.state?.phase == RunPhase.stageCompleted &&
+          session.state?.currentStageId == levels[index].id) {
+        await session.prepareRewardSelection(stageId: levels[index].id);
+      }
       final draw = await session.selectStage(
         levels[index].id,
         initialCloneCoreCount: _copyCoreCount,
@@ -246,16 +266,56 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         restoredState,
         session.state?.pendingTraitActions ?? const [],
       );
+      final stageAttempt = runStageAttemptNumber(
+        session.state?.acquiredRewards ?? const {},
+        level.id,
+      );
+      final recoveredBallPrefix = '${level.id}|$stageAttempt|';
+      final recoveredBallIds =
+          RunRewardInventory(session.state?.acquiredRewards ?? const {})
+              .useKeys(runRewardSpentBallRecoveryId)
+              .where((key) => key.startsWith(recoveredBallPrefix))
+              .map((key) => key.substring(recoveredBallPrefix.length))
+              .toSet();
+      if (recoveredBallIds.isNotEmpty) {
+        restoredState = restoredState.copyWith(
+          entities: [
+            for (final entity in restoredState.entities)
+              if (!recoveredBallIds.contains(entity.id)) entity,
+          ],
+        );
+      }
       if (restoredState.phase == GamePhase.success &&
           session.state?.phase == RunPhase.playing) {
-        await _recoverCompletedStage(
+        final completion = await _recoverCompletedStage(
           session: session,
           levelIndex: index,
           level: level,
           results: restoredResults,
           shotCount: restoredState.shotCount,
         );
+        restoredState = restoredState.copyWith(shotCount: completion.shotCount);
+      } else if (restoringCompletedStage &&
+          RunRewardInventory(
+            session.state?.acquiredRewards ?? const {},
+          ).wasUsedForStageAttempt(
+            runRewardStageRecordGuardId,
+            level.id,
+            stageAttempt,
+          )) {
+        restoredState = restoredState.copyWith(
+          shotCount: math.max(1, restoredState.shotCount - 1).toInt(),
+        );
       }
+      if (session.state?.phase == RunPhase.stageCompleted) {
+        await _recoverPendingCopyCoreReward(session);
+        await session.prepareRewardSelection(stageId: draw.stageId);
+      }
+      final rewardCandidates =
+          session.state?.phase == RunPhase.rewardSelectionPending ||
+              session.state?.phase == RunPhase.rewardSelectionCompleted
+          ? await session.prepareRewardSelection(stageId: draw.stageId)
+          : const <RunReward>[];
       restoredState = restoredState.copyWith(
         copyCoreCount: session.state?.cloneCoreCount ?? _copyCoreCount,
         copyCoreRewarded: _copyCoreRewarded,
@@ -274,6 +334,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _activeLevel = level;
         _activeState = restoredState;
         _activeShotResults = List.unmodifiable(restoredResults);
+        _activeRewardCandidates = rewardCandidates;
+        _activeSelectedRewardId = session.state?.selectedRewardId;
+        _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
       });
     } on Object {
       if (mounted) {
@@ -291,10 +354,11 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     try {
       final session = await _patternSessionFuture;
       final state = await session.loadState();
-      final stageId =
-          state?.phase == RunPhase.stageCompleted && state?.nextStageId != null
-          ? state!.nextStageId
-          : state?.currentStageId;
+      if (state?.phase == RunPhase.runCompleted) {
+        _showCompletedRunState(state!);
+        return;
+      }
+      final stageId = state?.currentStageId;
       final restoredIndex = stageId == null
           ? -1
           : levels.indexWhere((level) => level.id == stageId);
@@ -315,6 +379,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       _activeLevel = null;
       _activeState = null;
       _activeShotResults = const [];
+      _activeRewardCandidates = const [];
+      _activeSelectedRewardId = null;
+      _activeAcquiredRewards = const {};
       _showStageSelect = false;
     });
   }
@@ -346,17 +413,22 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return awarded;
   }
 
-  Future<void> _recordLevelClear(
+  Future<StageCompletionResult> _recordLevelClear(
     int levelIndex,
     CreativeChainScoreAnalysis? chainScore,
     bool optionalChallengeAchieved,
     int shotCount,
+    bool applyOptionalChallengeGuard,
+    bool applyStageRecordGuard,
   ) async {
     if (levelIndex < 0 || levelIndex >= levels.length) {
-      return;
+      return (
+        optionalChallengeAchieved: optionalChallengeAchieved,
+        shotCount: shotCount,
+      );
     }
     final session = await _patternSessionFuture;
-    await session.completeCurrentStage(
+    final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
       nextStageId: levelIndex < levels.length - 1
@@ -364,9 +436,98 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           : null,
       chainScore: chainScore?.totalScore,
       optionalChallengeAchieved: optionalChallengeAchieved,
+      applyOptionalChallengeGuard: applyOptionalChallengeGuard,
+      applyStageRecordGuard: applyStageRecordGuard,
     );
     await _progressStore.recordStageClear(levelIndex);
+    await _progressStore.recordBestShot(levelIndex, completion.shotCount);
+    if (completion.optionalChallengeAchieved) {
+      await _progressStore.recordBonusGoal(levelIndex);
+    }
     _applyClearedLevelInMemory(levelIndex);
+    if (mounted) {
+      setState(() {
+        _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+      });
+    }
+    return completion;
+  }
+
+  Future<List<RunReward>> _prepareRunRewards(int levelIndex) async {
+    if (levelIndex < 0 || levelIndex >= levels.length) return const [];
+    final session = await _patternSessionFuture;
+    final rewards = await session.prepareRewardSelection(
+      stageId: levels[levelIndex].id,
+    );
+    if (mounted) {
+      setState(() {
+        _activeRewardCandidates = rewards;
+        _activeSelectedRewardId = session.state?.selectedRewardId;
+      });
+    }
+    return rewards;
+  }
+
+  Future<RunReward> _selectRunReward(String rewardId) async {
+    final session = await _patternSessionFuture;
+    final reward = await session.selectReward(rewardId);
+    await _mirrorCloneCore(session);
+    if (mounted) {
+      setState(() {
+        _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
+        _activeSelectedRewardId = reward.id;
+        _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+      });
+    }
+    return reward;
+  }
+
+  Future<bool> _consumeRunReward(
+    String rewardId,
+    String useKey,
+    bool stageScoped,
+  ) async {
+    final session = await _patternSessionFuture;
+    final used = stageScoped
+        ? await session.consumeStageRewardUse(
+            rewardId: rewardId,
+            stageId: useKey,
+          )
+        : await session.consumeRewardUse(rewardId: rewardId, useKey: useKey);
+    if (used && mounted) {
+      setState(() {
+        _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+      });
+    }
+    return used;
+  }
+
+  Future<void> _completeRun() async {
+    final session = await _patternSessionFuture;
+    await session.completeRun();
+    _showCompletedRunState(session.state!);
+  }
+
+  void _showCompletedRunState(RunState state) {
+    if (!mounted) return;
+    setState(() {
+      _completedRunScore = state.totalScore;
+      _completedRunBestShots = state.shotsPerStage.values.fold<int>(
+        0,
+        (sum, shots) => sum + shots,
+      );
+      _completedRunRewardCount = runRewardSelectionRecords(
+        state.acquiredRewards,
+      ).length;
+      _activeStage = null;
+      _activeLevel = null;
+      _activeState = null;
+      _activeShotResults = const [];
+      _activeRewardCandidates = const [];
+      _activeSelectedRewardId = null;
+      _activeAcquiredRewards = const {};
+      _showRunResult = true;
+    });
   }
 
   Future<void> _recoverPendingCopyCoreReward(
@@ -402,7 +563,12 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   Future<void> _recoverCompletedProgress(StagePatternSession session) async {
     final state = session.state;
-    if (state == null || state.phase != RunPhase.stageCompleted) return;
+    if (state == null ||
+        (state.phase != RunPhase.stageCompleted &&
+            state.phase != RunPhase.rewardSelectionPending &&
+            state.phase != RunPhase.rewardSelectionCompleted)) {
+      return;
+    }
     final stageId = state.currentStageId;
     final levelIndex = stageId == null
         ? -1
@@ -442,7 +608,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
   }
 
-  Future<void> _recoverCompletedStage({
+  Future<StageCompletionResult> _recoverCompletedStage({
     required StagePatternSession session,
     required int levelIndex,
     required LevelDefinition level,
@@ -480,7 +646,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         drainedSourceMoved: _drainedSourceMoved(results),
       );
     }
-    await session.completeCurrentStage(
+    final inventory = session.rewardInventory;
+    final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
       nextStageId: levelIndex < levels.length - 1
@@ -488,14 +655,22 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           : null,
       chainScore: analysis?.totalScore,
       optionalChallengeAchieved: optionalChallengeAchieved,
+      applyOptionalChallengeGuard:
+          !optionalChallengeAchieved &&
+          inventory.availableUseCount(runRewardOptionalChallengeGuardId) > 0,
+      applyStageRecordGuard: inventory.canUseForStage(
+        runRewardStageRecordGuardId,
+        levels[levelIndex].id,
+      ),
     );
     await _progressStore.recordStageClear(levelIndex);
-    await _progressStore.recordBestShot(levelIndex, shotCount);
-    if (optionalChallengeAchieved) {
+    await _progressStore.recordBestShot(levelIndex, completion.shotCount);
+    if (completion.optionalChallengeAchieved) {
       await _progressStore.recordBonusGoal(levelIndex);
     }
     await _recoverPendingCopyCoreReward(session);
     _applyClearedLevelInMemory(levelIndex);
+    return completion;
   }
 
   void _applyClearedLevelInMemory(int levelIndex) {
@@ -526,9 +701,21 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return false;
   }
 
-  Future<void> _recordShot(ShotInput input) async {
+  Future<bool> _recordShot(
+    ShotInput input,
+    bool consumeFirstImpactGuide,
+  ) async {
     final session = await _patternSessionFuture;
-    await session.recordShot(input: input);
+    final consumed = await session.recordShot(
+      input: input,
+      consumeFirstImpactGuide: consumeFirstImpactGuide,
+    );
+    if (mounted && consumed) {
+      setState(() {
+        _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+      });
+    }
+    return consumed;
   }
 
   Future<void> _recordTraitAction(
@@ -554,12 +741,26 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     final session = await _patternSessionFuture;
     await session.restartCurrentStage();
     await _mirrorCloneCore(session);
+    if (mounted) {
+      setState(() {
+        _activeRewardCandidates = const [];
+        _activeSelectedRewardId = null;
+        _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+      });
+    }
   }
 
-  Future<void> _rewindStageRun() async {
+  Future<Set<String>> _rewindStageRun() async {
     final session = await _patternSessionFuture;
     await session.rewindCurrentShot();
     await _mirrorCloneCore(session);
+    final acquiredRewards = session.state?.acquiredRewards ?? const <String>{};
+    if (mounted) {
+      setState(() {
+        _activeAcquiredRewards = acquiredRewards;
+      });
+    }
+    return acquiredRewards;
   }
 
   Future<void> _mirrorCloneCore(StagePatternSession session) async {
@@ -612,11 +813,18 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         key: ValueKey('stage_$activeStage:${activeLevel.patternId}'),
         initialState: activeState,
         initialShotResults: _activeShotResults,
+        initialRewardCandidates: _activeRewardCandidates,
+        initialSelectedRewardId: _activeSelectedRewardId,
+        initialAcquiredRewards: _activeAcquiredRewards,
         levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
         onCopyCoreEarned: _earnCopyCore,
-        onLevelCleared: _recordLevelClear,
+        onRunLevelCleared: _recordLevelClear,
+        onRewardSelectionPrepared: _prepareRunRewards,
+        onRewardSelected: _selectRunReward,
+        onRunRewardUsed: _consumeRunReward,
+        onRunCompleted: _completeRun,
         onStageRequested: _startStage,
         onShotCommitted: _recordShot,
         onTraitActionCommitted: _recordTraitAction,
@@ -625,6 +833,18 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         progressStore: _progressStore,
         tutorialVariant: _tutorialVariant,
         showDebugControls: widget.showDebugControls,
+      );
+    }
+    if (_showRunResult) {
+      return _RunResultScreen(
+        totalScore: _completedRunScore,
+        totalBestShots: _completedRunBestShots,
+        rewardCount: _completedRunRewardCount,
+        onStartNewRun: () {
+          setState(() => _showRunResult = false);
+          unawaited(_startStage(0, allowStoredRunResume: true));
+        },
+        onHome: () => setState(() => _showRunResult = false),
       );
     }
     if (_showStageSelect) {
@@ -642,6 +862,122 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       onTutorialVariantChanged: (variant) {
         setState(() => _tutorialVariant = variant);
       },
+    );
+  }
+}
+
+class _RunResultScreen extends StatelessWidget {
+  const _RunResultScreen({
+    required this.totalScore,
+    required this.totalBestShots,
+    required this.rewardCount,
+    required this.onStartNewRun,
+    required this.onHome,
+  });
+
+  final int totalScore;
+  final int totalBestShots;
+  final int rewardCount;
+  final VoidCallback onStartNewRun;
+  final VoidCallback onHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const Key('run_result_screen'),
+      backgroundColor: const Color(0xFFBFE8E3),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            const Positioned.fill(child: _IslandBackdrop()),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7DB),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF503C2E),
+                        width: 3,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x44000000),
+                          blurRadius: 18,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_rounded,
+                          size: 54,
+                          color: Color(0xFFF0AE34),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          '첫 번째 섬 완주!',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 18),
+                        _RunResultRow(label: '총 연쇄 점수', value: '$totalScore점'),
+                        _RunResultRow(
+                          label: '단계별 최고 기록 합계',
+                          value: '$totalBestShots회',
+                        ),
+                        _RunResultRow(
+                          label: '선택한 런 보상',
+                          value: '$rewardCount개',
+                        ),
+                        const SizedBox(height: 20),
+                        FilledButton.icon(
+                          key: const Key('new_run_button'),
+                          onPressed: onStartNewRun,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('새 런 시작'),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          key: const Key('run_result_home_button'),
+                          onPressed: onHome,
+                          icon: const Icon(Icons.home_outlined),
+                          label: const Text('메인 메뉴'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RunResultRow extends StatelessWidget {
+  const _RunResultRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
+      ),
     );
   }
 }

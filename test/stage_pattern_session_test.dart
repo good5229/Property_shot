@@ -843,6 +843,105 @@ void main() {
     );
   });
 
+  test('서로 다른 보상 사용을 동시에 요청해도 두 소모 기록을 모두 보존한다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 1,
+    );
+    final firstCandidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    final firstReward = await session.selectReward(firstCandidates.first.id);
+    await session.selectStage('stage_bouncy');
+    await session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      nextStageId: 'stage_chain_gate',
+      shotCount: 1,
+    );
+    final secondCandidates = await session.prepareRewardSelection(
+      stageId: 'stage_bouncy',
+    );
+    final secondReward = await session.selectReward(
+      secondCandidates.firstWhere((reward) => reward.id != firstReward.id).id,
+    );
+    await session.selectStage('stage_chain_gate');
+
+    final used = await Future.wait([
+      session.consumeRewardUse(rewardId: firstReward.id, useKey: '동시사용-첫째'),
+      session.consumeRewardUse(rewardId: secondReward.id, useKey: '동시사용-둘째'),
+    ]);
+
+    expect(used, [isTrue, isTrue]);
+    expect(session.rewardInventory.useKeys(firstReward.id), ['동시사용-첫째']);
+    expect(session.rewardInventory.useKeys(secondReward.id), ['동시사용-둘째']);
+  });
+
+  test('독립 기록 보호 사용도 현재 단계 시도 번호와 완료값에 연결된다', () async {
+    final session = await _playingSessionWithReward(
+      runRewardStageRecordGuardId,
+    );
+
+    expect(
+      await session.consumeStageRewardUse(
+        rewardId: runRewardStageRecordGuardId,
+        stageId: 'stage_bouncy',
+      ),
+      isTrue,
+    );
+    expect(
+      session.rewardInventory.wasUsedForStageAttempt(
+        runRewardStageRecordGuardId,
+        'stage_bouncy',
+        0,
+      ),
+      isTrue,
+    );
+
+    final completion = await session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      shotCount: 4,
+    );
+    expect(completion.shotCount, 3);
+  });
+
+  test('제거된 보상 ID가 저장돼도 같은 seed의 정상 후보로 복구한다', () async {
+    final backend = _MemoryRunStateBackend();
+    final store = RunStateStore(backend: backend);
+    final session = _session(store);
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(stageId: 'stage_heavy', shotCount: 1);
+    final original = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    final damaged = RunState.fromJson({
+      ...session.state!.toJson(),
+      'rewardCandidateIds': [
+        'retired_reward',
+        ...original.skip(1).map((reward) => reward.id),
+      ],
+    });
+    await store.save(damaged);
+
+    final restored = _session(RunStateStore(backend: backend));
+    await restored.loadState();
+    final repaired = await restored.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+
+    expect(
+      repaired.map((reward) => reward.id),
+      original.map((reward) => reward.id),
+    );
+    expect(
+      restored.state?.rewardCandidateIds,
+      original.map((reward) => reward.id),
+    );
+    expect(restored.state?.phase, RunPhase.rewardSelectionPending);
+  });
+
   test('첫 충돌 안내 사용과 발사 입력은 한 저장 상태에 함께 기록된다', () async {
     final session = await _playingSessionWithReward(
       runRewardFirstImpactGuideId,
@@ -906,6 +1005,71 @@ void main() {
         'stage_bouncy',
       ),
       isFalse,
+    );
+  });
+
+  test('재도전 완료값은 현재 발사 횟수를 반환하고 최고 기록은 따로 보존한다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(stageId: 'stage_heavy', shotCount: 2);
+    await session.restartCurrentStage();
+
+    final completion = await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      shotCount: 5,
+    );
+
+    expect(completion.shotCount, 5);
+    expect(session.state?.shotsPerStage['stage_heavy'], 2);
+  });
+
+  test('이전 시도의 기록 보호는 새 재도전 발사 횟수를 줄이지 않는다', () async {
+    final session = await _playingSessionWithReward(
+      runRewardStageRecordGuardId,
+    );
+    final firstCompletion = await session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      shotCount: 4,
+      applyStageRecordGuard: true,
+    );
+    await session.restartCurrentStage();
+
+    final retryCompletion = await session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      shotCount: 5,
+      applyStageRecordGuard: session.rewardInventory.canUseForStage(
+        runRewardStageRecordGuardId,
+        'stage_bouncy',
+      ),
+    );
+
+    expect(firstCompletion.shotCount, 3);
+    expect(retryCompletion.shotCount, 5);
+    expect(session.state?.shotsPerStage['stage_bouncy'], 3);
+  });
+
+  test('되감기는 회수 보상과 기록 보호의 단계 시도 번호를 갱신한다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_heavy');
+    await session.recordShot(
+      input: const ShotInput(direction: Vec2(1, 0), power: 0.5),
+    );
+
+    expect(
+      runStageAttemptNumber(
+        session.state?.acquiredRewards ?? const {},
+        'stage_heavy',
+      ),
+      0,
+    );
+    await session.rewindCurrentShot();
+
+    expect(
+      runStageAttemptNumber(
+        session.state?.acquiredRewards ?? const {},
+        'stage_heavy',
+      ),
+      1,
     );
   });
 }

@@ -38,6 +38,7 @@ class PropertyShotGame extends FlameGame {
     this.loadVisualAssets = true,
     this.reducedMotion = false,
     this.screenShake = true,
+    this.ballRewardAppearance = false,
   });
 
   GameState state;
@@ -48,6 +49,7 @@ class PropertyShotGame extends FlameGame {
   final bool loadVisualAssets;
   final bool reducedMotion;
   final bool screenShake;
+  bool ballRewardAppearance;
   bool debugHitboxes = false;
   bool debugNormals = false;
   bool debugIds = false;
@@ -71,6 +73,10 @@ class PropertyShotGame extends FlameGame {
   void setChargeGaugeState(ChargeGaugeState next, {required bool active}) {
     chargeGaugeState = next;
     chargeGaugeActive = active;
+  }
+
+  void setBallRewardAppearance(bool enabled) {
+    ballRewardAppearance = enabled;
   }
 
   /// Golden·렌더 계약에서 물리 사건 시점을 재현하기 위한 결정론 cursor다.
@@ -1352,6 +1358,9 @@ class PropertyShotGame extends FlameGame {
           trait: entity.traits.isEmpty ? null : entity.traits.first,
         );
         _drawBallTraitTexture(canvas, entity);
+        if (entity.type == EntityType.ball) {
+          _drawRewardBallAppearance(canvas, entity);
+        }
       }
     } else {
       if (entity.type == EntityType.rotatingReflector) {
@@ -2660,6 +2669,7 @@ class PropertyShotGame extends FlameGame {
       trait: entity.traits.isEmpty ? null : entity.traits.first,
     );
     _drawBallTraitTexture(canvas, entity);
+    _drawRewardBallAppearance(canvas, entity);
     canvas.restore();
     canvas.restore();
 
@@ -2725,6 +2735,41 @@ class PropertyShotGame extends FlameGame {
         }
     }
     canvas.restore();
+  }
+
+  void _drawRewardBallAppearance(Canvas canvas, EntityState entity) {
+    if (!ballRewardAppearance) return;
+    final center = _project(entity.position);
+    final radius = entity.radius + 3.8;
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi * 0.9,
+      math.pi * 0.82,
+      false,
+      ring..color = const Color(0xFF27A8A1),
+    );
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      math.pi * 0.08,
+      math.pi * 0.82,
+      false,
+      ring..color = const Color(0xFFFFC857),
+    );
+    final sparkle = Paint()..color = const Color(0xFFFFC857);
+    canvas.drawCircle(
+      center + Offset(radius * 0.72, -radius * 0.72),
+      2.2,
+      sparkle,
+    );
+    canvas.drawCircle(
+      center + Offset(-radius * 0.78, radius * 0.5),
+      1.4,
+      sparkle,
+    );
   }
 
   void _drawHoleFlag(Canvas canvas, EntityState entity) {

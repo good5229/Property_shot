@@ -26,6 +26,7 @@ class StagePatternSession {
   final DateTime Function() _now;
   RunState? _state;
   bool _loaded = false;
+  Future<void> _operationTail = Future<void>.value();
   bool _legacyCurrentShotHistoryAmbiguous = false;
   int _ambiguousLegacyCopyActionCount = 0;
 
@@ -36,10 +37,10 @@ class StagePatternSession {
 
   int get ambiguousLegacyCopyActionCount => _ambiguousLegacyCopyActionCount;
 
-  Future<RunState?> loadState() async {
+  Future<RunState?> loadState() => _enqueueOperation(() async {
     await _loadOnce();
     return _state;
-  }
+  });
 
   List<RunShotInput> get currentShotInputs {
     final current = _state;
@@ -68,6 +69,20 @@ class StagePatternSession {
     int initialCloneCoreCount = 0,
     bool initialCloneCoreRewarded = false,
     Iterable<String> initialCloneCoreRewardedStageIds = const [],
+  }) => _enqueueOperation(
+    () => _selectStage(
+      stageId,
+      initialCloneCoreCount: initialCloneCoreCount,
+      initialCloneCoreRewarded: initialCloneCoreRewarded,
+      initialCloneCoreRewardedStageIds: initialCloneCoreRewardedStageIds,
+    ),
+  );
+
+  Future<StagePatternDraw> _selectStage(
+    String stageId, {
+    required int initialCloneCoreCount,
+    required bool initialCloneCoreRewarded,
+    required Iterable<String> initialCloneCoreRewardedStageIds,
   }) async {
     if (initialCloneCoreCount < 0) {
       throw ArgumentError.value(
@@ -164,6 +179,26 @@ class StagePatternSession {
     bool optionalChallengeAchieved = false,
     bool applyOptionalChallengeGuard = false,
     bool applyStageRecordGuard = false,
+  }) => _enqueueOperation(
+    () => _completeCurrentStage(
+      stageId: stageId,
+      shotCount: shotCount,
+      nextStageId: nextStageId,
+      chainScore: chainScore,
+      optionalChallengeAchieved: optionalChallengeAchieved,
+      applyOptionalChallengeGuard: applyOptionalChallengeGuard,
+      applyStageRecordGuard: applyStageRecordGuard,
+    ),
+  );
+
+  Future<StageCompletionResult> _completeCurrentStage({
+    required String stageId,
+    required int shotCount,
+    String? nextStageId,
+    int? chainScore,
+    required bool optionalChallengeAchieved,
+    required bool applyOptionalChallengeGuard,
+    required bool applyStageRecordGuard,
   }) async {
     if (shotCount < 1) {
       throw ArgumentError.value(shotCount, 'shotCount', '1 이상이어야 합니다.');
@@ -187,6 +222,7 @@ class StagePatternSession {
     }
     final acquiredRewards = current.acquiredRewards.toSet();
     final inventory = RunRewardInventory(acquiredRewards);
+    final stageAttempt = runStageAttemptNumber(acquiredRewards, stageId);
     var effectiveChallenge = optionalChallengeAchieved;
     var effectiveShotCount = shotCount;
     if (!effectiveChallenge && applyOptionalChallengeGuard) {
@@ -203,19 +239,30 @@ class StagePatternSession {
         effectiveChallenge = true;
       }
     }
+    var recordGuardApplied = inventory.wasUsedForStageAttempt(
+      runRewardStageRecordGuardId,
+      stageId,
+      stageAttempt,
+    );
     if (applyStageRecordGuard) {
       for (final selection in inventory.selections.where(
         (record) => record.rewardId == runRewardStageRecordGuardId,
       )) {
         final useRecord = runRewardStageUseRecordId(
           selection.recordId,
-          stageId,
+          '$stageId|$stageAttempt',
         );
         if (acquiredRewards.contains(useRecord)) continue;
+        if (!inventory.canUseForStage(runRewardStageRecordGuardId, stageId)) {
+          break;
+        }
         acquiredRewards.add(useRecord);
-        effectiveShotCount = math.max(1, shotCount - 1).toInt();
+        recordGuardApplied = true;
         break;
       }
+    }
+    if (recordGuardApplied) {
+      effectiveShotCount = math.max(1, shotCount - 1).toInt();
     }
     final scores = Map<String, int>.from(current.chainScoresPerStage);
     if (chainScore != null) {
@@ -271,11 +318,14 @@ class StagePatternSession {
     return (
       optionalChallengeAchieved:
           challenges['$stageId:${current.currentPatternId}'] ?? false,
-      shotCount: shots[stageId] ?? effectiveShotCount,
+      shotCount: effectiveShotCount,
     );
   }
 
-  Future<List<RunReward>> prepareRewardSelection({
+  Future<List<RunReward>> prepareRewardSelection({required String stageId}) =>
+      _enqueueOperation(() => _prepareRewardSelection(stageId: stageId));
+
+  Future<List<RunReward>> _prepareRewardSelection({
     required String stageId,
   }) async {
     await _loadOnce();
@@ -283,11 +333,19 @@ class StagePatternSession {
     if (current == null || current.currentStageId != stageId) {
       throw StateError('현재 단계의 보상 후보를 준비할 수 없습니다.');
     }
-    if (current.phase == RunPhase.rewardSelectionPending ||
-        current.phase == RunPhase.rewardSelectionCompleted) {
-      return _rewardsByIds(current.rewardCandidateIds);
-    }
-    if (current.phase != RunPhase.stageCompleted) {
+    final restoringSelection =
+        current.phase == RunPhase.rewardSelectionPending ||
+        current.phase == RunPhase.rewardSelectionCompleted;
+    if (restoringSelection) {
+      final restored = _knownRewardsByIds(current.rewardCandidateIds);
+      final selectedIsKnown =
+          current.selectedRewardId == null ||
+          restored.any((reward) => reward.id == current.selectedRewardId);
+      if (restored.length == RunRewardCandidateGenerator.candidateCount &&
+          selectedIsKnown) {
+        return restored;
+      }
+    } else if (current.phase != RunPhase.stageCompleted) {
       throw StateError('클리어가 저장된 뒤에만 보상 후보를 준비할 수 있습니다.');
     }
     final generator = RunRewardCandidateGenerator();
@@ -300,9 +358,13 @@ class StagePatternSession {
       current.acquiredRewards,
     ).selectionFor(stageId: stageId, patternSeed: current.currentPatternSeed!);
     final previousRewardId = previousSelection?.rewardId;
+    final restoredRewardId =
+        rewards.any((reward) => reward.id == previousRewardId)
+        ? previousRewardId
+        : null;
     final next = _copyState(
       current,
-      phase: previousRewardId == null
+      phase: restoredRewardId == null
           ? RunPhase.rewardSelectionPending
           : RunPhase.rewardSelectionCompleted,
       nextDraw: _savedNextDraw(current),
@@ -312,14 +374,17 @@ class StagePatternSession {
         patternSeed: current.currentPatternSeed!,
       ),
       rewardCandidateIds: rewards.map((reward) => reward.id),
-      selectedRewardId: previousRewardId,
+      selectedRewardId: restoredRewardId,
     );
     await store.save(next);
     _state = next;
     return rewards;
   }
 
-  Future<RunReward> selectReward(String rewardId) async {
+  Future<RunReward> selectReward(String rewardId) =>
+      _enqueueOperation(() => _selectReward(rewardId));
+
+  Future<RunReward> _selectReward(String rewardId) async {
     await _loadOnce();
     final current = _state;
     if (current == null || current.phase != RunPhase.rewardSelectionPending) {
@@ -359,6 +424,13 @@ class StagePatternSession {
   Future<bool> consumeRewardUse({
     required String rewardId,
     required String useKey,
+  }) => _enqueueOperation(
+    () => _consumeRewardUse(rewardId: rewardId, useKey: useKey),
+  );
+
+  Future<bool> _consumeRewardUse({
+    required String rewardId,
+    required String useKey,
   }) async {
     if (useKey.isEmpty) {
       throw ArgumentError.value(useKey, 'useKey', '비어 있을 수 없습니다.');
@@ -387,6 +459,13 @@ class StagePatternSession {
   Future<bool> consumeStageRewardUse({
     required String rewardId,
     required String stageId,
+  }) => _enqueueOperation(
+    () => _consumeStageRewardUse(rewardId: rewardId, stageId: stageId),
+  );
+
+  Future<bool> _consumeStageRewardUse({
+    required String rewardId,
+    required String stageId,
   }) async {
     await _loadOnce();
     final current = _state;
@@ -397,7 +476,13 @@ class StagePatternSession {
     for (final selection in inventory.selections.where(
       (record) => record.rewardId == rewardId,
     )) {
-      final useRecord = runRewardStageUseRecordId(selection.recordId, stageId);
+      final useStageId = rewardId == runRewardStageRecordGuardId
+          ? '$stageId|${runStageAttemptNumber(current.acquiredRewards, stageId)}'
+          : stageId;
+      final useRecord = runRewardStageUseRecordId(
+        selection.recordId,
+        useStageId,
+      );
       if (current.acquiredRewards.contains(useRecord)) continue;
       final next = _copyState(
         current,
@@ -412,7 +497,9 @@ class StagePatternSession {
     return false;
   }
 
-  Future<void> completeRun() async {
+  Future<void> completeRun() => _enqueueOperation(_completeRun);
+
+  Future<void> _completeRun() async {
     await _loadOnce();
     final current = _state;
     if (current == null ||
@@ -430,6 +517,13 @@ class StagePatternSession {
   }
 
   Future<void> recordTraitAction({
+    required String sourceId,
+    required RunTraitAction action,
+  }) => _enqueueOperation(
+    () => _recordTraitAction(sourceId: sourceId, action: action),
+  );
+
+  Future<void> _recordTraitAction({
     required String sourceId,
     required RunTraitAction action,
   }) async {
@@ -474,6 +568,13 @@ class StagePatternSession {
   Future<bool> awardStageCloneCores({
     required String stageId,
     required int amount,
+  }) => _enqueueOperation(
+    () => _awardStageCloneCores(stageId: stageId, amount: amount),
+  );
+
+  Future<bool> _awardStageCloneCores({
+    required String stageId,
+    required int amount,
   }) async {
     if (stageId.isEmpty) {
       throw ArgumentError.value(stageId, 'stageId', '비어 있을 수 없습니다.');
@@ -505,7 +606,10 @@ class StagePatternSession {
     return true;
   }
 
-  Future<bool> migrateLegacyCloneCoreReward({required bool rewarded}) async {
+  Future<bool> migrateLegacyCloneCoreReward({required bool rewarded}) =>
+      _enqueueOperation(() => _migrateLegacyCloneCoreReward(rewarded));
+
+  Future<bool> _migrateLegacyCloneCoreReward(bool rewarded) async {
     await _loadOnce();
     final current = _state;
     if (current == null ||
@@ -535,6 +639,16 @@ class StagePatternSession {
   Future<bool> recordShot({
     required ShotInput input,
     bool consumeFirstImpactGuide = false,
+  }) => _enqueueOperation(
+    () => _recordShot(
+      input: input,
+      consumeFirstImpactGuide: consumeFirstImpactGuide,
+    ),
+  );
+
+  Future<bool> _recordShot({
+    required ShotInput input,
+    required bool consumeFirstImpactGuide,
   }) async {
     await _loadOnce();
     final current = _state;
@@ -588,7 +702,9 @@ class StagePatternSession {
     return guideConsumed;
   }
 
-  Future<void> restartCurrentStage() async {
+  Future<void> restartCurrentStage() => _enqueueOperation(_restartCurrentStage);
+
+  Future<void> _restartCurrentStage() async {
     await _loadOnce();
     final current = _state;
     if (current == null ||
@@ -630,7 +746,9 @@ class StagePatternSession {
     _state = next;
   }
 
-  Future<void> rewindCurrentShot() async {
+  Future<void> rewindCurrentShot() => _enqueueOperation(_rewindCurrentShot);
+
+  Future<void> _rewindCurrentShot() async {
     await _loadOnce();
     final current = _state;
     if (current == null || current.phase != RunPhase.playing) return;
@@ -654,6 +772,17 @@ class StagePatternSession {
           _copyActionCount(current.pendingTraitActions),
       pendingTraitActions: removed.traitActions,
       shotInputLog: log,
+      acquiredRewards: [
+        ...current.acquiredRewards,
+        runStageAttemptRecordId(
+          current.currentStageId!,
+          runStageAttemptNumber(
+                current.acquiredRewards,
+                current.currentStageId!,
+              ) +
+              1,
+        ),
+      ],
     );
     await store.save(next);
     _state = next;
@@ -894,6 +1023,27 @@ class StagePatternSession {
     return actions
         .where((action) => action.action == RunTraitAction.copy)
         .length;
+  }
+
+  Future<T> _enqueueOperation<T>(Future<T> Function() operation) {
+    final next = _operationTail.then((_) => operation());
+    _operationTail = next.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return next;
+  }
+
+  List<RunReward> _knownRewardsByIds(Iterable<String> ids) {
+    final byId = {
+      for (final reward in defaultRunRewardCatalog.rewards) reward.id: reward,
+    };
+    final rewards = <RunReward>[];
+    for (final id in ids) {
+      final reward = byId[id];
+      if (reward != null) rewards.add(reward);
+    }
+    return List.unmodifiable(rewards);
   }
 
   List<RunReward> _rewardsByIds(Iterable<String> ids) {

@@ -313,10 +313,23 @@ class RunRewardInventory {
   bool canUseForStage(String rewardId, String stageId) => selections.any(
     (record) =>
         record.rewardId == rewardId &&
-        !acquiredRewards.contains(
-          runRewardStageUseRecordId(record.recordId, stageId),
+        !acquiredRewards.any(
+          (value) =>
+              value == runRewardStageUseRecordId(record.recordId, stageId) ||
+              value.startsWith(
+                '${runRewardStageUseRecordId(record.recordId, stageId)}|',
+              ),
         ),
   );
+
+  bool wasUsedForStageAttempt(String rewardId, String stageId, int attempt) =>
+      selections.any(
+        (record) =>
+            record.rewardId == rewardId &&
+            acquiredRewards.contains(
+              runRewardStageUseRecordId(record.recordId, '$stageId|$attempt'),
+            ),
+      );
 
   Iterable<String> useKeys(String rewardId) sync* {
     for (final record in selections.where(
