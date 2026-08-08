@@ -1,4 +1,4 @@
-# PS-REPLAY-01A 리플레이 문서 검증
+# PS-REPLAY-01A/B 리플레이 문서·캡처 검증
 
 기준일: 2026-08-08 KST
 
@@ -11,6 +11,14 @@
 - 결과 지문은 `outcomeFingerprintVersion=sha256-v1`과 소문자 SHA-256 64자리 hex로 고정한다.
 - 보상 재현에는 bounded `acquiredRewardIds`와 `(rewardId, useKey)` 쌍인 `consumedRewardUses`를 명시하며, 현재 `RunState.acquiredRewards`와 `consumeRewardUse(rewardId, useKey)` 용어에 대응한다.
 
+## RunState 캡처 경계
+
+- `ReplayCaptureService`는 현재 추첨의 stage·pattern·seed·cycle·drawIndex와 연속 샷만 골라 순수 Dart 판정기로 다시 실행한다.
+- 각 발사 공 ID는 실제 판정기의 `spent_ball_1`, `spent_ball_2` 순서와 맞춘다.
+- 카탈로그 전체 canonical JSON의 SHA-256과 resolver 버전을 먼저 대조하고, 각 샷 결과 지문이 다르면 재생을 중단한다.
+- 보상 저장 문자열 전체를 문서 ID로 복사하지 않는다. 선택한 안정 reward ID만 보존하고 한글 사용 키는 결정론 SHA-256 토큰으로 정규화한다.
+- 기존 과거 공 회수 기록은 대상 ID만 있고 회수 시점이 없다. 후속 샷 물리를 임의 추정하지 않도록 `unsupported_between_shot_state`로 거부하며, 향후 저장 형식에 샷 사이 순서를 추가한 뒤 호환 계층을 확장한다.
+
 ## 입력·공유 보안 계약
 
 - ID와 버전 문자열은 `[a-zA-Z0-9_.:|-]`만 허용한다. `|`는 기존 RunState의 `stageId|attempt` use key와 `run_reward_used:*` record를 무손실 보존하기 위한 구분자이며, 공백·슬래시·`@`·한글 자유 입력은 계속 거부해 개인정보성 값이 섞이지 않게 한다.
@@ -21,14 +29,14 @@
 ## 자동 검증
 
 ```text
-flutter test test/replay_document_test.dart test/replay_share_code_test.dart --reporter compact
+flutter test test/replay_capture_service_test.dart test/replay_document_test.dart test/replay_share_code_test.dart --reporter compact
 flutter analyze
 git diff --check
 ```
 
 검증 결과:
 
-- replay 집중 테스트 통과
+- replay 캡처·문서·공유 코드 집중 테스트 통과
 - Dart 분석기 이슈 0건
 - 전체 회귀 테스트 831개 통과
 - replay 변경 범위 `git diff --check` 통과

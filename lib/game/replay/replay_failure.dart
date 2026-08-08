@@ -9,6 +9,22 @@ enum ReplayFailureCode {
   invalidDateChallenge('invalid_date_challenge', '일일 도전 날짜와 도전 정보가 올바르지 않습니다.'),
   invalidSeed('invalid_seed', '리플레이 seed가 올바르지 않습니다.'),
   invalidReference('invalid_reference', '리플레이 참조 정보가 올바르지 않습니다.'),
+  resolverVersionMismatch(
+    'resolver_version_mismatch',
+    '리플레이 물리 판정 버전이 현재 버전과 달라 재생할 수 없습니다.',
+  ),
+  catalogFingerprintMismatch(
+    'catalog_fingerprint_mismatch',
+    '리플레이 스테이지 카탈로그가 현재 카탈로그와 달라 재생할 수 없습니다.',
+  ),
+  stageMismatch('stage_mismatch', '리플레이 스테이지 ID가 현재 패턴과 다릅니다.'),
+  patternMismatch('pattern_mismatch', '리플레이 패턴 ID가 현재 패턴과 다릅니다.'),
+  patternSeedMismatch('pattern_seed_mismatch', '리플레이 패턴 seed가 현재 패턴과 다릅니다.'),
+  drawMismatch('draw_mismatch', '리플레이 패턴 추첨 기록이 현재 런 기록과 다릅니다.'),
+  unsupportedBetweenShotState(
+    'unsupported_between_shot_state',
+    '샷 사이의 과거 공 회수 시점을 확인할 수 없어 이 기록은 재생할 수 없습니다.',
+  ),
   integerOutOfRange('integer_out_of_range', '리플레이 숫자가 허용 범위를 벗어났습니다.'),
   unsupportedInputEncodingVersion(
     'unsupported_input_encoding_version',
@@ -22,6 +38,10 @@ enum ReplayFailureCode {
   tooManyTraitActions('too_many_trait_actions', '리플레이 속성 행동 수가 제한을 초과했습니다.'),
   invalidFixedPoint('invalid_fixed_point', '리플레이 방향과 힘이 올바르지 않습니다.'),
   invalidFingerprint('invalid_fingerprint', '리플레이 결과 지문이 올바르지 않습니다.'),
+  outcomeFingerprintMismatch(
+    'outcome_fingerprint_mismatch',
+    '리플레이 결과 지문이 달라 결정론 검증에 실패했습니다.',
+  ),
   unsupportedOutcomeFingerprintVersion(
     'unsupported_outcome_fingerprint_version',
     '지원하지 않는 결과 지문 버전입니다.',
