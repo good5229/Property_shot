@@ -62,6 +62,7 @@ A와 C는 각각 `a_stone`, `c_sticky`를 `TraitResolver`로 한 번 이전해 �
 
 - `dart run tool/generate_stage_catalog.dart --check`: 통과
 - `test/stage10_property_shot_patterns_test.dart`, `test/stage_catalog_test.dart`, `test/stage_pattern_validator_test.dart` 집중 회귀: 50개 통과
+- 변경된 A 배치로 단일 40개·다중 50개 공용 리플레이를 재생성하고 전부 재생 비교 통과
 - `jq empty assets/stages/chapter_1.json`, `git diff --check`: 통과
 - A~D 전용 대표 연쇄는 같은 초기 패턴에서 두 번 실행한 사건·충돌·경로·최종 엔티티 서명이 일치한다. A의 직행은 `±4도·±8%` 81점 격자에서 `13/81` 성공, 최대 연결 `13`으로 측정되며, 대표 무거움 연쇄는 첫·둘째 샷 각각 `±3도·±6%` 49점 격자에서 `124` 성공, 최대 연결 `30`이다. 실제 저장·복원은 공용 RunState·리플레이 회귀가 담당한다.
 - `flutter analyze`: 이슈 없음
