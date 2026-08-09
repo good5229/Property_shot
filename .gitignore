@@ -60,9 +60,26 @@ harness_docs/*
 harness_docs/dev-wiki/*
 !harness_docs/dev-wiki/log.md
 
-# 보고서 산출물
-report/
+# 제출 보고서: 소스·재생성 도구·최종 PDF만 추적하고 렌더 중간물은 제외한다.
+/report/*
+!/report/game_introduction.md
+!/report/ai_technical_report.md
+!/report/tools/
+/report/tools/*
+!/report/tools/build_submission_reports_docx.py
+!/report/tools/build_final_report_docx.py
+!/report/tools/finalize_submission_pdf.py
+!/report/tools/record_gameplay_frames.py
+!/report/tools/encode_png_frames.swift
+!/report/tools/capture_latest_pages.py
+!/report/dist/
+/report/dist/*
+!/report/dist/property_shot_game_guide.pdf
+!/report/dist/property_shot_ai_technical_report.pdf
 
 # 로컬 플레이 영상(공모전 보고서용, 원격 저장소 미업로드)
 /recordings/*.mp4
 /recordings/*.mov
+/recordings/*.webm
+/recordings/.recording-frames/
+/recordings/.playwright-video/
