@@ -36,6 +36,7 @@ import 'debug_labels.dart';
 import 'play_telemetry.dart';
 import 'launch_input_session.dart';
 import 'tutorial_experiment.dart';
+import 'tutorial_failure_hint.dart';
 import 'failure_replay_dialog.dart';
 import 'frame_performance_tracker.dart';
 
@@ -85,6 +86,8 @@ class GameScreen extends StatefulWidget {
     this.onRunCompleted,
     this.loadGameAssets = true,
     this.tutorialVariant = TutorialExperimentVariant.guided,
+    this.showTutorialFailureHints = true,
+    this.difficulty,
     this.showDebugControls = false,
     this.progressStore,
     this.progressPersistencePolicy = GameProgressPersistencePolicy.enabled,
@@ -125,6 +128,8 @@ class GameScreen extends StatefulWidget {
   final Future<void> Function()? onRunCompleted;
   final bool loadGameAssets;
   final TutorialExperimentVariant tutorialVariant;
+  final bool showTutorialFailureHints;
+  final PlayerDifficulty? difficulty;
   final bool showDebugControls;
   final ProgressStore? progressStore;
 
@@ -144,6 +149,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _launchInputLatency = LaunchInputLatencyTracker();
   final _framePerformance = FramePerformanceTracker();
   late final LocalPlayTelemetry _telemetry;
+  late final PlayerDifficulty _difficulty;
   late GameState _state;
   late LevelDefinition _currentLevel;
   late PropertyShotGame _game;
@@ -151,7 +157,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _inspectedEntityId;
   Timer? _chargeTimer;
   Timer? _pressActivationTimer;
+  Timer? _chargeFeedbackTimer;
   bool _aimStartedForShot = false;
+  FirstArrivalPreview? _firstArrivalPreview;
+  ShotInput? _firstArrivalInputSnapshot;
+  Vec2? _pendingLaunchDirection;
+  List<EntityState>? _firstArrivalEntities;
+  int? _firstArrivalShotCount;
+  Vec2? _firstArrivalDirection;
+  int? _firstArrivalPowerBucket;
+  TraitType? _firstArrivalTrait;
   bool _isCharging = false;
   bool _chargeStartRecorded = false;
   ChargeGaugeState _chargeGaugeState = ChargeGaugeState.green;
@@ -262,6 +277,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         );
     WidgetsBinding.instance.addObserver(this);
     _telemetry = widget.telemetry ?? LocalPlayTelemetry();
+    _difficulty = widget.difficulty ?? GameFeedback.playerDifficulty;
     _state =
         widget.initialState ??
         levels.first
@@ -316,13 +332,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   PlayTelemetryContext _telemetryContext() {
     final supplied = widget.telemetryContextBuilder?.call();
-    if (supplied != null) return supplied;
+    if (supplied != null) {
+      return supplied.copyWith(
+        difficulty: _difficulty == PlayerDifficulty.easy
+            ? PlayTelemetryDifficulty.easy
+            : PlayTelemetryDifficulty.normal,
+      );
+    }
     return PlayTelemetryContext(
       stageIndex: _state.levelIndex,
       stageId: _currentLevel.stageId ?? _currentLevel.id,
       patternId: _currentLevel.patternId ?? '${_currentLevel.id}_default',
       seed: 0,
       resolverVersion: 'shot-resolver-v1',
+      difficulty: _difficulty == PlayerDifficulty.easy
+          ? PlayTelemetryDifficulty.easy
+          : PlayTelemetryDifficulty.normal,
       rewardState: PlayTelemetryRewardState(
         candidateIds: _rewardCandidates.map((reward) => reward.id),
         selectedId: _selectedRewardId,
@@ -532,7 +557,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _recordBonusGoal(int levelIndex) async {
     if (widget.progressPersistencePolicy ==
-        GameProgressPersistencePolicy.disabled) {
+            GameProgressPersistencePolicy.disabled ||
+        _difficulty == PlayerDifficulty.easy) {
       return;
     }
     if (_bonusGoals[levelIndex] == true) {
@@ -546,7 +572,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _recordBestShot(int levelIndex, int shotCount) async {
     if (widget.progressPersistencePolicy ==
-        GameProgressPersistencePolicy.disabled) {
+            GameProgressPersistencePolicy.disabled ||
+        _difficulty == PlayerDifficulty.easy) {
       return;
     }
     if (!_bestShotsLoaded) {
@@ -599,6 +626,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         physicsEvents: physicsEvents,
         animationTransaction: path.isNotEmpty,
       );
+      _syncFirstArrivalPreview();
     });
     _recordHintExposureIfNeeded();
   }
@@ -612,6 +640,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showClearPopup = false;
     _showFailurePopup = false;
     _failureReplay = null;
+    _aimStartedForShot = false;
+    _pendingLaunchDirection = null;
     _showClearPersistenceError = false;
     _clearPersistenceErrorTitle = '클리어 기록을 저장하지 못했습니다';
     _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
@@ -790,6 +820,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _isCommittingRewardAction = true;
     _pressActivationTimer?.cancel();
+    _chargeFeedbackTimer?.cancel();
+    _chargeFeedbackTimer = null;
     _chargeTimer?.cancel();
     _pressActivationTimer = null;
     _chargeTimer = null;
@@ -1205,7 +1237,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showBallInfo = false;
     _inspectedEntityId = null;
     _showFailurePopup = false;
-    _failureAdvice = _failureAdviceFor(result.events);
+    _failureAdvice = widget.showTutorialFailureHints
+        ? _failureAdviceFor(result.events, levelIndex: result.state.levelIndex)
+        : _baseFailureAdviceFor(result.events);
     if (_rewardInventory.has(runRewardFailureCauseBoostId) &&
         result.state.phase != GamePhase.success &&
         result.impacts.isNotEmpty) {
@@ -1231,6 +1265,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               drainedSourceIds.contains(move.entityId) && move.from != move.to,
         );
     _aimStartedForShot = false;
+    _pendingLaunchDirection = null;
     _isAnimatingShot = true;
     _setState(
       result.state,
@@ -1347,13 +1382,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             _unlockedLevel,
             math.min(levelIndex + 1, levels.length - 1),
           );
-          final previousBest = _bestShots[levelIndex];
-          _bestShots[levelIndex] = previousBest == null
-              ? effectiveShotCount
-              : math.min(previousBest, effectiveShotCount);
-          if (effectiveBonusAchieved) {
-            _bonusGoals[levelIndex] = true;
-            _bonusChallengeAchieved = true;
+          if (_difficulty == PlayerDifficulty.normal) {
+            final previousBest = _bestShots[levelIndex];
+            _bestShots[levelIndex] = previousBest == null
+                ? effectiveShotCount
+                : math.min(previousBest, effectiveShotCount);
+            if (effectiveBonusAchieved) {
+              _bonusGoals[levelIndex] = true;
+              _bonusChallengeAchieved = true;
+            }
           }
         });
       }
@@ -2189,6 +2226,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _recordTyped(PlayTelemetryEventType.aimStarted);
     }
     final quantizedAim = quantizeAimDirection(aim);
+    _pendingLaunchDirection = aim.length == 0
+        ? _state.aimDirection.normalized()
+        : aim.normalized();
     final guidedImpactLabel = _previewFirstImpact(
       quantizedAim,
       _state.aimPower,
@@ -2216,6 +2256,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     final current = math.atan2(_state.aimDirection.y, _state.aimDirection.x);
     final next = current + radians;
+    _aimStartedForShot = true;
+    _pendingLaunchDirection = Vec2(math.cos(next), math.sin(next)).normalized();
     _setState(
       _state.copyWith(
         aimDirection: Vec2(math.cos(next), math.sin(next)),
@@ -2237,6 +2279,70 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             : '힘 ${(nextPower * 100).round()}% · 첫 충돌 $_guidedImpactLabel',
       ),
     );
+  }
+
+  void _syncFirstArrivalPreview({
+    ShotInput? inputOverride,
+    bool force = false,
+  }) {
+    if (_difficulty != PlayerDifficulty.easy ||
+        !_aimStartedForShot ||
+        _state.phase != GamePhase.planning ||
+        _isAnimatingShot) {
+      _clearFirstArrivalPreview();
+      return;
+    }
+    final input =
+        inputOverride ??
+        ShotInput(
+          direction: _pendingLaunchDirection ?? _state.aimDirection,
+          power: _state.aimPower,
+          equippedTrait: _state.equippedTrait,
+        );
+    final normalizedInput = input.normalized();
+    final directionBucket = quantizeAimDirection(normalizedInput.direction);
+    final powerBucket = (normalizedInput.power * 100).round();
+    if (!force &&
+        identical(_firstArrivalEntities, _state.entities) &&
+        _firstArrivalShotCount == _state.shotCount &&
+        _firstArrivalDirection == directionBucket &&
+        _firstArrivalPowerBucket == powerBucket &&
+        _firstArrivalTrait == _state.equippedTrait) {
+      return;
+    }
+    final preview = _shotResolver.firstArrival(_state, normalizedInput);
+    _firstArrivalPreview = preview;
+    _firstArrivalInputSnapshot = normalizedInput;
+    _firstArrivalEntities = _state.entities;
+    _firstArrivalShotCount = _state.shotCount;
+    _firstArrivalDirection = directionBucket;
+    _firstArrivalPowerBucket = powerBucket;
+    _firstArrivalTrait = _state.equippedTrait;
+    _game.setFirstArrivalPreview(preview);
+  }
+
+  void _clearFirstArrivalPreview() {
+    if (_firstArrivalPreview == null) return;
+    _firstArrivalPreview = null;
+    _firstArrivalInputSnapshot = null;
+    _firstArrivalEntities = null;
+    _firstArrivalShotCount = null;
+    _firstArrivalDirection = null;
+    _firstArrivalPowerBucket = null;
+    _firstArrivalTrait = null;
+    _game.setFirstArrivalPreview(null);
+  }
+
+  String? get _firstArrivalSemanticsValue {
+    final preview = _firstArrivalPreview;
+    if (preview == null) return null;
+    final destination = switch (preview.kind) {
+      FirstArrivalKind.hole => '홀',
+      FirstArrivalKind.powerSlider => '파워 슬라이더',
+      FirstArrivalKind.impact => '첫 충돌',
+      FirstArrivalKind.rangeEnd => '사거리 끝',
+    };
+    return '쉬움 모드, 예상 첫 도착 $destination';
   }
 
   void _handleSemanticEntity(String entityId) {
@@ -2525,13 +2631,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     )) {
       return;
     }
+    _chargeFeedbackTimer?.cancel();
+    _chargeFeedbackTimer = null;
     _lastPointerTimeStamp = timeStamp;
     _frameTimeStampAtLastPointer =
         SchedulerBinding.instance.currentSystemFrameTimeStamp;
     _pressActivationTimer?.cancel();
     _chargeStartRecorded = false;
     _overchargeFeedbackRecorded = false;
-    _setChargeGauge(ChargeGaugeState.green, active: onBall);
+    _setChargeGauge(ChargeGaugeState.green, active: false);
     if (onBall) {
       _setState(_state.copyWith(message: '공을 길게 눌러 힘을 모으세요'));
       _pressActivationTimer = Timer(const Duration(milliseconds: 450), () {
@@ -2601,9 +2709,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       logicalPosition: logical,
       timeStamp: timeStamp,
     );
-    if (release.gaugeState == ChargeGaugeState.cancelledGray) {
-      _setChargeGauge(ChargeGaugeState.cancelledGray, active: true);
-    }
     _pressActivationTimer?.cancel();
     _pressActivationTimer = null;
     _chargeTimer?.cancel();
@@ -2612,7 +2717,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final overchargeCancelled =
         release.kind == LaunchInputReleaseKind.overchargeCancelled;
     if (overchargeCancelled) {
-      _setChargeGauge(ChargeGaugeState.green, active: false);
+      _showOverchargeFeedback();
       _chargeStartRecorded = false;
       _telemetry.record(
         '과충전 취소',
@@ -2651,14 +2756,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final direction = aim.length == 0
           ? _state.aimDirection
           : aim.normalized();
-      _launch(
-        inputOverride: ShotInput(
-          direction: direction,
-          power: power,
-          equippedTrait: _state.equippedTrait,
-        ),
-        inputReleasedAt: inputReleasedAt,
-      );
+      var launchInput = ShotInput(
+        direction: direction,
+        power: power,
+        equippedTrait: _state.equippedTrait,
+      ).normalized();
+      if (_difficulty == PlayerDifficulty.easy) {
+        _syncFirstArrivalPreview(inputOverride: launchInput, force: true);
+        launchInput = _firstArrivalInputSnapshot ?? launchInput;
+      }
+      _launch(inputOverride: launchInput, inputReleasedAt: inputReleasedAt);
       return;
     }
     if (release.kind == LaunchInputReleaseKind.tap) {
@@ -2796,22 +2903,33 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _chargeTimer?.cancel();
     _pressActivationTimer?.cancel();
+    _chargeFeedbackTimer?.cancel();
     _launchInputSession.reset();
     super.dispose();
   }
 
   void _resetChargeGauge() {
+    _chargeFeedbackTimer?.cancel();
+    _chargeFeedbackTimer = null;
     _chargeGaugeState = ChargeGaugeState.green;
     _chargeGaugeActive = false;
     _overchargeFeedbackRecorded = false;
-    _game.setChargeGaugeState(_chargeGaugeState, active: false);
+  }
+
+  void _showOverchargeFeedback() {
+    _chargeFeedbackTimer?.cancel();
+    _setChargeGauge(ChargeGaugeState.cancelledGray, active: true);
+    _chargeFeedbackTimer = Timer(const Duration(milliseconds: 450), () {
+      if (!mounted || _launchInputSession.isActive) return;
+      _chargeFeedbackTimer = null;
+      _setChargeGauge(ChargeGaugeState.green, active: false);
+    });
   }
 
   void _setChargeGauge(ChargeGaugeState next, {required bool active}) {
     final changed = _chargeGaugeState != next || _chargeGaugeActive != active;
     _chargeGaugeState = next;
     _chargeGaugeActive = active;
-    _game.setChargeGaugeState(next, active: active);
     if (changed && active) {
       _recordTyped(PlayTelemetryEventType.chargeStageChanged);
     }
@@ -2838,6 +2956,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final clearPopupOpen = _state.phase == GamePhase.success && _showClearPopup;
     final failurePopupOpen =
         _showFailurePopup && !_showBallInfo && inspectedEntity == null;
+    final persistentTutorialHint = widget.showTutorialFailureHints
+        ? persistentTutorialHintFor(
+            levelIndex: _state.levelIndex,
+            failedShots: _state.phase == GamePhase.success
+                ? 0
+                : _state.shotCount,
+          )
+        : null;
     final persistenceErrorOpen = _showClearPersistenceError;
     final popupOpen =
         _showBallInfo ||
@@ -2929,6 +3055,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     : null,
                               ),
                             ),
+                          if (persistentTutorialHint != null)
+                            PersistentTutorialHintCard(
+                              text: persistentTutorialHint,
+                            ),
                           Expanded(
                             child: AbsorbPointer(
                               absorbing: inputBlocked,
@@ -3009,7 +3139,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                   label: '공을 조준하는 게임 화면',
                                                   value: _chargeGaugeActive
                                                       ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                      : '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                                      : [
+                                                          '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                                          ?_firstArrivalSemanticsValue,
+                                                        ].join(', '),
                                                   increasedValue:
                                                       _chargeGaugeActive
                                                       ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
@@ -3020,6 +3153,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                       : '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
                                                   hint: _chargeGaugeActive
                                                       ? '현재 ${_chargeGaugeStateLabel(_chargeGaugeState)}. 손을 떼면 발사하거나 과충전 시 취소됩니다.'
+                                                      : _difficulty ==
+                                                            PlayerDifficulty
+                                                                .easy
+                                                      ? '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하면 마름모와 예상 라벨로 첫 도착 위치를 안내합니다'
                                                       : '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
                                                   onIncrease: () =>
                                                       _adjustPower(0.055),
@@ -3177,6 +3314,38 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
+              if (_chargeGaugeActive)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Align(
+                        alignment:
+                            GameFeedback.chargeGaugeSide ==
+                                ChargeGaugeSide.right
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: SizedBox(
+                          key: Key(
+                            'charge_gauge_${GameFeedback.chargeGaugeSide.name}',
+                          ),
+                          width: 34,
+                          height: math.min(
+                            196,
+                            math.max(144, screenSize.height * 0.23),
+                          ),
+                          child: _ChargeGaugeRail(
+                            state: _chargeGaugeState,
+                            power: _state.aimPower,
+                            side: GameFeedback.chargeGaugeSide,
+                            reducedMotion: GameFeedback.reducedMotionEnabled,
+                            strongFlash: GameFeedback.strongFlashEnabled,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               if (_showBallInfo)
                 _InfoPopup(
                   semanticLabel: '공 정보',
@@ -4486,7 +4655,13 @@ String _levelIntroMessage(int levelIndex) {
   };
 }
 
-String _failureAdviceFor(List<String> events) {
+String _failureAdviceFor(List<String> events, {required int levelIndex}) {
+  final causalHint = tutorialCausalHintForStage(levelIndex);
+  final advice = _baseFailureAdviceFor(events);
+  return causalHint == null ? advice : '$advice $causalHint';
+}
+
+String _baseFailureAdviceFor(List<String> events) {
   if (events.contains('hole_rejected_trait')) {
     return '홀에 닿지 못했어요. 속성을 활용하거나 다른 각도와 충돌 경로를 시도해 보세요.';
   }
@@ -4497,7 +4672,7 @@ String _failureAdviceFor(List<String> events) {
     return '상자가 움직이지 않았습니다. 더 강한 힘이나 다른 면을 노려 보세요.';
   }
   if (events.contains('power_low')) {
-    return '힘이 부족했어요. 공 주변 게이지를 조금 더 채워 다시 시도해 보세요.';
+    return '힘이 부족했어요. 화면 가장자리 충전 게이지를 조금 더 채워 다시 시도해 보세요.';
   }
   if (events.contains('power_high')) {
     return '힘이 너무 셌어요. 게이지를 한 칸 낮추고 충돌 면을 바꿔 보세요.';
@@ -4540,6 +4715,279 @@ String _chargeGaugeMessage(ChargeGaugeState state) {
     return '${_chargeGaugeStateLabel(state)} · 손을 떼고 새로 누르세요';
   }
   return '${_chargeGaugeStateLabel(state)} · 손을 떼면 발사됩니다';
+}
+
+class _ChargeGaugeRail extends StatefulWidget {
+  const _ChargeGaugeRail({
+    required this.state,
+    required this.power,
+    required this.side,
+    required this.reducedMotion,
+    required this.strongFlash,
+  });
+
+  final ChargeGaugeState state;
+  final double power;
+  final ChargeGaugeSide side;
+  final bool reducedMotion;
+  final bool strongFlash;
+
+  @override
+  State<_ChargeGaugeRail> createState() => _ChargeGaugeRailState();
+}
+
+class _ChargeGaugeRailState extends State<_ChargeGaugeRail>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flashController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 250),
+    value: 1,
+  );
+
+  bool get _shouldFlash =>
+      widget.state == ChargeGaugeState.warningRed &&
+      !widget.reducedMotion &&
+      widget.strongFlash;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFlash();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChargeGaugeRail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state != widget.state ||
+        oldWidget.reducedMotion != widget.reducedMotion ||
+        oldWidget.strongFlash != widget.strongFlash) {
+      _syncFlash();
+    }
+  }
+
+  void _syncFlash() {
+    if (_shouldFlash) {
+      _flashController.repeat(reverse: true, min: 0.35, max: 1);
+    } else {
+      _flashController
+        ..stop()
+        ..value = 1;
+    }
+  }
+
+  @override
+  void dispose() {
+    _flashController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _chargeGaugeColor(widget.state);
+    final icon = switch (widget.state) {
+      ChargeGaugeState.green => Icons.eco,
+      ChargeGaugeState.yellow => Icons.bolt,
+      ChargeGaugeState.red => Icons.local_fire_department,
+      ChargeGaugeState.warningRed => Icons.warning_amber_rounded,
+      ChargeGaugeState.cancelledGray => Icons.close,
+    };
+    final shortLabel = switch (widget.state) {
+      ChargeGaugeState.green => '약',
+      ChargeGaugeState.yellow => '중',
+      ChargeGaugeState.red => '강',
+      ChargeGaugeState.warningRed => '주의',
+      ChargeGaugeState.cancelledGray => '취소',
+    };
+    final percent = widget.state == ChargeGaugeState.cancelledGray
+        ? 100
+        : (widget.power.clamp(0.0, 1.0) * 100).round();
+    final sideLabel = widget.side == ChargeGaugeSide.right ? '오른쪽' : '왼쪽';
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Semantics(
+          key: const Key('charge_gauge_live_state'),
+          container: true,
+          liveRegion: true,
+          label: '충전 상태',
+          value: _chargeGaugeStateLabel(widget.state),
+          child: const SizedBox.expand(),
+        ),
+        Semantics(
+          key: const Key('charge_gauge_rail'),
+          container: true,
+          label: '충전 게이지',
+          value: '$sideLabel, 힘 $percent퍼센트',
+          child: ExcludeSemantics(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xB8FFF8E8),
+                border: Border.all(color: const Color(0xD924352D), width: 1),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x2924352D),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(3, 5, 3, 6),
+                child: Column(
+                  children: [
+                    Icon(icon, size: 17, color: color),
+                    const SizedBox(height: 2),
+                    Expanded(
+                      child: AnimatedBuilder(
+                        animation: _flashController,
+                        builder: (context, _) => Opacity(
+                          key: const Key('charge_gauge_flash_opacity'),
+                          opacity: _flashController.value,
+                          child: CustomPaint(
+                            key: const Key('charge_gauge_fill'),
+                            painter: _ChargeGaugeRailPainter(
+                              power:
+                                  widget.state == ChargeGaugeState.cancelledGray
+                                  ? 1
+                                  : widget.power,
+                              color: color,
+                              fillOpacity: 1,
+                              cancelled:
+                                  widget.state ==
+                                  ChargeGaugeState.cancelledGray,
+                            ),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      shortLabel,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: Color(0xFF24352D),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$percent%',
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: Color(0xFF24352D),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Color _chargeGaugeColor(ChargeGaugeState state) {
+  return switch (state) {
+    ChargeGaugeState.green => const Color(0xFF16784C),
+    ChargeGaugeState.yellow => const Color(0xFF9B6C00),
+    ChargeGaugeState.red => const Color(0xFFB3261E),
+    ChargeGaugeState.warningRed => const Color(0xFFD21F18),
+    ChargeGaugeState.cancelledGray => const Color(0xFF59615E),
+  };
+}
+
+class _ChargeGaugeRailPainter extends CustomPainter {
+  const _ChargeGaugeRailPainter({
+    required this.power,
+    required this.color,
+    required this.fillOpacity,
+    required this.cancelled,
+  });
+
+  final double power;
+  final Color color;
+  final double fillOpacity;
+  final bool cancelled;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const railWidth = 10.0;
+    final rail = RRect.fromRectAndRadius(
+      Rect.fromLTWH((size.width - railWidth) / 2, 0, railWidth, size.height),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(rail, Paint()..color = const Color(0xFFD7DED8));
+    canvas.drawRRect(
+      rail,
+      Paint()
+        ..color = const Color(0xFF24352D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    final progress = power.clamp(0.0, 1.0);
+    final fillHeight = size.height * progress;
+    canvas.save();
+    canvas.clipRRect(rail);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        rail.outerRect.left,
+        size.height - fillHeight,
+        railWidth,
+        fillHeight,
+      ),
+      Paint()..color = color.withValues(alpha: fillOpacity),
+    );
+    canvas.restore();
+
+    final tickPaint = Paint()
+      ..color = const Color(0xFFFDF8E6)
+      ..strokeWidth = 2;
+    for (final threshold in const [0.40, 0.70, 0.90]) {
+      final y = size.height * (1 - threshold);
+      canvas.drawLine(
+        Offset(rail.outerRect.left - 3, y),
+        Offset(rail.outerRect.right + 3, y),
+        tickPaint,
+      );
+    }
+
+    if (cancelled) {
+      final center = rail.outerRect.center;
+      final cancelPaint = Paint()
+        ..color = const Color(0xFFFDF8E6)
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        center + const Offset(-5, -5),
+        center + const Offset(5, 5),
+        cancelPaint,
+      );
+      canvas.drawLine(
+        center + const Offset(5, -5),
+        center + const Offset(-5, 5),
+        cancelPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChargeGaugeRailPainter oldDelegate) {
+    return oldDelegate.power != power ||
+        oldDelegate.color != color ||
+        oldDelegate.fillOpacity != fillOpacity ||
+        oldDelegate.cancelled != cancelled;
+  }
 }
 
 List<_LeaderboardRow> _leaderboardRows(GameState state) {

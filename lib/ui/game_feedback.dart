@@ -11,6 +11,10 @@ import 'feedback_audio.dart';
 typedef SoundPlayer = Future<void> Function(SystemSoundType type);
 typedef SoundCuePlayer = Future<void> Function(FeedbackCue cue);
 
+enum ChargeGaugeSide { right, left }
+
+enum PlayerDifficulty { normal, easy }
+
 /// 외부 오디오 파일 없이 플랫폼 기본 피드백을 조합한다.
 /// 웹이나 무음·미지원 플랫폼에서 실패해도 게임 상태에는 영향을 주지 않는다.
 class GameFeedback {
@@ -43,12 +47,15 @@ class GameFeedback {
   static const chainScoreDetailsPreferenceKey =
       'property_shot_chain_score_details_enabled';
   static const strongFlashPreferenceKey = 'property_shot_strong_flash_enabled';
+  static const chargeGaugeSidePreferenceKey = 'property_shot_charge_gauge_side';
+  static const playerDifficultyPreferenceKey =
+      'property_shot_player_difficulty';
   static const helpRevisionPreferenceKey = 'property_shot_help_revision';
   static const helpAcknowledgedRevisionPreferenceKey =
       'property_shot_help_acknowledged_revision';
   static const settingsSchemaVersionKey =
       'property_shot_settings_schema_version';
-  static const settingsSchemaVersion = 3;
+  static const settingsSchemaVersion = 4;
   static bool soundEnabled = true;
   static bool backgroundMusicEnabled = true;
   static bool hapticsEnabled = true;
@@ -63,6 +70,8 @@ class GameFeedback {
   static bool collisionPathIconsEnabled = true;
   static bool chainScoreDetailsEnabled = true;
   static bool strongFlashEnabled = true;
+  static ChargeGaugeSide chargeGaugeSide = ChargeGaugeSide.right;
+  static PlayerDifficulty playerDifficulty = PlayerDifficulty.normal;
   static int screenShakeStrength = 2;
   static int helpRevision = 0;
   static Future<void>? _preferenceWriteTail;
@@ -83,6 +92,8 @@ class GameFeedback {
     collisionPathIconsEnabled = true;
     chainScoreDetailsEnabled = true;
     strongFlashEnabled = true;
+    chargeGaugeSide = ChargeGaugeSide.right;
+    playerDifficulty = PlayerDifficulty.normal;
     screenShakeStrength = 2;
     helpRevision = 0;
     _preferenceWriteTail = null;
@@ -137,6 +148,14 @@ class GameFeedback {
           preferences.getBool(chainScoreDetailsPreferenceKey) ?? true;
       strongFlashEnabled =
           preferences.getBool(strongFlashPreferenceKey) ?? true;
+      final storedChargeGaugeSide = preferences.getString(
+        chargeGaugeSidePreferenceKey,
+      );
+      final storedPlayerDifficulty = preferences.getString(
+        playerDifficultyPreferenceKey,
+      );
+      chargeGaugeSide = _chargeGaugeSideFromStorage(storedChargeGaugeSide);
+      playerDifficulty = _playerDifficultyFromStorage(storedPlayerDifficulty);
       helpRevision = (preferences.getInt(helpRevisionPreferenceKey) ?? 0)
           .clamp(0, 999999)
           .toInt();
@@ -151,6 +170,19 @@ class GameFeedback {
           screenShakeStrength,
         );
         await _writeCurrentSettings(preferences);
+      } else {
+        if (storedChargeGaugeSide != chargeGaugeSide.name) {
+          await preferences.setString(
+            chargeGaugeSidePreferenceKey,
+            chargeGaugeSide.name,
+          );
+        }
+        if (storedPlayerDifficulty != playerDifficulty.name) {
+          await preferences.setString(
+            playerDifficultyPreferenceKey,
+            playerDifficulty.name,
+          );
+        }
       }
     } on Exception {
       // 설정 저장소를 사용할 수 없는 환경에서도 기본값으로 계속 실행한다.
@@ -227,6 +259,16 @@ class GameFeedback {
         strongFlashEnabled = value;
       });
 
+  static Future<void> setChargeGaugeSide(ChargeGaugeSide side) async {
+    chargeGaugeSide = side;
+    await _savePreferenceString(chargeGaugeSidePreferenceKey, side.name);
+  }
+
+  static Future<void> setPlayerDifficulty(PlayerDifficulty difficulty) async {
+    playerDifficulty = difficulty;
+    await _savePreferenceString(playerDifficultyPreferenceKey, difficulty.name);
+  }
+
   static Future<void> _setBoolean(
     String key,
     bool enabled,
@@ -293,6 +335,13 @@ class GameFeedback {
     });
   }
 
+  static Future<void> _savePreferenceString(String key, String value) async {
+    await _enqueuePreferenceWrite(() async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(key, value);
+    });
+  }
+
   static Future<void> _writeCurrentSettings(
     SharedPreferences preferences,
   ) async {
@@ -315,6 +364,28 @@ class GameFeedback {
     for (final entry in values.entries) {
       await preferences.setBool(entry.key, entry.value);
     }
+    await preferences.setString(
+      chargeGaugeSidePreferenceKey,
+      chargeGaugeSide.name,
+    );
+    await preferences.setString(
+      playerDifficultyPreferenceKey,
+      playerDifficulty.name,
+    );
+  }
+
+  static ChargeGaugeSide _chargeGaugeSideFromStorage(String? stored) {
+    return switch (stored) {
+      'left' => ChargeGaugeSide.left,
+      _ => ChargeGaugeSide.right,
+    };
+  }
+
+  static PlayerDifficulty _playerDifficultyFromStorage(String? stored) {
+    return switch (stored) {
+      'easy' => PlayerDifficulty.easy,
+      _ => PlayerDifficulty.normal,
+    };
   }
 
   static Future<void> _enqueuePreferenceWrite(

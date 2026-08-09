@@ -14,6 +14,13 @@ typedef StageCompletionResult = ({
   int shotCount,
 });
 
+typedef StagePatternDrawPolicy =
+    StagePatternDraw Function({
+      required StageDefinition stage,
+      required StageShuffleBagState state,
+      required int rootSeed,
+    });
+
 /// 스테이지 선택 화면과 결정론 패턴 런 상태를 연결한다.
 class StagePatternSession {
   StagePatternSession({
@@ -95,12 +102,14 @@ class StagePatternSession {
     int initialCloneCoreCount = 0,
     bool initialCloneCoreRewarded = false,
     Iterable<String> initialCloneCoreRewardedStageIds = const [],
+    StagePatternDrawPolicy? drawPolicy,
   }) => _enqueueOperation(
     () => _selectStage(
       stageId,
       initialCloneCoreCount: initialCloneCoreCount,
       initialCloneCoreRewarded: initialCloneCoreRewarded,
       initialCloneCoreRewardedStageIds: initialCloneCoreRewardedStageIds,
+      drawPolicy: drawPolicy,
     ),
   );
 
@@ -109,6 +118,7 @@ class StagePatternSession {
     required int initialCloneCoreCount,
     required bool initialCloneCoreRewarded,
     required Iterable<String> initialCloneCoreRewardedStageIds,
+    required StagePatternDrawPolicy? drawPolicy,
   }) async {
     if (initialCloneCoreCount < 0) {
       throw ArgumentError.value(
@@ -175,7 +185,7 @@ class StagePatternSession {
     final bag =
         (startingNewRun ? null : current.stageShuffleBags[stageId]) ??
         StageShuffleBagState.initial(stageId);
-    final draw = StageShuffleBag.draw(
+    final draw = (drawPolicy ?? StageShuffleBag.draw)(
       stage: stage,
       state: bag,
       rootSeed: rootSeed,
@@ -213,6 +223,7 @@ class StagePatternSession {
     bool optionalChallengeAchieved = false,
     bool applyOptionalChallengeGuard = false,
     bool applyStageRecordGuard = false,
+    StagePatternDrawPolicy? nextStageDrawPolicy,
   }) => _enqueueOperation(
     () => _completeCurrentStage(
       stageId: stageId,
@@ -222,6 +233,7 @@ class StagePatternSession {
       optionalChallengeAchieved: optionalChallengeAchieved,
       applyOptionalChallengeGuard: applyOptionalChallengeGuard,
       applyStageRecordGuard: applyStageRecordGuard,
+      nextStageDrawPolicy: nextStageDrawPolicy,
     ),
   );
 
@@ -233,6 +245,7 @@ class StagePatternSession {
     required bool optionalChallengeAchieved,
     required bool applyOptionalChallengeGuard,
     required bool applyStageRecordGuard,
+    required StagePatternDrawPolicy? nextStageDrawPolicy,
   }) async {
     if (shotCount < 1) {
       throw ArgumentError.value(shotCount, 'shotCount', '1 이상이어야 합니다.');
@@ -322,7 +335,7 @@ class StagePatternSession {
         final bag =
             current.stageShuffleBags[nextStageId] ??
             StageShuffleBagState.initial(nextStageId);
-        nextDraw = StageShuffleBag.draw(
+        nextDraw = (nextStageDrawPolicy ?? StageShuffleBag.draw)(
           stage: nextStage,
           state: bag,
           rootSeed: current.rootSeed,

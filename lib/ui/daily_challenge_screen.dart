@@ -22,6 +22,7 @@ import '../game/run/stage_shuffle_bag.dart';
 import '../game/simulation/trait_resolver.dart';
 import '../game/simulation/shot_resolver.dart';
 import 'game_screen.dart';
+import 'game_feedback.dart';
 import 'play_telemetry.dart';
 import 'tutorial_experiment.dart';
 
@@ -100,6 +101,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   DailyChallengeRunStateStorage? _runStorage;
   StagePatternSession? _session;
   DailyChallengeMode? _activeMode;
+  PlayerDifficulty _activeDifficulty = PlayerDifficulty.normal;
   DailyChallengeMode _completedMode = DailyChallengeMode.official;
   _DailyScreenView _view = _DailyScreenView.overview;
   bool _loading = true;
@@ -323,6 +325,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     DailyChallengeRecord? record,
   }) async {
     _runStartedRecorded = false;
+    _activeDifficulty = mode == DailyChallengeMode.official
+        ? PlayerDifficulty.normal
+        : GameFeedback.playerDifficulty;
     final storage = await _createStorage(mode, attemptId: attemptId);
     final session = storage.createSession(
       catalog: generatedStageCatalog,
@@ -490,6 +495,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       seed: state?.currentPatternSeed ?? 0,
       resolverVersion:
           state?.resolverVersion ?? dailyChallengePhysicsResolverVersion,
+      difficulty: _activeDifficulty == PlayerDifficulty.easy
+          ? PlayTelemetryDifficulty.easy
+          : PlayTelemetryDifficulty.normal,
       rewardState: PlayTelemetryRewardState(
         candidateIds: _activeRewardCandidates.map((reward) => reward.id),
         selectedId: _activeSelectedRewardId,
@@ -848,6 +856,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         onShotRewound: _rewindShot,
         progressPersistencePolicy: GameProgressPersistencePolicy.disabled,
         tutorialVariant: widget.tutorialVariant,
+        difficulty: _activeDifficulty,
+        showTutorialFailureHints: false,
         showDebugControls: false,
       );
     }

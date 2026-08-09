@@ -32,6 +32,8 @@ void main() {
 
     expect(find.text('효과음'), findsOneWidget);
     for (final label in const [
+      '충전 게이지 위치',
+      '게임 난이도',
       '마지막 샷 슬로모션',
       '충돌 순서 표시',
       '마지막 접촉 대상 강조',
@@ -54,6 +56,39 @@ void main() {
     );
     expect(find.byKey(const Key('help_reset_button')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('게이지 위치와 난이도 설정을 변경하고 저장한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+    await _pumpForAsyncWork(tester);
+    tester
+        .widget<IconButton>(find.byKey(const Key('feedback_settings_button')))
+        .onPressed!();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('charge_gauge_side_dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('왼쪽').last);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('player_difficulty_dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('쉬움').last);
+    await _pumpForAsyncWork(tester);
+
+    expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.left);
+    expect(GameFeedback.playerDifficulty, PlayerDifficulty.easy);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getString(GameFeedback.chargeGaugeSidePreferenceKey),
+      'left',
+    );
+    expect(
+      preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
+      'easy',
+    );
   });
 
   testWidgets('설정 메뉴에서 흔들림 강도와 도움말 초기화를 실행한다', (tester) async {

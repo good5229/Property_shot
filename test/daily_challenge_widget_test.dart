@@ -10,6 +10,7 @@ import 'package:property_shot/game/run/daily_challenge.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/daily_challenge_screen.dart';
 import 'package:property_shot/ui/game_screen.dart';
+import 'package:property_shot/ui/game_feedback.dart';
 import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,6 +54,46 @@ void main() {
     ).load();
     expect(record.officialAttemptCount, 1);
     expect(record.activeAttemptId, 'attempt_1');
+  });
+
+  testWidgets('정식 도전은 저장된 쉬움 설정과 무관하게 보통 모드로 시작한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    GameFeedback.playerDifficulty = PlayerDifficulty.easy;
+    addTearDown(GameFeedback.resetForTesting);
+    await tester.pumpWidget(const MaterialApp(home: DailyChallengeScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('daily_official_button')));
+    await tester.pump(const Duration(milliseconds: 800));
+
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).difficulty,
+      PlayerDifficulty.normal,
+    );
+  });
+
+  testWidgets('오늘의 도전 연습은 쉬움 설정을 사용하되 공식 기록과 분리된다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    GameFeedback.playerDifficulty = PlayerDifficulty.easy;
+    addTearDown(GameFeedback.resetForTesting);
+    await tester.pumpWidget(const MaterialApp(home: DailyChallengeScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('daily_practice_button')));
+    await tester.pump(const Duration(milliseconds: 800));
+
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).difficulty,
+      PlayerDifficulty.easy,
+    );
+    final preferences = await SharedPreferences.getInstance();
+    final definition = DailyChallengeDefinition.fromDateTime(DateTime.now());
+    final record = await DailyChallengeRecordStore(
+      backend: SharedPreferencesRunStateBackend(preferences),
+      definition: definition,
+    ).load();
+    expect(record.officialAttemptCount, 0);
+    expect(record.activeAttemptId, isNull);
   });
 
   testWidgets('오늘의 도전 플레이 중 메인 메뉴로 나가도 공식 진행은 보존된다', (tester) async {

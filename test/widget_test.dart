@@ -24,6 +24,7 @@ import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_screen.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 import 'package:property_shot/ui/play_telemetry.dart';
+import 'package:property_shot/ui/run_difficulty_attribution_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fixtures/stage_chain_score_patterns.dart';
@@ -580,6 +581,12 @@ void main() {
       );
     }
     expect(draw.patternId, solution.patternId);
+    expect(
+      await RunDifficultyAttributionStore(
+        preferences,
+      ).save(session.state!, PlayerDifficulty.normal),
+      isTrue,
+    );
     final source = draw.pattern.objects.firstWhere(
       (object) => object.id == solution.strategyId,
     );
@@ -792,6 +799,12 @@ void main() {
       now: () => DateTime.utc(2026, 8, 7, 8),
     );
     await session.selectStage(levels.first.id);
+    expect(
+      await RunDifficultyAttributionStore(
+        preferences,
+      ).save(session.state!, PlayerDifficulty.normal),
+      isTrue,
+    );
     await session.completeCurrentStage(
       stageId: levels.first.id,
       nextStageId: levels[1].id,

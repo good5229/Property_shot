@@ -73,6 +73,8 @@ extension PlayTelemetryEventTypeMetadata on PlayTelemetryEventType {
 
 enum PlayTelemetryResult { continued, cleared, failed, cancelled, abandoned }
 
+enum PlayTelemetryDifficulty { normal, easy }
+
 extension PlayTelemetryResultMetadata on PlayTelemetryResult {
   String get code => switch (this) {
     PlayTelemetryResult.continued => 'continued',
@@ -127,6 +129,7 @@ class PlayTelemetryContext {
     required this.resolverVersion,
     required this.rewardState,
     this.isReplay = false,
+    this.difficulty = PlayTelemetryDifficulty.normal,
   }) {
     _requireNonNegative(stageIndex, '단계 인덱스');
     if (seed < 0 || seed > 0xffffffff) {
@@ -144,6 +147,20 @@ class PlayTelemetryContext {
   final String resolverVersion;
   final PlayTelemetryRewardState rewardState;
   final bool isReplay;
+  final PlayTelemetryDifficulty difficulty;
+  bool get aimAssistEnabled => difficulty == PlayTelemetryDifficulty.easy;
+
+  PlayTelemetryContext copyWith({PlayTelemetryDifficulty? difficulty}) =>
+      PlayTelemetryContext(
+        stageIndex: stageIndex,
+        stageId: stageId,
+        patternId: patternId,
+        seed: seed,
+        resolverVersion: resolverVersion,
+        rewardState: rewardState,
+        isReplay: isReplay,
+        difficulty: difficulty ?? this.difficulty,
+      );
 
   Map<String, Object?> toJson() => {
     'stage_id': stageId,
@@ -152,6 +169,8 @@ class PlayTelemetryContext {
     'resolver_version': resolverVersion,
     ...rewardState.toJson(),
     'is_replay': isReplay,
+    'difficulty_mode': difficulty.name,
+    'aim_assist_enabled': aimAssistEnabled,
   };
 }
 

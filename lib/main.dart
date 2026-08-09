@@ -17,6 +17,7 @@ import 'game/persistence/progress_store.dart';
 import 'game/persistence/replay_library_store.dart';
 import 'game/persistence/run_state_store.dart';
 import 'game/replay/replay_capture_service.dart';
+import 'game/run/campaign_stage_selection.dart';
 import 'game/run/stage_pattern_session.dart';
 import 'game/run/run_state.dart';
 import 'game/run/run_reward.dart';
@@ -29,6 +30,7 @@ import 'ui/game_ball_painter.dart';
 import 'ui/bonus_goal.dart';
 import 'ui/play_telemetry.dart';
 import 'ui/replay_library_screen.dart';
+import 'ui/run_difficulty_attribution_store.dart';
 import 'ui/tutorial_experiment.dart';
 
 String _stageIntroMessage(int levelIndex) {
@@ -160,6 +162,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Set<String> _copyCoreRewardedStageIds = <String>{};
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
+  PlayerDifficulty _activeDifficulty = PlayerDifficulty.normal;
   late TutorialExperimentVariant _tutorialVariant = widget.tutorialVariant;
   late final ProgressStore _progressStore =
       widget.progressStore ??
@@ -169,6 +172,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       );
   late final Future<StagePatternSession> _patternSessionFuture;
   late final Future<ReplayLibraryStore> _replayLibraryFuture;
+  late final Future<RunDifficultyAttributionStore>
+  _difficultyAttributionStoreFuture;
   late final Future<void> _progressLoadFuture;
   late final LocalPlayTelemetry _telemetry;
   bool _runStartedRecorded = false;
@@ -179,6 +184,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     _patternSessionFuture = _createPatternSession();
     _replayLibraryFuture = _createReplayLibrary();
+    _difficultyAttributionStoreFuture = _createDifficultyAttributionStore();
     _progressLoadFuture = _loadCopyCore();
   }
 
@@ -197,6 +203,12 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return ReplayLibraryStore(
       backend: SharedPreferencesRunStateBackend(preferences),
     );
+  }
+
+  Future<RunDifficultyAttributionStore>
+  _createDifficultyAttributionStore() async {
+    final preferences = await SharedPreferences.getInstance();
+    return RunDifficultyAttributionStore(preferences);
   }
 
   Future<void> _loadCopyCore() async {
@@ -229,6 +241,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _selectingStage = true;
     try {
       await _progressLoadFuture;
+      _activeDifficulty = GameFeedback.playerDifficulty;
       final session = await _patternSessionFuture;
       await session.loadState();
       await session.migrateLegacyCloneCoreReward(
@@ -249,13 +262,46 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           session.state?.currentStageId == levels[index].id) {
         await session.prepareRewardSelection(stageId: levels[index].id);
       }
+      final preferBaseline =
+          CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
+            stageIndex: index,
+            alreadyCleared: _clearedLevels.contains(index),
+          );
+      final stateBeforeSelection = session.state;
       final draw = await session.selectStage(
         levels[index].id,
         initialCloneCoreCount: _copyCoreCount,
         initialCloneCoreRewarded:
             _legacyCopyCoreRewarded && _copyCoreRewardedStageIds.isEmpty,
         initialCloneCoreRewardedStageIds: _copyCoreRewardedStageIds,
+        drawPolicy: preferBaseline
+            ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
+            : null,
       );
+      final selectedRunState = session.state;
+      if (selectedRunState != null &&
+          selectedRunState.phase == RunPhase.playing) {
+        final attributionStore = await _difficultyAttributionStoreFuture;
+        final existingAttribution = attributionStore.loadFor(selectedRunState);
+        if (existingAttribution != null) {
+          _activeDifficulty = existingAttribution.difficulty;
+        } else if (!_sameStageIdentity(
+          stateBeforeSelection,
+          selectedRunState,
+        )) {
+          final attributed = await attributionStore.save(
+            selectedRunState,
+            _activeDifficulty,
+          );
+          final restoredAttribution = attributionStore.loadFor(
+            selectedRunState,
+          );
+          if (!attributed || restoredAttribution == null) {
+            throw StateError('단계 난이도 귀속 저장에 실패했습니다.');
+          }
+          _activeDifficulty = restoredAttribution.difficulty;
+        }
+      }
       await _mirrorCloneCore(session);
       _copyCoreRewarded = _isCloneCoreRewardedForStage(
         session.state,
@@ -390,6 +436,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
   }
 
+  bool _sameStageIdentity(RunState? left, RunState right) =>
+      left != null &&
+      left.runId == right.runId &&
+      left.currentStageId == right.currentStageId &&
+      left.currentPatternId == right.currentPatternId &&
+      left.currentPatternSeed == right.currentPatternSeed;
+
   PlayTelemetryContext _normalTelemetryContext() {
     final stageIndex = _activeStage ?? 0;
     final level = _activeLevel ?? levels[stageIndex];
@@ -399,6 +452,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       patternId: level.patternId ?? '${level.id}_default',
       seed: _activePatternSeed ?? 0,
       resolverVersion: 'shot-resolver-v1',
+      difficulty: _activeDifficulty == PlayerDifficulty.easy
+          ? PlayTelemetryDifficulty.easy
+          : PlayTelemetryDifficulty.normal,
       rewardState: PlayTelemetryRewardState(
         candidateIds: _activeRewardCandidates.map((reward) => reward.id),
         selectedId: _activeSelectedRewardId,
@@ -487,6 +543,19 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       );
     }
     final session = await _patternSessionFuture;
+    final attributionState = session.state;
+    final completionDifficulty = attributionState == null
+        ? null
+        : (await _difficultyAttributionStoreFuture)
+              .loadFor(attributionState)
+              ?.difficulty;
+    final nextIndex = levelIndex + 1;
+    final preferNextBaseline =
+        nextIndex < levels.length &&
+        CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
+          stageIndex: nextIndex,
+          alreadyCleared: _clearedLevels.contains(nextIndex),
+        );
     final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
@@ -497,14 +566,24 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       optionalChallengeAchieved: optionalChallengeAchieved,
       applyOptionalChallengeGuard: applyOptionalChallengeGuard,
       applyStageRecordGuard: applyStageRecordGuard,
+      nextStageDrawPolicy: preferNextBaseline
+          ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
+          : null,
     );
     await _saveCurrentReplay(session, totalScore: chainScore?.totalScore ?? 0);
     await _progressStore.recordStageClear(levelIndex);
-    await _progressStore.recordBestShot(levelIndex, completion.shotCount);
-    if (completion.optionalChallengeAchieved) {
-      await _progressStore.recordBonusGoal(levelIndex);
+    if (completionDifficulty == PlayerDifficulty.normal) {
+      await _progressStore.recordBestShot(levelIndex, completion.shotCount);
+      if (completion.optionalChallengeAchieved) {
+        await _progressStore.recordBonusGoal(levelIndex);
+      }
     }
     _applyClearedLevelInMemory(levelIndex);
+    if (attributionState != null) {
+      await (await _difficultyAttributionStoreFuture).clearFor(
+        attributionState,
+      );
+    }
     if (mounted) {
       setState(() {
         _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
@@ -659,16 +738,22 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         ? -1
         : levels.indexWhere((level) => level.id == stageId);
     if (levelIndex < 0) return;
+    final completionDifficulty = (await _difficultyAttributionStoreFuture)
+        .loadFor(state)
+        ?.difficulty;
     await _progressStore.recordStageClear(levelIndex);
-    final shotCount = state.shotsPerStage[stageId];
-    if (shotCount != null) {
-      await _progressStore.recordBestShot(levelIndex, shotCount);
-    }
-    final challengeKey = '$stageId:${state.currentPatternId}';
-    if (state.optionalChallenges[challengeKey] == true) {
-      await _progressStore.recordBonusGoal(levelIndex);
+    if (completionDifficulty == PlayerDifficulty.normal) {
+      final shotCount = state.shotsPerStage[stageId];
+      if (shotCount != null) {
+        await _progressStore.recordBestShot(levelIndex, shotCount);
+      }
+      final challengeKey = '$stageId:${state.currentPatternId}';
+      if (state.optionalChallenges[challengeKey] == true) {
+        await _progressStore.recordBonusGoal(levelIndex);
+      }
     }
     _applyClearedLevelInMemory(levelIndex);
+    await (await _difficultyAttributionStoreFuture).clearFor(state);
   }
 
   Future<void> _adoptCloneCoreState(StagePatternSession session) async {
@@ -700,6 +785,12 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     required List<ShotResult> results,
     required int shotCount,
   }) async {
+    final attributionState = session.state;
+    final completionDifficulty = attributionState == null
+        ? null
+        : (await _difficultyAttributionStoreFuture)
+              .loadFor(attributionState)
+              ?.difficulty;
     CreativeChainScoreAnalysis? analysis;
     var optionalChallengeAchieved = false;
     if (levelIndex == 7 && results.isNotEmpty) {
@@ -732,6 +823,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       );
     }
     final inventory = session.rewardInventory;
+    final nextIndex = levelIndex + 1;
+    final preferNextBaseline =
+        nextIndex < levels.length &&
+        CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
+          stageIndex: nextIndex,
+          alreadyCleared: _clearedLevels.contains(nextIndex),
+        );
     final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
@@ -747,14 +845,24 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         runRewardStageRecordGuardId,
         levels[levelIndex].id,
       ),
+      nextStageDrawPolicy: preferNextBaseline
+          ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
+          : null,
     );
     await _progressStore.recordStageClear(levelIndex);
-    await _progressStore.recordBestShot(levelIndex, completion.shotCount);
-    if (completion.optionalChallengeAchieved) {
-      await _progressStore.recordBonusGoal(levelIndex);
+    if (completionDifficulty == PlayerDifficulty.normal) {
+      await _progressStore.recordBestShot(levelIndex, completion.shotCount);
+      if (completion.optionalChallengeAchieved) {
+        await _progressStore.recordBonusGoal(levelIndex);
+      }
     }
     await _recoverPendingCopyCoreReward(session);
     _applyClearedLevelInMemory(levelIndex);
+    if (attributionState != null) {
+      await (await _difficultyAttributionStoreFuture).clearFor(
+        attributionState,
+      );
+    }
     return completion;
   }
 
@@ -964,6 +1072,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onStageRestarted: _restartStageRun,
         onShotRewound: _rewindStageRun,
         progressStore: _progressStore,
+        difficulty: _activeDifficulty,
         tutorialVariant: _tutorialVariant,
         showDebugControls: widget.showDebugControls,
       );
@@ -1447,6 +1556,48 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              DropdownButtonFormField<ChargeGaugeSide>(
+                key: const Key('charge_gauge_side_dropdown'),
+                decoration: const InputDecoration(labelText: '충전 게이지 위치'),
+                initialValue: GameFeedback.chargeGaugeSide,
+                items: const [
+                  DropdownMenuItem(
+                    value: ChargeGaugeSide.right,
+                    child: Text('오른쪽 (기본)'),
+                  ),
+                  DropdownMenuItem(
+                    value: ChargeGaugeSide.left,
+                    child: Text('왼쪽'),
+                  ),
+                ],
+                onChanged: (side) {
+                  if (side == null) return;
+                  setState(() => GameFeedback.chargeGaugeSide = side);
+                  unawaited(GameFeedback.setChargeGaugeSide(side));
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<PlayerDifficulty>(
+                key: const Key('player_difficulty_dropdown'),
+                decoration: const InputDecoration(labelText: '게임 난이도'),
+                initialValue: GameFeedback.playerDifficulty,
+                items: const [
+                  DropdownMenuItem(
+                    value: PlayerDifficulty.normal,
+                    child: Text('보통'),
+                  ),
+                  DropdownMenuItem(
+                    value: PlayerDifficulty.easy,
+                    child: Text('쉬움'),
+                  ),
+                ],
+                onChanged: (difficulty) {
+                  if (difficulty == null) return;
+                  setState(() => GameFeedback.playerDifficulty = difficulty);
+                  unawaited(GameFeedback.setPlayerDifficulty(difficulty));
+                },
+              ),
+              const Divider(height: 28),
               _settingSwitch(
                 key: const Key('last_shot_slow_motion_toggle'),
                 title: '마지막 샷 슬로모션',

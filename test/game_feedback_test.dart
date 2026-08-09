@@ -133,6 +133,8 @@ void main() {
       GameFeedback.hapticsPreferenceKey: false,
       GameFeedback.screenShakePreferenceKey: false,
       GameFeedback.reducedMotionPreferenceKey: true,
+      GameFeedback.chargeGaugeSidePreferenceKey: 'left',
+      GameFeedback.playerDifficultyPreferenceKey: 'easy',
     });
     GameFeedback.soundEnabled = true;
     GameFeedback.hapticsEnabled = true;
@@ -146,6 +148,8 @@ void main() {
     expect(GameFeedback.hapticsEnabled, isFalse);
     expect(GameFeedback.screenShakeEnabled, isFalse);
     expect(GameFeedback.reducedMotionEnabled, isTrue);
+    expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.left);
+    expect(GameFeedback.playerDifficulty, PlayerDifficulty.easy);
   });
 
   test('소리와 진동 설정 변경을 로컬 저장소에 기록한다', () async {
@@ -214,9 +218,9 @@ void main() {
     GameFeedback.helpRevision = 0;
   });
 
-  test('스키마 3은 실패 인과와 점수·점멸·음악 설정을 모두 복원한다', () async {
+  test('스키마 3을 4로 올리며 기존 설정과 새 기본값을 함께 보존한다', () async {
     SharedPreferences.setMockInitialValues({
-      GameFeedback.settingsSchemaVersionKey: 2,
+      GameFeedback.settingsSchemaVersionKey: 3,
       GameFeedback.lastShotSlowMotionPreferenceKey: false,
       GameFeedback.collisionOrderPreferenceKey: false,
       GameFeedback.lastContactHighlightPreferenceKey: false,
@@ -242,9 +246,19 @@ void main() {
     expect(GameFeedback.chainScoreDetailsEnabled, isFalse);
     expect(GameFeedback.strongFlashEnabled, isFalse);
     expect(GameFeedback.backgroundMusicEnabled, isFalse);
+    expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.right);
+    expect(GameFeedback.playerDifficulty, PlayerDifficulty.normal);
     expect(
       preferences.getInt(GameFeedback.settingsSchemaVersionKey),
       GameFeedback.settingsSchemaVersion,
+    );
+    expect(
+      preferences.getString(GameFeedback.chargeGaugeSidePreferenceKey),
+      'right',
+    );
+    expect(
+      preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
+      'normal',
     );
   });
 
@@ -261,6 +275,8 @@ void main() {
     await GameFeedback.setChainScoreDetailsEnabled(true);
     await GameFeedback.setStrongFlashEnabled(true);
     await GameFeedback.setBackgroundMusicEnabled(false);
+    await GameFeedback.setChargeGaugeSide(ChargeGaugeSide.left);
+    await GameFeedback.setPlayerDifficulty(PlayerDifficulty.easy);
     final preferences = await SharedPreferences.getInstance();
 
     for (final key in const [
@@ -279,6 +295,36 @@ void main() {
     expect(
       preferences.getBool(GameFeedback.backgroundMusicPreferenceKey),
       isFalse,
+    );
+    expect(
+      preferences.getString(GameFeedback.chargeGaugeSidePreferenceKey),
+      'left',
+    );
+    expect(
+      preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
+      'easy',
+    );
+  });
+
+  test('알 수 없는 새 설정 값은 안전한 기본값으로 복원한다', () async {
+    SharedPreferences.setMockInitialValues({
+      GameFeedback.settingsSchemaVersionKey: GameFeedback.settingsSchemaVersion,
+      GameFeedback.chargeGaugeSidePreferenceKey: 'center',
+      GameFeedback.playerDifficultyPreferenceKey: 'expert',
+    });
+
+    await GameFeedback.loadPreferences();
+
+    expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.right);
+    expect(GameFeedback.playerDifficulty, PlayerDifficulty.normal);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getString(GameFeedback.chargeGaugeSidePreferenceKey),
+      'right',
+    );
+    expect(
+      preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
+      'normal',
     );
   });
 

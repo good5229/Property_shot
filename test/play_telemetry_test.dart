@@ -347,6 +347,22 @@ void main() {
     expect(stored.keys.toSet().intersection(forbiddenKeys), isEmpty);
   });
 
+  test('난이도와 조준 보조 사용 여부를 공통 문맥에 기록한다', () {
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    final normalContext = context();
+    expect(normalContext.difficulty, PlayTelemetryDifficulty.normal);
+    expect(normalContext.aimAssistEnabled, isFalse);
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.aimStarted,
+        context: context().copyWith(difficulty: PlayTelemetryDifficulty.easy),
+      ),
+    );
+
+    expect(telemetry.events.single['difficulty_mode'], 'easy');
+    expect(telemetry.events.single['aim_assist_enabled'], isTrue);
+  });
+
   test('기존 CSV 열은 같은 순서의 접두부로 유지된다', () {
     final telemetry = LocalPlayTelemetry(persistLocally: false);
     telemetry.recordTyped(

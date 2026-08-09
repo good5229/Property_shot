@@ -14,7 +14,6 @@ import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
 import '../ui/game_ball_painter.dart';
 import '../ui/debug_labels.dart';
-import '../ui/launch_input_session.dart';
 
 class _ReflectorAnimationStep {
   const _ReflectorAnimationStep({
@@ -70,8 +69,7 @@ class PropertyShotGame extends FlameGame {
   bool debugStats = false;
   double lastFrameTimeMs = 0;
   double playbackSpeed = 1;
-  ChargeGaugeState chargeGaugeState = ChargeGaugeState.green;
-  bool chargeGaugeActive = false;
+  FirstArrivalPreview? firstArrivalPreview;
 
   void setDebugOptions({
     bool? hitboxes,
@@ -85,13 +83,12 @@ class PropertyShotGame extends FlameGame {
     debugStats = stats ?? debugStats;
   }
 
-  void setChargeGaugeState(ChargeGaugeState next, {required bool active}) {
-    chargeGaugeState = next;
-    chargeGaugeActive = active;
-  }
-
   void setBallRewardAppearance(bool enabled) {
     ballRewardAppearance = enabled;
+  }
+
+  void setFirstArrivalPreview(FirstArrivalPreview? preview) {
+    firstArrivalPreview = preview;
   }
 
   /// Golden·렌더 계약에서 물리 사건 시점을 재현하기 위한 결정론 cursor다.
@@ -365,6 +362,9 @@ class PropertyShotGame extends FlameGame {
         continue;
       }
       _drawEntityWithCache(canvas, entity, false, animated: animated);
+    }
+    if (!animated && state.phase == GamePhase.planning) {
+      _drawFirstArrivalPreview(canvas);
     }
     if (animated) {
       _drawAnimatedBall(canvas);
@@ -1161,7 +1161,6 @@ class PropertyShotGame extends FlameGame {
     final start = ball.position;
     final normal = Vec2(-direction.y, direction.x);
     final accent = const Color(0xFFEF765E);
-    final center = _project(start);
 
     // 방향은 유지하되, 개발용 직선 화살표 대신 공 뒤의 큐 장력과
     // 짧은 점형 마커만 보여 최종 궤적을 예고하지 않는다.
@@ -1272,115 +1271,66 @@ class PropertyShotGame extends FlameGame {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2,
     );
-
-    if (chargeGaugeActive) {
-      _drawChargeGauge(canvas, ball, center);
-    } else {
-      final gaugeTrack = Paint()
-        ..color = const Color(0x553B2B24)
-        ..strokeWidth = 7
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      final gaugePaint = Paint()
-        ..color = accent
-        ..strokeWidth = 5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      final gaugeRect = Rect.fromCircle(
-        center: center,
-        radius: ball.radius + 12,
-      );
-      canvas.drawArc(gaugeRect, -math.pi / 2, math.pi * 2, false, gaugeTrack);
-      canvas.drawArc(
-        gaugeRect,
-        -math.pi / 2,
-        state.aimPower * math.pi * 2,
-        false,
-        gaugePaint,
-      );
-      for (final fraction in const [0.33, 0.66]) {
-        final angle = -math.pi / 2 + fraction * math.pi * 2;
-        final marker =
-            _project(start) +
-            Offset(math.cos(angle), math.sin(angle)) * (ball.radius + 12);
-        canvas.drawCircle(
-          marker,
-          2.2,
-          Paint()..color = const Color(0xCCFFF4D6),
-        );
-      }
-    }
   }
 
-  void _drawChargeGauge(Canvas canvas, EntityState ball, Offset center) {
-    final (color, strokeWidth, tickCount) = switch (chargeGaugeState) {
-      ChargeGaugeState.green => (const Color(0xFF43B978), 2.4, 1),
-      ChargeGaugeState.yellow => (const Color(0xFFE3B93F), 4.2, 2),
-      ChargeGaugeState.red => (const Color(0xFFD95050), 6.2, 3),
-      ChargeGaugeState.warningRed => (const Color(0xFFE34843), 5.2, 0),
-      ChargeGaugeState.cancelledGray => (const Color(0xFF7C8582), 4.6, 0),
-    };
-    final baseRadius = ball.radius + 12;
-    final ringRect = Rect.fromCircle(center: center, radius: baseRadius);
-    final ring = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final track = Paint()
-      ..color = color.withValues(alpha: 0.22)
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    if (chargeGaugeState == ChargeGaugeState.cancelledGray) {
-      canvas.drawCircle(center, baseRadius, track);
-      canvas.drawCircle(center, baseRadius, ring);
-      final iconCenter = center + Offset(0, -baseRadius - 3);
-      final cancelPaint = Paint()
-        ..color = color
-        ..strokeWidth = 3.2
-        ..strokeCap = StrokeCap.round;
-      canvas.drawLine(
-        iconCenter + const Offset(-5, -5),
-        iconCenter + const Offset(5, 5),
-        cancelPaint,
-      );
-      canvas.drawLine(
-        iconCenter + const Offset(5, -5),
-        iconCenter + const Offset(-5, 5),
-        cancelPaint,
-      );
-      return;
-    }
-
-    canvas.drawCircle(center, baseRadius, track);
-    canvas.drawArc(
-      ringRect,
-      -math.pi / 2,
-      state.aimPower.clamp(0.0, 1.0) * math.pi * 2,
-      false,
-      ring,
+  void _drawFirstArrivalPreview(Canvas canvas) {
+    final preview = firstArrivalPreview;
+    if (preview == null) return;
+    final center = _project(preview.position);
+    const accent = Color(0xFF176B87);
+    const outline = Color(0xFFF8F4E8);
+    final diamond = Path()
+      ..moveTo(center.dx, center.dy - 8)
+      ..lineTo(center.dx + 8, center.dy)
+      ..lineTo(center.dx, center.dy + 8)
+      ..lineTo(center.dx - 8, center.dy)
+      ..close();
+    canvas.drawPath(
+      diamond,
+      Paint()
+        ..color = outline
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5,
     );
-    if (chargeGaugeState == ChargeGaugeState.warningRed) {
-      final pulse = reducedMotion || !strongFlash
-          ? 0.0
-          : (math.sin(_pulseClock * math.pi * 1.2) + 1) / 2;
-      final warningRing = Paint()
-        ..color = color.withValues(alpha: 0.26 + pulse * 0.26)
-        ..strokeWidth = 2.2
-        ..style = PaintingStyle.stroke;
-      canvas.drawCircle(center, baseRadius + 7 + pulse * 2, warningRing);
-    }
-    for (var index = 0; index < tickCount; index++) {
-      final angle = -math.pi / 2 + (index + 1) * math.pi * 2 / (tickCount + 1);
-      final marker =
-          center + Offset(math.cos(angle), math.sin(angle)) * (baseRadius + 1);
-      canvas.drawCircle(
-        marker,
-        2.1 + strokeWidth * 0.12,
-        Paint()..color = color,
-      );
-    }
+    canvas.drawPath(
+      diamond,
+      Paint()
+        ..color = accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
+    canvas.drawCircle(center, 2.6, Paint()..color = accent);
+
+    final label = TextPainter(
+      text: const TextSpan(
+        text: '예상',
+        style: TextStyle(
+          color: Color(0xFF173B48),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          fontFamily: 'NanumGothic',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final labelRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        center.dx - label.width / 2 - 5,
+        center.dy + 11,
+        label.width + 10,
+        label.height + 4,
+      ),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(labelRect, Paint()..color = const Color(0xEFFFF8E8));
+    canvas.drawRRect(
+      labelRect,
+      Paint()
+        ..color = accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+    label.paint(canvas, Offset(labelRect.left + 5, labelRect.top + 2));
   }
 
   void _drawEntity(Canvas canvas, EntityState entity, bool highlighted) {

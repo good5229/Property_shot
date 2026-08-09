@@ -561,6 +561,25 @@ class TrajectoryPreview {
   final String? highlightEntityId;
 }
 
+enum FirstArrivalKind { impact, hole, powerSlider, rangeEnd }
+
+/// 쉬움 모드의 조준 보조가 표시할 첫 도착점이다.
+///
+/// 판정 결과에서 첫 물리 사건만 읽으며 게임 상태나 발사 입력을 변경하지 않는다.
+class FirstArrivalPreview {
+  const FirstArrivalPreview({
+    required this.position,
+    required this.pathIndex,
+    required this.kind,
+    this.entityId,
+  });
+
+  final Vec2 position;
+  final int pathIndex;
+  final FirstArrivalKind kind;
+  final String? entityId;
+}
+
 class CollisionHit {
   const CollisionHit({
     required this.entity,
@@ -1805,6 +1824,49 @@ class ShotResolver {
       points: points,
       reflection: reflection,
       highlightEntityId: highlight,
+    );
+  }
+
+  /// 실제 발사 판정과 같은 규칙으로 첫 충돌·홀 진입·파워 슬라이더 진입을
+  /// 찾는다. 아무 사건도 없으면 사거리 끝을 반환한다.
+  FirstArrivalPreview firstArrival(GameState state, ShotInput rawInput) {
+    final result = resolve(state, rawInput);
+    ShotImpact? impact;
+    for (final candidate in result.impacts) {
+      if (impact == null || candidate.pathIndex < impact.pathIndex) {
+        impact = candidate;
+      }
+    }
+    PowerSliderActivation? slider;
+    for (final candidate in result.powerSliderActivations) {
+      if (slider == null || candidate.pathIndex < slider.pathIndex) {
+        slider = candidate;
+      }
+    }
+
+    if (impact != null &&
+        (slider == null || impact.pathIndex <= slider.pathIndex)) {
+      return FirstArrivalPreview(
+        position: impact.position,
+        pathIndex: impact.pathIndex,
+        kind: impact.entityType == EntityType.hole
+            ? FirstArrivalKind.hole
+            : FirstArrivalKind.impact,
+        entityId: impact.entityId,
+      );
+    }
+    if (slider != null) {
+      return FirstArrivalPreview(
+        position: slider.position,
+        pathIndex: slider.pathIndex,
+        kind: FirstArrivalKind.powerSlider,
+        entityId: slider.sliderEntityId,
+      );
+    }
+    return FirstArrivalPreview(
+      position: result.path.last,
+      pathIndex: result.path.length - 1,
+      kind: FirstArrivalKind.rangeEnd,
     );
   }
 
