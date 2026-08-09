@@ -105,6 +105,23 @@ void main() {
     );
   });
 
+  testWidgets('런 보상 8종은 서로 다른 무료 Material 아이콘을 사용한다', (tester) async {
+    await tester.pumpWidget(_popupApp(rewards: initialRunRewards));
+    await tester.pumpAndSettle();
+
+    final icons = <IconData>{};
+    for (final reward in initialRunRewards) {
+      final iconRoot = find.byKey(Key('run_reward_icon_${reward.id}'));
+      expect(iconRoot, findsOneWidget);
+      final icon = tester.widget<Icon>(
+        find.descendant(of: iconRoot, matching: find.byType(Icon)).first,
+      );
+      expect(icon.icon, isNotNull);
+      icons.add(icon.icon!);
+    }
+    expect(icons, hasLength(initialRunRewards.length));
+  });
+
   for (final fixture in const [
     (
       name: '320x700',
@@ -126,6 +143,20 @@ void main() {
       height: 844.0,
       textScale: 1.3,
       rewardOffset: 3,
+    ),
+    (
+      name: '390x844_rewards_4_6',
+      width: 390.0,
+      height: 844.0,
+      textScale: 1.0,
+      rewardOffset: 3,
+    ),
+    (
+      name: '390x844_rewards_6_8',
+      width: 390.0,
+      height: 844.0,
+      textScale: 1.0,
+      rewardOffset: 5,
     ),
     (
       name: '768x1024',

@@ -180,6 +180,13 @@ void main() {
 
       expect(first.state.phase, GamePhase.planning);
       expect(second.state.phase, GamePhase.success);
+      final rotationGate = initial.entityById('rotation_gate');
+      if (rotationGate != null) {
+        expect(rotationGate.open, isFalse);
+        expect(first.events, contains('rotation_gate_opened'));
+        expect(first.state.entityById('rotation_gate')!.open, isTrue);
+        expect(first.state.entityById('rotation_gate')!.solid, isFalse);
+      }
       expect(
         _rotationIds(first, second),
         solution.expectedRotationOrder,

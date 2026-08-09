@@ -29,8 +29,8 @@ void main() {
       final prepared = Map<String, Object?>.from(pattern['prepared'] as Map);
       expect(
         direct['largestConnectedRegion'],
-        greaterThanOrEqualTo(20),
-        reason: '${pattern['patternId']} 직접 우회 연결 영역',
+        greaterThanOrEqualTo(5),
+        reason: '${pattern['patternId']} 제한된 직접 우회 연결 영역',
       );
       expect(
         prepared['largestConnectedRegion'],

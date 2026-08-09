@@ -24,6 +24,15 @@
 - 출처 표기 정책: CC0 조건상 의무는 없지만 스토어·저작권 문서에는 `Smooth Physics Obstacle Props by Reactorcore, CC0`를 권장 표기로 사용한다.
 - 해시 검증: `shasum -a 256 -c assets/licenses/asset_hashes.txt`를 실행하며, 파일이 교체되면 체크섬 행만 갱신한다.
 
+### 런 보상 아이콘
+
+- 자산: Flutter `Icons`가 제공하는 Google Material Icons 8종
+- 용도: 런 보상 효과별 식별 아이콘
+- 원본: https://github.com/google/material-design-icons
+- 라이선스: Apache License 2.0
+- 라이선스 원문: https://github.com/google/material-design-icons/blob/master/LICENSE
+- 번들 방식: `uses-material-design: true`를 통해 Flutter가 아이콘 글꼴을 포함하며 별도 래스터 파일을 추가하지 않는다.
+
 ## 자체 제작·생성 비주얼
 
 - `lib/game/property_shot_game.dart`의 Canvas 렌더링: 프로젝트 자체 코드, 별도 외부 라이선스 없음.

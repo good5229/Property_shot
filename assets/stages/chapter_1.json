@@ -800,7 +800,7 @@
         {
           "patternId": "stage_bouncy_01",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 58,
@@ -830,7 +830,7 @@
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 100,
+                "x": 300,
                 "y": 110
               },
               "size": {
@@ -959,6 +959,28 @@
               "linkId": null
             },
             {
+              "id": "route_guard_lower",
+              "type": "wall",
+              "position": {
+                "x": 165,
+                "y": 350
+              },
+              "size": {
+                "x": 86,
+                "y": 24
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": null
+            },
+            {
               "id": "jelly",
               "type": "bumper",
               "position": {
@@ -987,7 +1009,7 @@
         {
           "patternId": "stage_bouncy_02",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 58,
@@ -1150,7 +1172,7 @@
         {
           "patternId": "stage_bouncy_03",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 58,
@@ -1165,11 +1187,11 @@
             "none"
           ],
           "solutionFamilies": [
-            "jelly_interaction",
+            "multi_wall_reflection",
             "wall_reflection"
           ],
           "optionalChallenges": [
-            "jelly_hit",
+            "two_wall_banks",
             "one_shot"
           ],
           "metadata": {},
@@ -1179,7 +1201,7 @@
               "type": "hole",
               "position": {
                 "x": 300,
-                "y": 510
+                "y": 110
               },
               "size": {
                 "x": 52,
@@ -1285,6 +1307,28 @@
               "linkId": null
             },
             {
+              "id": "route_guard_vertical",
+              "type": "wall",
+              "position": {
+                "x": 180,
+                "y": 450
+              },
+              "size": {
+                "x": 24,
+                "y": 180
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": null
+            },
+            {
               "id": "jelly",
               "type": "bumper",
               "position": {
@@ -1313,7 +1357,7 @@
         {
           "patternId": "stage_bouncy_04",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 300,
@@ -2398,7 +2442,7 @@
         {
           "patternId": "stage_balloon_01",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56,
@@ -2629,7 +2673,7 @@
         {
           "patternId": "stage_balloon_02",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56,
@@ -2859,7 +2903,7 @@
         {
           "patternId": "stage_balloon_03",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56,
@@ -3088,7 +3132,7 @@
         {
           "patternId": "stage_balloon_04",
           "weight": 1,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56,
@@ -3774,6 +3818,7 @@
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"reflector_a","type":"rotating_reflector","position":{"x":180,"y":350},"size":{"x":86,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":0,"reflectorRotationCount":0},
+            {"id":"rotation_gate","type":"gate","position":{"x":76,"y":238},"size":{"x":104,"y":24},"traits":[],"movable":false,"solid":true,"open":false,"visualState":"locked","restitution":0.08,"linkId":"rotation_gate"},
             {"id":"guide_stone","type":"weight","position":{"x":270,"y":260},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68}
           ]
         },
@@ -3821,6 +3866,7 @@
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"reflector_a","type":"rotating_reflector","position":{"x":100,"y":330},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":0,"reflectorRotationCount":0},
+            {"id":"rotation_gate","type":"gate","position":{"x":220,"y":225},"size":{"x":24,"y":150},"traits":[],"movable":false,"solid":true,"open":false,"visualState":"locked","restitution":0.08,"linkId":"rotation_gate"},
             {"id":"past_anchor","type":"sticky_surface","position":{"x":70,"y":270},"size":{"x":48,"y":32},"traits":["sticky"],"movable":false,"solid":true,"active":true,"hitboxScale":0.94,"restitution":0.12},
             {"id":"past_bumper","type":"bumper","position":{"x":285,"y":350},"size":{"x":54,"y":54},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92}
           ]

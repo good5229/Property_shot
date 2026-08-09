@@ -1083,7 +1083,12 @@ class StagePatternValidator {
     List<ValidationIssue> issues,
   ) {
     final activeGates = pattern.objects
-        .where((object) => object.active && object.type == EntityType.gate)
+        .where(
+          (object) =>
+              object.active &&
+              object.type == EntityType.gate &&
+              !object.id.startsWith('rotation_gate'),
+        )
         .toList();
     final activeSwitches = pattern.objects
         .where((object) => object.active && object.type == EntityType.switchPad)

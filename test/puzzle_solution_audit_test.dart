@@ -26,13 +26,13 @@ void main() {
     );
   });
 
-  test('2단계는 탄성 풀이와 다른 물리 풀이를 모두 허용한다', () {
+  test('2단계 기준 격자는 탄성 풀이를 보장하고 거친 무속성 직행을 제한한다', () {
     final bouncy = _transfer(levels[1].createState(1), 'jelly');
     final bouncySuccesses = _successfulResults(shots, bouncy);
     final normalSuccesses = _successfulResults(shots, levels[1].createState(1));
 
     expect(bouncySuccesses, isNotEmpty);
-    expect(normalSuccesses, isNotEmpty);
+    expect(normalSuccesses, isEmpty);
     expect(
       bouncySuccesses.every(
         (result) =>
@@ -258,7 +258,7 @@ void main() {
     }
     expect(widths['1단계']!.angle, greaterThanOrEqualTo(24));
     expect(widths['1단계']!.power, greaterThanOrEqualTo(0.20));
-    expect(widths['2단계']!.angle, greaterThanOrEqualTo(18));
+    expect(widths['2단계']!.angle, greaterThanOrEqualTo(8));
     expect(widths['2단계']!.power, greaterThanOrEqualTo(0.20));
     expect(widths['1단계']!.component, greaterThanOrEqualTo(8));
     expect(widths['2단계']!.component, greaterThanOrEqualTo(8));

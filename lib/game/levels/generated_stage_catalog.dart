@@ -837,7 +837,7 @@ const generatedStageCatalogJson = r'''
         {
           "patternId": "stage_bouncy_01",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 58.0,
@@ -848,7 +848,7 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 100.0,
+                "x": 300.0,
                 "y": 110.0
               },
               "size": {
@@ -983,6 +983,29 @@ const generatedStageCatalogJson = r'''
               "movableWhenDrained": false
             },
             {
+              "id": "route_guard_lower",
+              "type": "wall",
+              "position": {
+                "x": 165.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 86.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
               "id": "jelly",
               "type": "bumper",
               "position": {
@@ -1031,7 +1054,7 @@ const generatedStageCatalogJson = r'''
         {
           "patternId": "stage_bouncy_02",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 58.0,
@@ -1200,7 +1223,7 @@ const generatedStageCatalogJson = r'''
         {
           "patternId": "stage_bouncy_03",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 58.0,
@@ -1212,7 +1235,7 @@ const generatedStageCatalogJson = r'''
               "type": "hole",
               "position": {
                 "x": 300.0,
-                "y": 510.0
+                "y": 110.0
               },
               "size": {
                 "x": 52.0,
@@ -1323,6 +1346,29 @@ const generatedStageCatalogJson = r'''
               "movableWhenDrained": false
             },
             {
+              "id": "route_guard_vertical",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 450.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 180.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
               "id": "jelly",
               "type": "bumper",
               "position": {
@@ -1357,19 +1403,19 @@ const generatedStageCatalogJson = r'''
             "none"
           ],
           "solutionFamilies": [
-            "jelly_interaction",
+            "multi_wall_reflection",
             "wall_reflection"
           ],
           "optionalChallenges": [
-            "jelly_hit",
-            "one_shot"
+            "one_shot",
+            "two_wall_banks"
           ],
           "metadata": {}
         },
         {
           "patternId": "stage_bouncy_04",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 300.0,
@@ -2495,7 +2541,7 @@ const generatedStageCatalogJson = r'''
         {
           "patternId": "stage_balloon_01",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56.0,
@@ -2735,7 +2781,7 @@ const generatedStageCatalogJson = r'''
         {
           "patternId": "stage_balloon_02",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56.0,
@@ -2974,7 +3020,7 @@ const generatedStageCatalogJson = r'''
         {
           "patternId": "stage_balloon_03",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56.0,
@@ -3212,7 +3258,7 @@ const generatedStageCatalogJson = r'''
         {
           "patternId": "stage_balloon_04",
           "weight": 1.0,
-          "parShots": 2,
+          "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
             "x": 56.0,
@@ -6852,6 +6898,29 @@ const generatedStageCatalogJson = r'''
               "reflectorRotationCount": 0
             },
             {
+              "id": "rotation_gate",
+              "type": "gate",
+              "position": {
+                "x": 76.0,
+                "y": 238.0
+              },
+              "size": {
+                "x": 104.0,
+                "y": 24.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "locked",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": "rotation_gate",
+              "movableWhenDrained": false
+            },
+            {
               "id": "guide_stone",
               "type": "weight",
               "position": {
@@ -7217,6 +7286,29 @@ const generatedStageCatalogJson = r'''
               "movableWhenDrained": false,
               "reflectorOrientation": 0,
               "reflectorRotationCount": 0
+            },
+            {
+              "id": "rotation_gate",
+              "type": "gate",
+              "position": {
+                "x": 220.0,
+                "y": 225.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 150.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "locked",
+              "hitboxScale": 0.88,
+              "restitution": 0.08,
+              "linkId": "rotation_gate",
+              "movableWhenDrained": false
             },
             {
               "id": "past_anchor",

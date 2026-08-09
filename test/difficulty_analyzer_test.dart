@@ -8,7 +8,7 @@ void main() {
     final metrics = analyzer.analyzeAll();
 
     expect(metrics, hasLength(3));
-    expect(metrics.map((result) => result.recommendedParShots), [2, 2, 3]);
+    expect(metrics.map((result) => result.recommendedParShots), [2, 3, 3]);
     expect(
       metrics.asMap().entries.map(
         (entry) =>

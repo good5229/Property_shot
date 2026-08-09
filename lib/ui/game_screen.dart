@@ -4008,16 +4008,16 @@ class ClearResultPopup extends StatelessWidget {
                                                       ),
                                                       child: Row(
                                                         children: [
-                                                          Icon(
-                                                            selectedRewardId ==
-                                                                    reward.id
-                                                                ? Icons
-                                                                      .check_circle
-                                                                : Icons
-                                                                      .add_circle_outline,
+                                                          ExcludeSemantics(
+                                                            child: _RunRewardIcon(
+                                                              reward: reward,
+                                                              selected:
+                                                                  selectedRewardId ==
+                                                                  reward.id,
+                                                            ),
                                                           ),
                                                           const SizedBox(
-                                                            width: 8,
+                                                            width: 10,
                                                           ),
                                                           Expanded(
                                                             child: Column(
@@ -4203,6 +4203,112 @@ class ClearResultPopup extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _RunRewardIcon extends StatelessWidget {
+  const _RunRewardIcon({required this.reward, required this.selected});
+
+  final RunReward reward;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _runRewardIconVisual(reward.effectKind);
+    return SizedBox(
+      key: Key('run_reward_icon_${reward.id}'),
+      width: 42,
+      height: 42,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: visual.background,
+                shape: BoxShape.circle,
+                border: Border.all(color: visual.foreground, width: 1.5),
+              ),
+              child: Icon(visual.icon, color: visual.foreground, size: 25),
+            ),
+          ),
+          if (selected)
+            const Positioned(
+              right: -3,
+              bottom: -3,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Color(0xFF236B4A),
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+({IconData icon, Color foreground, Color background}) _runRewardIconVisual(
+  RunRewardEffectKind kind,
+) {
+  switch (kind) {
+    case RunRewardEffectKind.cloneCore:
+      return (
+        icon: Icons.copy_all_rounded,
+        foreground: const Color(0xFF236B4A),
+        background: const Color(0xFFDDF3D5),
+      );
+    case RunRewardEffectKind.shotCancelAssist:
+      return (
+        icon: Icons.undo_rounded,
+        foreground: const Color(0xFF285B7D),
+        background: const Color(0xFFDCEEFF),
+      );
+    case RunRewardEffectKind.spentBallRecovery:
+      return (
+        icon: Icons.replay_circle_filled_rounded,
+        foreground: const Color(0xFF704A8F),
+        background: const Color(0xFFEEDFF7),
+      );
+    case RunRewardEffectKind.firstImpactGuide:
+      return (
+        icon: Icons.center_focus_strong_rounded,
+        foreground: const Color(0xFF9B5A22),
+        background: const Color(0xFFFFE9C8),
+      );
+    case RunRewardEffectKind.optionalChallengeGuard:
+      return (
+        icon: Icons.shield_rounded,
+        foreground: const Color(0xFF356072),
+        background: const Color(0xFFDCECF0),
+      );
+    case RunRewardEffectKind.failureCauseBoost:
+      return (
+        icon: Icons.account_tree_rounded,
+        foreground: const Color(0xFF9A3F3F),
+        background: const Color(0xFFFFDDDC),
+      );
+    case RunRewardEffectKind.ballAppearance:
+      return (
+        icon: Icons.auto_awesome_rounded,
+        foreground: const Color(0xFF087F7A),
+        background: const Color(0xFFFFE9A8),
+      );
+    case RunRewardEffectKind.stageRecordGuard:
+      return (
+        icon: Icons.workspace_premium_rounded,
+        foreground: const Color(0xFF8A651D),
+        background: const Color(0xFFFFE8A9),
+      );
   }
 }
 

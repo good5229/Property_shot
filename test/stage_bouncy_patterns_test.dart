@@ -93,7 +93,7 @@ void main() {
 
   test('저장된 대표 입력은 none/jelly 실제 성공과 풀이 계열을 재현한다', () {
     const resolver = ShotResolver();
-    var jellyWallReflectionCount = 0;
+    final jellyWallReflectionPatterns = <String>{};
     for (final fixture in stageBouncyRepresentatives) {
       final pattern = stage.patternById(fixture.patternId);
       final state = _stateFor(pattern, fixture.strategyId);
@@ -145,7 +145,7 @@ void main() {
           reason: '${fixture.patternId} jelly 대표 입력의 실제 충돌 대상이 없습니다.',
         );
         if (_hasPatternWallImpact(pattern, result)) {
-          jellyWallReflectionCount++;
+          jellyWallReflectionPatterns.add(fixture.patternId);
         }
         print(
           '${fixture.patternId}/jelly same-input none=${noneResult.state.phase} '
@@ -166,7 +166,7 @@ void main() {
       expect(result.events, isNot(contains('chain_safety_stop')));
     }
     expect(
-      jellyWallReflectionCount,
+      jellyWallReflectionPatterns.length,
       4,
       reason: '4개 jelly 대표 경로 모두 실제 pattern wall+bounced여야 합니다.',
     );
@@ -298,8 +298,11 @@ void main() {
       final state = _stateFor(pattern, fixture.strategyId);
       var successCount = 0;
       final inputKeys = <String>{};
+      final powerDeltas = fixture.power >= 0.96
+          ? [-0.04, -0.02, 0, 0.01, 0.02]
+          : [-0.04, -0.02, 0, 0.02, 0.04];
       for (final degreeDelta in [-2, 0, 2]) {
-        for (final powerDelta in [-0.04, -0.02, 0, 0.02, 0.04]) {
+        for (final powerDelta in powerDeltas) {
           final degree = (fixture.degree + degreeDelta) % 360;
           final power = (fixture.power + powerDelta).clamp(0.05, 1.0);
           final inputKey = '$degree/${power.toStringAsFixed(2)}';
@@ -326,9 +329,15 @@ void main() {
         reason:
             '${fixture.patternId}/${fixture.strategyId} 고유 근방 입력 수가 15가 아닙니다.',
       );
+      final deliberatelyRareNoneRoute =
+          fixture.strategyId == 'none' &&
+          const {
+            'stage_bouncy_01',
+            'stage_bouncy_03',
+          }.contains(fixture.patternId);
       expect(
         successCount,
-        greaterThanOrEqualTo(3),
+        greaterThanOrEqualTo(deliberatelyRareNoneRoute ? 1 : 3),
         reason:
             '${fixture.patternId}/${fixture.strategyId} 대표 근방 성공점=$successCount/15',
       );
@@ -374,6 +383,22 @@ void main() {
         greaterThan(none),
         reason: '${pattern.patternId} 성공점 none=$none, jelly=$jelly',
       );
+      if (const {
+        'stage_bouncy_01',
+        'stage_bouncy_03',
+      }.contains(pattern.patternId)) {
+        final maximumBypassRatio = pattern.patternId == 'stage_bouncy_01'
+            ? 0.30
+            : 0.10;
+        expect(
+          none / jelly,
+          lessThanOrEqualTo(maximumBypassRatio),
+          reason:
+              '${pattern.patternId} 무속성 우회 비율이 허용치 '
+              '${(maximumBypassRatio * 100).round()}%를 넘습니다: '
+              'none=$none jelly=$jelly ratio=${none / jelly}',
+        );
+      }
     }
     print(
       'stage_bouncy 축소 격자 성공점: '

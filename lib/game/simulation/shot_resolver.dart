@@ -1060,6 +1060,13 @@ class ShotResolver {
             visualState: 'rotated',
           ),
         );
+        final openedRotationGate = entities.any(
+          (entity) =>
+              entity.type == EntityType.gate &&
+              entity.id.startsWith('rotation_gate') &&
+              !entity.open,
+        );
+        entities = _openReflectorGates(entities);
         reflectorContacts.markEntered(contactId);
         reflectorRotations.add(
           ReflectorRotation(
@@ -1078,6 +1085,7 @@ class ShotResolver {
         );
         events.add('reflector_reflected');
         events.add('reflector_rotated');
+        if (openedRotationGate) events.add('rotation_gate_opened');
         continue;
       }
 
@@ -3006,6 +3014,17 @@ class ShotResolver {
     ];
   }
 
+  List<EntityState> _openReflectorGates(List<EntityState> entities) {
+    return [
+      for (final entity in entities)
+        if (entity.type == EntityType.gate &&
+            entity.id.startsWith('rotation_gate'))
+          entity.copyWith(open: true, solid: false, visualState: 'open')
+        else
+          entity,
+    ];
+  }
+
   List<EntityState> _openLinkedEntity(
     List<EntityState> entities,
     String linkId,
@@ -3455,6 +3474,13 @@ class ShotResolver {
           ),
         );
         entities = _replace(entities, current);
+        final openedRotationGate = entities.any(
+          (entity) =>
+              entity.type == EntityType.gate &&
+              entity.id.startsWith('rotation_gate') &&
+              !entity.open,
+        );
+        entities = _openReflectorGates(entities);
         reflectorContacts.markEntered(contactId);
         reflectorRotations?.add(
           ReflectorRotation(
@@ -3478,6 +3504,7 @@ class ShotResolver {
         }
         events.add('reflector_reflected');
         events.add('reflector_rotated');
+        if (openedRotationGate) events.add('rotation_gate_opened');
         continue;
       }
 

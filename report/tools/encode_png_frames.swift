@@ -97,8 +97,6 @@ func makePixelBuffer(from image: CGImage) -> CVPixelBuffer? {
         bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue
     ) else { return nil }
     context.clear(CGRect(x: 0, y: 0, width: width, height: height))
-    context.translateBy(x: 0, y: CGFloat(height))
-    context.scaleBy(x: 1, y: -1)
     context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
     return pixelBuffer
 }

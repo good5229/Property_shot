@@ -1400,6 +1400,8 @@ class PropertyShotGame extends FlameGame {
           center: center,
           radius: entity.radius,
           trait: entity.traits.isEmpty ? null : entity.traits.first,
+          rewardAppearance:
+              ballRewardAppearance && entity.type == EntityType.ball,
         );
         _drawBallTraitTexture(canvas, entity);
         if (entity.type == EntityType.ball) {
@@ -2719,6 +2721,7 @@ class PropertyShotGame extends FlameGame {
       center: center,
       radius: entity.radius,
       trait: entity.traits.isEmpty ? null : entity.traits.first,
+      rewardAppearance: ballRewardAppearance,
     );
     _drawBallTraitTexture(canvas, entity);
     _drawRewardBallAppearance(canvas, entity);

@@ -1445,7 +1445,7 @@ void main() {
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
     expect(find.textContaining('예시 기록'), findsOneWidget);
     expect(find.byKey(const Key('clear_stars')), findsOneWidget);
-    expect(find.text('파 2회 · 3/3 별'), findsOneWidget);
+    expect(find.text('파 3회 · 3/3 별'), findsOneWidget);
     expect(find.byKey(const Key('retry_stage_button')), findsOneWidget);
     expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsNothing);
 

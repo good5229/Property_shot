@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import '../game/domain/trait.dart';
 
 class GameBallIconPainter extends CustomPainter {
-  const GameBallIconPainter(this.trait);
+  const GameBallIconPainter(this.trait, {this.rewardAppearance = false});
 
   final TraitType? trait;
+  final bool rewardAppearance;
 
   static void drawBall(
     Canvas canvas, {
@@ -15,15 +16,25 @@ class GameBallIconPainter extends CustomPainter {
     required double radius,
     TraitType? trait,
     bool drawShadow = false,
+    bool rewardAppearance = false,
   }) {
-    final baseColor = trait == null ? Colors.white : _traitBallColor(trait);
+    final traitColor = trait == null ? Colors.white : _traitBallColor(trait);
+    final baseColor = rewardAppearance
+        ? Color.lerp(traitColor, const Color(0xFF24B8AE), 0.72)!
+        : traitColor;
     final gradient = RadialGradient(
       center: const Alignment(-0.45, -0.55),
       radius: 0.96,
       colors: [
-        Colors.white.withValues(alpha: 0.98),
+        rewardAppearance
+            ? const Color(0xFFFFF4B8)
+            : Colors.white.withValues(alpha: 0.98),
         baseColor,
-        Color.lerp(baseColor, const Color(0xFF152018), 0.22)!,
+        Color.lerp(
+          baseColor,
+          rewardAppearance ? const Color(0xFF075B58) : const Color(0xFF152018),
+          rewardAppearance ? 0.52 : 0.22,
+        )!,
       ],
       stops: const [0.0, 0.58, 1.0],
     );
@@ -49,10 +60,26 @@ class GameBallIconPainter extends CustomPainter {
       center,
       radius,
       Paint()
-        ..color = const Color(0xFF24352D)
+        ..color = rewardAppearance
+            ? const Color(0xFFFFC857)
+            : const Color(0xFF24352D)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = radius * 0.075,
+        ..strokeWidth = radius * (rewardAppearance ? 0.14 : 0.075),
     );
+
+    if (rewardAppearance) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius * 0.72),
+        -math.pi * 0.9,
+        math.pi * 1.48,
+        false,
+        Paint()
+          ..color = const Color(0xAAE9FFFB)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1.4, radius * 0.08)
+          ..strokeCap = StrokeCap.round,
+      );
+    }
 
     final scale = radius / 23;
     final eye = Paint()..color = const Color(0xFF3B302A);
@@ -105,10 +132,17 @@ class GameBallIconPainter extends CustomPainter {
     required Offset center,
     required double radius,
   }) {
-    final ringRadius = radius + 3.8;
+    final ringRadius = radius + 5.2;
+    canvas.drawCircle(
+      center,
+      ringRadius + 1.4,
+      Paint()
+        ..color = const Color(0x5527A8A1)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
     final ring = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(1.8, radius * 0.105)
+      ..strokeWidth = math.max(2.4, radius * 0.14)
       ..strokeCap = StrokeCap.round;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: ringRadius),
@@ -124,10 +158,33 @@ class GameBallIconPainter extends CustomPainter {
       false,
       ring..color = const Color(0xFFFFC857),
     );
-    final sparkle = Paint()..color = const Color(0xFFFFC857);
-    canvas.drawCircle(
-      center + Offset(ringRadius * 0.72, -ringRadius * 0.72),
-      math.max(1.5, radius * 0.096),
+    final sparkleCenter =
+        center + Offset(ringRadius * 0.72, -ringRadius * 0.72);
+    final sparkleRadius = math.max(2.4, radius * 0.14);
+    final sparkle = Paint()..color = const Color(0xFFFFD96A);
+    canvas.drawPath(
+      Path()
+        ..moveTo(sparkleCenter.dx, sparkleCenter.dy - sparkleRadius * 1.8)
+        ..lineTo(
+          sparkleCenter.dx + sparkleRadius * 0.55,
+          sparkleCenter.dy - sparkleRadius * 0.5,
+        )
+        ..lineTo(sparkleCenter.dx + sparkleRadius * 1.8, sparkleCenter.dy)
+        ..lineTo(
+          sparkleCenter.dx + sparkleRadius * 0.55,
+          sparkleCenter.dy + sparkleRadius * 0.5,
+        )
+        ..lineTo(sparkleCenter.dx, sparkleCenter.dy + sparkleRadius * 1.8)
+        ..lineTo(
+          sparkleCenter.dx - sparkleRadius * 0.55,
+          sparkleCenter.dy + sparkleRadius * 0.5,
+        )
+        ..lineTo(sparkleCenter.dx - sparkleRadius * 1.8, sparkleCenter.dy)
+        ..lineTo(
+          sparkleCenter.dx - sparkleRadius * 0.55,
+          sparkleCenter.dy - sparkleRadius * 0.5,
+        )
+        ..close(),
       sparkle,
     );
     canvas.drawCircle(
@@ -145,12 +202,14 @@ class GameBallIconPainter extends CustomPainter {
       radius: size.shortestSide * 0.42,
       trait: trait,
       drawShadow: true,
+      rewardAppearance: rewardAppearance,
     );
   }
 
   @override
   bool shouldRepaint(covariant GameBallIconPainter oldDelegate) =>
-      oldDelegate.trait != trait;
+      oldDelegate.trait != trait ||
+      oldDelegate.rewardAppearance != rewardAppearance;
 }
 
 Color _traitBallColor(TraitType trait) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture a real 61-second deployed play session as an 8 fps PNG sequence."""
+"""Capture a real 48-second play session with deliberate 1–2 second scenes."""
 
 import argparse
 import asyncio
@@ -11,7 +11,7 @@ from playwright.async_api import async_playwright
 
 VIEWPORT = {"width": 390, "height": 844}
 FPS = 8
-DURATION_SECONDS = 61.0
+DURATION_SECONDS = 48.0
 
 
 async def main() -> int:
@@ -56,20 +56,24 @@ async def main() -> int:
             return frame_index
 
         async def perform_actions():
+            # 홈 화면 전체를 1.8초 보여 준 뒤 설정으로 이동한다.
             await page.wait_for_timeout(1800)
             await page.mouse.click(363, 29)
             await page.wait_for_timeout(1800)
+
+            # 게이지 위치와 난이도 선택지를 각각 1.2초 이상 유지한다.
             await page.mouse.click(195, 134)
-            await page.wait_for_timeout(650)
+            await page.wait_for_timeout(1200)
             await page.mouse.click(95, 184)
-            await page.wait_for_timeout(650)
+            await page.wait_for_timeout(1200)
             await page.mouse.click(195, 204)
-            await page.wait_for_timeout(650)
+            await page.wait_for_timeout(1200)
             await page.mouse.click(95, 244)
             await page.wait_for_timeout(1600)
             await page.mouse.click(294, 768)
             await page.wait_for_timeout(2200)
 
+            # 스테이지, 속성 원본 팝업, 쉬움 조준을 각각 1.8초 이상 보여 준다.
             await page.mouse.click(195, 498)
             await page.wait_for_timeout(3200)
             await page.mouse.click(84, 238)

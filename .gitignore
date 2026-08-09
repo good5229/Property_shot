@@ -71,6 +71,8 @@ harness_docs/dev-wiki/*
 !/report/tools/finalize_submission_pdf.py
 !/report/tools/record_gameplay_frames.py
 !/report/tools/encode_png_frames.swift
+!/report/tools/extract_video_frames.swift
+!/report/tools/compose_gameplay_demo_frames.py
 !/report/tools/capture_latest_pages.py
 !/report/dist/
 /report/dist/*
@@ -82,4 +84,5 @@ harness_docs/dev-wiki/*
 /recordings/*.mov
 /recordings/*.webm
 /recordings/.recording-frames/
+/recordings/.demo-frames/
 /recordings/.playwright-video/
