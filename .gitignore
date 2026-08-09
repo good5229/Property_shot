@@ -59,3 +59,10 @@ harness_docs/*
 !harness_docs/dev-wiki/
 harness_docs/dev-wiki/*
 !harness_docs/dev-wiki/log.md
+
+# 보고서 산출물
+report/
+
+# 로컬 플레이 영상(공모전 보고서용, 원격 저장소 미업로드)
+/recordings/*.mp4
+/recordings/*.mov

@@ -37,6 +37,7 @@ import 'play_telemetry.dart';
 import 'launch_input_session.dart';
 import 'tutorial_experiment.dart';
 import 'failure_replay_dialog.dart';
+import 'frame_performance_tracker.dart';
 
 enum GameProgressPersistencePolicy { enabled, disabled }
 
@@ -141,6 +142,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _feedback = GameFeedback();
   final _launchInputSession = LaunchInputSession();
   final _launchInputLatency = LaunchInputLatencyTracker();
+  final _framePerformance = FramePerformanceTracker();
   late final LocalPlayTelemetry _telemetry;
   late GameState _state;
   late LevelDefinition _currentLevel;
@@ -251,6 +253,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _framePerformance.start();
     _progressStore =
         widget.progressStore ??
         ProgressStore(
@@ -399,7 +402,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           .length,
       scoreDamped: (score?.breakdown.dampedImpactCount ?? 0) > 0,
       nearestHoleDistance: nearestHoleDistance,
-      frameDurationMs: _game.lastFrameTimeMs,
+      frameDurationMs: _framePerformance.latestProcessingDurationMilliseconds,
       inputLatencyMs: inputLatencyMs,
       result: result.state.phase == GamePhase.success
           ? PlayTelemetryResult.cleared
@@ -1834,6 +1837,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         hapticsEnabled: GameFeedback.hapticsEnabled,
         tutorialVariant: _activeTutorialVariant,
         inputLatencyReport: _telemetry.inputLatencyReport,
+        framePerformanceReport: _framePerformance.report,
         onSelectStage: _debugSelectStage,
         onRestartStage: _restartCurrentStage,
         onResetProgress: _debugResetProgress,
@@ -1869,6 +1873,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         onCopyState: _copyDebugState,
         onCopyEvents: _copyDebugEvents,
         onCopyInputLatencyReport: _copyInputLatencyReport,
+        onCopyFramePerformanceReport: _copyFramePerformanceReport,
         onToggleReplayRecording: (value) {
           setState(() => _debugRecordReplay = value);
         },
@@ -2089,6 +2094,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void _copyInputLatencyReport() {
     Clipboard.setData(
       ClipboardData(text: _telemetry.exportInputLatencyReportJson()),
+    );
+  }
+
+  void _copyFramePerformanceReport() {
+    Clipboard.setData(
+      ClipboardData(text: _framePerformance.exportReportJson()),
     );
   }
 
@@ -2779,6 +2790,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _framePerformance.stop();
     _telemetry.sessionEnd(stage: _state.levelIndex);
     unawaited(_telemetry.close());
     WidgetsBinding.instance.removeObserver(this);

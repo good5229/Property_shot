@@ -7,6 +7,7 @@ import '../game/domain/trait.dart';
 import '../game/levels/levels.dart';
 import '../game/simulation/shot_resolver.dart';
 import 'debug_labels.dart';
+import 'frame_performance_tracker.dart';
 import 'play_telemetry.dart';
 import 'tutorial_experiment.dart';
 
@@ -29,6 +30,7 @@ class DebugMenu extends StatefulWidget {
     required this.hapticsEnabled,
     required this.tutorialVariant,
     required this.inputLatencyReport,
+    required this.framePerformanceReport,
     required this.onSelectStage,
     required this.onRestartStage,
     required this.onResetProgress,
@@ -45,6 +47,7 @@ class DebugMenu extends StatefulWidget {
     required this.onCopyState,
     required this.onCopyEvents,
     required this.onCopyInputLatencyReport,
+    required this.onCopyFramePerformanceReport,
     required this.onToggleReplayRecording,
     required this.onPlayReplay,
     required this.onToggleSound,
@@ -67,6 +70,7 @@ class DebugMenu extends StatefulWidget {
   final bool hapticsEnabled;
   final TutorialExperimentVariant tutorialVariant;
   final InputLatencyReport inputLatencyReport;
+  final FramePerformanceReport framePerformanceReport;
   final ValueChanged<int> onSelectStage;
   final VoidCallback onRestartStage;
   final VoidCallback onResetProgress;
@@ -83,6 +87,7 @@ class DebugMenu extends StatefulWidget {
   final VoidCallback onCopyState;
   final VoidCallback onCopyEvents;
   final VoidCallback onCopyInputLatencyReport;
+  final VoidCallback onCopyFramePerformanceReport;
   final ValueChanged<bool> onToggleReplayRecording;
   final VoidCallback onPlayReplay;
   final ValueChanged<bool> onToggleSound;
@@ -345,6 +350,19 @@ class _DebugMenuState extends State<DebugMenu> {
                   Text(
                     widget.inputLatencyReport.summaryLabel,
                     key: const Key('debug_input_latency_summary'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  OutlinedButton.icon(
+                    key: const Key('debug_copy_frame_performance_report'),
+                    onPressed: widget.onCopyFramePerformanceReport,
+                    icon: const Icon(Icons.monitor_heart_outlined),
+                    label: const Text('프레임 성능 보고서 복사'),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.framePerformanceReport.summaryLabel,
+                    key: const Key('debug_frame_performance_summary'),
                     style: const TextStyle(fontSize: 12),
                   ),
                   SwitchListTile.adaptive(

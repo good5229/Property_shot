@@ -41,6 +41,12 @@ void main() {
       find.byKey(const Key('debug_copy_input_latency_report')),
       findsOneWidget,
     );
+    expect(find.text('프레임 성능 보고서 복사'), findsOneWidget);
+    expect(find.textContaining('프레임 표본'), findsOneWidget);
+    expect(
+      find.byKey(const Key('debug_copy_frame_performance_report')),
+      findsOneWidget,
+    );
     expect(find.textContaining('anvil'), findsNothing);
     expect(find.textContaining('spike_source'), findsNothing);
     expect(find.textContaining('무거운 돌'), findsWidgets);
