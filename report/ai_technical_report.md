@@ -1,7 +1,7 @@
 # 속성 한방(Property Shot) AI 활용 기술 문서
 
 작성일: 2026-08-09 KST
-기능 기준: `main` / `2061280e616d790a7ecfb0571b42ecfc3ce589e1`
+기능 기준: `main` / `f2e0c173ef1b87df9901df47a0583e0a70786a17`
 제출 형식: AI 활용 기술 PDF
 
 ## 1. AI 활용 개요
@@ -96,16 +96,24 @@ AI 감사에서 앱 재개 중 현재 설정이 완료 당시 난이도를 덮�
 
 Normal/Easy/metadata 없음 × 3개 완료 경로의 9개 조합에서 진행 해금은 항상 공유하고, Normal만 최고 기록·보너스를 갱신하며, 성공 트랜잭션 뒤 sidecar 삭제를 검증했다.
 
+### 4.5 기믹 우위·보상 시각 언어
+
+사용자 캡처에서 드러난 2단계 직행 우회를 막기 위해 기준·변형 패턴의 홀 위치와 고정 경로 벽을 조정했다. 9단계 일부 패턴에는 반사판 회전으로만 열리는 `rotation_gate`를 추가했다. 자동 검증은 40개 생산 패턴을 모두 순회하고, 1–6·9단계는 각 패턴 900개 입력에서 기믹 성공점이 우회보다 많은지 확인한다. 단계 합계는 최소 1.4배라는 별도 게이트를 통과해야 한다. 7·8·10단계는 상태 준비·연쇄 점수·선언 사건을 인과 기준으로 검증한다.
+
+런 보상 8종은 Flutter의 무료 Material Icons에서 기능별 아이콘을 매핑했다. 청록/금색 꾸미기는 공 본체의 채움·테두리·하이라이트를 함께 바꿔 다음 스테이지에서도 변화가 식별되도록 했고, 비교 Golden과 실제 단계 Golden을 추가했다.
+
 ## 5. 검증 및 AI 결과 채택 기준
 
 | 검증 | 최종 결과 |
 |---|---|
-| 전체 회귀 | 988/988 통과, 4분 58초 |
+| 전체 회귀 | 직렬 실행 995개 통과·1건 일시 실패(9분 34초), 해당 파일 15/15 및 기믹 검증 포함 영향권 16/16 재통과 |
 | 정적 분석 | 문제 0건 |
 | 보통 모드 화면 | 10단계 × 5 viewport Golden 통과 |
 | 신규 게이지 | 좌/우 × 5상태, 모바일/태블릿, 저모션·점멸 끄기 Golden/위젯 통과 |
 | 쉬움 모드 | 첫 도착 단위·위젯·390/768 Golden 통과 |
 | 복구/공정성 | direct·stageCompleted·shot-success crash × 3귀속 행렬 통과 |
+| 기믹 우위 | 10단계 × 4패턴 전수 검증, 단계 합계 최소 1.4배 또는 후반 인과·점수 게이트 통과 |
+| 보상·꾸미기 | 8종 고유 아이콘과 청록/금색 본체 변화 Widget/Golden 통과 |
 | 출시 빌드 | Web release, Android release APK(62.3MB) 통과 |
 | 독립 감사 | 최종 P0 0 / P1 0 / P2 0 |
 
@@ -159,6 +167,7 @@ Web Release 반복 발사 측정에서 rAF p90은 17.9–18.1ms, p99는 18.5–1
 | crypto | 3.0.7 | 무결성·해시 | BSD-3-Clause · [pub.dev/crypto](https://pub.dev/packages/crypto) |
 | audioplayers | 6.8.1 | 배경음·효과음 | MIT · [pub.dev/audioplayers](https://pub.dev/packages/audioplayers) |
 | NanumGothic | bundled TTF | 한글 UI·보고서 렌더 | SIL OFL 1.1 · [NAVER Nanum](https://hangeul.naver.com/font) |
+| Material Icons | Flutter bundled font | 런 보상 8종 아이콘 | Apache-2.0 · [Flutter Icons API](https://api.flutter.dev/flutter/material/Icons-class.html), [Google Material Icons](https://github.com/google/material-design-icons) |
 
 ### 7.2 외부/레거시 에셋
 
@@ -180,9 +189,9 @@ Web Release 반복 발사 측정에서 rAF p90은 17.9–18.1ms, p99는 18.5–1
 
 ## 9. 추적 가능한 근거
 
-- 기능 기준 커밋: `2061280e616d790a7ecfb0571b42ecfc3ce589e1`
+- 기능 기준 커밋: `f2e0c173ef1b87df9901df47a0583e0a70786a17`
 - QA 결과: `harness_docs/qa/validation_results.md`
 - 에이전트 작업 맥락: `harness_docs/prompts/*`, `harness_docs/dev-wiki/log.md`
 - 에셋 권리: `harness_docs/release/asset_rights_ledger.md`
 - 공개 플레이: [GitHub Pages](https://good5229.github.io/Property_shot/)
-- 배포 기록: [GitHub Actions run #4](https://github.com/good5229/Property_shot/actions/runs/31308849533)
+- 배포 기록: [GitHub Pages run 31315470165](https://github.com/good5229/Property_shot/actions/runs/31315470165)

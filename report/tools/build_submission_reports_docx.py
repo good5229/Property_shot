@@ -235,7 +235,7 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
     commit.alignment = WD_ALIGN_PARAGRAPH.CENTER
     commit.paragraph_format.space_after = Pt(10)
     base.set_run_font(
-        commit.add_run("기능 기준 main · 2061280e616d790a7ecfb0571b42ecfc3ce589e1"),
+        commit.add_run("기능 기준 main · f2e0c173ef1b87df9901df47a0583e0a70786a17"),
         size=8.5,
         color=MUTED,
     )
@@ -402,11 +402,6 @@ def build(config: ReportConfig) -> Path:
             continue
         heading = re.match(r"^(#{2,4})\s+(.*)$", line)
         if heading:
-            if (
-                config.preset == "standard_business_brief"
-                and heading.group(2).startswith("9. 추적 가능한 근거")
-            ):
-                doc.add_page_break()
             base.add_heading(doc, heading.group(2), len(heading.group(1)) - 1)
             idx += 1
             continue
