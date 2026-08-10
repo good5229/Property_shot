@@ -43,8 +43,7 @@
 
 평균은 16.664–16.666ms였지만 p90 16.7ms 엄격 목표는 0.5ms 초과했다. 이는 Chromium rAF 대리값이며 실제 Flutter build/raster 또는 모바일 실기기 성능으로 확대하지 않는다.
 
-## GO 전 남은 게이트
+## 제품 전체 GO 전 남은 게이트
 
-1. 한 번의 승인된 최종 변경 묶음을 commit·push하고 GitHub Pages workflow 성공 및 공개 URL의 새 bundle hash를 확인한다.
-2. iOS Simulator runtime 또는 실제 iPhone/iPad에서 SafeArea·화면 읽기·저모션·터치·프레임을 확인한다. 불가능하면 제출 범위를 명시하고 상용 `GO`가 아닌 `CONDITIONAL GO`를 유지한다.
-3. 초보자 외부 플레이테스트로 힌트 이해도·열쇠 발견률·기믹 우회 발견률을 확인한다.
+1. iOS Simulator runtime 또는 실제 iPhone/iPad에서 SafeArea·화면 읽기·저모션·터치·프레임을 확인한다. 불가능하면 제출 범위를 명시하고 상용 `GO`가 아닌 `CONDITIONAL GO`를 유지한다.
+2. 초보자 외부 플레이테스트로 힌트 이해도·열쇠 발견률·기믹 우회 발견률을 확인한다.
