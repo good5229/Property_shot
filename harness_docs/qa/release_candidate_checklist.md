@@ -2,7 +2,7 @@
 
 작성 기준: 2026-08-10 KST
 
-최신 자동 회귀 기준: `main` 작업 트리 / 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c`. 사용자가 요청한 단 한 번의 직렬 실행은 **1,062건 중 997건 통과·65건 실패**였다. stale Golden 61장과 레벨 7·10 replay fixture를 실제 렌더·성공 경로에 맞춰 검토한 뒤 Golden 영향권 67/67, replay·결정론 9/9, 핵심 변경 239/239를 표적 재검증했다. `flutter analyze`는 문제 0건이다.
+최신 자동 회귀 기준: `main` 배포 커밋 `69744c6d3183b4933817066f80221c2f8fd69630`. 사용자가 요청한 단 한 번의 직렬 실행은 **1,062건 중 997건 통과·65건 실패**였다. stale Golden 61장과 레벨 7·10 replay fixture를 실제 렌더·성공 경로에 맞춰 검토한 뒤 Golden 영향권 67/67, replay·결정론 9/9, 핵심 변경 239/239를 표적 재검증했다. 최종 telemetry `shot_id` 수정의 실제 발사 회귀와 `flutter analyze`도 통과했다.
 
 현재 판정: `Conditional Go`
 
@@ -27,8 +27,8 @@
 | 실제 모바일 성능 | 에뮬레이터 대리 부분 통과 | Android Release 반복 메모리·기능 확인, iPhone·Android·iPad 실기기 필요 |
 | 외부 플레이테스트 | 미검증 | 초보자 이해도·우회 발견률·만족도 필요 |
 | 에셋 라이선스 | 기술 교차검토 통과 | 출처·오프라인 증거·해시·Release 번들·자동 계약 확인, 법무 승인 미수행 |
-| 작업 단위 commit·push | 대기 | 최종 영상 검증 통과. 최신 문서 재생성·감사 후 한 번의 완료 커밋·푸시 수행 |
-| 공개 Web 배포 | 이전 버전만 통과 | 최신 Web release 로컬 빌드·HTTP 200 확인, 변경판 Pages 배포는 commit/push 뒤 필요 |
+| 작업 단위 commit·push | 통과 | 릴리스 후보 커밋 `69744c6d…`을 `origin/main`에 push |
+| 공개 Web 배포 | 통과 | Pages run `31373105599` 성공, 공개 루트 HTTP 200, 배포 번들 SHA-256 `fd3f99ec…1718375` |
 | 제출 문서·영상 | 통과 | PDF 2개와 편집 가능한 A4 세로 PPTX 2개 렌더 검수. 영상 소스 Golden 68건·freshness, 실제 telemetry attestation, 60.000초 H.264 MOV, 방향·대표 프레임 검사 통과 |
 | 반복 사용 스트레스 | 자동·Android 대리 통과 | 재도전 20회·설정 30회·리플레이 100회·10단계·A/B 복구와 Android 20회×2 메모리 고수위 재사용 확인, 실기기 heap 추세 필요 |
 

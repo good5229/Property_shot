@@ -235,7 +235,7 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
     commit.alignment = WD_ALIGN_PARAGRAPH.CENTER
     commit.paragraph_format.space_after = Pt(10)
     base.set_run_font(
-        commit.add_run("기능 기준 main 작업 트리 · base bfb7a39734cad39b"),
+        commit.add_run("기능 기준 main · deployed 69744c6d3183"),
         size=8.5,
         color=MUTED,
     )

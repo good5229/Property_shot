@@ -1,7 +1,7 @@
 # 속성 한방(Property Shot) AI 활용 기술 문서
 
 작성일: 2026-08-10 KST
-기능 기준: `main` 작업 트리 / 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c`
+기능 기준: `main` / 배포 커밋 `69744c6d3183b4933817066f80221c2f8fd69630`
 제출 형식: AI 활용 기술 PDF
 
 ## 1. AI 활용 개요
@@ -121,9 +121,9 @@ Normal/Easy/metadata 없음 × 3개 완료 경로의 9개 조합에서 진행 �
 | 복구/공정성 | direct·stageCompleted·shot-success crash × 3귀속 행렬 통과 |
 | 기믹 우위 | 10단계 × 4패턴 전수 검증, 단계 합계 최소 1.4배 또는 후반 인과·점수 게이트 통과 |
 | 보상·꾸미기 | 기존 8종+다음 스테이지 팁 1종의 고유 아이콘과 청록/금색 본체 변화 Widget/Golden 통과 |
-| 출시 빌드 | Web release 통과(`main.dart.js` 3,709,343바이트, SHA-256 `cb95f03f...cc537f`), Android release APK 63,261,407바이트·SHA-256 `f2a12703...146674` 통과 |
-| 영상·배포 | 19소스 Golden 68건·freshness·실제 telemetry attestation·60.000초 H.264/avc1 MOV·identity transform·대표 27프레임 시각 검사 통과. Pages 재배포는 문서 재생성 뒤 수행 |
-| 독립 감사 | 코드·레벨·영상 핵심 감사 통과. 최종 문서·배포 감사는 최신 산출물·Pages 확인 뒤 확정 |
+| 출시 빌드 | Pages `main.dart.js` 3,709,337바이트·SHA-256 `fd3f99ec...1718375`, Android release APK 63,261,407바이트·SHA-256 `9560dcd7...31552` 통과 |
+| 영상·배포 | 19소스 Golden 68건·freshness·실제 telemetry attestation·60.000초 H.264/avc1 MOV·identity transform·대표 27프레임 시각 검사 통과. Pages run `31373105599` 성공 및 공개 URL HTTP 200 |
+| 독립 감사 | 코드·레벨·영상·문서 레이아웃 핵심 감사 통과. 배포 전 발견한 telemetry `shot_id` 불일치는 실제 발사 회귀를 추가해 수정·재감사 |
 
 이번 단일 전체 실행에서 실패한 Golden 61개는 실제 렌더를 직접 비교했다. 차이는 모두 하단 조작 안내를 `물체를 눌러 속성 고르기`로 단축해 한 줄로 만든 영역에 국한됐고, 해당 6개 Golden 파일 묶음의 67개 테스트가 갱신 후 재통과했다.
 
@@ -197,9 +197,9 @@ Normal/Easy/metadata 없음 × 3개 완료 경로의 9개 조합에서 진행 �
 
 ## 9. 추적 가능한 근거
 
-- 기능 기준: `main` 작업 트리 / 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c`
+- 기능 기준: `main` / 배포 커밋 `69744c6d3183b4933817066f80221c2f8fd69630`
 - QA 결과: `harness_docs/qa/validation_results.md`
 - 에이전트 작업 맥락: `harness_docs/prompts/*`, `harness_docs/dev-wiki/log.md`
 - 에셋 권리: `harness_docs/release/asset_rights_ledger.md`
 - 공개 플레이: [GitHub Pages](https://good5229.github.io/Property_shot/)
-- 배포 기록: [GitHub Pages run 31315470165](https://github.com/good5229/Property_shot/actions/runs/31315470165)
+- 배포 기록: [GitHub Pages run 31373105599](https://github.com/good5229/Property_shot/actions/runs/31373105599)

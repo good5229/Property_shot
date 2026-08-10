@@ -1,7 +1,7 @@
 # 속성 한방(Property Shot) 게임 소개 및 설명
 
 작성일: 2026-08-10 KST
-기능 기준: `main` 작업 트리 / 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c`
+기능 기준: `main` / 배포 커밋 `69744c6d3183b4933817066f80221c2f8fd69630`
 제출 형식: 게임 소개 및 설명 PDF
 
 ## 1. 게임 제목과 한 줄 소개
@@ -125,7 +125,7 @@
 
 - [GitHub Pages에서 바로 플레이](https://good5229.github.io/Property_shot/)
 - [소스 저장소](https://github.com/good5229/Property_shot)
-- [기능 기준 배포 워크플로](https://github.com/good5229/Property_shot/actions/runs/31315470165)
+- [기능 기준 배포 워크플로](https://github.com/good5229/Property_shot/actions/runs/31373105599)
 
 ### 6.2 소스에서 Web 실행
 
@@ -149,7 +149,7 @@ flutter build web --release --base-href "/Property_shot/"
 flutter build apk --release
 ```
 
-생성 파일은 `build/app/outputs/flutter-apk/app-release.apk`이며, 이번 검증 빌드는 63,261,407바이트(약 60.33MiB), SHA-256 `f2a127039375d9a0d76d82e054c7d00a11955237d99566bb28a86bc49f146674`다. Android 기기로 옮긴 뒤 알 수 없는 앱 설치 권한을 허용해 수동 설치할 수 있다. 공개 APK 다운로드 링크와 iOS TestFlight 링크는 제공하지 않는다.
+생성 파일은 `build/app/outputs/flutter-apk/app-release.apk`이며, 이번 검증 빌드는 63,261,407바이트(약 60.33MiB), SHA-256 `9560dcd76a98fa9b7ce5c140be8998f81eb7dea5e1833bb9f5fa39255ab31552`다. Android 기기로 옮긴 뒤 알 수 없는 앱 설치 권한을 허용해 수동 설치할 수 있다. 공개 APK 다운로드 링크와 iOS TestFlight 링크는 제공하지 않는다.
 
 ## 7. 플레이 영상
 
@@ -164,18 +164,17 @@ flutter build apk --release
 
 | 항목 | 결과 |
 |---|---|
-| 전체 테스트 | 단 한 번의 직렬 실행 1,062건 중 997건 통과·65건 실패. 실패는 최종 하단 문구가 반영되지 않은 Golden 61건과 레벨 7·10 리플레이 fixture 계열이었다. 정상 화면 대조 후 Golden 영향권 67/67, 리플레이·결정론 9/9, 변경 기능 핵심 묶음 239/239를 표적 재검증했다. |
+| 전체 테스트 | 단 한 번의 직렬 실행 1,062건: 997 통과·65 실패(stale Golden 61, replay fixture 4). 분류·수정 후 Golden 67/67, replay·결정론 9/9, 핵심 변경 239/239 표적 재통과 |
 | 정적 분석 | `flutter analyze` — 문제 0건 |
-| Web 출시 빌드 | `flutter build web --release --base-href /Property_shot/` — 통과 |
-| Android 출시 빌드 | `flutter build apk --release` — 통과, 63,261,407바이트(약 60.33MiB) |
-| 플레이 영상 | 실제 telemetry attestation·소스 freshness·60.000초 H.264/avc1·390×844·480프레임·identity transform·대표 27프레임 시각 검사 통과 |
-| 화면 회귀 | 실패 Golden 61장을 실제 렌더와 대조해 하단 단일행 문구 변경만 확인하고 67/67 표적 재통과 |
+| Web 출시·공개 배포 | Pages run `31373105599` 성공, 공개 URL HTTP 200. 배포 `main.dart.js` 3,709,337바이트, SHA-256 `fd3f99ec…1718375` |
+| Android 출시 빌드 | `flutter build apk --release` — 통과, 63,261,407바이트(약 60.33MiB), SHA-256 `9560dcd7…31552` |
+| 플레이 영상 | 실제 telemetry·소스 freshness·60.000초 H.264/avc1·390×844·480프레임·identity transform·대표 27프레임 검사 통과 |
+| 화면 회귀 | Golden 61장을 실제 렌더와 대조해 하단 단일행 문구 변경만 확인, 영향권 67/67 재통과 |
 | 기믹 우위 | 단발 32패턴 각각 ≥1.40배, 7단계 합계 1.92배, 8단계 연쇄 점수 1.48–1.74배, 10단계 합계 36.67배 |
-| 독립 감사 | 코드·레벨·영상 핵심 감사 통과. 최종 문서·배포 감사는 최신 산출물 재생성 및 Pages 배포 뒤 확정 |
+| 독립 감사 | 코드·레벨·영상·문서 레이아웃 통과. telemetry `shot_id` 불일치를 수정하고 실제 발사 회귀·정적 분석 재통과 |
 
 ## 9. 알려진 제한
 
 - iPhone/iPad 실기기 성능·터치 체감과 App Store 제출은 이번 범위에서 검증하지 않았다.
 - 외부 사용자 대상 정식 30초/5분 플레이테스트는 별도 모집이 필요하다.
 - 생성형 이미지 애셋은 출처·해시를 기록했으나 상업 공개 전 최종 권리 검토가 필요하다.
-- 최신 변경판의 GitHub Pages 배포와 최종 커밋·푸시는 이 문서 재생성·감사 뒤 수행한다. 이 문서 생성 시점의 공개 링크는 이전 배포본이다.

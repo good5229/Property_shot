@@ -1,13 +1,13 @@
 # UI·힌트·시연 난이도 최종 Sol 리뷰
 
 작성 기준: 2026-08-10 KST
-기준 작업 트리: 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c` 이후 미커밋 통합본
+기준: `main` 배포 커밋 `69744c6d3183b4933817066f80221c2f8fd69630`, Pages run `31373105599`
 
 ## 판정
 
 **CONDITIONAL GO**
 
-코드·레벨·저장·Validator·접근성·Golden·Web/APK 빌드와 최종 실제 60초 MOV는 제출 후보 수준의 자동·시각 증거를 확보했다. 그러나 변경판 GitHub Pages 배포, iOS Simulator·실제 iPhone/iPad 성능, 외부 플레이테스트, 한 번에 전부 초록인 전체 회귀 실행은 아직 없다. 이 항목을 통과로 과장하지 않는다.
+코드·레벨·저장·Validator·접근성·Golden·Web/APK 빌드, 실제 60초 MOV와 변경판 GitHub Pages 배포는 제출 후보 수준의 자동·시각 증거를 확보했다. 그러나 iOS Simulator·실제 iPhone/iPad 성능, 외부 플레이테스트, 한 번에 전부 초록인 전체 회귀 실행은 아직 없다. 이 항목을 통과로 과장하지 않는다.
 
 ## 최종 질문별 답변
 
@@ -30,7 +30,7 @@
 | 화면 비율·FPS가 물리 결과에 영향을 주지 않는가? | 구조·자동 PASS | ShotResolver 입력은 viewport/HUD를 참조하지 않고 30/60/120Hz 결정론과 replay fingerprint를 유지한다. 실제 기기 GPU/FPS 교차 검사는 남는다. |
 | 기존 10단계·셔플·RunState·리플레이와 충돌하지 않는가? | PASS | 생산 40패턴, 캠페인 전용 첫 baseline, daily 기존 shuffle, RunState v1/v2→v3, replay fixture·결정론 표적 회귀를 확인했다. |
 | 전체 회귀와 release build가 통과하는가? | 조건부 | Web/APK release와 `flutter analyze`는 통과했다. 사용자 요청에 따라 전체 직렬 실행은 한 번만 수행했고 1,062건 중 997건 통과·65건 실패였다. 실패는 stale Golden 61장과 replay fixture로 분류·수정해 영향권 67/67, replay 9/9, 핵심 239/239를 재통과했지만 전체를 다시 한 번에 실행하지는 않았다. |
-| 공개 배포·최종 제출 증거가 완료됐는가? | 부분 완료 | 최신 로컬 서버 `/`·`main.dart.js` HTTP 200, PDF/PPTX 렌더 검수와 최종 MOV 검증은 통과했다. commit/push와 변경판 Pages 배포는 남았다. |
+| 공개 배포·최종 제출 증거가 완료됐는가? | PASS | 커밋 `69744c6d…` push, Pages run `31373105599`, 공개 루트·번들 HTTP 200과 SHA-256, PDF/PPTX 렌더 및 최종 MOV 검증을 확인했다. |
 
 ## 최신 성능 대리 증거
 
