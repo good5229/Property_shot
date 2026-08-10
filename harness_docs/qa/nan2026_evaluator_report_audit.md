@@ -13,6 +13,9 @@ NAN 2026 공식 안내와 공개 게임잼·AI 해커톤 평가 자료를 읽고
 - [Taylor University GameJam judging](https://gamejam.cse.taylor.edu/judging.php): 혁신성·게임플레이·프로그래밍·그래픽·오디오·완성도
 - [BCI Game Jam 2026](https://bci.games/jams/2026): 창의성·접근성·재미·플레이 용이성·재플레이성
 - [IxDF case-study guide](https://ixdf.org/literature/article/how-to-write-great-case-studies-for-your-ux-design-portfolio): 결과보다 문제·과정·판단·증거를 연결하는 포트폴리오 서사
+- [Hack n Hoard · Devpost](https://devpost.com/software/hack-n-hoard): Inspiration, What it does, How we built it, Accomplishments, What we learned 순서의 실제 해커톤 프로젝트 서사
+- [PRESS PLAY submission guide](https://pressplay-cub.com/submissions): 게임 설명 자료에서 제목, 핵심 메커니즘, 조작, 사용 소프트웨어를 명확히 분리하는 구성
+- [Game Developer postmortem analysis](https://media.gdcvault.com/GD_Mag_Archives/GDM_February_2011.pdf): 프로젝트 회고를 잘된 점과 어려웠던 점처럼 구체적 경험 단위로 정리하는 형식
 
 ## 도출한 평가 관점
 
@@ -34,6 +37,8 @@ NAN 2026 공식 안내와 공개 게임잼·AI 해커톤 평가 자료를 읽고
 - 잘못된 기믹 우위 지표를 독립 감사로 반려한 사례를 핵심 AI 디렉팅 증거로 제시했다.
 - 포트폴리오는 문제→의사결정→전후 결과→개인 기여→회고의 사례 연구로 신규 제작했다.
 - 평가 기준을 평가자에게 설명하는 메타 문단은 최종 보고서에서 제거하고 이 내부 감사 문서에만 보존했다.
+- 해커톤 프로젝트 페이지의 간결한 서사를 참고해 `출발점 → 게임이 하는 일 → 제작 과정 → 주요 결정 → 결과` 순으로 바꾸고 표 중심 문장을 회고형 문장으로 줄였다.
+- 제작 과정은 사용자 피드백 → 기능 계약 → 전문 실행 → 독립 감사 → 증거·통합의 편집 가능한 관계도로 표현했다.
 
 ## 최종 감사 기준
 

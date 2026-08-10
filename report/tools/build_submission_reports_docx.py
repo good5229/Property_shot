@@ -16,6 +16,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
@@ -39,7 +40,6 @@ class ReportConfig:
     source: Path
     output: Path
     title: str
-    subtitle: str
     kicker: str
     running_label: str
     preset: str
@@ -75,7 +75,6 @@ CONFIGS = {
         source=ROOT / "report" / "game_introduction.md",
         output=ROOT / "report" / "dist" / "property_shot_game_guide.docx",
         title="속성 한방(Property Shot)",
-        subtitle="게임 소개 및 설명",
         kicker="Game Guide",
         running_label="Property Shot · Game Guide",
         preset="compact_reference_guide",
@@ -87,7 +86,6 @@ CONFIGS = {
         source=ROOT / "report" / "ai_technical_report.md",
         output=ROOT / "report" / "dist" / "property_shot_ai_technical_report.docx",
         title="속성 한방(Property Shot)",
-        subtitle="AI 활용 기술 문서",
         kicker="AI Technical Report",
         running_label="Property Shot · AI Technical Report",
         preset="standard_business_brief",
@@ -99,7 +97,6 @@ CONFIGS = {
         source=ROOT / "report" / "portfolio.md",
         output=ROOT / "report" / "dist" / "property_shot_portfolio.docx",
         title="속성 한방(Property Shot)",
-        subtitle="프로젝트 포트폴리오",
         kicker="GAME · AI · PRODUCT CASE STUDY",
         running_label="Property Shot · Portfolio",
         preset="compact_reference_guide",
@@ -230,11 +227,6 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
     title.paragraph_format.space_after = Pt(8)
     base.set_run_font(title.add_run(config.title), size=30, color=NAVY, bold=True)
 
-    subtitle = doc.add_paragraph()
-    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    subtitle.paragraph_format.space_after = Pt(28)
-    base.set_run_font(subtitle.add_run(config.subtitle), size=15, color=DARK_BLUE)
-
     strap = doc.add_paragraph()
     strap.alignment = WD_ALIGN_PARAGRAPH.CENTER
     strap.paragraph_format.space_after = Pt(18)
@@ -261,6 +253,50 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
     event.paragraph_format.space_after = Pt(10)
     base.set_run_font(event.add_run("NAN 2026 Game × AI 해커톤 사전 과제"), size=10, color=MUTED)
     doc.add_page_break()
+
+
+def add_workflow_diagram(doc: Document) -> None:
+    """Add an editable, left-to-right production workflow."""
+    labels = [
+        "사용자\n피드백",
+        "→",
+        "기능 계약",
+        "→",
+        "전문 실행",
+        "→",
+        "독립 감사",
+        "→",
+        "증거·통합",
+    ]
+    table = doc.add_table(rows=1, cols=len(labels))
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    for index, (cell, label) in enumerate(zip(table.rows[0].cells, labels)):
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        width = Inches(1.02 if index % 2 == 0 else 0.24)
+        cell.width = width
+        cell._tc.tcPr.tcW.set(qn("w:w"), str(round(width.inches * 1440)))
+        cell._tc.tcPr.tcW.set(qn("w:type"), "dxa")
+        paragraph = cell.paragraphs[0]
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        paragraph.paragraph_format.space_before = Pt(8)
+        paragraph.paragraph_format.space_after = Pt(8)
+        run = paragraph.add_run(label)
+        base.set_run_font(
+            run,
+            size=9.5 if index % 2 == 0 else 15,
+            color=NAVY if index % 2 == 0 else GOLD,
+            bold=True,
+        )
+        if index % 2 == 0:
+            shading = OxmlElement("w:shd")
+            shading.set(qn("w:fill"), "E8F4F1")
+            cell._tc.get_or_add_tcPr().append(shading)
+    note = doc.add_paragraph()
+    note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    note.paragraph_format.space_before = Pt(4)
+    note.paragraph_format.space_after = Pt(10)
+    base.set_run_font(note.add_run("감사에서 문제가 발견되면 기능 계약 단계로 돌아간다."), size=8.5, color=MUTED)
 
 
 def next_num_id(doc: Document) -> int:
@@ -397,6 +433,10 @@ def build(config: ReportConfig) -> Path:
                 code.append(lines[idx])
                 idx += 1
             base.add_code_block(doc, code)
+            idx += 1
+            continue
+        if line.strip() == "[[WORKFLOW]]":
+            add_workflow_diagram(doc)
             idx += 1
             continue
         if line.startswith("|") and idx + 1 < len(lines) and lines[idx + 1].startswith("|"):

@@ -35,7 +35,6 @@ const CONFIGS = [
     output: path.join(ROOT, "report/dist/property_shot_game_guide.pptx"),
     kicker: "GAME GUIDE",
     title: "속성 한방(Property Shot)",
-    subtitle: "게임 소개 및 설명",
     running: "Property Shot · Game Guide",
     tagline: "속성을 옮기고, 실패까지 다음 해법으로 바꾸는 물리 퍼즐",
     coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/390x844-current-play-audit.png"),
@@ -45,7 +44,6 @@ const CONFIGS = [
     output: path.join(ROOT, "report/dist/property_shot_ai_technical_report.pptx"),
     kicker: "AI TECHNICAL REPORT",
     title: "속성 한방(Property Shot)",
-    subtitle: "AI 활용 기술 문서",
     running: "Property Shot · AI Technical Report",
     tagline: "프롬프트를 제작 계약으로 바꾸고, 독립 감사로 검증한 AI 협업",
     coverImage: path.join(ROOT, "test/goldens/difficulty_easy_first_arrival_390x844.png"),
@@ -55,7 +53,6 @@ const CONFIGS = [
     output: path.join(ROOT, "report/dist/property_shot_portfolio.pptx"),
     kicker: "GAME · AI · PRODUCT CASE STUDY",
     title: "속성 한방(Property Shot)",
-    subtitle: "프로젝트 포트폴리오",
     running: "Property Shot · Portfolio",
     tagline: "게임 디렉팅, AI 오케스트레이션, 검증 가능한 제품 제작",
     coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/stage4-property-ready.png"),
@@ -104,6 +101,11 @@ function parseMarkdown(markdown, sourcePath) {
     }
     if (line.startsWith("# ")) {
       title = cleanInline(line.slice(2));
+      index += 1;
+      continue;
+    }
+    if (line === "[[WORKFLOW]]") {
+      blocks.push({ type: "workflow", raw: line });
       index += 1;
       continue;
     }
@@ -276,19 +278,14 @@ async function addCover(presentation, config, pageNumber) {
     color: COLORS.ink,
     lineSpacing: 1.05,
   });
-  addTextBox(slide, "cover-subtitle", config.subtitle, { left: 78, top: 430, width: 620, height: 62 }, {
-    fontSize: 28,
-    bold: true,
-    color: COLORS.teal,
-  });
   slide.shapes.add({
     geometry: "rect",
     name: "cover-rule",
-    position: { left: 78, top: 532, width: 180, height: 5 },
+    position: { left: 78, top: 440, width: 180, height: 5 },
     fill: COLORS.gold,
     line: { style: "solid", fill: "none", width: 0 },
   });
-  addTextBox(slide, "cover-description", config.tagline, { left: 78, top: 570, width: 340, height: 160 }, {
+  addTextBox(slide, "cover-description", config.tagline, { left: 78, top: 478, width: 340, height: 160 }, {
     fontSize: 22,
     color: COLORS.muted,
     lineSpacing: 1.25,
@@ -301,9 +298,9 @@ async function addCover(presentation, config, pageNumber) {
     fit: "contain",
     geometry: "roundRect",
     borderRadius: "rounded-xl",
-    position: { left: 470, top: 560, width: 230, height: 330 },
+    position: { left: 470, top: 468, width: 230, height: 330 },
   });
-  addTextBox(slide, "cover-meta", "NAN 2026 Game × AI 해커톤 사전 과제\n2026-08-10", { left: 78, top: 920, width: 610, height: 76 }, {
+  addTextBox(slide, "cover-meta", "NAN 2026 Game × AI 해커톤 사전 과제\n2026-08-10", { left: 78, top: 900, width: 610, height: 76 }, {
     fontSize: 17,
     color: COLORS.ink,
     lineSpacing: 1.3,
@@ -394,6 +391,46 @@ function addBullets(slide, items, y) {
   return height + 10;
 }
 
+function addWorkflowDiagram(slide, y) {
+  const labels = ["사용자 피드백", "기능 계약", "전문 실행", "독립 감사", "증거·통합"];
+  const nodeWidth = 110;
+  const gap = 33;
+  const nodeHeight = 92;
+  for (let index = 0; index < labels.length - 1; index += 1) {
+    slide.shapes.add({
+      geometry: "rightArrow",
+      name: `workflow-arrow-${y}-${index}`,
+      position: { left: MARGIN + nodeWidth + index * (nodeWidth + gap) + 5, top: y + 30, width: gap - 10, height: 28 },
+      fill: COLORS.gold,
+      line: { style: "solid", fill: "none", width: 0 },
+    });
+  }
+  for (let index = 0; index < labels.length; index += 1) {
+    const left = MARGIN + index * (nodeWidth + gap);
+    slide.shapes.add({
+      geometry: "roundRect",
+      name: `workflow-node-${y}-${index}`,
+      position: { left, top: y, width: nodeWidth, height: nodeHeight },
+      fill: index === 3 ? "#FFF0EC" : COLORS.paleTeal,
+      line: { style: "solid", fill: index === 3 ? COLORS.coral : COLORS.teal, width: 1.4 },
+      borderRadius: "rounded-lg",
+    });
+    addTextBox(slide, `workflow-label-${y}-${index}`, labels[index], { left: left + 8, top: y + 24, width: nodeWidth - 16, height: 42 }, {
+      fontSize: 16,
+      bold: true,
+      color: COLORS.ink,
+      alignment: "center",
+      verticalAlignment: "middle",
+    });
+  }
+  addTextBox(slide, `workflow-note-${y}`, "감사에서 문제가 발견되면 기능 계약 단계로 돌아간다.", { left: MARGIN, top: y + 112, width: CONTENT_WIDTH, height: 34 }, {
+    fontSize: 14,
+    color: COLORS.muted,
+    alignment: "center",
+  });
+  return 166;
+}
+
 function tableMetrics(rows) {
   const columns = Math.max(...rows.map((row) => row.length));
   const normalized = rows.map((row) => Array.from({ length: columns }, (_, index) => row[index] ?? ""));
@@ -450,6 +487,7 @@ function blockHeight(block) {
   if (block.type === "bullets") return block.items.reduce((sum, item) => sum + textHeight(item, 16, 41), 0) + 18;
   if (block.type === "image") return 384;
   if (block.type === "table") return tableMetrics(block.rows).height + 16;
+  if (block.type === "workflow") return 166;
   return 0;
 }
 
@@ -537,6 +575,8 @@ async function buildDeck(config) {
         y += addBullets(slide, block.items, y);
       } else if (block.type === "table") {
         y += addTable(slide, block.rows, y);
+      } else if (block.type === "workflow") {
+        y += addWorkflowDiagram(slide, y);
       }
     }
     finishSlide();
