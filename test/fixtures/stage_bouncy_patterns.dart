@@ -103,8 +103,8 @@ const stageBouncyRepresentatives = <StageBouncyRepresentative>[
   StageBouncyRepresentative(
     patternId: 'stage_bouncy_04',
     strategyId: 'none',
-    degree: 225,
-    power: 0.78,
+    degree: 60,
+    power: 0.74,
     familyId: 'wall_reflection',
   ),
   StageBouncyRepresentative(
@@ -117,9 +117,9 @@ const stageBouncyRepresentatives = <StageBouncyRepresentative>[
   StageBouncyRepresentative(
     patternId: 'stage_bouncy_04',
     strategyId: 'none',
-    degree: 228,
-    power: 0.90,
-    familyId: 'jelly_interaction',
+    degree: 246,
+    power: 0.88,
+    familyId: 'multi_wall_reflection',
   ),
 ];
 

@@ -79,8 +79,8 @@ const stagePersistentRepresentativeSolutions = <StagePersistentSolution>[
     patternId: 'stage_persistent_04',
     firstDegree: 130,
     firstPower: 0.60,
-    secondDegree: 260,
-    secondPower: 0.14,
+    secondDegree: 252,
+    secondPower: 0.16,
     familyId: 'crate_stopper_chain',
     expectedFirstImpactId: 'stopper_crate',
     expectedSecondHoleSourceId: 'spent_ball_1',
@@ -90,9 +90,9 @@ const stagePersistentRepresentativeSolutions = <StagePersistentSolution>[
 const stagePersistentAlternativeSolutions = <StagePersistentSolution>[
   StagePersistentSolution(
     patternId: 'stage_persistent_01',
-    firstDegree: 0,
-    firstPower: 0.12,
-    secondDegree: 0,
+    firstDegree: 24,
+    firstPower: 0.60,
+    secondDegree: 24,
     secondPower: 0.12,
     familyId: 'direct_bypass',
     requireFirstMove: false,

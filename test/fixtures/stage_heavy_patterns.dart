@@ -45,8 +45,8 @@ const List<StageHeavyRepresentative> stageHeavyRepresentatives = [
   StageHeavyRepresentative(
     patternId: 'stage_heavy_02',
     strategyId: 'none',
-    degree: 38,
-    power: 0.96,
+    degree: 42,
+    power: 0.88,
     familyId: 'wall_reflection',
   ),
   StageHeavyRepresentative(

@@ -4,6 +4,11 @@ import '../domain/geometry.dart';
 import '../domain/level_definition.dart';
 import '../domain/stage_pattern.dart';
 import '../domain/entity_state.dart';
+import '../domain/game_state.dart';
+import '../domain/shot_input.dart';
+import '../hint/hint_catalog.dart';
+import '../hint/pattern_hint.dart';
+import '../simulation/shot_resolver.dart';
 import 'stage_pattern_runtime_probe.dart';
 
 const _activeBallHitRadius = 12 * 0.88;
@@ -76,6 +81,23 @@ enum ValidationIssueCode {
   runtimeProbeBudget,
   runtimeMissingSolutionEvidence,
   runtimeRewardFreeRouteMissing,
+  hintCatalogVersion,
+  hintMissing,
+  hintDuplicate,
+  hintInvalidLevel,
+  hintEmptyText,
+  hintMissingIntent,
+  hintMissingReference,
+  hintUnknownReference,
+  hintTooVague,
+  hintExactSolution,
+  keyInvalidVersion,
+  keyOutOfBounds,
+  keyOverlapsSpawn,
+  keyOverlapsSolid,
+  keyOverlapsHole,
+  keyUnreachable,
+  demoDirectClear,
 }
 
 extension ValidationIssueCodeSchema on ValidationIssueCode {
@@ -200,6 +222,40 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'missing_solution_family_evidence';
       case ValidationIssueCode.runtimeRewardFreeRouteMissing:
         return 'missing_reward_free_route_evidence';
+      case ValidationIssueCode.hintCatalogVersion:
+        return 'invalid_hint_catalog_version';
+      case ValidationIssueCode.hintMissing:
+        return 'invalid_hint_missing';
+      case ValidationIssueCode.hintDuplicate:
+        return 'invalid_hint_duplicate';
+      case ValidationIssueCode.hintInvalidLevel:
+        return 'invalid_hint_level';
+      case ValidationIssueCode.hintEmptyText:
+        return 'invalid_hint_empty';
+      case ValidationIssueCode.hintMissingIntent:
+        return 'invalid_hint_missing_intent';
+      case ValidationIssueCode.hintMissingReference:
+        return 'invalid_hint_stage_pattern';
+      case ValidationIssueCode.hintUnknownReference:
+        return 'invalid_hint_wrong_pattern';
+      case ValidationIssueCode.hintTooVague:
+        return 'invalid_hint_too_vague';
+      case ValidationIssueCode.hintExactSolution:
+        return 'invalid_hint_exact_solution';
+      case ValidationIssueCode.keyInvalidVersion:
+        return 'invalid_key_version';
+      case ValidationIssueCode.keyOutOfBounds:
+        return 'invalid_key_out_of_bounds';
+      case ValidationIssueCode.keyOverlapsSpawn:
+        return 'invalid_key_overlap_spawn';
+      case ValidationIssueCode.keyOverlapsSolid:
+        return 'invalid_key_overlap';
+      case ValidationIssueCode.keyOverlapsHole:
+        return 'invalid_key_blocks_hole';
+      case ValidationIssueCode.keyUnreachable:
+        return 'invalid_key_unreachable';
+      case ValidationIssueCode.demoDirectClear:
+        return 'invalid_demo_direct_clear';
     }
   }
 }
@@ -1090,8 +1146,18 @@ class StagePatternValidator {
               !object.id.startsWith('rotation_gate'),
         )
         .toList();
+    // 연쇄 패턴은 스위치뿐 아니라 힘 발판/점착면이 의도된 첫 사건으로
+    // 문을 열 수 있다. resolver의 linked-gate 규칙과 같은 활성자 집합을
+    // 정적으로 검증한다.
     final activeSwitches = pattern.objects
-        .where((object) => object.active && object.type == EntityType.switchPad)
+        .where(
+          (object) =>
+              object.active &&
+              (object.type == EntityType.switchPad ||
+                  ((object.type == EntityType.powerSlider ||
+                          object.type == EntityType.stickySurface) &&
+                      (object.linkId?.trim().isNotEmpty ?? false))),
+        )
         .toList();
     final linkedSwitches = activeSwitches
         .where((object) => object.linkId?.trim().isNotEmpty ?? false)
@@ -1355,7 +1421,336 @@ class StagePatternValidator {
       }
     }
   }
+
+  /// 패턴 물리 카탈로그와 분리된 힌트/열쇠 카탈로그를 검사한다.
+  ///
+  /// 힌트 권한 저장이나 Flame VFX는 이 검증 경계에 포함하지 않는다. 여기서는
+  /// stageId+patternId 연결, 실제 기물 참조, 열쇠 배치, 데모 직선 성공만 본다.
+  ValidationReport validateHintCatalog(
+    Iterable<StageDefinition> stages,
+    HintCatalog hintCatalog,
+  ) {
+    final stageList = stages.toList(growable: false);
+    final issues = <ValidationIssue>[];
+    if (hintCatalog.version != 1) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.hintCatalogVersion,
+          'hint_catalog',
+          message: '지원하지 않는 힌트 카탈로그 버전입니다.',
+        ),
+      );
+    }
+    final entries = <String, PatternHintEntry>{};
+    for (final entry in hintCatalog.entries) {
+      final key = '${entry.stageId}\u0000${entry.patternId}';
+      if (entries.containsKey(key)) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hintDuplicate,
+            entry.stageId,
+            patternId: entry.patternId,
+          ),
+        );
+      } else {
+        entries[key] = entry;
+      }
+    }
+    for (final stage in stageList) {
+      for (final pattern in stage.patterns) {
+        final entry = entries['${stage.stageId}\u0000${pattern.patternId}'];
+        if (entry == null) {
+          issues.add(
+            _issue(
+              ValidationIssueCode.hintMissing,
+              stage.stageId,
+              patternId: pattern.patternId,
+            ),
+          );
+          continue;
+        }
+        _validateHintEntry(stage, pattern, entry, issues);
+      }
+    }
+    for (final entry in hintCatalog.entries) {
+      final stage = stageList.where((item) => item.stageId == entry.stageId);
+      if (stage.length != 1 ||
+          !stage.single.patterns.any(
+            (item) => item.patternId == entry.patternId,
+          )) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hintMissingReference,
+            entry.stageId,
+            patternId: entry.patternId,
+            message: '힌트가 존재하지 않는 stageId/patternId를 가리킵니다.',
+          ),
+        );
+      }
+    }
+    return ValidationReport(_sortIssues(issues));
+  }
+
+  void _validateHintEntry(
+    StageDefinition stage,
+    StagePattern pattern,
+    PatternHintEntry entry,
+    List<ValidationIssue> issues,
+  ) {
+    final objectIds = pattern.objects.map((object) => object.id).toSet();
+    final levels = entry.hints.map((hint) => hint.level).toList();
+    if (entry.hintVersion < 1) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.hintCatalogVersion,
+          stage.stageId,
+          patternId: pattern.patternId,
+        ),
+      );
+    }
+    if (entry.intentTags.isEmpty) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.hintMissingIntent,
+          stage.stageId,
+          patternId: pattern.patternId,
+        ),
+      );
+    }
+    if (levels.length != 2 || levels[0] != 1 || levels[1] != 2) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.hintInvalidLevel,
+          stage.stageId,
+          patternId: pattern.patternId,
+          message: '힌트 레벨은 중복 없이 L1, L2 두 단계가 연속으로 필요합니다.',
+        ),
+      );
+    }
+    for (final hint in entry.hints) {
+      if (hint.text.trim().isEmpty) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hintEmptyText,
+            stage.stageId,
+            patternId: pattern.patternId,
+          ),
+        );
+      }
+      if (hint.intentTags.isEmpty) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hintMissingIntent,
+            stage.stageId,
+            patternId: pattern.patternId,
+          ),
+        );
+      }
+      if (hint.referencedObjectIds.isEmpty) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hintTooVague,
+            stage.stageId,
+            patternId: pattern.patternId,
+            message: '힌트는 실제 기물과 행동 의도를 하나 이상 참조해야 합니다.',
+          ),
+        );
+      }
+      final missing =
+          hint.referencedObjectIds
+              .where((id) => !objectIds.contains(id))
+              .toList()
+            ..sort();
+      if (missing.isNotEmpty) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hintUnknownReference,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: missing,
+          ),
+        );
+      }
+      if (_containsExactSolutionNumber(hint.text)) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hintExactSolution,
+            stage.stageId,
+            patternId: pattern.patternId,
+          ),
+        );
+      }
+    }
+    final key = entry.key;
+    if (key != null) _validateHintKey(stage, pattern, key, issues);
+    if (!entry.directClearPolicy.allowed && _hasDirectClear(stage, pattern)) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.demoDirectClear,
+          stage.stageId,
+          patternId: pattern.patternId,
+        ),
+      );
+    }
+  }
+
+  void _validateHintKey(
+    StageDefinition stage,
+    StagePattern pattern,
+    HintKeyDefinition key,
+    List<ValidationIssue> issues,
+  ) {
+    if (key.version < 1 ||
+        key.id.trim().isEmpty ||
+        !key.position.x.isFinite ||
+        !key.position.y.isFinite ||
+        !key.size.x.isFinite ||
+        !key.size.y.isFinite ||
+        key.size.x <= 0 ||
+        key.size.y <= 0) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.keyInvalidVersion,
+          stage.stageId,
+          patternId: pattern.patternId,
+          objectIds: [key.id],
+        ),
+      );
+      return;
+    }
+    final bounds = key.bounds;
+    if (bounds.left < 0 ||
+        bounds.top < 0 ||
+        bounds.right > boardSize.x ||
+        bounds.bottom > boardSize.y) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.keyOutOfBounds,
+          stage.stageId,
+          patternId: pattern.patternId,
+          objectIds: [key.id],
+        ),
+      );
+    }
+    const ballRadius = _activeBallHitRadius;
+    if (bounds.intersectsCircle(pattern.ballSpawn, ballRadius)) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.keyOverlapsSpawn,
+          stage.stageId,
+          patternId: pattern.patternId,
+          objectIds: [key.id],
+        ),
+      );
+    }
+    PatternObjectDefinition? hole;
+    for (final object in pattern.objects) {
+      if (object.type == EntityType.hole) hole = object;
+      final entity = object.toEntityState();
+      if (entity.solid &&
+          entity.active &&
+          entity.hitBounds.intersectsCircle(
+            key.position,
+            math.max(key.size.x, key.size.y) / 2,
+          )) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.keyOverlapsSolid,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: [key.id, object.id],
+          ),
+        );
+      }
+    }
+    if (hole != null) {
+      final holeRadius = math.min(hole.size.x, hole.size.y) / 2;
+      if (key.position.distanceTo(hole.position) <=
+          holeRadius + math.max(key.size.x, key.size.y) / 2) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.keyOverlapsHole,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: [key.id, hole.id],
+          ),
+        );
+      }
+    }
+    if (!_keyHasStraightApproach(pattern, key)) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.keyUnreachable,
+          stage.stageId,
+          patternId: pattern.patternId,
+          objectIds: [key.id],
+        ),
+      );
+    }
+  }
+
+  bool _keyHasStraightApproach(StagePattern pattern, HintKeyDefinition key) {
+    final distance = pattern.ballSpawn.distanceTo(key.position);
+    final samples = math.max(1, (distance / 4).ceil());
+    for (var sample = 1; sample < samples; sample++) {
+      final t = sample / samples;
+      final point = Vec2(
+        pattern.ballSpawn.x + (key.position.x - pattern.ballSpawn.x) * t,
+        pattern.ballSpawn.y + (key.position.y - pattern.ballSpawn.y) * t,
+      );
+      for (final object in pattern.objects) {
+        final entity = object.toEntityState();
+        if (entity.active &&
+            entity.solid &&
+            entity.hitBounds.intersectsCircle(point, _activeBallHitRadius)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool _hasDirectClear(StageDefinition stage, StagePattern pattern) {
+    final hole = pattern.objects.where((item) => item.type == EntityType.hole);
+    if (hole.length != 1) return false;
+    final direction = (hole.single.position - pattern.ballSpawn).normalized();
+    if (direction.length == 0) return true;
+    final initial = pattern
+        .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+        .createState(0);
+    const resolver = ShotResolver();
+    for (var step = 2; step <= 20; step++) {
+      final power = step / 20;
+      final result = resolver.resolve(
+        initial,
+        ShotInput(direction: direction, power: power),
+      );
+      if (result.state.phase != GamePhase.success) continue;
+      if (result.events.any(
+        (event) =>
+            event == 'power_slider_activated' ||
+            event == 'slider_gate_opened' ||
+            event == 'switch_pressed' ||
+            event == 'sticky_gate_opened',
+      )) {
+        continue;
+      }
+      if (result.impacts.every(
+        (impact) => impact.entityType == EntityType.hole,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
+
+final RegExp _exactHintNumber = RegExp(
+  r'(?:\d+(?:\.\d+)?\s*(?:도|%|퍼센트)|(?:각도|파워|힘)\s*[:：]?\s*\d+)',
+);
+
+bool _containsExactSolutionNumber(String text) =>
+    _exactHintNumber.hasMatch(text);
 
 String _defaultMessage(ValidationIssueCode code) {
   switch (code) {
@@ -1477,6 +1872,40 @@ String _defaultMessage(ValidationIssueCode code) {
       return '선언된 풀이 계열의 실행 증거가 없습니다.';
     case ValidationIssueCode.runtimeRewardFreeRouteMissing:
       return '런 보상 없는 대표 성공 증거가 없습니다.';
+    case ValidationIssueCode.hintCatalogVersion:
+      return '힌트 카탈로그 버전이 올바르지 않습니다.';
+    case ValidationIssueCode.hintMissing:
+      return '패턴에 연결된 힌트가 없습니다.';
+    case ValidationIssueCode.hintDuplicate:
+      return '같은 패턴의 힌트가 중복됩니다.';
+    case ValidationIssueCode.hintInvalidLevel:
+      return '힌트 레벨 구성이 올바르지 않습니다.';
+    case ValidationIssueCode.hintEmptyText:
+      return '힌트 문구가 비어 있습니다.';
+    case ValidationIssueCode.hintMissingIntent:
+      return '힌트의 행동 의도가 없습니다.';
+    case ValidationIssueCode.hintMissingReference:
+      return '힌트의 stageId 또는 patternId 참조가 올바르지 않습니다.';
+    case ValidationIssueCode.hintUnknownReference:
+      return '힌트가 현재 패턴에 없는 기물을 참조합니다.';
+    case ValidationIssueCode.hintTooVague:
+      return '힌트가 구체 기물 또는 행동을 참조하지 않습니다.';
+    case ValidationIssueCode.hintExactSolution:
+      return '힌트에 정확한 각도 또는 힘 수치가 들어 있습니다.';
+    case ValidationIssueCode.keyInvalidVersion:
+      return '힌트 열쇠 정의가 올바르지 않습니다.';
+    case ValidationIssueCode.keyOutOfBounds:
+      return '힌트 열쇠가 필드 밖에 있습니다.';
+    case ValidationIssueCode.keyOverlapsSpawn:
+      return '힌트 열쇠가 공 시작점과 겹칩니다.';
+    case ValidationIssueCode.keyOverlapsSolid:
+      return '힌트 열쇠가 고체 기물과 겹칩니다.';
+    case ValidationIssueCode.keyOverlapsHole:
+      return '힌트 열쇠가 홀 근처를 가립니다.';
+    case ValidationIssueCode.keyUnreachable:
+      return '힌트 열쇠로 향하는 기본 접근선이 막혀 있습니다.';
+    case ValidationIssueCode.demoDirectClear:
+      return '시연 패턴이 기믹 없이 직선으로 즉시 클리어됩니다.';
   }
 }
 

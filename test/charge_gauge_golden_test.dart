@@ -1,11 +1,19 @@
 import 'dart:math' as math;
 
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/level_definition.dart';
+import 'package:property_shot/game/hint/generated_hint_catalog.dart';
+import 'package:property_shot/game/hint/pattern_hint.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/levels/generated_stage_catalog.dart';
+import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
+import 'package:property_shot/ui/game_screen.dart';
 import 'package:property_shot/ui/launch_input_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +33,7 @@ void main() {
   tearDown(GameFeedback.resetForTesting);
 
   for (final fixture in const [
+    (name: '320x568', width: 320.0, height: 568.0),
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
   ]) {
@@ -52,6 +61,7 @@ void main() {
   }
 
   for (final fixture in const [
+    (name: '320x568', width: 320.0, height: 568.0),
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
   ]) {
@@ -82,6 +92,26 @@ void main() {
     }
   }
 
+  testWidgets('compact SafeArea 충전 게이지 Golden 320x568', (tester) async {
+    tester.view.padding = const FakeViewPadding(top: 24, bottom: 34);
+    addTearDown(() => tester.view.resetPadding());
+    GameFeedback.chargeGaugeSide = ChargeGaugeSide.right;
+    await _pumpGame(tester, 320, 568);
+    final gesture = await _holdCharge(tester, ChargeGaugeState.green);
+
+    final rail = tester.getRect(find.byKey(const Key('charge_gauge_rail')));
+    expect(rail.top, greaterThanOrEqualTo(24));
+    expect(rail.bottom, lessThanOrEqualTo(568 - 34));
+    await expectLater(
+      find.byKey(const Key('game_screen_golden')),
+      matchesGoldenFile(
+        'goldens/charge_gauge_safe_area_right_320x568.png',
+      ),
+    );
+    await gesture.cancel();
+    await tester.pump();
+  });
+
   for (final side in ChargeGaugeSide.values) {
     testWidgets('4단계 핵심 목표와 ${side.name} edge rail Golden', (tester) async {
       GameFeedback.chargeGaugeSide = side;
@@ -108,6 +138,63 @@ void main() {
       await tester.pump();
     });
   }
+
+  testWidgets('파워 슬라이더는 부동 게이지와 겹치지 않는다', (tester) async {
+    GameFeedback.chargeGaugeSide = ChargeGaugeSide.right;
+    final stage = generatedStageCatalog.stageById('stage_chain_score');
+    final pattern = stage.patternById('stage_chain_score_01');
+    final level = pattern.toLevelDefinition(
+      stageId: stage.stageId,
+      stageTitle: stage.title,
+    );
+    await _pumpPatternGame(
+      tester,
+      level: level,
+      size: const Size(390, 844),
+      goldenKey: const Key('charge_gauge_slider_golden'),
+    );
+    final gesture = await _holdChargeAt(tester, level.ballSpawn);
+    final rail = find.byKey(const Key('charge_gauge_rail'));
+    final slider = find.bySemanticsLabel(RegExp('^파워 슬라이더,'));
+    expect(slider, findsOneWidget);
+    expect(tester.getRect(rail).overlaps(tester.getRect(slider)), isFalse);
+    await expectLater(
+      find.byKey(const Key('charge_gauge_slider_golden')),
+      matchesGoldenFile('goldens/charge_gauge_slider_390x844.png'),
+    );
+    await gesture.cancel();
+  });
+
+  testWidgets('힌트 열쇠는 부동 게이지와 겹치지 않는다', (tester) async {
+    GameFeedback.chargeGaugeSide = ChargeGaugeSide.right;
+    final entry = generatedHintCatalog.entryFor(
+      stageId: 'stage_bouncy',
+      patternId: 'stage_bouncy_01',
+    );
+    final stage = generatedStageCatalog.stageById(entry.stageId);
+    final pattern = stage.patternById(entry.patternId);
+    final level = pattern.toLevelDefinition(
+      stageId: stage.stageId,
+      stageTitle: stage.title,
+    );
+    await _pumpPatternGame(
+      tester,
+      level: level,
+      entry: entry,
+      size: const Size(390, 844),
+      goldenKey: const Key('charge_gauge_hint_key_golden'),
+    );
+    final gesture = await _holdChargeAt(tester, level.ballSpawn);
+    final rail = find.byKey(const Key('charge_gauge_rail'));
+    final key = find.bySemanticsLabel('힌트 열쇠');
+    expect(key, findsOneWidget);
+    expect(tester.getRect(rail).overlaps(tester.getRect(key)), isFalse);
+    await expectLater(
+      find.byKey(const Key('charge_gauge_hint_key_golden')),
+      matchesGoldenFile('goldens/charge_gauge_hint_key_390x844.png'),
+    );
+    await gesture.cancel();
+  });
 }
 
 Future<void> _pumpGame(
@@ -193,6 +280,52 @@ Future<TestGesture> _holdCharge(
         .value,
     contains(_semanticStateLabel(state)),
   );
+  return gesture;
+}
+
+Future<void> _pumpPatternGame(
+  WidgetTester tester, {
+  required LevelDefinition level,
+  required Size size,
+  required Key goldenKey,
+  PatternHintEntry? entry,
+}) async {
+  await tester.binding.setSurfaceSize(size);
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
+      home: RepaintBoundary(
+        key: goldenKey,
+        child: GameScreen(
+          initialState: level.createState(7, productRules: true).copyWith(
+            message: '충전 상태를 확인하세요',
+          ),
+          levelOverride: level,
+          showStageSelector: false,
+          loadGameAssets: false,
+          patternHintEntry: entry,
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  final gameWidget = tester.state<GameWidgetState<PropertyShotGame>>(
+    find.byType(GameWidget<PropertyShotGame>),
+  );
+  await gameWidget.currentGame.toBeLoaded();
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
+Future<TestGesture> _holdChargeAt(
+  WidgetTester tester,
+  Vec2 ball,
+) async {
+  final area = find.byKey(const Key('aim_area'));
+  final gesture = await tester.createGesture();
+  await gesture.down(_logicalPosition(tester, area, ball.x, ball.y));
+  await _pumpChargeFrames(tester, _holdDuration(ChargeGaugeState.warningRed));
+  expect(find.byKey(const Key('charge_gauge_rail')), findsOneWidget);
   return gesture;
 }
 

@@ -148,6 +148,11 @@ void main() {
     test('${solution.patternId} ${solution.familyId} 대체 경로도 성공한다', () {
       _expectUiPower(solution.firstPower);
       final pattern = stage.patternById(solution.patternId);
+      expect(
+        pattern.solutionFamilies,
+        contains(solution.familyId),
+        reason: '${solution.patternId}/${solution.familyId} 대체 풀이 계열이 데이터에 없습니다.',
+      );
       final result = resolver.resolve(_state(pattern), solution.firstInput);
       expect(
         result.state.phase,

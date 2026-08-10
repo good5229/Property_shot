@@ -7,6 +7,7 @@ import 'package:property_shot/game/analysis/replay_signature.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
 import 'package:property_shot/game/run/run_state.dart';
+import 'package:property_shot/game/run/run_hint_state.dart';
 import 'package:property_shot/game/run/run_reward.dart';
 import 'package:property_shot/game/run/stage_pattern_session.dart';
 import 'package:property_shot/game/run/stage_shuffle_bag.dart';
@@ -694,6 +695,176 @@ void main() {
     expect(session.state?.acquiredRewards, contains(selected.id));
   });
 
+  test('다음 단계 힌트 보상은 선추첨된 패턴에 원자 지급되고 열쇠와 병합된다', () async {
+    final backend = _MemoryRunStateBackend();
+    final session = _session(RunStateStore(backend: backend));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 1,
+    );
+    final candidates = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+    );
+    expect(
+      candidates.map((reward) => reward.id),
+      contains(runRewardNextStageHintAccessId),
+    );
+
+    await session.selectReward(runRewardNextStageHintAccessId);
+    final nextPatternId = session.state!.nextStagePatternId!;
+    expect(
+      session.state!.hintEntitlements.single.identity.stageId,
+      'stage_bouncy',
+    );
+    expect(
+      session.state!.hintEntitlements.single.identity.patternId,
+      nextPatternId,
+    );
+    expect(session.state!.hintEntitlements.single.sources, {
+      HintEntitlementSource.clearReward,
+    });
+
+    await session.selectStage('stage_bouncy');
+    expect(session.currentHintEntitlement, isNotNull);
+    expect(
+      await session.recordKeyCollection(
+        keyId: 'hint_key',
+        sourceBallId: 'active_ball',
+        shotIndex: 0,
+      ),
+      isTrue,
+    );
+    expect(
+      await session.recordKeyCollection(
+        keyId: 'hint_key',
+        sourceBallId: 'active_ball',
+        shotIndex: 0,
+      ),
+      isFalse,
+    );
+    await expectLater(
+      session.recordKeyCollection(
+        keyId: 'invalid_key',
+        sourceBallId: 'crate_a',
+        shotIndex: 0,
+      ),
+      throwsArgumentError,
+    );
+    expect(session.currentHintEntitlement!.sources, {
+      HintEntitlementSource.clearReward,
+      HintEntitlementSource.stageKey,
+    });
+    await session.recordHintFailure();
+    await session.recordHintFailure();
+    final level1 = await session.openHint();
+    expect(level1!.unlockedHintLevel, 1);
+    expect(level1.failureCountAtFirstOpen, 2);
+    await session.recordHintFailure();
+    final level2 = await session.openHint(requestedLevel: 2);
+    expect(level2!.unlockedHintLevel, 2);
+    expect(level2.consumed, isTrue);
+    await expectLater(session.openHint(requestedLevel: 3), throwsArgumentError);
+
+    final resumed = _session(RunStateStore(backend: backend));
+    await resumed.loadState();
+    expect(resumed.currentHintEntitlement!.openedCount, 2);
+    expect(resumed.currentHintEntitlement!.failureCountAtFirstOpen, 2);
+    expect(resumed.currentHintEntitlement!.failedShotCount, 3);
+    expect(resumed.state!.keyCollections, hasLength(1));
+  });
+
+  test('힌트 UI가 없는 일일 도전 후보에서는 다음 단계 팁 보상을 제외한다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 1,
+    );
+
+    final rewards = await session.prepareRewardSelection(
+      stageId: 'stage_heavy',
+      includeNextStageHint: false,
+    );
+
+    expect(rewards, hasLength(RunRewardCandidateGenerator.candidateCount));
+    expect(
+      rewards.map((reward) => reward.id),
+      isNot(contains(runRewardNextStageHintAccessId)),
+    );
+  });
+
+  test('패턴별 hintVersion resolver가 다음 보상과 현재 entitlement에 함께 적용된다', () async {
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(backend: _MemoryRunStateBackend()),
+      now: () => DateTime.utc(2026, 8, 7, 8),
+      hintVersionResolver: (_, _) => 2,
+    );
+    await session.selectStage('stage_heavy');
+    await session.completeCurrentStage(
+      stageId: 'stage_heavy',
+      nextStageId: 'stage_bouncy',
+      shotCount: 1,
+    );
+    await session.prepareRewardSelection(stageId: 'stage_heavy');
+    await session.selectReward(runRewardNextStageHintAccessId);
+    await session.selectStage('stage_bouncy');
+
+    expect(session.currentHintEntitlement?.identity.hintVersion, 2);
+  });
+
+  test('열쇠 저장 뒤 큐에 넣은 실패 기록은 같은 entitlement에 직렬 반영된다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_bouncy');
+
+    final keyWrite = session.recordKeyCollection(
+      keyId: 'queued_hint_key',
+      sourceBallId: 'active_ball',
+      shotIndex: 0,
+    );
+    final failureWrite = session.recordHintFailure();
+    expect(await keyWrite, isTrue);
+    final entitlement = await failureWrite;
+
+    expect(entitlement, isNotNull);
+    expect(entitlement!.sources, contains(HintEntitlementSource.stageKey));
+    expect(entitlement.failedShotCount, 1);
+  });
+
+  test('열쇠·실패·단계 완료는 호출 순서대로 저장되어 완료 상태에도 모두 남는다', () async {
+    final backend = _MemoryRunStateBackend();
+    final session = _session(RunStateStore(backend: backend));
+    await session.selectStage('stage_bouncy');
+
+    final keyWrite = session.recordKeyCollection(
+      keyId: 'queued_completion_key',
+      sourceBallId: 'active_ball',
+      shotIndex: 0,
+    );
+    final failureWrite = session.recordHintFailure();
+    final completionWrite = session.completeCurrentStage(
+      stageId: 'stage_bouncy',
+      shotCount: 1,
+    );
+
+    expect(await keyWrite, isTrue);
+    expect((await failureWrite)?.failedShotCount, 1);
+    await completionWrite;
+
+    final restored = _session(RunStateStore(backend: backend));
+    final state = await restored.loadState();
+    expect(state?.phase, RunPhase.stageCompleted);
+    expect(state?.keyCollections.single.keyId, 'queued_completion_key');
+    expect(state?.hintEntitlements.single.failedShotCount, 1);
+    expect(
+      state?.hintEntitlements.single.sources,
+      contains(HintEntitlementSource.stageKey),
+    );
+  });
+
   test('복제 코어 후보 선택은 저장 상태의 코어를 정확히 하나 늘린다', () async {
     StagePatternSession? matched;
     List<RunReward>? matchedCandidates;
@@ -762,6 +933,10 @@ void main() {
     );
     final candidates = await session.prepareRewardSelection(
       stageId: 'stage_property_shot',
+    );
+    expect(
+      candidates.map((reward) => reward.id),
+      isNot(contains(runRewardNextStageHintAccessId)),
     );
     await session.selectReward(candidates.last.id);
     final completedRootSeed = session.state!.rootSeed;

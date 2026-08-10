@@ -378,6 +378,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "heavy_02_bypass_blocker",
+              "type": "wall",
+              "position": {
+                "x": 300.0,
+                "y": 486.0
+              },
+              "size": {
+                "x": 20.0,
+                "y": 20.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1464,7 +1487,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.12,
               "linkId": null,
               "movableWhenDrained": false
             },
@@ -1510,7 +1533,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.52,
               "linkId": null,
               "movableWhenDrained": false
             },
@@ -1538,6 +1561,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "bouncy_04_goal_blocker",
+              "type": "wall",
+              "position": {
+                "x": 100.0,
+                "y": 170.0
+              },
+              "size": {
+                "x": 80.0,
+                "y": 20.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1549,11 +1595,11 @@ const generatedStageCatalogJson = r'''
             "none"
           ],
           "solutionFamilies": [
-            "jelly_interaction",
+            "multi_wall_reflection",
             "wall_reflection"
           ],
           "optionalChallenges": [
-            "jelly_hit",
+            "two_wall_banks",
             "upper_wall_bank"
           ],
           "metadata": {}
@@ -2996,6 +3042,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "balloon_02_left_return_blocker",
+              "type": "wall",
+              "position": {
+                "x": 55.0,
+                "y": 205.0
+              },
+              "size": {
+                "x": 20.0,
+                "y": 50.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -3226,6 +3295,52 @@ const generatedStageCatalogJson = r'''
               },
               "traits": [],
               "movable": true,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "balloon_03_direct_lane_blocker",
+              "type": "wall",
+              "position": {
+                "x": 75.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 30.0,
+                "y": 120.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "balloon_03_left_bank_blocker",
+              "type": "wall",
+              "position": {
+                "x": 70.0,
+                "y": 250.0
+              },
+              "size": {
+                "x": 80.0,
+                "y": 20.0
+              },
+              "traits": [],
+              "movable": false,
               "solid": true,
               "active": true,
               "open": false,
@@ -3866,6 +3981,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.66,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "drained_02_bypass_blocker",
+              "type": "wall",
+              "position": {
+                "x": 205.0,
+                "y": 170.0
+              },
+              "size": {
+                "x": 70.0,
+                "y": 110.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -4056,6 +4194,29 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "drained_03_bypass_blocker",
+              "type": "wall",
+              "position": {
+                "x": 62.0,
+                "y": 320.0
+              },
+              "size": {
+                "x": 26.0,
+                "y": 70.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
             }
@@ -5213,6 +5374,52 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "sequence_switch_p1",
+              "type": "switch_pad",
+              "position": {
+                "x": 254.0,
+                "y": 544.0
+              },
+              "size": {
+                "x": 10.0,
+                "y": 10.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "p1_setup_gate",
+              "movableWhenDrained": false
+            },
+            {
+              "id": "p1_setup_gate",
+              "type": "gate",
+              "position": {
+                "x": 240.0,
+                "y": 500.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 70.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "p1_setup_gate",
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -5831,6 +6038,52 @@ const generatedStageCatalogJson = r'''
               "traits": [
                 "bouncy"
               ],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "p4_bypass_blocker_a",
+              "type": "wall",
+              "position": {
+                "x": 216.0,
+                "y": 430.0
+              },
+              "size": {
+                "x": 32.0,
+                "y": 110.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "p4_bypass_blocker_b",
+              "type": "wall",
+              "position": {
+                "x": 260.0,
+                "y": 320.0
+              },
+              "size": {
+                "x": 22.0,
+                "y": 100.0
+              },
+              "traits": [],
               "movable": false,
               "solid": true,
               "active": true,
@@ -7766,12 +8019,12 @@ const generatedStageCatalogJson = r'''
               "id": "a_gate",
               "type": "gate",
               "position": {
-                "x": 300.0,
-                "y": 160.0
+                "x": 100.0,
+                "y": 185.0
               },
               "size": {
-                "x": 24.0,
-                "y": 140.0
+                "x": 130.0,
+                "y": 18.0
               },
               "traits": [],
               "movable": false,
@@ -7795,8 +8048,8 @@ const generatedStageCatalogJson = r'''
             "none"
           ],
           "solutionFamilies": [
-            "direct_bypass",
-            "heavy_transfer_switch"
+            "heavy_transfer_switch",
+            "opened_gate_bank"
           ],
           "optionalChallenges": [
             "direct_low_score",
@@ -7933,7 +8186,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "ready",
               "hitboxScale": 0.9,
               "restitution": 0.72,
-              "linkId": null,
+              "linkId": "sequence_gate_b",
               "movableWhenDrained": false,
               "direction": {
                 "x": 1.0,
@@ -8017,6 +8270,29 @@ const generatedStageCatalogJson = r'''
               "hitboxScale": 0.88,
               "restitution": 0.68,
               "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "sequence_gate_b",
+              "type": "gate",
+              "position": {
+                "x": 295.0,
+                "y": 185.0
+              },
+              "size": {
+                "x": 70.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "sequence_gate_b",
               "movableWhenDrained": false
             }
           ],
@@ -8246,6 +8522,29 @@ const generatedStageCatalogJson = r'''
               ]
             },
             {
+              "id": "c_direct_blocker",
+              "type": "wall",
+              "position": {
+                "x": 200.0,
+                "y": 240.0
+              },
+              "size": {
+                "x": 24.0,
+                "y": 60.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 1.0,
+              "restitution": 0.64,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
               "id": "c_sticky",
               "type": "sticky_surface",
               "position": {
@@ -8272,7 +8571,7 @@ const generatedStageCatalogJson = r'''
             },
             {
               "id": "c_sticky_target",
-              "type": "wall",
+              "type": "sticky_surface",
               "position": {
                 "x": 180.0,
                 "y": 480.0
@@ -8281,7 +8580,9 @@ const generatedStageCatalogJson = r'''
                 "x": 48.0,
                 "y": 32.0
               },
-              "traits": [],
+              "traits": [
+                "sticky"
+              ],
               "movable": false,
               "solid": true,
               "active": true,
@@ -8290,7 +8591,30 @@ const generatedStageCatalogJson = r'''
               "visualState": "ready",
               "hitboxScale": 0.94,
               "restitution": 0.12,
-              "linkId": null,
+              "linkId": "sequence_gate_c",
+              "movableWhenDrained": false
+            },
+            {
+              "id": "sequence_gate_c",
+              "type": "gate",
+              "position": {
+                "x": 250.0,
+                "y": 170.0
+              },
+              "size": {
+                "x": 100.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "sequence_gate_c",
               "movableWhenDrained": false
             }
           ],
@@ -8303,7 +8627,7 @@ const generatedStageCatalogJson = r'''
             "sticky_past_ball_chain"
           ],
           "solutionFamilies": [
-            "direct_bypass",
+            "opened_gate_bank",
             "sticky_balloon_crate_chain"
           ],
           "optionalChallenges": [
@@ -8418,6 +8742,37 @@ const generatedStageCatalogJson = r'''
               "movableWhenDrained": false
             },
             {
+              "id": "d_setup_slider",
+              "type": "power_slider",
+              "position": {
+                "x": 92.0,
+                "y": 390.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 36.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": "sequence_gate_d",
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "referenceSpeed": 1.0,
+              "allowedTargets": [
+                "ball"
+              ]
+            },
+            {
               "id": "d_slider",
               "type": "power_slider",
               "position": {
@@ -8519,6 +8874,29 @@ const generatedStageCatalogJson = r'''
               "hitboxScale": 0.88,
               "restitution": 0.92,
               "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "sequence_gate_d",
+              "type": "gate",
+              "position": {
+                "x": 180.0,
+                "y": 130.0
+              },
+              "size": {
+                "x": 300.0,
+                "y": 14.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": "sequence_gate_d",
               "movableWhenDrained": false
             }
           ],

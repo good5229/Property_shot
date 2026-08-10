@@ -26,7 +26,7 @@
 
 ### 런 보상 아이콘
 
-- 자산: Flutter `Icons`가 제공하는 Google Material Icons 8종
+- 자산: Flutter `Icons`가 제공하는 Google Material Icons 9종(기존 런 보상 8종+다음 스테이지 팁 1종)
 - 용도: 런 보상 효과별 식별 아이콘
 - 원본: https://github.com/google/material-design-icons
 - 라이선스: Apache License 2.0

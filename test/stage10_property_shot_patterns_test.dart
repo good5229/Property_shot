@@ -62,7 +62,7 @@ void main() {
       };
       expect(
         keyTypes.length,
-        inInclusiveRange(5, 7),
+        inInclusiveRange(5, 8),
         reason: '${pattern.patternId}: $keyTypes',
       );
       expect(pattern.copyCharges, 0);
@@ -127,7 +127,7 @@ void main() {
   });
 
   for (final solution in stage10PropertyShotSolutions) {
-    test('${solution.patternId} 직접 우회와 의도 연쇄가 실제 ShotResolver에서 성공한다', () {
+    test('${solution.patternId} 직접 경로 제약과 의도 연쇄가 실제 ShotResolver에서 성립한다', () {
       _expectUiPower(solution.directPower);
       _expectUiPower(solution.firstPower);
       _expectUiPower(solution.secondPower);
@@ -135,12 +135,22 @@ void main() {
       final initial = _state(pattern);
 
       final direct = resolver.resolve(initial, solution.directInput);
-      expect(
-        direct.state.phase,
-        GamePhase.success,
-        reason: '${solution.patternId} 직접: ${direct.events}',
-      );
-      _expectDirectBypass(solution, direct);
+      if (solution.patternId == 'stage_property_shot_a' ||
+          solution.patternId == 'stage_property_shot_c') {
+        expect(
+          direct.state.phase,
+          isNot(GamePhase.success),
+          reason:
+              '${solution.contract}는 첫 샷의 속성 기믹으로 연결 문을 연 뒤에만 홀 경로가 열립니다.',
+        );
+      } else {
+        expect(
+          direct.state.phase,
+          GamePhase.success,
+          reason: '${solution.patternId} 직접: ${direct.events}',
+        );
+        _expectDirectBypass(solution, direct);
+      }
 
       final prepared = _preparedState(pattern, solution);
       final first = resolver.resolve(prepared, solution.firstInput);
@@ -160,6 +170,26 @@ void main() {
         contains(solution.familyId),
         reason: '${solution.patternId} 풀이 계열이 데이터에 없습니다.',
       );
+      if (solution.directFamilyId case final directFamilyId?) {
+        expect(
+          pattern.solutionFamilies,
+          contains(directFamilyId),
+          reason: '${solution.patternId} 직접 대체 풀이 계열이 데이터에 없습니다.',
+        );
+      }
+      if ((solution.openedGateBankDegree, solution.openedGateBankPower) case (
+        final int degree,
+        final double power,
+      )) {
+        final bank = resolver.resolve(first.state, _input(degree, power));
+        expect(bank.state.phase, GamePhase.success);
+        expect(pattern.solutionFamilies, contains('opened_gate_bank'));
+        expect(
+          bank.impacts.map((impact) => impact.entityId).toList(),
+          isNot(equals(second.impacts.map((impact) => impact.entityId).toList())),
+          reason: '${solution.patternId} 문 개방 뒤 대체 bank가 canonical과 같은 경로입니다.',
+        );
+      }
       for (final impactId in solution.expectedImpactIds) {
         expect(
           [...first.impacts, ...second.impacts].any(
@@ -197,7 +227,10 @@ void main() {
       }
       if (solution.contract == 'C') {
         expect(prepared.activeBall.traits, contains(TraitType.sticky));
-        expect(prepared.entityById('c_sticky_target')!.traits, isEmpty);
+        expect(
+          prepared.entityById('c_sticky_target')!.traits,
+          contains(TraitType.sticky),
+        );
         expect(first.events, contains('sticky_attached'));
         expect(first.state.entityById('spent_ball_1')!.movable, isFalse);
         expect(first.state.entityById('spent_ball_1')!.visualState, 'stuck');
@@ -213,7 +246,7 @@ void main() {
         );
 
         final withoutTransferredTrait = resolver.resolve(
-          prepared,
+          initial,
           _input(solution.firstDegree, solution.firstPower),
         );
         expect(
@@ -269,16 +302,22 @@ void main() {
       final pattern = stage.patternById(solution.patternId);
       final initial = _state(pattern);
       final directRegion = _directNeighborhood(initial, solution.directInput);
-      expect(
-        directRegion.successCount,
-        greaterThanOrEqualTo(5),
-        reason: '${solution.patternId} 직접 허용 폭=${directRegion}',
-      );
-      expect(
-        directRegion.largestConnectedRegion,
-        greaterThanOrEqualTo(3),
-        reason: '${solution.patternId} 직접 연결 영역=${directRegion}',
-      );
+      if (solution.patternId == 'stage_property_shot_a' ||
+          solution.patternId == 'stage_property_shot_c') {
+        expect(directRegion.successCount, 0);
+        expect(directRegion.largestConnectedRegion, 0);
+      } else {
+        expect(
+          directRegion.successCount,
+          greaterThanOrEqualTo(5),
+          reason: '${solution.patternId} 직접 허용 폭=${directRegion}',
+        );
+        expect(
+          directRegion.largestConnectedRegion,
+          greaterThanOrEqualTo(3),
+          reason: '${solution.patternId} 직접 연결 영역=${directRegion}',
+        );
+      }
       final directSuccessUpperBound = solution.directSuccessUpperBound;
       if (directSuccessUpperBound != null) {
         expect(
@@ -315,6 +354,10 @@ void main() {
       );
       expect(preparedRegion.firstInputCount, greaterThanOrEqualTo(2));
       expect(preparedRegion.secondInputCount, greaterThanOrEqualTo(2));
+      // 이 fixture는 7^4 연쇄 조합과 9^2 직접 입력을 서로 다른 표본
+      // 공간에서 탐색한다. 따라서 여기서는 각 경로의 절대적인 근방
+      // 견고성만 확인하고, 공정한 동일 2D 격자 우위는 all-stage 계약이
+      // 별도로 검증한다.
       final chainSuccessLowerBound = solution.chainSuccessLowerBound;
       if (chainSuccessLowerBound != null) {
         expect(

@@ -9,8 +9,12 @@ import 'game/analysis/creative_chain_score.dart';
 import 'game/analysis/stage_chain_challenge.dart';
 import 'game/domain/entity_state.dart';
 import 'game/domain/game_state.dart';
+import 'game/domain/geometry.dart';
 import 'game/domain/level_definition.dart';
 import 'game/domain/shot_input.dart';
+import 'game/hint/generated_hint_catalog.dart';
+import 'game/hint/demo_playback_plan.dart';
+import 'game/hint/pattern_hint.dart';
 import 'game/levels/generated_stage_catalog.dart';
 import 'game/levels/levels.dart';
 import 'game/persistence/progress_store.dart';
@@ -21,6 +25,7 @@ import 'game/run/campaign_stage_selection.dart';
 import 'game/run/stage_pattern_session.dart';
 import 'game/run/run_state.dart';
 import 'game/run/run_reward.dart';
+import 'game/run/run_hint_state.dart';
 import 'game/simulation/shot_resolver.dart';
 import 'game/simulation/trait_resolver.dart';
 import 'ui/game_feedback.dart';
@@ -50,7 +55,13 @@ String _stageIntroMessage(int levelIndex) {
 }
 
 void main() {
-  runApp(const PropertyShotApp(showHome: true, showDebugControls: kDebugMode));
+  runApp(
+    PropertyShotApp(
+      showHome: true,
+      showDebugControls: kDebugMode,
+      demoPlanId: Uri.base.queryParameters['demo'],
+    ),
+  );
 }
 
 class PropertyShotApp extends StatelessWidget {
@@ -65,6 +76,7 @@ class PropertyShotApp extends StatelessWidget {
     this.showDebugControls = false,
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.progressStore,
+    this.demoPlanId,
   });
 
   final GameState? initialState;
@@ -76,6 +88,7 @@ class PropertyShotApp extends StatelessWidget {
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
   final ProgressStore? progressStore;
+  final String? demoPlanId;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +116,9 @@ class PropertyShotApp extends StatelessWidget {
           ),
         ),
       ),
-      home: showHome && initialState == null
+      home: demoPlanId == stageBouncy01DemoPlaybackPlan.id
+          ? _DemoPlaybackScreen(loadGameAssets: loadGameAssets)
+          : showHome && initialState == null
           ? _PropertyShotRouter(
               showDebugControls: showDebugControls,
               tutorialVariant: tutorialVariant,
@@ -120,6 +135,133 @@ class PropertyShotApp extends StatelessWidget {
             ),
     );
   }
+}
+
+/// 녹화 전용 고정 진입점이다. 캠페인 셔플·진행 저장과 완전히 분리하면서도
+/// 실제 GameScreen, ShotResolver, 힌트·열쇠 UI와 로컬 telemetry를 그대로 쓴다.
+class _DemoPlaybackScreen extends StatefulWidget {
+  const _DemoPlaybackScreen({required this.loadGameAssets});
+
+  final bool loadGameAssets;
+
+  @override
+  State<_DemoPlaybackScreen> createState() => _DemoPlaybackScreenState();
+}
+
+class _DemoPlaybackScreenState extends State<_DemoPlaybackScreen> {
+  late final PatternHintEntry _hintEntry = generatedHintCatalog.entryFor(
+    stageId: stageBouncy01DemoPlaybackPlan.stageId,
+    patternId: stageBouncy01DemoPlaybackPlan.patternId,
+  );
+  late final LevelDefinition _level = generatedStageCatalog
+      .stageById(stageBouncy01DemoPlaybackPlan.stageId)
+      .patternById(stageBouncy01DemoPlaybackPlan.patternId)
+      .toLevelDefinition(
+        stageId: stageBouncy01DemoPlaybackPlan.stageId,
+        stageTitle: '탄성',
+      );
+  late final LocalPlayTelemetry _telemetry = LocalPlayTelemetry(
+    buildId: stageBouncy01DemoPlaybackPlan.id,
+  );
+  RunHintEntitlement? _entitlement;
+
+  PlayTelemetryContext get _context => PlayTelemetryContext(
+    stageIndex: 1,
+    stageId: stageBouncy01DemoPlaybackPlan.stageId,
+    patternId: stageBouncy01DemoPlaybackPlan.patternId,
+    seed: stageBouncy01DemoPlaybackPlan.visualSeed,
+    resolverVersion: 'shot-resolver-v1',
+    rewardState: PlayTelemetryRewardState(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.runStarted,
+        context: _context,
+        result: PlayTelemetryResult.continued,
+      ),
+    );
+    _telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.stagePatternDrawn,
+        context: _context,
+      ),
+    );
+  }
+
+  Future<bool> _recordKey(String keyId, String sourceBallId, int shotIndex) {
+    _entitlement ??= RunHintEntitlement(
+      identity: HintIdentity(
+        stageId: _hintEntry.stageId,
+        patternId: _hintEntry.patternId,
+        hintVersion: _hintEntry.hintVersion,
+      ),
+      sources: const [HintEntitlementSource.stageKey],
+      acquiredAt: DateTime.now().toUtc(),
+    );
+    return Future<bool>.value(true);
+  }
+
+  Future<RunHintEntitlement?> _recordFailure() {
+    final current = _entitlement;
+    if (current != null) {
+      _entitlement = current.copyWith(
+        failedShotCount: current.failedShotCount + 1,
+      );
+    }
+    return Future<RunHintEntitlement?>.value(_entitlement);
+  }
+
+  Future<RunHintEntitlement?> _openHint({int? requestedLevel}) {
+    final current = _entitlement;
+    if (current == null) return Future<RunHintEntitlement?>.value(null);
+    final requested = requestedLevel ?? 1;
+    if (requested < 1 || requested > 2) {
+      return Future<RunHintEntitlement?>.error(
+        ArgumentError.value(requested, 'requestedLevel'),
+      );
+    }
+    final nextLevel = current.consumed && requested > current.unlockedHintLevel
+        ? math.min(2, current.unlockedHintLevel + 1)
+        : current.unlockedHintLevel;
+    _entitlement = current.copyWith(
+      consumed: true,
+      openedCount: current.openedCount + 1,
+      unlockedHintLevel: math.max(nextLevel, requested),
+      failureCountAtFirstOpen: current.consumed
+          ? current.failureCountAtFirstOpen
+          : current.failedShotCount,
+    );
+    return Future<RunHintEntitlement?>.value(_entitlement);
+  }
+
+  @override
+  Widget build(BuildContext context) => GameScreen(
+    key: const Key('demo_bouncy_01_screen'),
+    initialState: _level.createState(1, productRules: true),
+    levelOverride: _level,
+    showStageSelector: false,
+    telemetry: _telemetry,
+    loadGameAssets: widget.loadGameAssets,
+    telemetryContextBuilder: () => _context,
+    patternHintEntry: _hintEntry,
+    onHintKeyCollected: _recordKey,
+    onHintEntitlementRead: () async => _entitlement,
+    onHintFailure: _recordFailure,
+    onHintOpened: _openHint,
+    onStageRestarted: () async {},
+    difficulty: PlayerDifficulty.normal,
+    demoLaunchInput: ShotInput(
+      direction: Vec2(
+        math.cos(48 * math.pi / 180),
+        math.sin(48 * math.pi / 180),
+      ),
+      power: 0.90,
+    ),
+  );
 }
 
 class _PropertyShotRouter extends StatefulWidget {
@@ -145,9 +287,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   LevelDefinition? _activeLevel;
   GameState? _activeState;
   List<ShotResult> _activeShotResults = const [];
+  List<ShotInput> _activeShotInputs = const [];
   List<RunReward> _activeRewardCandidates = const [];
   String? _activeSelectedRewardId;
   Set<String> _activeAcquiredRewards = const {};
+  PatternHintEntry? _activePatternHintEntry;
+  RunHintEntitlement? _activeHintEntitlement;
+  Set<String> _activeCollectedHintKeyIds = const {};
   bool _showRunResult = false;
   int _completedRunScore = 0;
   int _completedRunBestShots = 0;
@@ -195,6 +341,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       store: RunStateStore(
         backend: SharedPreferencesRunStateBackend(preferences),
       ),
+      hintVersionResolver: (stageId, patternId) => generatedHintCatalog
+          .entryFor(stageId: stageId, patternId: patternId)
+          .hintVersion,
     );
   }
 
@@ -318,16 +467,19 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         copyCoreRewarded: _copyCoreRewarded,
       );
       final restoredResults = <ShotResult>[];
+      final restoredInputs = <ShotInput>[];
       for (final saved in session.currentShotInputs) {
         restoredState = _restoreTraitActions(restoredState, saved.traitActions);
+        final restoredInput = ShotInput(
+          direction: saved.direction,
+          power: saved.power,
+          equippedTrait: saved.equippedTrait,
+        ).normalized();
         final result = const ShotResolver().resolve(
           restoredState,
-          ShotInput(
-            direction: saved.direction,
-            power: saved.power,
-            equippedTrait: saved.equippedTrait,
-          ),
+          restoredInput,
         );
+        restoredInputs.add(restoredInput);
         restoredResults.add(result);
         restoredState = result.state;
       }
@@ -385,6 +537,32 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
               session.state?.phase == RunPhase.rewardSelectionCompleted
           ? await session.prepareRewardSelection(stageId: draw.stageId)
           : const <RunReward>[];
+      PatternHintEntry? hintEntry;
+      try {
+        hintEntry = generatedHintCatalog.entryFor(
+          stageId: draw.stageId,
+          patternId: draw.patternId,
+        );
+      } on ArgumentError {
+        // 과거 카탈로그 저장을 복원할 때도 플레이는 계속하고 힌트 UI만 숨긴다.
+      }
+      final selectedHintIdentity = hintEntry == null
+          ? null
+          : HintIdentity(
+              stageId: draw.stageId,
+              patternId: draw.patternId,
+              hintVersion: hintEntry.hintVersion,
+            );
+      final collectedHintKeyIds = selectedHintIdentity == null
+          ? const <String>{}
+          : session.state!.keyCollections
+                .where(
+                  (record) =>
+                      record.identity.storageKey ==
+                      selectedHintIdentity.storageKey,
+                )
+                .map((record) => record.keyId)
+                .toSet();
       restoredState = restoredState.copyWith(
         copyCoreCount: session.state?.cloneCoreCount ?? _copyCoreCount,
         copyCoreRewarded: _copyCoreRewarded,
@@ -404,9 +582,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _activeLevel = level;
         _activeState = restoredState;
         _activeShotResults = List.unmodifiable(restoredResults);
+        _activeShotInputs = List.unmodifiable(restoredInputs);
         _activeRewardCandidates = rewardCandidates;
         _activeSelectedRewardId = session.state?.selectedRewardId;
         _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
+        _activePatternHintEntry = hintEntry;
+        _activeHintEntitlement = session.currentHintEntitlement;
+        _activeCollectedHintKeyIds = collectedHintKeyIds;
       });
       final context = _normalTelemetryContext();
       if (!_runStartedRecorded) {
@@ -494,6 +676,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       _activeLevel = null;
       _activeState = null;
       _activeShotResults = const [];
+      _activeShotInputs = const [];
       _activeRewardCandidates = const [];
       _activeSelectedRewardId = null;
       _activeAcquiredRewards = const {};
@@ -687,6 +870,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       _activeLevel = null;
       _activeState = null;
       _activeShotResults = const [];
+      _activeShotInputs = const [];
       _activeRewardCandidates = const [];
       _activeSelectedRewardId = null;
       _activeAcquiredRewards = const {};
@@ -911,6 +1095,49 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return consumed;
   }
 
+  Future<bool> _recordHintKeyCollection(
+    String keyId,
+    String sourceBallId,
+    int shotIndex,
+  ) async {
+    final session = await _patternSessionFuture;
+    final stored = await session.recordKeyCollection(
+      keyId: keyId,
+      sourceBallId: sourceBallId,
+      shotIndex: shotIndex,
+    );
+    if (stored && mounted) {
+      setState(() {
+        _activeHintEntitlement = session.currentHintEntitlement;
+        _activeCollectedHintKeyIds = {..._activeCollectedHintKeyIds, keyId};
+      });
+    }
+    return stored;
+  }
+
+  Future<RunHintEntitlement?> _recordCurrentHintFailure() async {
+    final session = await _patternSessionFuture;
+    final entitlement = await session.recordHintFailure();
+    if (entitlement != null && mounted) {
+      setState(() => _activeHintEntitlement = entitlement);
+    }
+    return entitlement;
+  }
+
+  Future<RunHintEntitlement?> _openCurrentHint({int? requestedLevel}) async {
+    final session = await _patternSessionFuture;
+    final entitlement = await session.openHint(requestedLevel: requestedLevel);
+    if (entitlement != null && mounted) {
+      setState(() => _activeHintEntitlement = entitlement);
+    }
+    return entitlement;
+  }
+
+  Future<RunHintEntitlement?> _readCurrentHintEntitlement() async {
+    final session = await _patternSessionFuture;
+    return session.currentHintEntitlement;
+  }
+
   Future<void> _recordTraitAction(
     String sourceId,
     RunTraitAction action,
@@ -1052,9 +1279,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         key: ValueKey('stage_$activeStage:${activeLevel.patternId}'),
         initialState: activeState,
         initialShotResults: _activeShotResults,
+        initialShotInputs: _activeShotInputs,
         initialRewardCandidates: _activeRewardCandidates,
         initialSelectedRewardId: _activeSelectedRewardId,
         initialAcquiredRewards: _activeAcquiredRewards,
+        patternHintEntry: _activePatternHintEntry,
+        initialHintEntitlement: _activeHintEntitlement,
+        initialCollectedHintKeyIds: _activeCollectedHintKeyIds,
         levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
@@ -1068,6 +1299,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onRunCompleted: _completeRun,
         onStageRequested: _startStage,
         onShotCommitted: _recordShot,
+        onHintKeyCollected: _recordHintKeyCollection,
+        onHintEntitlementRead: _readCurrentHintEntitlement,
+        onHintFailure: _recordCurrentHintFailure,
+        onHintOpened: _openCurrentHint,
         onTraitActionCommitted: _recordTraitAction,
         onStageRestarted: _restartStageRun,
         onShotRewound: _rewindStageRun,

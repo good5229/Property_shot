@@ -3,9 +3,10 @@ import 'dart:convert';
 import '../domain/geometry.dart';
 import '../domain/stage_pattern.dart';
 import '../domain/trait.dart';
+import 'run_hint_state.dart';
 import 'stage_shuffle_bag.dart';
 
-const int currentRunStateSchemaVersion = 1;
+const int currentRunStateSchemaVersion = 3;
 
 enum RunPhase {
   playing,
@@ -281,6 +282,8 @@ class RunState {
     required this.totalScore,
     Map<String, String> replayReferences = const {},
     Iterable<RunShotInput> shotInputLog = const [],
+    Iterable<RunHintEntitlement> hintEntitlements = const [],
+    Iterable<KeyCollectionRecord> keyCollections = const [],
     required this.startedAt,
     required this.updatedAt,
   }) : patternDrawHistory = List.unmodifiable(patternDrawHistory),
@@ -292,7 +295,9 @@ class RunState {
        chainScoresPerStage = Map.unmodifiable(chainScoresPerStage),
        optionalChallenges = Map.unmodifiable(optionalChallenges),
        replayReferences = Map.unmodifiable(replayReferences),
-       shotInputLog = List.unmodifiable(shotInputLog) {
+       shotInputLog = List.unmodifiable(shotInputLog),
+       hintEntitlements = List.unmodifiable(hintEntitlements),
+       keyCollections = List.unmodifiable(keyCollections) {
     _validateRunState(this);
   }
 
@@ -326,6 +331,8 @@ class RunState {
 
   final Map<String, String> replayReferences;
   final List<RunShotInput> shotInputLog;
+  final List<RunHintEntitlement> hintEntitlements;
+  final List<KeyCollectionRecord> keyCollections;
   final DateTime startedAt;
   final DateTime updatedAt;
 
@@ -373,8 +380,9 @@ class RunState {
     );
   }
 
-  factory RunState.fromJson(Map<String, dynamic> json) {
+  factory RunState.fromJson(Map<String, dynamic> rawJson) {
     try {
+      final json = _migrateRunStateJson(rawJson);
       final phaseValue = _requiredString(json, 'phase', 'run state');
       final stageBags = _requiredMap(json, 'stageShuffleBags', 'run state');
       final stageShuffleBags = <String, StageShuffleBagState>{};
@@ -483,6 +491,18 @@ class RunState {
           'run state',
           RunShotInput.fromJson,
         ),
+        hintEntitlements: _requiredList(
+          json,
+          'hintEntitlements',
+          'run state',
+          RunHintEntitlement.fromJson,
+        ),
+        keyCollections: _requiredList(
+          json,
+          'keyCollections',
+          'run state',
+          KeyCollectionRecord.fromJson,
+        ),
         startedAt: _requiredUtcDateTime(json, 'startedAt', 'run state'),
         updatedAt: _requiredUtcDateTime(json, 'updatedAt', 'run state'),
       );
@@ -538,12 +558,61 @@ class RunState {
       'totalScore': totalScore,
       'replayReferences': _sortedStringMap(replayReferences),
       'shotInputLog': shotInputLog.map((entry) => entry.toJson()).toList(),
+      'hintEntitlements':
+          (hintEntitlements.toList()..sort(
+                (left, right) => left.identity.storageKey.compareTo(
+                  right.identity.storageKey,
+                ),
+              ))
+              .map((entry) => entry.toJson())
+              .toList(),
+      'keyCollections':
+          (keyCollections.toList()..sort(
+                (left, right) => left.storageKey.compareTo(right.storageKey),
+              ))
+              .map((entry) => entry.toJson())
+              .toList(),
       'startedAt': startedAt.toUtc().toIso8601String(),
       'updatedAt': updatedAt.toUtc().toIso8601String(),
     };
   }
 
   String toJsonString() => jsonEncode(toJson());
+}
+
+Map<String, dynamic> _migrateRunStateJson(Map<String, dynamic> raw) {
+  final json = Map<String, dynamic>.from(raw);
+  final version = json['schemaVersion'];
+  if (version is! int || version < 1) {
+    throw const FormatException('run state.schemaVersion이 유효한 정수가 아닙니다.');
+  }
+  if (version > currentRunStateSchemaVersion) {
+    throw FormatException('run state.schemaVersion $version은 지원하지 않습니다.');
+  }
+  if (version == 1) {
+    // v1에는 힌트·열쇠 기록이 없었다. 빈 typed 컬렉션으로 명시 승격한다.
+    json['hintEntitlements'] = const <dynamic>[];
+    json['keyCollections'] = const <dynamic>[];
+  }
+  if (version <= 2) {
+    // v2는 첫 힌트 열람 시점의 실패 기준선을 저장하지 않았다. 과거 기록의
+    // 전/후 비교를 추측하지 않도록 nullable default로 승격한다.
+    final entries = json['hintEntitlements'];
+    if (entries is List) {
+      json['hintEntitlements'] = entries.map((entry) {
+        if (entry is! Map) return entry;
+        final migrated = Map<String, dynamic>.from(entry);
+        final legacyLevel = migrated['unlockedHintLevel'];
+        if (legacyLevel is int && legacyLevel > 2) {
+          migrated['unlockedHintLevel'] = 2;
+        }
+        migrated.putIfAbsent('failureCountAtFirstOpen', () => null);
+        return migrated;
+      }).toList();
+    }
+    json['schemaVersion'] = currentRunStateSchemaVersion;
+  }
+  return json;
 }
 
 void _validateRunState(RunState state) {
@@ -660,6 +729,37 @@ void _validateRunState(RunState state) {
   for (final entry in state.replayReferences.entries) {
     _validateId(entry.key, 'replayReferences key');
     _validateId(entry.value, 'replayReferences value');
+  }
+  final entitlementKeys = <String>{};
+  for (final entitlement in state.hintEntitlements) {
+    if (!entitlementKeys.add(entitlement.identity.storageKey)) {
+      throw ArgumentError('같은 패턴·버전의 힌트 접근권이 중복되었습니다.');
+    }
+    final matches = state.patternDrawHistory.any(
+      (draw) =>
+          draw.stageId == entitlement.identity.stageId &&
+          draw.patternId == entitlement.identity.patternId,
+    );
+    if (!matches) {
+      throw ArgumentError('힌트 접근권이 patternDrawHistory와 일치하지 않습니다.');
+    }
+  }
+  final collectedKeyKeys = <String>{};
+  for (final collection in state.keyCollections) {
+    if (!collectedKeyKeys.add(collection.storageKey)) {
+      throw ArgumentError('같은 패턴의 열쇠를 중복 획득했습니다.');
+    }
+    if (!entitlementKeys.contains(collection.identity.storageKey)) {
+      throw ArgumentError('열쇠 획득에는 같은 패턴의 힌트 접근권이 필요합니다.');
+    }
+    final matches = state.patternDrawHistory.any(
+      (draw) =>
+          draw.stageId == collection.identity.stageId &&
+          draw.patternId == collection.identity.patternId,
+    );
+    if (!matches) {
+      throw ArgumentError('열쇠 획득이 patternDrawHistory와 일치하지 않습니다.');
+    }
   }
   for (final reward in state.acquiredRewards) {
     _validateId(reward, 'acquiredRewards');

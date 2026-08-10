@@ -18,11 +18,14 @@ import '../game/domain/geometry.dart';
 import '../game/domain/level_definition.dart';
 import '../game/domain/shot_input.dart';
 import '../game/domain/trait.dart';
+import '../game/hint/deterministic_key_collection_resolver.dart';
+import '../game/hint/pattern_hint.dart';
 import '../game/input/aim_direction_quantizer.dart';
 import '../game/levels/levels.dart';
 import '../game/persistence/progress_store.dart';
 import '../game/property_shot_game.dart';
 import '../game/run/run_state.dart';
+import '../game/run/run_hint_state.dart';
 import '../game/run/run_reward.dart';
 import '../game/run/stage_pattern_session.dart';
 import '../game/simulation/shot_resolver.dart';
@@ -77,6 +80,7 @@ class GameScreen extends StatefulWidget {
     this.onShotRewound,
     this.levelOverride,
     this.initialShotResults = const [],
+    this.initialShotInputs = const [],
     this.initialRewardCandidates = const [],
     this.initialSelectedRewardId,
     this.initialAcquiredRewards = const {},
@@ -91,6 +95,15 @@ class GameScreen extends StatefulWidget {
     this.showDebugControls = false,
     this.progressStore,
     this.progressPersistencePolicy = GameProgressPersistencePolicy.enabled,
+    this.patternHintEntry,
+    this.initialHintEntitlement,
+    this.initialCollectedHintKeyIds = const {},
+    this.onHintKeyCollected,
+    this.onHintEntitlementRead,
+    this.onHintFailure,
+    this.onHintOpened,
+    this.debugHintKeyVfxId,
+    this.demoLaunchInput,
   });
 
   final GameState? initialState;
@@ -119,6 +132,7 @@ class GameScreen extends StatefulWidget {
   final Future<Set<String>> Function()? onShotRewound;
   final LevelDefinition? levelOverride;
   final List<ShotResult> initialShotResults;
+  final List<ShotInput> initialShotInputs;
   final List<RunReward> initialRewardCandidates;
   final String? initialSelectedRewardId;
   final Set<String> initialAcquiredRewards;
@@ -132,6 +146,24 @@ class GameScreen extends StatefulWidget {
   final PlayerDifficulty? difficulty;
   final bool showDebugControls;
   final ProgressStore? progressStore;
+
+  /// 캠페인의 확정된 pattern identity에만 붙는 힌트다. Daily/단독 플레이는
+  /// null로 두어 런 상태를 오염시키지 않는다.
+  final PatternHintEntry? patternHintEntry;
+  final RunHintEntitlement? initialHintEntitlement;
+  final Set<String> initialCollectedHintKeyIds;
+  final Future<bool> Function(String keyId, String sourceBallId, int shotIndex)?
+  onHintKeyCollected;
+  final Future<RunHintEntitlement?> Function()? onHintEntitlementRead;
+  final Future<RunHintEntitlement?> Function()? onHintFailure;
+  final Future<RunHintEntitlement?> Function({int? requestedLevel})?
+  onHintOpened;
+
+  /// Golden test에서만 수집 직후의 짧은 열쇠 반짝임을 결정론적으로 고정한다.
+  /// 실제 플레이의 저장·물리·타이머 흐름에는 관여하지 않는다.
+  @visibleForTesting
+  final String? debugHintKeyVfxId;
+  final ShotInput? demoLaunchInput;
 
   /// 오늘의 도전처럼 일반 섬 진행을 오염시키면 안 되는 흐름은 disabled로 둔다.
   final GameProgressPersistencePolicy progressPersistencePolicy;
@@ -201,6 +233,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final List<bool> _bonusSwitchHistory = [];
   final List<bool> _bonusDrainedSourceHistory = [];
   late final List<ShotResult> _stageShotResults;
+  late final List<ShotInput> _stageShotInputs;
   CreativeChainScoreAnalysis? _chainScoreAnalysis;
   Future<bool>? _clearPersistenceFuture;
   Future<bool> Function()? _clearPersistenceRetry;
@@ -214,6 +247,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _challengeGuardAppliedForClear = false;
   bool _recordGuardAppliedForClear = false;
   PlayTelemetryShotPayload? _lastTypedShot;
+  late PatternHintEntry? _patternHintEntry;
+  RunHintEntitlement? _hintEntitlement;
+  late Set<String> _collectedHintKeyIds;
+  String? _keyCollectionVfxId;
+  Timer? _keyCollectionVfxTimer;
+  bool _keySpawnRecorded = false;
+  bool _hintAvailableRecorded = false;
 
   RunRewardInventory get _rewardInventory =>
       RunRewardInventory(_acquiredRewards);
@@ -285,9 +325,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             .copyWith(message: _levelIntroMessage(0));
     _currentLevel = widget.levelOverride ?? levels[_state.levelIndex];
     _stageShotResults = List.of(widget.initialShotResults);
+    _stageShotInputs = List.of(widget.initialShotInputs);
+    if (_stageShotInputs.isNotEmpty &&
+        _stageShotResults.length != _stageShotInputs.length) {
+      throw ArgumentError(
+        '복원된 발사 결과와 입력 수가 일치해야 합니다: '
+        '${_stageShotResults.length}/${_stageShotInputs.length}',
+      );
+    }
     _rewardCandidates = List.of(widget.initialRewardCandidates);
     _selectedRewardId = widget.initialSelectedRewardId;
     _acquiredRewards = Set.of(widget.initialAcquiredRewards);
+    _patternHintEntry = widget.patternHintEntry;
+    _hintEntitlement = widget.initialHintEntitlement;
+    _collectedHintKeyIds = Set.of(widget.initialCollectedHintKeyIds);
     _restoreStageOutcomeHistory();
     _chainScoreAnalysis = _analyzeSuccessfulStage(
       state: _state,
@@ -326,6 +377,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bestShotsLoadFuture = _loadBestShots();
     _telemetry.record('단계 시작', stage: _state.levelIndex);
     _recordTyped(PlayTelemetryEventType.stageEntered);
+    _recordKeySpawnIfNeeded();
+    _recordHintAvailableIfNeeded();
     _recordHintExposureIfNeeded();
     unawaited(_showRequestedHelp());
   }
@@ -361,6 +414,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     PlayTelemetryEventType type, {
     PlayTelemetryShotPayload? shot,
     PlayTelemetryResult? result,
+    PlayTelemetryHintPayload? hint,
+    PlayTelemetryKeyPayload? key,
+    PlayTelemetryStageOutcomePayload? stageOutcome,
+    PlayTelemetryPowerGaugePayload? powerGauge,
   }) {
     _telemetry.recordTyped(
       TypedPlayTelemetryEvent(
@@ -368,6 +425,288 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         context: _telemetryContext(),
         shot: shot,
         result: result,
+        hint: hint,
+        key: key,
+        stageOutcome: stageOutcome,
+        powerGauge: powerGauge,
+      ),
+    );
+  }
+
+  HintKeyDefinition? get _currentHintKey => _patternHintEntry?.key;
+
+  bool get _hintAvailable => _hintEntitlement != null;
+
+  PlayTelemetryHintSource _hintSourceFor(RunHintEntitlement entitlement) =>
+      entitlement.sources.contains(HintEntitlementSource.stageKey)
+      ? PlayTelemetryHintSource.stageKey
+      : PlayTelemetryHintSource.clearReward;
+
+  PlayTelemetryHintLevel _hintLevelFor(int level) => switch (level) {
+    1 => PlayTelemetryHintLevel.one,
+    2 => PlayTelemetryHintLevel.two,
+    _ => throw StateError('현재 HintCatalog에는 L1/L2만 존재합니다: $level'),
+  };
+
+  PlayTelemetryHintPayload _hintTelemetryPayload(
+    RunHintEntitlement entitlement, {
+    required int level,
+    bool clearedAfterOpen = false,
+  }) => PlayTelemetryHintPayload(
+    source: _hintSourceFor(entitlement),
+    level: _hintLevelFor(level),
+    openedCount: entitlement.openedCount,
+    failureCountBeforeOpen:
+        entitlement.failureCountAtFirstOpen ?? entitlement.failedShotCount,
+    clearedAfterOpen: clearedAfterOpen,
+  );
+
+  void _recordKeySpawnIfNeeded() {
+    final key = _currentHintKey;
+    if (key == null ||
+        _collectedHintKeyIds.contains(key.id) ||
+        _keySpawnRecorded) {
+      return;
+    }
+    _keySpawnRecorded = true;
+    _recordTyped(
+      PlayTelemetryEventType.keySpawned,
+      key: PlayTelemetryKeyPayload(
+        keyId: key.id,
+        shotId: _state.shotCount,
+        collected: false,
+      ),
+    );
+  }
+
+  void _recordHintAvailableIfNeeded() {
+    final entitlement = _hintEntitlement;
+    if (entitlement == null || _hintAvailableRecorded) return;
+    _hintAvailableRecorded = true;
+    _recordTyped(
+      PlayTelemetryEventType.hintAvailable,
+      hint: _hintTelemetryPayload(
+        entitlement,
+        level: entitlement.unlockedHintLevel,
+      ),
+    );
+  }
+
+  Future<void> _recordHintFailureIfEligible(ShotResult result) async {
+    if (result.state.phase == GamePhase.success ||
+        widget.onHintFailure == null) {
+      return;
+    }
+    try {
+      final updated = await widget.onHintFailure!.call();
+      if (updated != null && mounted) {
+        setState(() => _hintEntitlement = updated);
+      }
+    } on Object {
+      // 힌트의 실패 횟수 기록은 플레이 결과를 되돌리지 않는다.
+    }
+  }
+
+  bool _isDirectClear(Iterable<ShotResult> results) {
+    final all = results.toList(growable: false);
+    if (all.length != 1) return false;
+    final result = all.single;
+    // "직선 즉시"는 첫/유일 샷이 홀만 접촉해 끝난 경우로 보수적으로
+    // 정의한다. 벽·기물·속성 충돌이 하나라도 있으면 기믹 경로다.
+    final usedTrait =
+        _stageShotInputs.length == 1 &&
+        _stageShotInputs.single.equippedTrait != null;
+    final emittedOnlyHole = result.events.every(
+      (event) => event == 'hole_entered',
+    );
+    final physicsTraits =
+        result.impacts.any((impact) => impact.sourceTraits.isNotEmpty) ||
+        result.physicsEvents.any((event) => event.sourceTraits.isNotEmpty);
+    return !usedTrait &&
+        !physicsTraits &&
+        emittedOnlyHole &&
+        result.powerSliderActivations.isEmpty &&
+        result.reflectorRotations.isEmpty &&
+        result.state.phase == GamePhase.success &&
+        result.impacts.isNotEmpty &&
+        result.impacts.every((impact) => impact.entityType == EntityType.hole);
+  }
+
+  Set<String> get _stageGimmickTypes {
+    final types = <String>{};
+    for (final input in _stageShotInputs) {
+      final trait = input.equippedTrait;
+      if (trait != null) types.add(trait.name);
+    }
+    for (final result in _stageShotResults) {
+      for (final impact in result.impacts) {
+        if (impact.entityType != EntityType.hole) {
+          types.add(impact.entityType.name);
+        }
+        types.addAll(impact.sourceTraits.map((trait) => trait.name));
+        if (impact.entityType == EntityType.wall) {
+          types.add('wall_reflection');
+        }
+      }
+      for (final event in result.physicsEvents) {
+        types.addAll(event.sourceTraits.map((trait) => trait.name));
+        if (event.kind == PhysicsEventKind.powerSliderActivation) {
+          types.add('power_slider');
+        }
+        if (event.targetType == EntityType.wall) {
+          types.add('wall_reflection');
+        }
+      }
+      if (result.powerSliderActivations.isNotEmpty) {
+        types.add('power_slider');
+      }
+      if (result.reflectorRotations.isNotEmpty) {
+        types.add('rotating_reflector');
+      }
+      for (final event in result.events) {
+        if (event == 'hole_entered') continue;
+        types.add(event);
+        if (event == 'bounced' || event == 'spent_ball_bounced') {
+          types.add('wall_reflection');
+        }
+        if (event == 'jelly_bounced') types.add('bouncy');
+      }
+    }
+    return types;
+  }
+
+  PlayTelemetryStageOutcomePayload _stageOutcomePayload() {
+    final entitlement = _hintEntitlement;
+    final currentFailures = entitlement?.failedShotCount ?? 0;
+    final failureBaseline = entitlement?.consumed == true
+        ? entitlement!.failureCountAtFirstOpen ?? currentFailures
+        : 0;
+    return PlayTelemetryStageOutcomePayload(
+      keyCollected:
+          _currentHintKey != null &&
+          _collectedHintKeyIds.contains(_currentHintKey!.id),
+      directClear: _isDirectClear(_stageShotResults),
+      hintUsedBeforeClear: entitlement?.consumed ?? false,
+      failureCountBeforeHint: failureBaseline,
+      failureCountAfterHint: entitlement?.consumed == true
+          ? math.max(0, currentFailures - failureBaseline).toInt()
+          : 0,
+      effectiveChainScore: _chainScoreAnalysis?.totalScore ?? 0,
+      gimmickTypes: _stageGimmickTypes,
+    );
+  }
+
+  Future<void> _recordCollectedKeys({
+    required GameState stateBeforeShot,
+    required ShotResult result,
+  }) async {
+    final key = _currentHintKey;
+    final onCollected = widget.onHintKeyCollected;
+    if (key == null ||
+        onCollected == null ||
+        _collectedHintKeyIds.contains(key.id)) {
+      return;
+    }
+    final events = const DeterministicKeyCollectionResolver().collect(
+      stateBeforeShot: stateBeforeShot,
+      result: result,
+      keys: [key],
+    );
+    for (final event in events) {
+      if (_collectedHintKeyIds.contains(event.keyId)) continue;
+      bool stored;
+      try {
+        stored = await onCollected(
+          event.keyId,
+          event.sourceBallId,
+          stateBeforeShot.shotCount,
+        );
+      } on Object {
+        continue;
+      }
+      if (!stored || !mounted) continue;
+      final updated = <String>{..._collectedHintKeyIds, event.keyId};
+      setState(() {
+        _collectedHintKeyIds = updated;
+        _keyCollectionVfxId = event.keyId;
+      });
+      _keyCollectionVfxTimer?.cancel();
+      _keyCollectionVfxTimer = Timer(const Duration(milliseconds: 620), () {
+        if (mounted && _keyCollectionVfxId == event.keyId) {
+          setState(() => _keyCollectionVfxId = null);
+        }
+      });
+      // Session callback writes entitlement before this point; UI/VFX is only
+      // acknowledged once durable state has accepted the non-physical event.
+      final entitlement = await _hintEntitlementAfterKeyStored();
+      if (!mounted) return;
+      setState(() => _hintEntitlement = entitlement ?? _hintEntitlement);
+      _recordTyped(
+        PlayTelemetryEventType.keyCollected,
+        key: PlayTelemetryKeyPayload(
+          keyId: event.keyId,
+          shotId: stateBeforeShot.shotCount + 1,
+          collected: true,
+          shotsUntilCollected: stateBeforeShot.shotCount + 1,
+        ),
+      );
+      if (entitlement != null) {
+        _recordHintAvailableIfNeeded();
+      }
+    }
+  }
+
+  /// The key save callback intentionally remains bool-shaped so existing
+  /// RunState serialization is the source of truth. The UI receives the
+  /// durable entitlement through this optional read callback in campaign mode.
+  Future<RunHintEntitlement?> _hintEntitlementAfterKeyStored() async {
+    final read = widget.onHintEntitlementRead;
+    if (read != null) return read();
+    return _hintEntitlement;
+  }
+
+  Future<void> _showPatternHintSheet() async {
+    final entry = _patternHintEntry;
+    final openHint = widget.onHintOpened;
+    if (entry == null || openHint == null || _hintEntitlement == null) return;
+    RunHintEntitlement? entitlement;
+    try {
+      entitlement = await openHint();
+    } on Object {
+      return;
+    }
+    if (entitlement == null || !mounted) return;
+    setState(() => _hintEntitlement = entitlement);
+    _recordTyped(
+      PlayTelemetryEventType.hintOpened,
+      hint: _hintTelemetryPayload(entitlement, level: 1),
+    );
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: .54,
+        alignment: Alignment.bottomCenter,
+        child: _PatternHintSheet(
+          entry: entry,
+          entitlement: entitlement!,
+          onMore: (currentLevel) async {
+            final updated = await openHint(requestedLevel: currentLevel + 1);
+            if (updated == null) return null;
+            if (mounted) setState(() => _hintEntitlement = updated);
+            _recordTyped(
+              PlayTelemetryEventType.hintLevelOpened,
+              hint: _hintTelemetryPayload(
+                updated,
+                level: updated.unlockedHintLevel,
+              ),
+            );
+            return updated;
+          },
+        ),
       ),
     );
   }
@@ -653,6 +992,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusSwitchHistory.clear();
     _bonusDrainedSourceHistory.clear();
     _stageShotResults.clear();
+    _stageShotInputs.clear();
     _chainScoreAnalysis = null;
     _clearPersistenceFuture = null;
     _clearPersistenceRetry = null;
@@ -784,6 +1124,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         PlayTelemetryEventType.rewardSelected,
         result: PlayTelemetryResult.continued,
       );
+      if (selected.effectKind == RunRewardEffectKind.nextStageHintAccess) {
+        _recordTyped(
+          PlayTelemetryEventType.hintRewardSelected,
+          hint: PlayTelemetryHintPayload(
+            source: PlayTelemetryHintSource.clearReward,
+            level: PlayTelemetryHintLevel.one,
+          ),
+        );
+      }
     } on Object {
       if (!mounted) return;
       setState(() {
@@ -838,6 +1187,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _recordTyped(
         PlayTelemetryEventType.chargeCancelled,
         result: PlayTelemetryResult.cancelled,
+      );
+      _recordTyped(
+        PlayTelemetryEventType.powerGaugeCancelled,
+        powerGauge: PlayTelemetryPowerGaugePayload(
+          chargeStage: 4,
+          power: LaunchInputSession.maximumPower,
+          cancelled: true,
+        ),
       );
       _setState(_state.copyWith(message: '발사 취소 보조를 사용해 다시 조준할 수 있습니다.'));
     } finally {
@@ -1119,6 +1476,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
+  void _launchVerifiedDemoShot() {
+    final preset = widget.demoLaunchInput;
+    if (preset == null) return;
+    _launch(
+      inputOverride: ShotInput(
+        direction: preset.direction,
+        power: preset.power,
+        equippedTrait: _state.equippedTrait,
+      ),
+    );
+  }
+
   Future<void> _launchAfterCommit({
     ShotInput? inputOverride,
     required bool isReplay,
@@ -1204,6 +1573,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _failureReplay = null;
     }
     _stageShotResults.add(result);
+    _stageShotInputs.add(normalizedInput);
     _chainScoreAnalysis = _analyzeSuccessfulStage(
       state: result.state,
       shotResults: _stageShotResults,
@@ -1216,6 +1586,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       inputLatencyMs: inputLatencyMs,
     );
     _recordTyped(PlayTelemetryEventType.shotReleased, shot: _lastTypedShot);
+    if (!isReplay) {
+      // Key/failure writes are queued immediately behind the already-durable
+      // shot commit, but never hold the animation path hostage. The key VFX
+      // and hint button still change only after the key save resolves true.
+      unawaited(
+        _recordCollectedKeys(stateBeforeShot: shotStartState, result: result),
+      );
+      unawaited(_recordHintFailureIfEligible(result));
+    }
     _telemetry.record(
       '발사',
       stage: _state.levelIndex,
@@ -1567,6 +1946,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           _state.levelIndex,
         );
         _recordTyped(PlayTelemetryEventType.rewardOffered);
+        if (_rewardCandidates.any(
+          (reward) =>
+              reward.effectKind == RunRewardEffectKind.nextStageHintAccess,
+        )) {
+          _recordTyped(
+            PlayTelemetryEventType.hintRewardOffered,
+            hint: PlayTelemetryHintPayload(
+              source: PlayTelemetryHintSource.clearReward,
+              level: PlayTelemetryHintLevel.one,
+            ),
+          );
+        }
       } on Object {
         if (mounted) {
           setState(() {
@@ -1589,13 +1980,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _showFailurePopup = !cleared;
     });
     if (cleared) {
+      final key = _currentHintKey;
+      if (key != null && !_collectedHintKeyIds.contains(key.id)) {
+        _recordTyped(
+          PlayTelemetryEventType.keyIgnored,
+          key: PlayTelemetryKeyPayload(
+            keyId: key.id,
+            shotId: _state.shotCount,
+            collected: false,
+          ),
+        );
+      }
       unawaited(_showClearPopupAfterPersistence());
-      _telemetry.record(
-        '클리어',
-        stage: _state.levelIndex,
-        attempt: _state.shotCount,
-        result: '성공',
-      );
       _recordTyped(
         PlayTelemetryEventType.collisionChainCompleted,
         shot: _lastTypedShot,
@@ -1607,7 +2003,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         PlayTelemetryEventType.stageCleared,
         shot: _lastTypedShot,
         result: PlayTelemetryResult.cleared,
+        stageOutcome: _lastTypedShot == null ? null : _stageOutcomePayload(),
+        hint: _hintEntitlement?.consumed == true
+            ? _hintTelemetryPayload(
+                _hintEntitlement!,
+                level: _hintEntitlement!.unlockedHintLevel,
+                clearedAfterOpen: true,
+              )
+            : null,
       );
+      final directClear = _isDirectClear(_stageShotResults);
+      if (directClear &&
+          _patternHintEntry?.directClearPolicy.demoPreferred == true) {
+        _recordTyped(
+          PlayTelemetryEventType.demoDirectClearDetected,
+          stageOutcome: _stageOutcomePayload(),
+        );
+      }
       _feedback.shotCleared();
       _feedback.medalAwarded(awardedStars);
     } else {
@@ -1746,7 +2158,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       stage: _state.levelIndex,
       target: impact.entityType.name,
       eventCode: 'collision_resolved',
-      shotId: _state.shotCount + 1,
+      shotId: _state.shotCount,
       objectId: impact.entityId,
       objectType: impact.entityType.name,
       position: impact.position,
@@ -1798,7 +2210,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         target: activation.sliderEntityId,
         result: '진행 방향 유지',
         eventCode: 'power_slider_activated',
-        shotId: _state.shotCount + 1,
+        shotId: _state.shotCount,
         objectId: activation.sourceEntityId,
         objectType: EntityType.powerSlider.name,
         contactId: activation.contactId,
@@ -1823,7 +2235,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         result:
             '${rotation.orientationBefore}에서 ${rotation.orientationAfter}로 회전',
         eventCode: 'reflector_rotated',
-        shotId: _state.shotCount + 1,
+        shotId: _state.shotCount,
         objectId: rotation.sourceEntityId,
         objectType: EntityType.rotatingReflector.name,
         contactId: rotation.contactId,
@@ -2183,6 +2595,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         if (_stageShotResults.isNotEmpty) {
           _stageShotResults.removeLast();
         }
+        if (_stageShotInputs.isNotEmpty) {
+          _stageShotInputs.removeLast();
+        }
         _chainScoreAnalysis = null;
       }
       _setState(_withoutRecoveredPastBalls(_shotResolver.rewind(_state)));
@@ -2217,12 +2632,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final aim = logical - _state.activeBall.position;
     if (!_aimStartedForShot) {
       _aimStartedForShot = true;
-      _telemetry.record(
-        '조준 시작',
-        stage: _state.levelIndex,
-        objectId: _state.activeBall.id,
-        objectType: EntityType.ball.name,
-      );
       _recordTyped(PlayTelemetryEventType.aimStarted);
     }
     final quantizedAim = quantizeAimDirection(aim);
@@ -2729,6 +3138,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         PlayTelemetryEventType.chargeCancelled,
         result: PlayTelemetryResult.cancelled,
       );
+      _recordTyped(
+        PlayTelemetryEventType.powerGaugeCancelled,
+        powerGauge: PlayTelemetryPowerGaugePayload(
+          chargeStage: _chargeGaugeState.index,
+          power: _state.aimPower,
+          cancelled: true,
+        ),
+      );
       if (mounted && _state.phase == GamePhase.planning) {
         _setState(
           _state.copyWith(message: '과충전되어 발사를 취소했습니다. 새로 눌러 다시 시작하세요.'),
@@ -2792,6 +3209,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _chargeTimer = null;
     _launchInputSession.cancel(pointer: pointer);
     final wasCharging = _isCharging;
+    final cancelledGaugeStage = _chargeGaugeState.index;
     _isCharging = false;
     _chargeStartRecorded = false;
     _setChargeGauge(ChargeGaugeState.green, active: false);
@@ -2799,6 +3217,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _recordTyped(
         PlayTelemetryEventType.chargeCancelled,
         result: PlayTelemetryResult.cancelled,
+      );
+      _recordTyped(
+        PlayTelemetryEventType.powerGaugeCancelled,
+        powerGauge: PlayTelemetryPowerGaugePayload(
+          chargeStage: cancelledGaugeStage,
+          power: _state.aimPower,
+          cancelled: true,
+        ),
       );
       if (showCancellation) {
         _feedback.cancelled();
@@ -2824,6 +3250,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       stage: _state.levelIndex,
       eventCode: 'charge_started',
       power: LaunchInputSession.minimumPower,
+    );
+    _recordTyped(
+      PlayTelemetryEventType.powerGaugeChargeStarted,
+      powerGauge: PlayTelemetryPowerGaugePayload(
+        chargeStage: 0,
+        power: LaunchInputSession.minimumPower,
+        cancelled: false,
+      ),
     );
   }
 
@@ -2904,6 +3338,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _chargeTimer?.cancel();
     _pressActivationTimer?.cancel();
     _chargeFeedbackTimer?.cancel();
+    _keyCollectionVfxTimer?.cancel();
     _launchInputSession.reset();
     super.dispose();
   }
@@ -2948,11 +3383,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final inspectedEntity = _inspectedEntityId == null
         ? null
         : _state.entityById(_inspectedEntityId!);
-    final screenSize = MediaQuery.sizeOf(context);
-    final compactLayout = screenSize.width <= 800;
-    final contentWidth = compactLayout
-        ? screenSize.width
-        : math.min(screenSize.width * 0.78, 760.0);
     final clearPopupOpen = _state.phase == GamePhase.success && _showClearPopup;
     final failurePopupOpen =
         _showFailurePopup && !_showBallInfo && inspectedEntity == null;
@@ -3002,428 +3432,538 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               )
             : null,
         body: SafeArea(
-          child: Stack(
-            children: [
-              const Positioned.fill(child: _GameplayBackdrop()),
-              AbsorbPointer(
-                absorbing: inputBlocked,
-                child: ExcludeSemantics(
-                  excluding: inputBlocked,
-                  child: Center(
-                    child: SizedBox(
-                      width: contentWidth,
-                      height: math.max(
-                        0,
-                        screenSize.height -
-                            (widget.showStageSelector ? kToolbarHeight : 0),
-                      ),
-                      child: Column(
-                        children: [
-                          if (!compactLayout)
-                            _Hud(
-                              tutorialActive: tutorialTarget != null,
-                              state: _state,
-                              unlockedLevel: _unlockedLevel,
-                              onSelectLevel: _selectLevel,
-                              showStageSelector: widget.showStageSelector,
-                              onPause: _togglePause,
-                              onExit: widget.onExit == null ? null : _exitStage,
-                              exitToMainMenu: widget.exitToMainMenu,
-                              hudScore: widget.hudScore,
-                              onDebug: widget.showDebugControls
-                                  ? _openDebugMenu
-                                  : null,
-                            ),
-                          if (compactLayout)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-                              child: _Hud(
-                                compact: true,
-                                tutorialActive: tutorialTarget != null,
-                                state: _state,
-                                unlockedLevel: _unlockedLevel,
-                                onSelectLevel: _selectLevel,
-                                showStageSelector: widget.showStageSelector,
-                                onPause: _togglePause,
-                                onExit: widget.onExit == null
-                                    ? null
-                                    : _exitStage,
-                                exitToMainMenu: widget.exitToMainMenu,
-                                hudScore: widget.hudScore,
-                                onDebug: widget.showDebugControls
-                                    ? _openDebugMenu
-                                    : null,
-                              ),
-                            ),
-                          if (persistentTutorialHint != null)
-                            PersistentTutorialHintCard(
-                              text: persistentTutorialHint,
-                            ),
-                          Expanded(
-                            child: AbsorbPointer(
-                              absorbing: inputBlocked,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: compactLayout ? 0 : 12,
-                                ),
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final semanticLaunch =
-                                        CustomSemanticsAction(label: '공 발사');
-                                    final semanticAimRight =
-                                        CustomSemanticsAction(
-                                          label: '오른쪽으로 조준',
-                                        );
-                                    final semanticAimLeft =
-                                        CustomSemanticsAction(label: '왼쪽으로 조준');
-                                    final semanticAimUp = CustomSemanticsAction(
-                                      label: '위쪽으로 조준',
-                                    );
-                                    final semanticAimDown =
-                                        CustomSemanticsAction(
-                                          label: '아래쪽으로 조준',
-                                        );
-                                    final fieldSize = constraints.biggest;
-                                    final scale = math.min(
-                                      fieldSize.width / logicalSize.x,
-                                      fieldSize.height / logicalSize.y,
-                                    );
-                                    final boardSize = Size(
-                                      logicalSize.x * scale,
-                                      logicalSize.y * scale,
-                                    );
-                                    return Align(
-                                      alignment: Alignment.topCenter,
-                                      child: SizedBox(
-                                        width: boardSize.width,
-                                        height: boardSize.height,
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            Positioned(
-                                              left: 0,
-                                              top: 0,
-                                              width: boardSize.width,
-                                              height: boardSize.height,
-                                              child: Listener(
-                                                key: const Key('aim_area'),
-                                                behavior:
-                                                    HitTestBehavior.opaque,
-                                                onPointerDown: (event) =>
-                                                    _handlePointerDown(
-                                                      event.pointer,
-                                                      event.localPosition,
-                                                      boardSize,
-                                                      event.timeStamp,
-                                                    ),
-                                                onPointerMove: (event) =>
-                                                    _handlePointerMove(
-                                                      event.pointer,
-                                                      event.localPosition,
-                                                      boardSize,
-                                                      event.timeStamp,
-                                                    ),
-                                                onPointerUp: (event) =>
-                                                    _handlePointerUp(
-                                                      event.pointer,
-                                                      event.localPosition,
-                                                      boardSize,
-                                                      event.timeStamp,
-                                                    ),
-                                                onPointerCancel: (event) =>
-                                                    _handlePointerCancel(
-                                                      pointer: event.pointer,
-                                                    ),
-                                                child: Semantics(
-                                                  container: true,
-                                                  label: '공을 조준하는 게임 화면',
-                                                  value: _chargeGaugeActive
-                                                      ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                      : [
-                                                          '힘 ${(_state.aimPower * 100).round()}퍼센트',
-                                                          ?_firstArrivalSemanticsValue,
-                                                        ].join(', '),
-                                                  increasedValue:
-                                                      _chargeGaugeActive
-                                                      ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                      : '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                                  decreasedValue:
-                                                      _chargeGaugeActive
-                                                      ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                      : '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                                  hint: _chargeGaugeActive
-                                                      ? '현재 ${_chargeGaugeStateLabel(_chargeGaugeState)}. 손을 떼면 발사하거나 과충전 시 취소됩니다.'
-                                                      : _difficulty ==
-                                                            PlayerDifficulty
-                                                                .easy
-                                                      ? '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하면 마름모와 예상 라벨로 첫 도착 위치를 안내합니다'
-                                                      : '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
-                                                  onIncrease: () =>
-                                                      _adjustPower(0.055),
-                                                  onDecrease: () =>
-                                                      _adjustPower(-0.055),
-                                                  customSemanticsActions: {
-                                                    semanticLaunch: _launch,
-                                                    semanticAimRight: () =>
-                                                        _nudgeAim(math.pi / 18),
-                                                    semanticAimLeft: () =>
-                                                        _nudgeAim(
-                                                          -math.pi / 18,
-                                                        ),
-                                                    semanticAimUp: () =>
-                                                        _nudgeAim(
-                                                          -math.pi / 18,
-                                                        ),
-                                                    semanticAimDown: () =>
-                                                        _nudgeAim(math.pi / 18),
-                                                  },
-                                                  child: ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                    child: GameWidget(
-                                                      game: _game,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            if (tutorialTarget != null)
-                                              Positioned(
-                                                left: math.min(
-                                                  math.max(
-                                                    6.0,
-                                                    (tutorialTarget.position.x -
-                                                            58) *
-                                                        scale,
-                                                  ),
-                                                  math.max(
-                                                    6.0,
-                                                    boardSize.width - 150,
-                                                  ),
-                                                ),
-                                                top: math.min(
-                                                  math.max(
-                                                    6.0,
-                                                    (tutorialTarget.position.y -
-                                                            66) *
-                                                        scale,
-                                                  ),
-                                                  math.max(
-                                                    6.0,
-                                                    boardSize.height - 54,
-                                                  ),
-                                                ),
-                                                child: IgnorePointer(
-                                                  child: _TutorialCoachMark(
-                                                    text: _tutorialHint,
-                                                  ),
-                                                ),
-                                              ),
-                                            for (final entity
-                                                in _state.entities)
-                                              if (entity.active)
-                                                Positioned(
-                                                  left: _semanticEntityRect(
-                                                    entity,
-                                                    scale,
-                                                  ).left,
-                                                  top: _semanticEntityRect(
-                                                    entity,
-                                                    scale,
-                                                  ).top,
-                                                  width: _semanticEntityRect(
-                                                    entity,
-                                                    scale,
-                                                  ).width,
-                                                  height: _semanticEntityRect(
-                                                    entity,
-                                                    scale,
-                                                  ).height,
-                                                  child: Semantics(
-                                                    container: true,
-                                                    button: true,
-                                                    label: _semanticEntityLabel(
-                                                      entity,
-                                                    ),
-                                                    hint:
-                                                        entity.traits.isNotEmpty
-                                                        ? '선택하면 속성 정보를 확인할 수 있습니다'
-                                                        : '선택하면 물체 정보를 확인할 수 있습니다',
-                                                    onTap: () =>
-                                                        _handleSemanticEntity(
-                                                          entity.id,
-                                                        ),
-                                                    child:
-                                                        const SizedBox.expand(),
-                                                  ),
-                                                ),
-                                            if (compactLayout)
-                                              Positioned(
-                                                left: 6,
-                                                right: 6,
-                                                bottom: 6,
-                                                child: _ControlPanel(
-                                                  compact: true,
-                                                  tutorialActive:
-                                                      tutorialTarget != null &&
-                                                      _state.equippedTrait ==
-                                                          null,
-                                                  state: _state,
-                                                  onRewind: _rewind,
-                                                  onReset: _restartCurrentStage,
-                                                  canCancelReward:
-                                                      _isCharging &&
-                                                      _rewardInventory
-                                                              .availableUseCount(
-                                                                runRewardShotCancelAssistId,
-                                                              ) >
-                                                          0,
-                                                  onCancelReward: () => unawaited(
-                                                    _cancelLaunchWithReward(),
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (!compactLayout)
-                            _ControlPanel(
-                              state: _state,
-                              onRewind: _rewind,
-                              onReset: _restartCurrentStage,
-                              canCancelReward:
-                                  _isCharging &&
-                                  _rewardInventory.availableUseCount(
-                                        runRewardShotCancelAssistId,
-                                      ) >
-                                      0,
-                              onCancelReward: () =>
-                                  unawaited(_cancelLaunchWithReward()),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (_chargeGaugeActive)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Align(
-                        alignment:
-                            GameFeedback.chargeGaugeSide ==
-                                ChargeGaugeSide.right
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
+          child: LayoutBuilder(
+            builder: (context, safeConstraints) {
+              // `SafeArea` 이후의 실제 제약을 기준으로만 HUD와 월드를
+              // 배치한다. 전체 MediaQuery 높이를 다시 강제하면 홈 인디케이터
+              // 또는 브라우저 하단 영역에서 보드와 제어 패널이 잘릴 수 있다.
+              final safeSize = safeConstraints.biggest;
+              final compactLayout =
+                  safeSize.width <= 800 || safeSize.height < 700;
+              // 320x568급은 제어 정보를 한 줄로 줄이되, 기물을 가리지 않도록
+              // 보드 밖 Safe bottom interaction band를 계속 사용한다.
+              final denseCompact = safeSize.height < 600;
+              final contentWidth = compactLayout
+                  ? safeSize.width
+                  : math.min(safeSize.width * 0.78, 760.0);
+              return Stack(
+                children: [
+                  const Positioned.fill(child: _GameplayBackdrop()),
+                  AbsorbPointer(
+                    absorbing: inputBlocked,
+                    child: ExcludeSemantics(
+                      excluding: inputBlocked,
+                      child: Center(
                         child: SizedBox(
-                          key: Key(
-                            'charge_gauge_${GameFeedback.chargeGaugeSide.name}',
-                          ),
-                          width: 34,
-                          height: math.min(
-                            196,
-                            math.max(144, screenSize.height * 0.23),
-                          ),
-                          child: _ChargeGaugeRail(
-                            state: _chargeGaugeState,
-                            power: _state.aimPower,
-                            side: GameFeedback.chargeGaugeSide,
-                            reducedMotion: GameFeedback.reducedMotionEnabled,
-                            strongFlash: GameFeedback.strongFlashEnabled,
+                          width: contentWidth,
+                          height: safeSize.height,
+                          child: Column(
+                            children: [
+                              if (!compactLayout)
+                                _Hud(
+                                  tutorialActive: tutorialTarget != null,
+                                  state: _state,
+                                  unlockedLevel: _unlockedLevel,
+                                  onSelectLevel: _selectLevel,
+                                  showStageSelector: widget.showStageSelector,
+                                  onPause: _togglePause,
+                                  onExit: widget.onExit == null
+                                      ? null
+                                      : _exitStage,
+                                  exitToMainMenu: widget.exitToMainMenu,
+                                  hudScore: widget.hudScore,
+                                  onDebug: widget.showDebugControls
+                                      ? _openDebugMenu
+                                      : null,
+                                ),
+                              if (compactLayout)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    6,
+                                    6,
+                                    6,
+                                    0,
+                                  ),
+                                  child: _Hud(
+                                    compact: true,
+                                    dense: denseCompact,
+                                    tutorialActive: tutorialTarget != null,
+                                    state: _state,
+                                    unlockedLevel: _unlockedLevel,
+                                    onSelectLevel: _selectLevel,
+                                    showStageSelector: widget.showStageSelector,
+                                    onPause: _togglePause,
+                                    onExit: widget.onExit == null
+                                        ? null
+                                        : _exitStage,
+                                    exitToMainMenu: widget.exitToMainMenu,
+                                    hudScore: widget.hudScore,
+                                    onDebug: widget.showDebugControls
+                                        ? _openDebugMenu
+                                        : null,
+                                  ),
+                                ),
+                              if (persistentTutorialHint != null)
+                                PersistentTutorialHintCard(
+                                  text: persistentTutorialHint,
+                                ),
+                              Expanded(
+                                child: AbsorbPointer(
+                                  absorbing: inputBlocked,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: compactLayout ? 0 : 12,
+                                    ),
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final semanticLaunch =
+                                            CustomSemanticsAction(
+                                              label: '공 발사',
+                                            );
+                                        final semanticAimRight =
+                                            CustomSemanticsAction(
+                                              label: '오른쪽으로 조준',
+                                            );
+                                        final semanticAimLeft =
+                                            CustomSemanticsAction(
+                                              label: '왼쪽으로 조준',
+                                            );
+                                        final semanticAimUp =
+                                            CustomSemanticsAction(
+                                              label: '위쪽으로 조준',
+                                            );
+                                        final semanticAimDown =
+                                            CustomSemanticsAction(
+                                              label: '아래쪽으로 조준',
+                                            );
+                                        final fieldSize = constraints.biggest;
+                                        final scale = math.min(
+                                          fieldSize.width / logicalSize.x,
+                                          fieldSize.height / logicalSize.y,
+                                        );
+                                        final boardSize = Size(
+                                          logicalSize.x * scale,
+                                          logicalSize.y * scale,
+                                        );
+                                        return Align(
+                                          alignment: Alignment.topCenter,
+                                          child: SizedBox(
+                                            width: boardSize.width,
+                                            height: boardSize.height,
+                                            child: Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                Positioned(
+                                                  left: 0,
+                                                  top: 0,
+                                                  width: boardSize.width,
+                                                  height: boardSize.height,
+                                                  child: Listener(
+                                                    key: const Key('aim_area'),
+                                                    behavior:
+                                                        HitTestBehavior.opaque,
+                                                    onPointerDown: (event) =>
+                                                        _handlePointerDown(
+                                                          event.pointer,
+                                                          event.localPosition,
+                                                          boardSize,
+                                                          event.timeStamp,
+                                                        ),
+                                                    onPointerMove: (event) =>
+                                                        _handlePointerMove(
+                                                          event.pointer,
+                                                          event.localPosition,
+                                                          boardSize,
+                                                          event.timeStamp,
+                                                        ),
+                                                    onPointerUp: (event) =>
+                                                        _handlePointerUp(
+                                                          event.pointer,
+                                                          event.localPosition,
+                                                          boardSize,
+                                                          event.timeStamp,
+                                                        ),
+                                                    onPointerCancel: (event) =>
+                                                        _handlePointerCancel(
+                                                          pointer:
+                                                              event.pointer,
+                                                        ),
+                                                    child: Semantics(
+                                                      container: true,
+                                                      label: '공을 조준하는 게임 화면',
+                                                      value: _chargeGaugeActive
+                                                          ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                          : [
+                                                              '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                                              ?_firstArrivalSemanticsValue,
+                                                            ].join(', '),
+                                                      increasedValue:
+                                                          _chargeGaugeActive
+                                                          ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                          : '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                      decreasedValue:
+                                                          _chargeGaugeActive
+                                                          ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                          : '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                      hint: _chargeGaugeActive
+                                                          ? '현재 ${_chargeGaugeStateLabel(_chargeGaugeState)}. 손을 떼면 발사하거나 과충전 시 취소됩니다.'
+                                                          : _difficulty ==
+                                                                PlayerDifficulty
+                                                                    .easy
+                                                          ? '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하면 마름모와 예상 라벨로 첫 도착 위치를 안내합니다'
+                                                          : '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
+                                                      onIncrease: () =>
+                                                          _adjustPower(0.055),
+                                                      onDecrease: () =>
+                                                          _adjustPower(-0.055),
+                                                      customSemanticsActions: {
+                                                        semanticLaunch: _launch,
+                                                        semanticAimRight: () =>
+                                                            _nudgeAim(
+                                                              math.pi / 18,
+                                                            ),
+                                                        semanticAimLeft: () =>
+                                                            _nudgeAim(
+                                                              -math.pi / 18,
+                                                            ),
+                                                        semanticAimUp: () =>
+                                                            _nudgeAim(
+                                                              -math.pi / 18,
+                                                            ),
+                                                        semanticAimDown: () =>
+                                                            _nudgeAim(
+                                                              math.pi / 18,
+                                                            ),
+                                                      },
+                                                      child: ClipRRect(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        child: GameWidget(
+                                                          game: _game,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (tutorialTarget != null)
+                                                  Positioned(
+                                                    left: math.min(
+                                                      math.max(
+                                                        6.0,
+                                                        (tutorialTarget
+                                                                    .position
+                                                                    .x -
+                                                                58) *
+                                                            scale,
+                                                      ),
+                                                      math.max(
+                                                        6.0,
+                                                        boardSize.width - 150,
+                                                      ),
+                                                    ),
+                                                    top: math.min(
+                                                      math.max(
+                                                        6.0,
+                                                        (tutorialTarget
+                                                                    .position
+                                                                    .y -
+                                                                66) *
+                                                            scale,
+                                                      ),
+                                                      math.max(
+                                                        6.0,
+                                                        boardSize.height - 54,
+                                                      ),
+                                                    ),
+                                                    child: IgnorePointer(
+                                                      child: _TutorialCoachMark(
+                                                        text: _tutorialHint,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                for (final entity
+                                                    in _state.entities)
+                                                  if (entity.active)
+                                                    Positioned(
+                                                      left: _semanticEntityRect(
+                                                        entity,
+                                                        scale,
+                                                      ).left,
+                                                      top: _semanticEntityRect(
+                                                        entity,
+                                                        scale,
+                                                      ).top,
+                                                      width:
+                                                          _semanticEntityRect(
+                                                            entity,
+                                                            scale,
+                                                          ).width,
+                                                      height:
+                                                          _semanticEntityRect(
+                                                            entity,
+                                                            scale,
+                                                          ).height,
+                                                      child: Semantics(
+                                                        container: true,
+                                                        button: true,
+                                                        label:
+                                                            _semanticEntityLabel(
+                                                              entity,
+                                                            ),
+                                                        hint:
+                                                            entity
+                                                                .traits
+                                                                .isNotEmpty
+                                                            ? '선택하면 속성 정보를 확인할 수 있습니다'
+                                                            : '선택하면 물체 정보를 확인할 수 있습니다',
+                                                        onTap: () =>
+                                                            _handleSemanticEntity(
+                                                              entity.id,
+                                                            ),
+                                                        child:
+                                                            const SizedBox.expand(),
+                                                      ),
+                                                    ),
+                                                if (_currentHintKey
+                                                    case final key?
+                                                    when !_collectedHintKeyIds
+                                                            .contains(key.id) ||
+                                                        (widget.debugHintKeyVfxId ??
+                                                                _keyCollectionVfxId) ==
+                                                            key.id)
+                                                  Positioned(
+                                                    left:
+                                                        (key.position.x -
+                                                            key.size.x / 2) *
+                                                        scale,
+                                                    top:
+                                                        (key.position.y -
+                                                            key.size.y / 2) *
+                                                        scale,
+                                                    width: key.size.x * scale,
+                                                    height: key.size.y * scale,
+                                                    child: Semantics(
+                                                      container: true,
+                                                      label: '힌트 열쇠',
+                                                      value:
+                                                          '공으로 닿으면 현재 스테이지 팁을 해금합니다',
+                                                      child: IgnorePointer(
+                                                        child: _HintKeyOverlay(
+                                                          vfxActive:
+                                                              (widget.debugHintKeyVfxId ??
+                                                                  _keyCollectionVfxId) ==
+                                                              key.id,
+                                                          reducedMotion:
+                                                              GameFeedback
+                                                                  .reducedMotionEnabled,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                if (_patternHintEntry != null)
+                                                  Positioned(
+                                                    top: 10,
+                                                    right: 10,
+                                                    child: _HintAccessButton(
+                                                      available: _hintAvailable,
+                                                      keyAvailable:
+                                                          _currentHintKey !=
+                                                              null &&
+                                                          !_collectedHintKeyIds
+                                                              .contains(
+                                                                _currentHintKey!
+                                                                    .id,
+                                                              ),
+                                                      onPressed: _hintAvailable
+                                                          ? _showPatternHintSheet
+                                                          : null,
+                                                    ),
+                                                  ),
+                                                if (widget.demoLaunchInput !=
+                                                    null)
+                                                  Positioned(
+                                                    top: 0,
+                                                    left:
+                                                        boardSize.width / 2 -
+                                                        22,
+                                                    child: Semantics(
+                                                      button: true,
+                                                      label:
+                                                          '검증된 48도 90퍼센트 시연 발사',
+                                                      child: GestureDetector(
+                                                        key: const Key(
+                                                          'verified_demo_launch',
+                                                        ),
+                                                        behavior:
+                                                            HitTestBehavior
+                                                                .opaque,
+                                                        onTap:
+                                                            _launchVerifiedDemoShot,
+                                                        child: Opacity(
+                                                          opacity: 0.01,
+                                                          child: Container(
+                                                            width: 44,
+                                                            height: 44,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                if (_chargeGaugeActive)
+                                                  _FloatingChargeGauge(
+                                                    boardSize: boardSize,
+                                                    scale: scale,
+                                                    state: _state,
+                                                    hintKey: _currentHintKey,
+                                                    gaugeState:
+                                                        _chargeGaugeState,
+                                                    power: _state.aimPower,
+                                                    side: GameFeedback
+                                                        .chargeGaugeSide,
+                                                    reducedMotion: GameFeedback
+                                                        .reducedMotionEnabled,
+                                                    strongFlash: GameFeedback
+                                                        .strongFlashEnabled,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (compactLayout)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    6,
+                                    4,
+                                    6,
+                                    6,
+                                  ),
+                                  child: _ControlPanel(
+                                    compact: true,
+                                    dense: denseCompact,
+                                    tutorialActive:
+                                        tutorialTarget != null &&
+                                        _state.equippedTrait == null,
+                                    state: _state,
+                                    onRewind: _rewind,
+                                    onReset: _restartCurrentStage,
+                                    canCancelReward:
+                                        _isCharging &&
+                                        _rewardInventory.availableUseCount(
+                                              runRewardShotCancelAssistId,
+                                            ) >
+                                            0,
+                                    onCancelReward: () =>
+                                        unawaited(_cancelLaunchWithReward()),
+                                  ),
+                                ),
+                              if (!compactLayout)
+                                _ControlPanel(
+                                  state: _state,
+                                  onRewind: _rewind,
+                                  onReset: _restartCurrentStage,
+                                  canCancelReward:
+                                      _isCharging &&
+                                      _rewardInventory.availableUseCount(
+                                            runRewardShotCancelAssistId,
+                                          ) >
+                                          0,
+                                  onCancelReward: () =>
+                                      unawaited(_cancelLaunchWithReward()),
+                                ),
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              if (_showBallInfo)
-                _InfoPopup(
-                  semanticLabel: '공 정보',
-                  onClose: _dismissInfo,
-                  child: _BallInfoPanel(state: _state),
-                ),
-              if (!_showBallInfo && inspectedEntity != null)
-                _InfoPopup(
-                  semanticLabel: '${_entityName(inspectedEntity)} 정보',
-                  onClose: _dismissInfo,
-                  child: _EntityInfoPanel(
-                    entity: inspectedEntity,
-                    copyCharges: _state.copyCharges,
-                    copyCoreCount: _state.copyCoreCount,
-                    onTransfer:
-                        inspectedEntity.type == EntityType.ball ||
-                            inspectedEntity.traits.isEmpty ||
-                            _isCommittingTraitAction
-                        ? null
-                        : _transferTrait,
-                    onCopy:
-                        inspectedEntity.type == EntityType.ball ||
-                            inspectedEntity.traits.isEmpty ||
-                            _state.copyCharges <= 0 ||
-                            _isCommittingTraitAction
-                        ? null
-                        : _copyTrait,
-                  ),
-                ),
-              if (failurePopupOpen)
-                _FailurePopup(
-                  state: _state,
-                  advice: _failureAdvice,
-                  failureReplay: _failureReplay,
-                  onReplay: _openFailureReplay,
-                  onRetry: () => setState(() => _showFailurePopup = false),
-                  onRewind: _rewind,
-                  onRecoverPastBall:
-                      _state.entities.any(
-                            (entity) =>
-                                entity.type == EntityType.ball &&
-                                entity.id.startsWith('spent_ball_'),
-                          ) &&
-                          _rewardInventory.availableUseCount(
-                                runRewardSpentBallRecoveryId,
-                              ) >
-                              0
-                      ? () => unawaited(_recoverPastBallWithReward())
-                      : null,
-                  onReset: () {
-                    _showFailurePopup = false;
-                    _restartCurrentStage();
-                  },
-                ),
-              if (persistenceErrorOpen)
-                _ClearPersistenceErrorPopup(
-                  title: _clearPersistenceErrorTitle,
-                  body: _clearPersistenceErrorBody,
-                  onRetry: _retryClearPersistence,
-                ),
-              if (clearPopupOpen)
-                ClearResultPopup(
-                  state: _state,
-                  level: _currentLevel,
-                  chainScoreAnalysis: _chainScoreAnalysis,
-                  bestShot: _bestShots[_state.levelIndex],
-                  bonusAchieved: _bonusChallengeAchieved,
-                  rewardCandidates: _rewardCandidates,
-                  selectedRewardId: _selectedRewardId,
-                  isSelectingReward: _isSelectingReward,
-                  rewardSelectionError: _rewardSelectionError,
-                  onRewardSelected: (rewardId) =>
-                      unawaited(_selectRunReward(rewardId)),
-                  onNext: () => unawaited(_goNextLevel()),
-                  onRetry: () => unawaited(_retryAfterClear()),
-                  isFinal: _state.levelIndex >= levels.length - 1,
-                ),
-            ],
+                  if (_showBallInfo)
+                    _InfoPopup(
+                      semanticLabel: '공 정보',
+                      onClose: _dismissInfo,
+                      child: _BallInfoPanel(state: _state),
+                    ),
+                  if (!_showBallInfo && inspectedEntity != null)
+                    _InfoPopup(
+                      semanticLabel: '${_entityName(inspectedEntity)} 정보',
+                      onClose: _dismissInfo,
+                      child: _EntityInfoPanel(
+                        entity: inspectedEntity,
+                        copyCharges: _state.copyCharges,
+                        copyCoreCount: _state.copyCoreCount,
+                        onTransfer:
+                            inspectedEntity.type == EntityType.ball ||
+                                inspectedEntity.traits.isEmpty ||
+                                _isCommittingTraitAction
+                            ? null
+                            : _transferTrait,
+                        onCopy:
+                            inspectedEntity.type == EntityType.ball ||
+                                inspectedEntity.traits.isEmpty ||
+                                _state.copyCharges <= 0 ||
+                                _isCommittingTraitAction
+                            ? null
+                            : _copyTrait,
+                      ),
+                    ),
+                  if (failurePopupOpen)
+                    _FailurePopup(
+                      state: _state,
+                      advice: _failureAdvice,
+                      failureReplay: _failureReplay,
+                      onReplay: _openFailureReplay,
+                      onRetry: () => setState(() => _showFailurePopup = false),
+                      onRewind: _rewind,
+                      onRecoverPastBall:
+                          _state.entities.any(
+                                (entity) =>
+                                    entity.type == EntityType.ball &&
+                                    entity.id.startsWith('spent_ball_'),
+                              ) &&
+                              _rewardInventory.availableUseCount(
+                                    runRewardSpentBallRecoveryId,
+                                  ) >
+                                  0
+                          ? () => unawaited(_recoverPastBallWithReward())
+                          : null,
+                      onReset: () {
+                        _showFailurePopup = false;
+                        _restartCurrentStage();
+                      },
+                    ),
+                  if (persistenceErrorOpen)
+                    _ClearPersistenceErrorPopup(
+                      title: _clearPersistenceErrorTitle,
+                      body: _clearPersistenceErrorBody,
+                      onRetry: _retryClearPersistence,
+                    ),
+                  if (clearPopupOpen)
+                    ClearResultPopup(
+                      state: _state,
+                      level: _currentLevel,
+                      chainScoreAnalysis: _chainScoreAnalysis,
+                      bestShot: _bestShots[_state.levelIndex],
+                      bonusAchieved: _bonusChallengeAchieved,
+                      rewardCandidates: _rewardCandidates,
+                      selectedRewardId: _selectedRewardId,
+                      isSelectingReward: _isSelectingReward,
+                      rewardSelectionError: _rewardSelectionError,
+                      onRewardSelected: (rewardId) =>
+                          unawaited(_selectRunReward(rewardId)),
+                      onNext: () => unawaited(_goNextLevel()),
+                      onRetry: () => unawaited(_retryAfterClear()),
+                      isFinal: _state.levelIndex >= levels.length - 1,
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -3475,6 +4015,270 @@ class _GameplayBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(painter: GameplayBackdropPainter());
+  }
+}
+
+/// 독자적으로 그린 청동 열쇠다. 속성 아이콘/홀 깃발과 형태를 분리했고,
+/// GameState에 들어가지 않는 선택 수집물이라 물리·리플레이를 바꾸지 않는다.
+class _HintKeyOverlay extends StatelessWidget {
+  const _HintKeyOverlay({required this.vfxActive, required this.reducedMotion});
+
+  final bool vfxActive;
+  final bool reducedMotion;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _HintKeyPainter(
+      vfxActive: vfxActive,
+      reducedMotion: reducedMotion,
+    ),
+    child: const SizedBox.expand(),
+  );
+}
+
+class _HintKeyPainter extends CustomPainter {
+  const _HintKeyPainter({required this.vfxActive, required this.reducedMotion});
+
+  final bool vfxActive;
+  final bool reducedMotion;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final unit = math.min(size.width, size.height);
+    final halo = Paint()..color = const Color(0x385B9F86);
+    canvas.drawCircle(center, unit * .48, halo);
+    canvas.drawCircle(
+      center,
+      unit * .43,
+      Paint()
+        ..color = const Color(0xFFC77D32)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.2, unit * .075),
+    );
+    final bronze = Paint()
+      ..color = const Color(0xFFC9873B)
+      ..style = PaintingStyle.fill;
+    final outline = Paint()
+      ..color = const Color(0xFF6D3D1F)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.0, unit * .065)
+      ..strokeJoin = StrokeJoin.round;
+    final bowRadius = unit * .19;
+    final bow = Offset(center.dx - unit * .11, center.dy - unit * .1);
+    canvas.drawCircle(bow, bowRadius, bronze);
+    canvas.drawCircle(bow, bowRadius, outline);
+    canvas.drawCircle(
+      bow,
+      bowRadius * .43,
+      Paint()..color = const Color(0xFFFFE1A3),
+    );
+    final shaft = Path()
+      ..moveTo(bow.dx + bowRadius * .58, bow.dy + bowRadius * .55)
+      ..lineTo(center.dx + unit * .32, center.dy + unit * .34)
+      ..lineTo(center.dx + unit * .22, center.dy + unit * .44)
+      ..lineTo(center.dx + unit * .12, center.dy + unit * .35)
+      ..lineTo(center.dx + unit * .03, center.dy + unit * .44)
+      ..lineTo(center.dx - unit * .07, center.dy + unit * .34)
+      ..lineTo(bow.dx + bowRadius * .37, bow.dy + bowRadius * .39)
+      ..close();
+    canvas.drawPath(shaft, bronze);
+    canvas.drawPath(shaft, outline);
+    if (vfxActive) {
+      final sparkle = Paint()
+        ..color = const Color(0xFFFFF3B0)
+        ..strokeWidth = math.max(1.4, unit * .07)
+        ..strokeCap = StrokeCap.round;
+      for (final angle in [0.0, math.pi / 2, math.pi, math.pi * 1.5]) {
+        final from =
+            center + Offset(math.cos(angle), math.sin(angle)) * unit * .28;
+        final to =
+            center + Offset(math.cos(angle), math.sin(angle)) * unit * .49;
+        canvas.drawLine(from, to, sparkle);
+      }
+    } else if (!reducedMotion) {
+      canvas.drawCircle(
+        Offset(center.dx + unit * .33, center.dy - unit * .28),
+        math.max(1.2, unit * .045),
+        Paint()..color = const Color(0xFFFFED9A),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HintKeyPainter oldDelegate) =>
+      oldDelegate.vfxActive != vfxActive ||
+      oldDelegate.reducedMotion != reducedMotion;
+}
+
+class _HintAccessButton extends StatelessWidget {
+  const _HintAccessButton({
+    required this.available,
+    required this.keyAvailable,
+    required this.onPressed,
+  });
+
+  final bool available;
+  final bool keyAvailable;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = available ? '💡 팁 보기' : '🔑 팁 잠김';
+    final reason = keyAvailable
+        ? '열쇠를 공으로 건드리면 현재 스테이지 팁을 사용할 수 있습니다'
+        : '이 스테이지의 힌트 접근권이 아직 없습니다';
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: available,
+      label: label,
+      hint: reason,
+      onTap: onPressed,
+      child: ExcludeSemantics(
+        child: SizedBox(
+          height: 44,
+          child: FilledButton.tonalIcon(
+            key: const Key('pattern_hint_button'),
+            onPressed: onPressed,
+            icon: Icon(
+              available ? Icons.lightbulb_outline : Icons.key_outlined,
+            ),
+            label: Text(label),
+            style: FilledButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              backgroundColor: available
+                  ? const Color(0xFFFDF0B4)
+                  : const Color(0xFFE8E2D3),
+              foregroundColor: available
+                  ? const Color(0xFF5A4825)
+                  : const Color(0xFF6C665B),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom-sheet content preview used by Golden tests without a Navigator route.
+/// The production flow always opens this through [_showPatternHintSheet].
+@visibleForTesting
+Widget buildPatternHintSheetForTesting({
+  required PatternHintEntry entry,
+  required RunHintEntitlement entitlement,
+  required Future<RunHintEntitlement?> Function(int currentLevel) onMore,
+}) => _PatternHintSheet(entry: entry, entitlement: entitlement, onMore: onMore);
+
+class _PatternHintSheet extends StatefulWidget {
+  const _PatternHintSheet({
+    required this.entry,
+    required this.entitlement,
+    required this.onMore,
+  });
+
+  final PatternHintEntry entry;
+  final RunHintEntitlement entitlement;
+  final Future<RunHintEntitlement?> Function(int currentLevel) onMore;
+
+  @override
+  State<_PatternHintSheet> createState() => _PatternHintSheetState();
+}
+
+class _PatternHintSheetState extends State<_PatternHintSheet> {
+  late RunHintEntitlement _entitlement = widget.entitlement;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayLevel = math.min(
+      _entitlement.unlockedHintLevel,
+      widget.entry.hints.length,
+    );
+    final hint = widget.entry.hints.firstWhere(
+      (candidate) => candidate.level == displayLevel,
+      orElse: () => widget.entry.hints.last,
+    );
+    final canMore = displayLevel < widget.entry.hints.length && !_loading;
+    // showModalBottomSheet(useSafeArea: true)의 제약을 그대로 사용한다.
+    // 여기서 SafeArea를 한 번 더 감싸면 compact 뷰포트에서 sheet가 보드 밖
+    // 아래로 밀릴 수 있으므로, sheet 자체는 주어진 높이 안에서만 그린다.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxHeight = math.min(constraints.maxHeight, 500.0);
+        return Container(
+          key: const Key('pattern_hint_sheet'),
+          width: double.infinity,
+          height: maxHeight,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFF7DB),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 18)],
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB6A985),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '💡 현재 스테이지 팁 · $displayLevel단계',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF403923),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(hint.text, style: Theme.of(context).textTheme.bodyLarge),
+                const SizedBox(height: 14),
+                Text(
+                  canMore
+                      ? '다음 단계는 정확한 각도나 힘 대신, 다음에 시험할 기믹과 순서를 알려줍니다.'
+                      : '이 팁은 언제든 다시 열어 볼 수 있습니다.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF665F4E),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (canMore)
+                  FilledButton.icon(
+                    key: const Key('pattern_hint_more_button'),
+                    onPressed: () async {
+                      setState(() => _loading = true);
+                      final updated = await widget.onMore(displayLevel);
+                      if (!mounted) return;
+                      setState(() {
+                        _loading = false;
+                        if (updated != null) _entitlement = updated;
+                      });
+                    },
+                    icon: _loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.tips_and_updates_outlined),
+                    label: const Text('더 구체적으로'),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -3795,374 +4599,459 @@ class ClearResultPopup extends StatelessWidget {
                             child: Column(
                               children: [
                                 Expanded(
-                                  child: SingleChildScrollView(
-                                    key: const Key('clear_result_scroll'),
-                                    padding: const EdgeInsets.fromLTRB(
-                                      18,
-                                      18,
-                                      18,
-                                      8,
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          '클리어!',
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.headlineSmall,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text('${state.shotCount}번 만에 성공'),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          key: const Key('clear_stars'),
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            for (
-                                              var index = 0;
-                                              index < 3;
-                                              index++
-                                            )
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 2,
+                                  child: Stack(
+                                    children: [
+                                      Scrollbar(
+                                        child: SingleChildScrollView(
+                                          key: const Key('clear_result_scroll'),
+                                          padding: const EdgeInsets.fromLTRB(
+                                            18,
+                                            18,
+                                            18,
+                                            8,
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '클리어!',
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.headlineSmall,
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text('${state.shotCount}번 만에 성공'),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                key: const Key('clear_stars'),
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  for (
+                                                    var index = 0;
+                                                    index < 3;
+                                                    index++
+                                                  )
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 2,
+                                                          ),
+                                                      child: Icon(
+                                                        index < stars
+                                                            ? Icons.star_rounded
+                                                            : Icons
+                                                                  .star_border_rounded,
+                                                        color: index < stars
+                                                            ? const Color(
+                                                                0xFFF0AE34,
+                                                              )
+                                                            : const Color(
+                                                                0xFFB7B6A9,
+                                                              ),
+                                                        size: 32,
+                                                      ),
                                                     ),
-                                                child: Icon(
-                                                  index < stars
-                                                      ? Icons.star_rounded
-                                                      : Icons
-                                                            .star_border_rounded,
-                                                  color: index < stars
-                                                      ? const Color(0xFFF0AE34)
-                                                      : const Color(0xFFB7B6A9),
-                                                  size: 32,
+                                                ],
+                                              ),
+                                              Text(
+                                                '파 ${level.parShots}회 · $stars/3 별',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelLarge
+                                                    ?.copyWith(
+                                                      color: const Color(
+                                                        0xFF6A5947,
+                                                      ),
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                              if (rewardCandidates
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 10),
+                                                Container(
+                                                  key: const Key(
+                                                    'run_reward_selection',
+                                                  ),
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets.all(
+                                                    10,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFEAF4FF,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFF7BA4C7,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        selectedRewardId == null
+                                                            ? '런 보상 하나 선택'
+                                                            : '런 보상 선택 완료',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleSmall
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w800,
+                                                              color:
+                                                                  const Color(
+                                                                    0xFF285B7D,
+                                                                  ),
+                                                            ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      for (final reward
+                                                          in rewardCandidates) ...[
+                                                        Semantics(
+                                                          button: true,
+                                                          selected:
+                                                              selectedRewardId ==
+                                                              reward.id,
+                                                          label: reward.name,
+                                                          hint: reward
+                                                              .description,
+                                                          child: OutlinedButton(
+                                                            key: Key(
+                                                              'run_reward_${reward.id}',
+                                                            ),
+                                                            onPressed:
+                                                                selectedRewardId ==
+                                                                        null &&
+                                                                    !isSelectingReward
+                                                                ? () => onRewardSelected
+                                                                      ?.call(
+                                                                        reward
+                                                                            .id,
+                                                                      )
+                                                                : null,
+                                                            style: OutlinedButton.styleFrom(
+                                                              minimumSize:
+                                                                  const Size(
+                                                                    double
+                                                                        .infinity,
+                                                                    68,
+                                                                  ),
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        10,
+                                                                    vertical: 8,
+                                                                  ),
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                            child: Row(
+                                                              children: [
+                                                                ExcludeSemantics(
+                                                                  child: _RunRewardIcon(
+                                                                    reward:
+                                                                        reward,
+                                                                    selected:
+                                                                        selectedRewardId ==
+                                                                        reward
+                                                                            .id,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 10,
+                                                                ),
+                                                                Expanded(
+                                                                  child: Column(
+                                                                    mainAxisSize:
+                                                                        MainAxisSize
+                                                                            .min,
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .start,
+                                                                    children: [
+                                                                      Text(
+                                                                        reward
+                                                                            .name,
+                                                                        style: const TextStyle(
+                                                                          fontWeight:
+                                                                              FontWeight.w800,
+                                                                        ),
+                                                                      ),
+                                                                      const SizedBox(
+                                                                        height:
+                                                                            2,
+                                                                      ),
+                                                                      Text(
+                                                                        reward
+                                                                            .description,
+                                                                        style: Theme.of(
+                                                                          context,
+                                                                        ).textTheme.bodySmall,
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 6,
+                                                        ),
+                                                      ],
+                                                      if (isSelectingReward)
+                                                        const Center(
+                                                          child:
+                                                              CircularProgressIndicator(),
+                                                        ),
+                                                      if (rewardSelectionError !=
+                                                          null)
+                                                        Text(
+                                                          rewardSelectionError!,
+                                                          key: const Key(
+                                                            'run_reward_error',
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Color(
+                                                                  0xFFB3261E,
+                                                                ),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                              ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                              const SizedBox(height: 10),
+                                              Container(
+                                                key: const Key(
+                                                  'bonus_goal_status',
+                                                ),
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.all(
+                                                  10,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: bonusAchieved
+                                                      ? const Color(0xFFDDF3D5)
+                                                      : const Color(0xFFF7EAC0),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(
+                                                      bonusAchieved
+                                                          ? Icons.emoji_events
+                                                          : Icons.flag_outlined,
+                                                      size: 20,
+                                                      color: bonusAchieved
+                                                          ? const Color(
+                                                              0xFF2F8A62,
+                                                            )
+                                                          : const Color(
+                                                              0xFF8B6E35,
+                                                            ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            bonusAchieved
+                                                                ? '추가 도전 달성'
+                                                                : '추가 도전',
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .labelLarge
+                                                                ?.copyWith(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w800,
+                                                                  color:
+                                                                      bonusAchieved
+                                                                      ? const Color(
+                                                                          0xFF236B4A,
+                                                                        )
+                                                                      : const Color(
+                                                                          0xFF6A5947,
+                                                                        ),
+                                                                ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 2,
+                                                          ),
+                                                          Text(
+                                                            level.bonusGoal,
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .bodySmall
+                                                                ?.copyWith(
+                                                                  color: const Color(
+                                                                    0xFF5D6657,
+                                                                  ),
+                                                                ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                          ],
-                                        ),
-                                        Text(
-                                          '파 ${level.parShots}회 · $stars/3 별',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelLarge
-                                              ?.copyWith(
-                                                color: const Color(0xFF6A5947),
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Container(
-                                          key: const Key('bonus_goal_status'),
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: bonusAchieved
-                                                ? const Color(0xFFDDF3D5)
-                                                : const Color(0xFFF7EAC0),
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Icon(
-                                                bonusAchieved
-                                                    ? Icons.emoji_events
-                                                    : Icons.flag_outlined,
-                                                size: 20,
-                                                color: bonusAchieved
-                                                    ? const Color(0xFF2F8A62)
-                                                    : const Color(0xFF8B6E35),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
+                                              if (chainScoreAnalysis !=
+                                                  null) ...[
+                                                const SizedBox(height: 10),
+                                                CreativeChainScoreSummary(
+                                                  analysis: chainScoreAnalysis!,
+                                                  showDetails: GameFeedback
+                                                      .chainScoreDetailsEnabled,
+                                                ),
+                                              ],
+                                              if (!isFinal) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '${state.levelIndex + 2}단계가 열렸습니다.',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleSmall
+                                                      ?.copyWith(
+                                                        color: const Color(
+                                                          0xFF236B4A,
+                                                        ),
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                ),
+                                              ],
+                                              if (bestShot != null) ...[
+                                                const SizedBox(height: 4),
+                                                Text('내 최고 기록 $bestShot회'),
+                                              ],
+                                              const SizedBox(height: 14),
+                                              Container(
+                                                key: const Key(
+                                                  'clear_leaderboard',
+                                                ),
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.74),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFFE4C56A,
+                                                    ),
+                                                  ),
+                                                ),
                                                 child: Column(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: [
-                                                    Text(
-                                                      bonusAchieved
-                                                          ? '추가 도전 달성'
-                                                          : '추가 도전',
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .labelLarge
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w800,
-                                                            color: bonusAchieved
-                                                                ? const Color(
-                                                                    0xFF236B4A,
-                                                                  )
-                                                                : const Color(
-                                                                    0xFF6A5947,
-                                                                  ),
-                                                          ),
+                                                    const Text(
+                                                      '예시 기록 · 온라인 순위 아님',
                                                     ),
                                                     const SizedBox(height: 2),
                                                     Text(
-                                                      level.bonusGoal,
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodySmall
-                                                          ?.copyWith(
-                                                            color: const Color(
-                                                              0xFF5D6657,
-                                                            ),
-                                                          ),
+                                                      '현재는 데모용 기록만 표시합니다.',
+                                                      style: Theme.of(
+                                                        context,
+                                                      ).textTheme.bodySmall,
                                                     ),
+                                                    const SizedBox(height: 8),
+                                                    for (
+                                                      var i = 0;
+                                                      i < rows.length;
+                                                      i++
+                                                    )
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              vertical: 3,
+                                                            ),
+                                                        child: Row(
+                                                          children: [
+                                                            SizedBox(
+                                                              width: 28,
+                                                              child: Text(
+                                                                '${i + 1}위',
+                                                              ),
+                                                            ),
+                                                            Expanded(
+                                                              child: Text(
+                                                                rows[i].name,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              '${rows[i].shots}회',
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
                                                   ],
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                        if (chainScoreAnalysis != null) ...[
-                                          const SizedBox(height: 10),
-                                          CreativeChainScoreSummary(
-                                            analysis: chainScoreAnalysis!,
-                                            showDetails: GameFeedback
-                                                .chainScoreDetailsEnabled,
-                                          ),
-                                        ],
-                                        if (rewardCandidates.isNotEmpty) ...[
-                                          const SizedBox(height: 10),
-                                          Container(
-                                            key: const Key(
-                                              'run_reward_selection',
-                                            ),
-                                            width: double.infinity,
-                                            padding: const EdgeInsets.all(10),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFEAF4FF),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: const Color(0xFF7BA4C7),
-                                              ),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  selectedRewardId == null
-                                                      ? '런 보상 하나 선택'
-                                                      : '런 보상 선택 완료',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleSmall
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w800,
-                                                        color: const Color(
-                                                          0xFF285B7D,
-                                                        ),
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                for (final reward
-                                                    in rewardCandidates) ...[
-                                                  Semantics(
-                                                    button: true,
-                                                    selected:
-                                                        selectedRewardId ==
-                                                        reward.id,
-                                                    label: reward.name,
-                                                    hint: reward.description,
-                                                    child: OutlinedButton(
-                                                      key: Key(
-                                                        'run_reward_${reward.id}',
-                                                      ),
-                                                      onPressed:
-                                                          selectedRewardId ==
-                                                                  null &&
-                                                              !isSelectingReward
-                                                          ? () =>
-                                                                onRewardSelected
-                                                                    ?.call(
-                                                                      reward.id,
-                                                                    )
-                                                          : null,
-                                                      style: OutlinedButton.styleFrom(
-                                                        minimumSize: const Size(
-                                                          double.infinity,
-                                                          68,
-                                                        ),
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 10,
-                                                              vertical: 8,
-                                                            ),
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                8,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      child: Row(
-                                                        children: [
-                                                          ExcludeSemantics(
-                                                            child: _RunRewardIcon(
-                                                              reward: reward,
-                                                              selected:
-                                                                  selectedRewardId ==
-                                                                  reward.id,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 10,
-                                                          ),
-                                                          Expanded(
-                                                            child: Column(
-                                                              mainAxisSize:
-                                                                  MainAxisSize
-                                                                      .min,
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: [
-                                                                Text(
-                                                                  reward.name,
-                                                                  style: const TextStyle(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w800,
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                  height: 2,
-                                                                ),
-                                                                Text(
-                                                                  reward
-                                                                      .description,
-                                                                  style: Theme.of(
-                                                                    context,
-                                                                  ).textTheme.bodySmall,
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 6),
+                                      ),
+                                      IgnorePointer(
+                                        child: Align(
+                                          alignment: Alignment.bottomCenter,
+                                          child: Container(
+                                            key: const Key('clear_scroll_fade'),
+                                            height: 24,
+                                            decoration: const BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Color(0x00FFF7DB),
+                                                  Color(0xFFFFF7DB),
                                                 ],
-                                                if (isSelectingReward)
-                                                  const Center(
-                                                    child:
-                                                        CircularProgressIndicator(),
-                                                  ),
-                                                if (rewardSelectionError !=
-                                                    null)
-                                                  Text(
-                                                    rewardSelectionError!,
-                                                    key: const Key(
-                                                      'run_reward_error',
-                                                    ),
-                                                    style: const TextStyle(
-                                                      color: Color(0xFFB3261E),
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                        if (!isFinal) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '${state.levelIndex + 2}단계가 열렸습니다.',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleSmall
-                                                ?.copyWith(
-                                                  color: const Color(
-                                                    0xFF236B4A,
-                                                  ),
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                          ),
-                                        ],
-                                        if (bestShot != null) ...[
-                                          const SizedBox(height: 4),
-                                          Text('내 최고 기록 $bestShot회'),
-                                        ],
-                                        const SizedBox(height: 14),
-                                        Container(
-                                          key: const Key('clear_leaderboard'),
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.74,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            border: Border.all(
-                                              color: const Color(0xFFE4C56A),
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              const Text('예시 기록 · 온라인 순위 아님'),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '현재는 데모용 기록만 표시합니다.',
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.bodySmall,
                                               ),
-                                              const SizedBox(height: 8),
-                                              for (
-                                                var i = 0;
-                                                i < rows.length;
-                                                i++
-                                              )
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        vertical: 3,
-                                                      ),
-                                                  child: Row(
-                                                    children: [
-                                                      SizedBox(
-                                                        width: 28,
-                                                        child: Text(
-                                                          '${i + 1}위',
-                                                        ),
-                                                      ),
-                                                      Expanded(
-                                                        child: Text(
-                                                          rows[i].name,
-                                                        ),
-                                                      ),
-                                                      Text('${rows[i].shots}회'),
-                                                    ],
-                                                  ),
-                                                ),
-                                            ],
+                                            ),
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Padding(
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFDF3D0),
+                                    border: Border(
+                                      top: BorderSide(color: Color(0x33A47842)),
+                                    ),
+                                  ),
                                   padding: const EdgeInsets.fromLTRB(
                                     18,
-                                    0,
+                                    8,
                                     18,
                                     18,
                                   ),
@@ -4308,6 +5197,12 @@ class _RunRewardIcon extends StatelessWidget {
         icon: Icons.workspace_premium_rounded,
         foreground: const Color(0xFF8A651D),
         background: const Color(0xFFFFE8A9),
+      );
+    case RunRewardEffectKind.nextStageHintAccess:
+      return (
+        icon: Icons.lightbulb_rounded,
+        foreground: const Color(0xFF8A5B00),
+        background: const Color(0xFFFFF0B8),
       );
   }
 }
@@ -4823,6 +5718,246 @@ String _chargeGaugeMessage(ChargeGaugeState state) {
   return '${_chargeGaugeStateLabel(state)} · 손을 떼면 발사됩니다';
 }
 
+/// 월드 좌표를 바꾸지 않고 화면상의 공 위치와 게이지를 연결한다.
+///
+/// 보드 안에서만 clamp하므로 홈 인디케이터 등의 Safe Area 침범은 상위
+/// 레이아웃이 맡고, 이 위젯은 홀·풍선처럼 시선이 필요한 기물을 가리지
+/// 않도록 결정론적인 대체 위치를 고른다.
+class _FloatingChargeGauge extends StatelessWidget {
+  const _FloatingChargeGauge({
+    required this.boardSize,
+    required this.scale,
+    required this.state,
+    this.hintKey,
+    required this.gaugeState,
+    required this.power,
+    required this.side,
+    required this.reducedMotion,
+    required this.strongFlash,
+  });
+
+  static const _gaugeWidth = 38.0;
+  static const _edgeInset = 8.0;
+  static const _anchorGap = 64.0;
+
+  final Size boardSize;
+  final double scale;
+  final GameState state;
+
+  /// GameState 밖에 존재하는 비물리 수집물도 시각상 핵심 기물이므로
+  /// 레일 배치 후보에서 함께 피한다.
+  final HintKeyDefinition? hintKey;
+  final ChargeGaugeState gaugeState;
+  final double power;
+  final ChargeGaugeSide side;
+  final bool reducedMotion;
+  final bool strongFlash;
+
+  @override
+  Widget build(BuildContext context) {
+    final placement = _placement();
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            CustomPaint(
+              painter: _ChargeGaugeAnchorPainter(
+                from: placement.ballCenter,
+                to: placement.anchorEnd,
+              ),
+              child: const SizedBox.expand(),
+            ),
+            Positioned.fromRect(
+              rect: placement.rect,
+              child: SizedBox(
+                key: Key('charge_gauge_${side.name}'),
+                child: _ChargeGaugeRail(
+                  state: gaugeState,
+                  power: power,
+                  side: side,
+                  reducedMotion: reducedMotion,
+                  strongFlash: strongFlash,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  _GaugePlacement _placement() {
+    final height = math.min(180.0, math.max(132.0, boardSize.height * 0.28));
+    final ball = state.activeBall;
+    final ballCenter = Offset(ball.position.x * scale, ball.position.y * scale);
+    final boardCenter = Offset(boardSize.width / 2, boardSize.height / 2);
+    final towardCenter = boardCenter - ballCenter;
+    final distance = towardCenter.distance;
+    final unit = distance < 0.001
+        ? const Offset(1, 0)
+        : towardCenter / distance;
+    final ballRadius = math.max(10.0, ball.radius * scale);
+    final preferredCenter =
+        ballCenter + unit * (ballRadius + _anchorGap + height / 2);
+
+    Rect at(Offset center) => _clampRect(
+      Rect.fromCenter(center: center, width: _gaugeWidth, height: height),
+    );
+    final opposite = -unit;
+    final sideX = side == ChargeGaugeSide.right
+        ? boardSize.width - _edgeInset - _gaugeWidth / 2
+        : _edgeInset + _gaugeWidth / 2;
+    // 기본 side 설정은 중앙 공에서도 실제 배치 차이를 만들어야 한다. 공이
+    // 가장자리에 있을 때만 아래 fallback이 안전한 반대 위치를 선택한다.
+    final sideDirection = side == ChargeGaugeSide.right
+        ? const Offset(1, 0)
+        : const Offset(-1, 0);
+    final sidePreferredCenter =
+        ballCenter + sideDirection * (ballRadius + _anchorGap + height / 2);
+    final candidates = <Rect>[
+      at(sidePreferredCenter),
+      at(preferredCenter),
+      at(ballCenter + opposite * (ballRadius + _anchorGap + height / 2)),
+      at(Offset(sideX, ballCenter.dy)),
+      at(Offset(boardSize.width - sideX, ballCenter.dy)),
+    ];
+    const protectedEntityTypes = <EntityType>{
+      EntityType.ball,
+      EntityType.hole,
+      EntityType.balloon,
+      EntityType.crate,
+      EntityType.bumper,
+      EntityType.stickySurface,
+      EntityType.weight,
+      EntityType.switchPad,
+      EntityType.gate,
+      EntityType.spikeSource,
+      EntityType.powerSlider,
+      EntityType.rotatingReflector,
+    };
+    final blocked = [
+      for (final entity in state.entities)
+        if (entity.active && protectedEntityTypes.contains(entity.type))
+          _entityRect(entity).inflate(8),
+      if (hintKey != null) _hintKeyRect(hintKey!).inflate(8),
+    ];
+    double overlapArea(Rect candidate) =>
+        blocked.fold<double>(0, (total, obstacle) {
+          final intersection = candidate.intersect(obstacle);
+          if (intersection.width <= 0 || intersection.height <= 0) return total;
+          return total + intersection.width * intersection.height;
+        });
+
+    Rect? clearCandidate;
+    for (final candidate in candidates) {
+      if (overlapArea(candidate) == 0) {
+        clearCandidate = candidate;
+        break;
+      }
+    }
+    // 모든 후보가 막힌 밀집 배치에서도 임의의 마지막 후보를 고르지 않고
+    // 핵심 기물과의 실제 겹침 면적이 가장 작은 위치를 택한다.
+    final rect =
+        clearCandidate ??
+        candidates.reduce(
+          (best, candidate) =>
+              overlapArea(candidate) < overlapArea(best) ? candidate : best,
+        );
+    final closest = Offset(
+      ballCenter.dx.clamp(rect.left, rect.right),
+      ballCenter.dy.clamp(rect.top, rect.bottom),
+    );
+    final vector = closest - ballCenter;
+    final anchorEnd = vector.distance <= 30
+        ? closest
+        : ballCenter + vector / vector.distance * 30;
+    return _GaugePlacement(
+      rect: rect,
+      ballCenter: ballCenter,
+      anchorEnd: anchorEnd,
+    );
+  }
+
+  Rect _entityRect(EntityState entity) {
+    final bounds = entity.bounds;
+    return Rect.fromLTRB(
+      bounds.left * scale,
+      bounds.top * scale,
+      bounds.right * scale,
+      bounds.bottom * scale,
+    );
+  }
+
+  Rect _hintKeyRect(HintKeyDefinition key) {
+    final bounds = key.bounds;
+    return Rect.fromLTRB(
+      bounds.left * scale,
+      bounds.top * scale,
+      bounds.right * scale,
+      bounds.bottom * scale,
+    );
+  }
+
+  Rect _clampRect(Rect rect) {
+    final maxLeft = math.max(
+      _edgeInset,
+      boardSize.width - _edgeInset - rect.width,
+    );
+    final maxTop = math.max(
+      _edgeInset,
+      boardSize.height - _edgeInset - rect.height,
+    );
+    return Rect.fromLTWH(
+      rect.left.clamp(_edgeInset, maxLeft),
+      rect.top.clamp(_edgeInset, maxTop),
+      rect.width,
+      rect.height,
+    );
+  }
+}
+
+class _GaugePlacement {
+  const _GaugePlacement({
+    required this.rect,
+    required this.ballCenter,
+    required this.anchorEnd,
+  });
+
+  final Rect rect;
+  final Offset ballCenter;
+  final Offset anchorEnd;
+}
+
+class _ChargeGaugeAnchorPainter extends CustomPainter {
+  const _ChargeGaugeAnchorPainter({required this.from, required this.to});
+
+  final Offset from;
+  final Offset to;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if ((to - from).distance < 2) return;
+    final paint = Paint()
+      ..color = const Color(0xB824352D)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(from, to, paint);
+    canvas.drawCircle(from, 2.5, Paint()..color = const Color(0xFFEAF6E9));
+    canvas.drawCircle(
+      from,
+      2.5,
+      Paint()
+        ..color = const Color(0xB824352D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChargeGaugeAnchorPainter oldDelegate) =>
+      oldDelegate.from != from || oldDelegate.to != to;
+}
+
 class _ChargeGaugeRail extends StatefulWidget {
   const _ChargeGaugeRail({
     required this.state,
@@ -5122,6 +6257,7 @@ List<_LeaderboardRow> _leaderboardRows(GameState state) {
 class _Hud extends StatelessWidget {
   const _Hud({
     this.compact = false,
+    this.dense = false,
     this.tutorialActive = false,
     required this.state,
     required this.unlockedLevel,
@@ -5135,6 +6271,7 @@ class _Hud extends StatelessWidget {
   });
 
   final bool compact;
+  final bool dense;
   final bool tutorialActive;
   final GameState state;
   final int unlockedLevel;
@@ -5153,7 +6290,7 @@ class _Hud extends StatelessWidget {
     if (compact) {
       return Container(
         key: const Key('compact_hud'),
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        padding: EdgeInsets.fromLTRB(8, dense ? 5 : 6, 8, dense ? 5 : 6),
         decoration: BoxDecoration(
           color: const Color(0xE6F7FAF3),
           borderRadius: BorderRadius.circular(10),
@@ -5173,14 +6310,51 @@ class _Hud extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    state.levelName,
-                    maxLines: 2,
-                    softWrap: true,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  child: showStageSelector && dense
+                      ? SizedBox(
+                          height: 30,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              for (
+                                var index = 0;
+                                index < levels.length;
+                                index++
+                              )
+                                Semantics(
+                                  label: index <= unlockedLevel
+                                      ? '${index + 1}단계 선택'
+                                      : '${index + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
+                                  button: index <= unlockedLevel,
+                                  selected: state.levelIndex == index,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: ChoiceChip(
+                                      key: Key('level_$index'),
+                                      label: Text(
+                                        state.levelIndex == index
+                                            ? state.levelName
+                                            : '${index + 1}',
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.zero,
+                                      selected: state.levelIndex == index,
+                                      onSelected: index <= unlockedLevel
+                                          ? (_) => onSelectLevel(index)
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        )
+                      : Text(
+                          state.levelName,
+                          maxLines: 2,
+                          softWrap: true,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
                 ),
                 const SizedBox(width: 6),
                 Text('시도 ${state.shotCount}'),
@@ -5219,7 +6393,7 @@ class _Hud extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 2),
-            if (showStageSelector)
+            if (showStageSelector && !dense)
               SizedBox(
                 height: 30,
                 child: ListView(
@@ -5513,6 +6687,7 @@ class _TutorialCoachMark extends StatelessWidget {
 class _ControlPanel extends StatelessWidget {
   const _ControlPanel({
     this.compact = false,
+    this.dense = false,
     this.tutorialActive = false,
     required this.state,
     required this.onRewind,
@@ -5522,6 +6697,7 @@ class _ControlPanel extends StatelessWidget {
   });
 
   final bool compact;
+  final bool dense;
   final bool tutorialActive;
   final GameState state;
   final VoidCallback onRewind;
@@ -5549,30 +6725,42 @@ class _ControlPanel extends StatelessWidget {
         ),
         child: Row(
           children: [
-            if (!tutorialActive)
+            if (!tutorialActive && !dense)
               Expanded(
                 child: Text(
                   state.equippedTrait != null
-                      ? '공을 길게 눌러 힘을 모으세요'
+                      ? '공을 길게 눌러 힘 모으기'
                       : state.selectedTrait == null
                       ? state.traitSources.isEmpty
-                            ? '공을 길게 눌러 힘을 모으세요'
-                            : '물체를 눌러 속성을 고르세요'
+                            ? '공을 길게 눌러 힘 모으기'
+                            : '물체를 눌러 속성 고르기'
                       : '선택: ${state.selectedTrait!.label}',
                   maxLines: 2,
                   softWrap: true,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               )
+            else if (state.equippedTrait != null)
+              Expanded(
+                child: Text(
+                  '공을 길게 눌러 힘을 모으세요',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              )
             else
               const Spacer(),
-            Text(
-              '공 속성: ${state.equippedTrait?.label ?? '없음'}',
-              maxLines: 2,
-              softWrap: true,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+            Flexible(
+              child: Text(
+                '공 속성: ${state.equippedTrait?.label ?? '없음'}',
+                maxLines: dense ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
+                softWrap: !dense,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
             IconButton(
               key: const Key('rewind_button'),
@@ -5610,11 +6798,11 @@ class _ControlPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   state.equippedTrait != null
-                      ? '공을 길게 눌러 힘을 모으세요'
+                      ? '공을 길게 눌러 힘 모으기'
                       : state.selectedTrait == null
                       ? state.traitSources.isEmpty
-                            ? '공을 길게 눌러 힘을 모으세요'
-                            : '물체를 눌러 속성을 고르세요'
+                            ? '공을 길게 눌러 힘 모으기'
+                            : '물체를 눌러 속성 고르기'
                       : '선택: ${state.selectedTrait!.label}',
                 ),
               ),

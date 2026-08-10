@@ -5,6 +5,7 @@ import '../domain/stage_pattern.dart';
 import '../domain/shot_input.dart';
 import '../persistence/replay_library_store.dart';
 import '../persistence/run_state_store.dart';
+import 'run_hint_state.dart';
 import 'run_reward.dart';
 import 'run_state.dart';
 import 'stage_shuffle_bag.dart';
@@ -21,6 +22,8 @@ typedef StagePatternDrawPolicy =
       required int rootSeed,
     });
 
+typedef HintVersionResolver = int Function(String stageId, String patternId);
+
 /// 스테이지 선택 화면과 결정론 패턴 런 상태를 연결한다.
 class StagePatternSession {
   StagePatternSession({
@@ -30,6 +33,7 @@ class StagePatternSession {
     this.fixedRootSeed,
     this.fixedRunId,
     this.fixedResolverVersion,
+    this.hintVersionResolver,
   }) : _now = now ?? DateTime.now {
     if (fixedRootSeed != null &&
         (fixedRootSeed! < 0 || fixedRootSeed! > 0xffffffff)) {
@@ -57,6 +61,7 @@ class StagePatternSession {
   final int? fixedRootSeed;
   final String? fixedRunId;
   final String? fixedResolverVersion;
+  final HintVersionResolver? hintVersionResolver;
   RunState? _state;
   bool _loaded = false;
   Future<void> _operationTail = Future<void>.value();
@@ -69,6 +74,34 @@ class StagePatternSession {
       _legacyCurrentShotHistoryAmbiguous;
 
   int get ambiguousLegacyCopyActionCount => _ambiguousLegacyCopyActionCount;
+
+  int _hintVersionFor(String stageId, String patternId) {
+    final version =
+        hintVersionResolver?.call(stageId, patternId) ?? currentHintVersion;
+    if (version <= 0) {
+      throw StateError('힌트 버전은 양수여야 합니다: $stageId/$patternId v$version');
+    }
+    return version;
+  }
+
+  /// 현재 확정된 패턴에 사용 가능한 힌트 접근권이다.
+  RunHintEntitlement? get currentHintEntitlement {
+    final current = _state;
+    if (current?.currentStageId == null || current?.currentPatternId == null) {
+      return null;
+    }
+    return _hintEntitlementFor(
+      current!,
+      HintIdentity(
+        stageId: current.currentStageId!,
+        patternId: current.currentPatternId!,
+        hintVersion: _hintVersionFor(
+          current.currentStageId!,
+          current.currentPatternId!,
+        ),
+      ),
+    );
+  }
 
   Future<RunState?> loadState() => _enqueueOperation(() async {
     await _loadOnce();
@@ -369,11 +402,19 @@ class StagePatternSession {
     );
   }
 
-  Future<List<RunReward>> prepareRewardSelection({required String stageId}) =>
-      _enqueueOperation(() => _prepareRewardSelection(stageId: stageId));
+  Future<List<RunReward>> prepareRewardSelection({
+    required String stageId,
+    bool includeNextStageHint = true,
+  }) => _enqueueOperation(
+    () => _prepareRewardSelection(
+      stageId: stageId,
+      includeNextStageHint: includeNextStageHint,
+    ),
+  );
 
   Future<List<RunReward>> _prepareRewardSelection({
     required String stageId,
+    required bool includeNextStageHint,
   }) async {
     await _loadOnce();
     final current = _state;
@@ -388,7 +429,13 @@ class StagePatternSession {
       final selectedIsKnown =
           current.selectedRewardId == null ||
           restored.any((reward) => reward.id == current.selectedRewardId);
+      final restoredHintIsSupported =
+          includeNextStageHint ||
+          !restored.any(
+            (reward) => reward.id == runRewardNextStageHintAccessId,
+          );
       if (restored.length == RunRewardCandidateGenerator.candidateCount &&
+          restoredHintIsSupported &&
           selectedIsKnown) {
         return restored;
       }
@@ -400,6 +447,7 @@ class StagePatternSession {
       rootSeed: current.rootSeed,
       stageId: stageId,
       patternSeed: current.currentPatternSeed!,
+      includeNextStageHint: includeNextStageHint && current.nextStageId != null,
     );
     final previousSelection = RunRewardInventory(
       current.acquiredRewards,
@@ -447,6 +495,24 @@ class StagePatternSession {
       rewardId: rewardId,
     );
     final alreadyAcquired = current.acquiredRewards.contains(selectionRecord);
+    var entitlements = current.hintEntitlements;
+    if (!alreadyAcquired &&
+        reward.effectKind == RunRewardEffectKind.nextStageHintAccess) {
+      final nextStageId = current.nextStageId;
+      final nextPatternId = current.nextStagePatternId;
+      if (nextStageId == null || nextPatternId == null) {
+        throw StateError('다음 단계가 없는 런에는 다음 스테이지 팁을 선택할 수 없습니다.');
+      }
+      entitlements = _mergeHintEntitlement(
+        entitlements,
+        HintIdentity(
+          stageId: nextStageId,
+          patternId: nextPatternId,
+          hintVersion: _hintVersionFor(nextStageId, nextPatternId),
+        ),
+        HintEntitlementSource.clearReward,
+      );
+    }
     final next = _copyState(
       current,
       phase: RunPhase.rewardSelectionCompleted,
@@ -459,10 +525,189 @@ class StagePatternSession {
               ? 1
               : 0),
       acquiredRewards: [...current.acquiredRewards, rewardId, selectionRecord],
+      hintEntitlements: entitlements,
     );
     await _store.save(next);
     _state = next;
     return reward;
+  }
+
+  /// 물리 resolver가 확정한 직접 공 접촉을 저장한다. 같은 key는 재시작·복원
+  /// 뒤에도 한 번만 entitlement에 병합된다.
+  Future<bool> recordKeyCollection({
+    required String keyId,
+    required String sourceBallId,
+    required int shotIndex,
+    int? hintVersion,
+  }) => _enqueueOperation(
+    () => _recordKeyCollection(
+      keyId: keyId,
+      sourceBallId: sourceBallId,
+      shotIndex: shotIndex,
+      hintVersion: hintVersion,
+    ),
+  );
+
+  Future<bool> _recordKeyCollection({
+    required String keyId,
+    required String sourceBallId,
+    required int shotIndex,
+    required int? hintVersion,
+  }) async {
+    final directBall =
+        sourceBallId == 'active_ball' || sourceBallId.startsWith('spent_ball_');
+    if (keyId.trim().isEmpty ||
+        sourceBallId.trim().isEmpty ||
+        !directBall ||
+        shotIndex < 0) {
+      throw ArgumentError('열쇠 수집 정보가 올바르지 않습니다.');
+    }
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.phase != RunPhase.playing) {
+      throw StateError('플레이 중에만 열쇠를 수집할 수 있습니다.');
+    }
+    final resolvedHintVersion =
+        hintVersion ??
+        _hintVersionFor(current.currentStageId!, current.currentPatternId!);
+    final identity = HintIdentity(
+      stageId: current.currentStageId!,
+      patternId: current.currentPatternId!,
+      hintVersion: resolvedHintVersion,
+    );
+    final duplicate = current.keyCollections.any(
+      (record) => record.storageKey == '${identity.storageKey}\u0000$keyId',
+    );
+    if (duplicate) return false;
+    final entitlements = _mergeHintEntitlement(
+      current.hintEntitlements,
+      identity,
+      HintEntitlementSource.stageKey,
+    );
+    final collections = [
+      ...current.keyCollections,
+      KeyCollectionRecord(
+        identity: identity,
+        keyId: keyId,
+        sourceBallId: sourceBallId,
+        shotIndex: shotIndex,
+        acquiredAt: _now().toUtc(),
+      ),
+    ];
+    final next = _copyState(
+      current,
+      phase: current.phase,
+      nextDraw: _savedNextDraw(current),
+      hintEntitlements: entitlements,
+      keyCollections: collections,
+    );
+    await _store.save(next);
+    _state = next;
+    return true;
+  }
+
+  /// 실패한 발사만 누적한다. 단계 완료 score와 달리 현재 시도 중에도 힌트
+  /// 레벨 해금에 사용할 수 있다.
+  Future<RunHintEntitlement?> recordHintFailure({int? hintVersion}) =>
+      _enqueueOperation(() => _recordHintFailure(hintVersion));
+
+  Future<RunHintEntitlement?> _recordHintFailure(int? hintVersion) async {
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.phase != RunPhase.playing) return null;
+    final resolvedHintVersion =
+        hintVersion ??
+        _hintVersionFor(current.currentStageId!, current.currentPatternId!);
+    final identity = HintIdentity(
+      stageId: current.currentStageId!,
+      patternId: current.currentPatternId!,
+      hintVersion: resolvedHintVersion,
+    );
+    final existing = _hintEntitlementFor(current, identity);
+    if (existing == null) return null;
+    final updated = existing.copyWith(
+      failedShotCount: existing.failedShotCount + 1,
+    );
+    final next = _copyState(
+      current,
+      phase: current.phase,
+      nextDraw: _savedNextDraw(current),
+      hintEntitlements: _replaceHintEntitlement(
+        current.hintEntitlements,
+        updated,
+      ),
+    );
+    await _store.save(next);
+    _state = next;
+    return updated;
+  }
+
+  /// 접근권을 소모하지 않고 열람 상태와 요청한 힌트 레벨만 저장한다.
+  Future<RunHintEntitlement?> openHint({
+    int? hintVersion,
+    int? requestedLevel,
+  }) => _enqueueOperation(
+    () => _openHint(hintVersion: hintVersion, requestedLevel: requestedLevel),
+  );
+
+  Future<RunHintEntitlement?> _openHint({
+    required int? hintVersion,
+    required int? requestedLevel,
+  }) async {
+    if (requestedLevel != null && (requestedLevel < 1 || requestedLevel > 2)) {
+      throw ArgumentError.value(
+        requestedLevel,
+        'requestedLevel',
+        '현재 HintCatalog 계약의 1~2단계여야 합니다.',
+      );
+    }
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.phase != RunPhase.playing) return null;
+    final resolvedHintVersion =
+        hintVersion ??
+        _hintVersionFor(current.currentStageId!, current.currentPatternId!);
+    final identity = HintIdentity(
+      stageId: current.currentStageId!,
+      patternId: current.currentPatternId!,
+      hintVersion: resolvedHintVersion,
+    );
+    final existing = _hintEntitlementFor(current, identity);
+    if (existing == null) return null;
+    final allowedByFailures = existing.failedShotCount >= 2 ? 2 : 1;
+    final requested = requestedLevel ?? 1;
+    // L1을 읽은 뒤의 "한 단계 더 구체적으로" 요청은 실패 횟수와 무관하게
+    // 바로 다음 단계까지만 허용한다. 현재 카탈로그는 모든 패턴이 L1/L2로
+    // 고정되어 있으므로 저장 계층도 존재하지 않는 L3를 만들지 않는다.
+    final allowedByExplicitRequest =
+        existing.consumed && requested > existing.unlockedHintLevel
+        ? math.min(2, existing.unlockedHintLevel + 1)
+        : existing.unlockedHintLevel;
+    final allowedLevel = math.max(allowedByFailures, allowedByExplicitRequest);
+    final nextLevel = math.min(
+      2,
+      math.max(existing.unlockedHintLevel, math.min(requested, allowedLevel)),
+    );
+    final updated = existing.copyWith(
+      unlockedHintLevel: nextLevel,
+      consumed: true,
+      openedCount: existing.openedCount + 1,
+      failureCountAtFirstOpen: existing.consumed
+          ? existing.failureCountAtFirstOpen
+          : existing.failedShotCount,
+    );
+    final next = _copyState(
+      current,
+      phase: current.phase,
+      nextDraw: _savedNextDraw(current),
+      hintEntitlements: _replaceHintEntitlement(
+        current.hintEntitlements,
+        updated,
+      ),
+    );
+    await _store.save(next);
+    _state = next;
+    return updated;
   }
 
   RunRewardInventory get rewardInventory =>
@@ -1036,6 +1281,59 @@ class StagePatternSession {
     );
   }
 
+  RunHintEntitlement? _hintEntitlementFor(
+    RunState state,
+    HintIdentity identity,
+  ) {
+    for (final entitlement in state.hintEntitlements) {
+      if (entitlement.identity.storageKey == identity.storageKey) {
+        return entitlement;
+      }
+    }
+    return null;
+  }
+
+  List<RunHintEntitlement> _mergeHintEntitlement(
+    Iterable<RunHintEntitlement> values,
+    HintIdentity identity,
+    HintEntitlementSource source,
+  ) {
+    final existing = values
+        .where(
+          (entitlement) =>
+              entitlement.identity.storageKey == identity.storageKey,
+        )
+        .toList(growable: false);
+    if (existing.length > 1) {
+      throw StateError('같은 패턴·버전의 힌트 접근권이 중복 저장되었습니다.');
+    }
+    if (existing.isEmpty) {
+      return List.unmodifiable([
+        ...values,
+        RunHintEntitlement(
+          identity: identity,
+          sources: [source],
+          acquiredAt: _now().toUtc(),
+        ),
+      ]);
+    }
+    final merged = existing.single.copyWith(
+      sources: {...existing.single.sources, source},
+    );
+    return _replaceHintEntitlement(values, merged);
+  }
+
+  List<RunHintEntitlement> _replaceHintEntitlement(
+    Iterable<RunHintEntitlement> values,
+    RunHintEntitlement replacement,
+  ) => List.unmodifiable([
+    for (final value in values)
+      if (value.identity.storageKey == replacement.identity.storageKey)
+        replacement
+      else
+        value,
+  ]);
+
   RunState _withCurrentDraw(
     RunState state,
     StagePatternDraw draw, {
@@ -1076,6 +1374,8 @@ class StagePatternSession {
     Iterable<RunTraitActionRecord>? pendingTraitActions,
     Iterable<String>? acquiredRewards,
     Map<String, String>? replayReferences,
+    Iterable<RunHintEntitlement>? hintEntitlements,
+    Iterable<KeyCollectionRecord>? keyCollections,
     int? rewardCandidateSeed,
     Iterable<String>? rewardCandidateIds,
     String? selectedRewardId,
@@ -1115,6 +1415,8 @@ class StagePatternSession {
       totalScore: totalScore ?? state.totalScore,
       replayReferences: replayReferences ?? state.replayReferences,
       shotInputLog: shotInputLog ?? state.shotInputLog,
+      hintEntitlements: hintEntitlements ?? state.hintEntitlements,
+      keyCollections: keyCollections ?? state.keyCollections,
       startedAt: state.startedAt,
       updatedAt: updatedAt,
     );

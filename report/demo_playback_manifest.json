@@ -1,0 +1,60 @@
+{
+  "manifestVersion": 1,
+  "title": "Property Shot — bouncy_01 guided gameplay demo",
+  "contract": {
+    "demoPlanId": "demo_bouncy_01_v1",
+    "stageId": "stage_bouncy",
+    "patternId": "stage_bouncy_01",
+    "fixtureId": "stage_bouncy_01_bouncy_multi_wall_reflection",
+    "traitSourceObjectId": "jelly",
+    "aim": { "degrees": 48, "power": 0.9 },
+    "launchControlLabel": "검증된 48도 90퍼센트 시연 발사",
+    "expectedEvents": ["bounced", "bounced", "bounced", "hole_entered"],
+    "forbiddenEvents": ["direct_clear"],
+    "keyId": "bouncy_01_hint_key",
+    "hintLevels": [1, 2]
+  },
+  "video": {
+    "width": 390,
+    "height": 844,
+    "fps": 8,
+    "durationSeconds": 60,
+    "codec": "h264",
+    "container": "mov",
+    "orientation": "identity"
+  },
+  "browserCapture": {
+    "durationSeconds": 22,
+    "requiredPlanId": "demo_bouncy_01_v1",
+    "notes": "The active 22-second take shows key collection, L1/L2, jelly transfer, visual aiming, then the exact 48°/0.90 demo control and its non-direct three-wall success. The action sequence must end with 1.5–2.0 seconds of capture slack, so no long clear-popup still is recorded."
+  },
+  "sourceVerification": {
+    "requiredSuites": [
+      "test/hint_key_ui_golden_test.dart",
+      "test/hint_ui_widget_test.dart",
+      "test/run_reward_selection_widget_test.dart",
+      "test/charge_gauge_golden_test.dart"
+    ]
+  },
+  "featureScenes": [
+    {"id":"key-locked-compact","seconds":2,"source":"test/goldens/hint_key_locked_320x568.png","purpose":"Compact locked key state"},
+    {"id":"key-locked","seconds":2,"source":"test/goldens/hint_key_locked_390x844.png","purpose":"Collectible key and locked hint state"},
+    {"id":"key-locked-reduced-motion","seconds":2,"source":"test/goldens/hint_key_locked_reduced_motion_390x844.png","purpose":"Static reduced-motion key"},
+    {"id":"key-collected","seconds":2,"source":"test/goldens/hint_key_collected_vfx_390x844.png","purpose":"Key collection acknowledgement"},
+    {"id":"key-collected-hidden","seconds":2,"source":"test/goldens/hint_key_collected_hidden_390x844.png","purpose":"Key removed after collection"},
+    {"id":"hint-available","seconds":2,"source":"test/goldens/hint_key_available_390x844.png","purpose":"Unlocked hint control"},
+    {"id":"hint-level-1","seconds":2,"source":"test/goldens/hint_key_sheet_l1_390x844.png","purpose":"Concrete L1 route hint"},
+    {"id":"hint-level-2","seconds":2,"source":"test/goldens/hint_key_sheet_l2_390x844.png","purpose":"Concrete L2 route hint"},
+    {"id":"compact-next-hint-reward","seconds":2,"source":"test/goldens/run_reward_320x568_hint_first.png","purpose":"Compact clear reward, including the next-stage hint option"},
+    {"id":"reward-icon-set","seconds":2,"source":"test/goldens/run_reward_390x844.png","purpose":"Run reward icon set"},
+    {"id":"reward-compact-layout","seconds":2,"source":"test/goldens/run_reward_320x700.png","purpose":"Compact reward layout"},
+    {"id":"reward-options-4-6","seconds":2,"source":"test/goldens/run_reward_390x844_rewards_4_6.png","purpose":"Distinct reward options 4–6"},
+    {"id":"reward-options-6-8","seconds":2,"source":"test/goldens/run_reward_390x844_rewards_6_8.png","purpose":"Distinct reward options 6–8"},
+    {"id":"charge-green","seconds":2,"source":"test/goldens/charge_gauge_green_right_390x844.png","purpose":"Visible green power gauge"},
+    {"id":"charge-yellow","seconds":2,"source":"test/goldens/charge_gauge_yellow_right_390x844.png","purpose":"Visible yellow power gauge"},
+    {"id":"charge-red","seconds":2,"source":"test/goldens/charge_gauge_red_right_390x844.png","purpose":"Visible red power gauge"},
+    {"id":"charge-warning","seconds":2,"source":"test/goldens/charge_gauge_warningRed_right_390x844.png","purpose":"Warning-red power gauge"},
+    {"id":"charge-cancelled","seconds":2,"source":"test/goldens/charge_gauge_cancelledGray_right_390x844.png","purpose":"Cancelled-gray power gauge"},
+    {"id":"gauge-avoids-key","seconds":2,"source":"test/goldens/charge_gauge_hint_key_390x844.png","purpose":"Power gauge avoids the key"}
+  ]
+}

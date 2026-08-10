@@ -48,8 +48,8 @@ const stageBalloonRepresentatives = <StageBalloonRepresentative>[
   StageBalloonRepresentative(
     patternId: 'stage_balloon_02',
     strategyId: 'none',
-    degree: 232,
-    power: 0.725,
+    degree: 233,
+    power: 0.780,
     familyId: 'balloon_bounce',
   ),
   StageBalloonRepresentative(
@@ -62,8 +62,8 @@ const stageBalloonRepresentatives = <StageBalloonRepresentative>[
   StageBalloonRepresentative(
     patternId: 'stage_balloon_03',
     strategyId: 'none',
-    degree: 66,
-    power: 0.945,
+    degree: 202,
+    power: 0.835,
     familyId: 'none_bypass',
   ),
   StageBalloonRepresentative(

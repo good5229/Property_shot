@@ -122,6 +122,42 @@ void main() {
     expect(icons, hasLength(initialRunRewards.length));
   });
 
+  testWidgets('320x568에서는 다음 스테이지 팁 보상이 첫 viewport에 보인다', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final hintReward = initialRunRewards.firstWhere(
+      (reward) => reward.id == runRewardNextStageHintAccessId,
+    );
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: const Key('run_reward_compact_hint_golden'),
+        child: _popupApp(rewards: [hintReward, ...initialRunRewards.take(2)]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final panel = tester.getRect(find.byKey(const Key('clear_panel')));
+    final selection = tester.getRect(
+      find.byKey(const Key('run_reward_selection')),
+    );
+    final hintChoice = tester.getRect(
+      find.byKey(Key('run_reward_${hintReward.id}')),
+    );
+    final leaderboard = tester.getRect(
+      find.byKey(const Key('clear_leaderboard')),
+    );
+    expect(selection.top, greaterThanOrEqualTo(panel.top));
+    expect(selection.top, lessThan(panel.bottom - 96));
+    expect(hintChoice.top, lessThan(panel.bottom - 48));
+    expect(leaderboard.top, greaterThan(selection.top));
+    await expectLater(
+      find.byKey(const Key('run_reward_compact_hint_golden')),
+      matchesGoldenFile('goldens/run_reward_320x568_hint_first.png'),
+    );
+  });
+
   for (final fixture in const [
     (
       name: '320x700',

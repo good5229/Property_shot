@@ -380,6 +380,9 @@ void main() {
     final screen = tester.widget<GameScreen>(find.byType(GameScreen));
     expect(screen.levelOverride?.patternId, draw.patternId);
     expect(screen.initialShotResults, hasLength(1));
+    expect(screen.initialShotInputs, hasLength(1));
+    expect(screen.initialShotInputs.single.direction, savedInput.direction);
+    expect(screen.initialShotInputs.single.power, savedInput.power);
     expect(screen.initialState?.shotCount, expected.state.shotCount);
     expect(
       shotResultFingerprint(screen.initialShotResults.single),
@@ -472,6 +475,10 @@ void main() {
 
     final screen = tester.widget<GameScreen>(find.byType(GameScreen));
     expect(screen.initialShotResults, hasLength(1));
+    expect(screen.initialShotInputs, hasLength(1));
+    expect(screen.initialShotInputs.single.direction, input.direction);
+    expect(screen.initialShotInputs.single.power, input.power);
+    expect(screen.initialShotInputs.single.equippedTrait, input.equippedTrait);
     expect(screen.initialState?.copyCoreCount, 0);
     expect(
       screen.initialState?.entityById(source.id)?.traits,
@@ -1666,6 +1673,19 @@ void main() {
     expect(released['nearest_hole_distance'], isA<double>());
     expect(released['input_latency_ms'], isA<double>());
     expect(released['input_latency_ms'], greaterThanOrEqualTo(0));
+    expect(
+      telemetry.events.where((event) => event['event_code'] == 'stage_cleared'),
+      hasLength(1),
+    );
+    final firedShotId = telemetry.events.singleWhere(
+      (event) => event['event_code'] == 'shot_fired',
+    )['shot_id'];
+    final collisionShotIds = telemetry.events
+        .where((event) => event['event_code'] == 'collision_resolved')
+        .map((event) => event['shot_id'])
+        .toSet();
+    expect(firedShotId, 1);
+    expect(collisionShotIds, {firedShotId});
   });
 
   testWidgets('1단계 직접 성공도 점수를 계산해 일반 런 저장 흐름에 전달한다', (tester) async {

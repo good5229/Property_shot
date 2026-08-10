@@ -1,7 +1,7 @@
 # 속성 한방(Property Shot) AI 활용 기술 문서
 
-작성일: 2026-08-09 KST
-기능 기준: `main` / `f2e0c173ef1b87df9901df47a0583e0a70786a17`
+작성일: 2026-08-10 KST
+기능 기준: `main` 작업 트리 / 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c`
 제출 형식: AI 활용 기술 PDF
 
 ## 1. AI 활용 개요
@@ -22,7 +22,8 @@
 | 계층 | 주요 파일 | AI 활용 내용 |
 |---|---|---|
 | 도메인/물리 | `lib/game/simulation/shot_resolver.dart` | 결정론적 충돌 판정, 쉬움 모드 첫 도착 read-only preview |
-| 캠페인 진행 | `lib/game/run/stage_pattern_session.dart`, `campaign_stage_selection.dart` | 최초 학습 기준 패턴 정책을 공용 셔플과 격리 |
+| 캠페인 진행 | `lib/game/run/stage_pattern_session.dart`, `campaign_stage_selection.dart`, `run_hint_state.dart` | 최초 학습 기준 패턴 정책, RunState v3 힌트 권한·열쇠·저장 큐 |
+| 힌트 데이터 | `lib/game/hint/*`, `assets/stages/hints_v1.json` | 40패턴 L1/L2, 비물리 열쇠, 시연 계약, 생성기·Validator |
 | 입력/UI | `lib/ui/game_screen.dart`, `launch_input_session.dart` | 직선 게이지, 상태/접근성, 예상 위치 표시 |
 | 기록 공정성 | `run_difficulty_attribution_store.dart` | 완료 당시 난이도를 sidecar로 귀속해 Normal 기록 보호 |
 | 설정 | `lib/ui/game_feedback.dart`, `lib/main.dart` | schema 4에서 게이지 위치·난이도를 한 번에 마이그레이션 |
@@ -70,9 +71,9 @@
 
 ## 4. AI 지원 구현 사례
 
-### 4.1 화면 가장자리 충전 게이지
+### 4.1 중앙 편향 부유 충전 게이지
 
-기존 `LaunchInputSession`의 450ms 활성화, 0.40/0.70/0.90 경계, 1680ms 과충전 계약은 바꾸지 않았다. 공 주변 원형 링만 제거하고 SafeArea 내부 34px 반투명 edge rail로 옮겼다.
+기존 `LaunchInputSession`의 450ms 활성화, 0.40/0.70/0.90 경계, 1680ms 과충전 계약은 바꾸지 않았다. 공 주변 원형 링을 제거하고 공 가까이에서 홀·풍선·파워 슬라이더·열쇠 등 핵심 기물을 피하는 34px 부유 rail로 옮겼다. 오른손/왼손 설정은 공 반대쪽 후보의 우선순위를 바꾸며, 실제 겹침 검사가 최종 위치를 정한다.
 
 접근성 감사에서 퍼센트를 80ms마다 liveRegion으로 읽는 문제와 450ms 전 50%가 보이는 문제가 발견됐다. 상태 전이만 live로 읽고 퍼센트는 non-live로 분리했으며, 실제 충전 시작 전에는 레일을 숨겼다.
 
@@ -98,30 +99,37 @@ Normal/Easy/metadata 없음 × 3개 완료 경로의 9개 조합에서 진행 �
 
 ### 4.5 기믹 우위·보상 시각 언어
 
-사용자 캡처에서 드러난 2단계 직행 우회를 막기 위해 기준·변형 패턴의 홀 위치와 고정 경로 벽을 조정했다. 9단계 일부 패턴에는 반사판 회전으로만 열리는 `rotation_gate`를 추가했다. 자동 검증은 40개 생산 패턴을 모두 순회하고, 1–6·9단계는 각 패턴 900개 입력에서 기믹 성공점이 우회보다 많은지 확인한다. 단계 합계는 최소 1.4배라는 별도 게이트를 통과해야 한다. 7·8·10단계는 상태 준비·연쇄 점수·선언 사건을 인과 기준으로 검증한다.
+사용자 캡처에서 드러난 직행 우회를 막기 위해 기준·변형 패턴의 홀·벽·문·스위치 배치를 조정했다. 자동 검증은 40개 생산 패턴을 모두 순회한다. 단발 32패턴은 기믹 성공 영역이 무기믹 우회보다 개별 1.40배 이상이어야 한다. 7·10단계는 같은 900개 최종 입력을 준비 상태와 초기 상태에 각각 적용해 표본 분모를 같게 하고, typed 준비 사건·문 상태 변화·같은 최종 입력 실패를 먼저 증명한다. 8단계는 같은 홀 진입에서 연쇄 점수 1.45배 이상을 요구한다.
 
-런 보상 8종은 Flutter의 무료 Material Icons에서 기능별 아이콘을 매핑했다. 청록/금색 꾸미기는 공 본체의 채움·테두리·하이라이트를 함께 바꿔 다음 스테이지에서도 변화가 식별되도록 했고, 비교 Golden과 실제 단계 Golden을 추가했다.
+기존 런 보상 8종과 다음 스테이지 팁 1종, 총 9종은 Flutter의 무료 Material Icons에서 기능별 아이콘을 매핑했다. 청록/금색 꾸미기는 공 본체의 채움·테두리·하이라이트를 함께 바꿔 다음 스테이지에서도 변화가 식별되도록 했고, 비교 Golden과 실제 단계 Golden을 추가했다.
+
+### 4.6 패턴 힌트·비물리 열쇠·저장 복구
+
+`HintCatalog v1`은 40개 생산 패턴 각각에 정확히 L1·L2를 제공한다. Validator는 잘못된 패턴/기물 참조, 누락·중복·L3, 숫자 정답과 추상 문장을 거부한다. 다음 단계 팁 보상은 이미 선추첨된 다음 패턴 정체성에 결속하고, 일일 도전에서는 사용할 수 없는 후보를 제외한다.
+
+열쇠 판정은 `ShotResolver` 물리에 엔티티를 추가하지 않고, 확정된 현재 공·과거 공 경로의 모든 접촉 후보를 시간순으로 정렬해 열쇠별 첫 직접 접촉만 채택한다. 느린 저장 중에도 샷 애니메이션은 바로 진행되고, 저장 성공 뒤에만 열쇠 제거·VFX·힌트 버튼을 반영한다. `RunState v3`는 v1/v2 마이그레이션, L3→L2 clamp, 실패 전후 기준값과 권한 불변식을 검증한다.
 
 ## 5. 검증 및 AI 결과 채택 기준
 
 | 검증 | 최종 결과 |
 |---|---|
-| 전체 회귀 | 직렬 실행 995개 통과·1건 일시 실패(9분 34초), 해당 파일 15/15 및 기믹 검증 포함 영향권 16/16 재통과 |
+| 전체 회귀 | 단 한 번의 직렬 실행 1,062건 중 997건 통과·65건 실패. stale Golden 61장과 레벨 7·10 replay fixture를 실제 결과에 맞춰 검토한 뒤 Golden 67/67, replay·결정론 9/9, 핵심 변경 239/239를 표적 재검증 |
 | 정적 분석 | 문제 0건 |
-| 보통 모드 화면 | 10단계 × 5 viewport Golden 통과 |
+| 보통 모드 화면 | 320×568·375×812를 포함한 화면 기준과 최종 하단 문구 변경 영향권 Golden 표적 통과 |
 | 신규 게이지 | 좌/우 × 5상태, 모바일/태블릿, 저모션·점멸 끄기 Golden/위젯 통과 |
 | 쉬움 모드 | 첫 도착 단위·위젯·390/768 Golden 통과 |
 | 복구/공정성 | direct·stageCompleted·shot-success crash × 3귀속 행렬 통과 |
 | 기믹 우위 | 10단계 × 4패턴 전수 검증, 단계 합계 최소 1.4배 또는 후반 인과·점수 게이트 통과 |
-| 보상·꾸미기 | 8종 고유 아이콘과 청록/금색 본체 변화 Widget/Golden 통과 |
-| 출시 빌드 | Web release, Android release APK(62.3MB) 통과 |
-| 독립 감사 | 최종 P0 0 / P1 0 / P2 0 |
+| 보상·꾸미기 | 기존 8종+다음 스테이지 팁 1종의 고유 아이콘과 청록/금색 본체 변화 Widget/Golden 통과 |
+| 출시 빌드 | Web release 통과(`main.dart.js` 3,709,343바이트, SHA-256 `cb95f03f...cc537f`), Android release APK 63,261,407바이트·SHA-256 `f2a12703...146674` 통과 |
+| 영상·배포 | 19소스 Golden 68건·freshness·실제 telemetry attestation·60.000초 H.264/avc1 MOV·identity transform·대표 27프레임 시각 검사 통과. Pages 재배포는 문서 재생성 뒤 수행 |
+| 독립 감사 | 코드·레벨·영상 핵심 감사 통과. 최종 문서·배포 감사는 최신 산출물·Pages 확인 뒤 확정 |
 
-전체 테스트 중 원형 링 제거가 반영되지 않은 기존 Golden 47개는 master/test RGBA를 전수 비교했다. 각 변경은 24×23–51×51px의 단일 공 주변 영역이었고, 갱신 baseline과 실패 당시 정상 test image의 SHA-256이 47/47 일치했다.
+이번 단일 전체 실행에서 실패한 Golden 61개는 실제 렌더를 직접 비교했다. 차이는 모두 하단 조작 안내를 `물체를 눌러 속성 고르기`로 단축해 한 줄로 만든 영역에 국한됐고, 해당 6개 Golden 파일 묶음의 67개 테스트가 갱신 후 재통과했다.
 
 ### 5.1 Web 성능 증거의 범위
 
-Web Release 반복 발사 측정에서 rAF p90은 17.9–18.1ms, p99는 18.5–18.6ms였고 발사 누락 프레임·50ms 초과 프레임·Long Task는 0건이었다. 16.7ms 엄격 목표는 넘었으므로 성능 게이트를 통과했다고 과장하지 않는다. 이 값은 브라우저 rAF 대리 측정이며 Core Web Vitals나 실제 iPhone·Android·iPad의 렌더 성능을 대체하지 않는다.
+2026-08-10 최신 Web Release를 에이전트·빌드 작업이 없는 상태에서 뷰포트별 3회 다시 측정했다. 390×844와 768×1024 모두 발사 구간 rAF p90 17.2ms, p99 17.6ms, 누락·50ms 초과·Long Task·콘솔 오류 0건이었다. 평균은 16.664–16.666ms였으며 과거 자원 경합 회차의 급등은 재현되지 않았다. 16.7ms p90 목표는 0.5ms 초과했으므로 엄격 목표 통과로 과장하지 않고, 브라우저 rAF 대리값을 실제 기기 성능으로 확대하지 않는다.
 
 ## 6. AI 생성 이미지 애셋
 
@@ -167,7 +175,7 @@ Web Release 반복 발사 측정에서 rAF p90은 17.9–18.1ms, p99는 18.5–1
 | crypto | 3.0.7 | 무결성·해시 | BSD-3-Clause · [pub.dev/crypto](https://pub.dev/packages/crypto) |
 | audioplayers | 6.8.1 | 배경음·효과음 | MIT · [pub.dev/audioplayers](https://pub.dev/packages/audioplayers) |
 | NanumGothic | bundled TTF | 한글 UI·보고서 렌더 | SIL OFL 1.1 · [NAVER Nanum](https://hangeul.naver.com/font) |
-| Material Icons | Flutter bundled font | 런 보상 8종 아이콘 | Apache-2.0 · [Flutter Icons API](https://api.flutter.dev/flutter/material/Icons-class.html), [Google Material Icons](https://github.com/google/material-design-icons) |
+| Material Icons | Flutter bundled font | 기존 런 보상 8종+다음 스테이지 팁 1종 아이콘 | Apache-2.0 · [Flutter Icons API](https://api.flutter.dev/flutter/material/Icons-class.html), [Google Material Icons](https://github.com/google/material-design-icons) |
 
 ### 7.2 외부/레거시 에셋
 
@@ -189,7 +197,7 @@ Web Release 반복 발사 측정에서 rAF p90은 17.9–18.1ms, p99는 18.5–1
 
 ## 9. 추적 가능한 근거
 
-- 기능 기준 커밋: `f2e0c173ef1b87df9901df47a0583e0a70786a17`
+- 기능 기준: `main` 작업 트리 / 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c`
 - QA 결과: `harness_docs/qa/validation_results.md`
 - 에이전트 작업 맥락: `harness_docs/prompts/*`, `harness_docs/dev-wiki/log.md`
 - 에셋 권리: `harness_docs/release/asset_rights_ledger.md`

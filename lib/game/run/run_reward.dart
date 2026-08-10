@@ -11,6 +11,7 @@ const String runRewardOptionalChallengeGuardId =
 const String runRewardFailureCauseBoostId = 'failure_cause_boost';
 const String runRewardBallAppearanceId = 'ball_appearance_set';
 const String runRewardStageRecordGuardId = 'stage_record_guard_once';
+const String runRewardNextStageHintAccessId = 'next_stage_hint_access';
 const String _selectionPrefix = 'run_reward:';
 const String _usedPrefix = 'run_reward_used:';
 const String _stageUsedPrefix = 'run_reward_stage_used:';
@@ -25,7 +26,8 @@ enum RunRewardEffectKind {
   optionalChallengeGuard('optional_challenge_guard'),
   failureCauseBoost('failure_cause_boost'),
   ballAppearance('ball_appearance'),
-  stageRecordGuard('stage_record_guard');
+  stageRecordGuard('stage_record_guard'),
+  nextStageHintAccess('next_stage_hint_access');
 
   const RunRewardEffectKind(this.schemaName);
 
@@ -120,7 +122,7 @@ final List<RunReward> initialRunRewards = List.unmodifiable([
   RunReward(
     id: runRewardBallAppearanceId,
     name: '공 꾸미기 묶음',
-    description: '공 둘레에 청록·금색 링과 반짝임을 더합니다.',
+    description: '공 본체를 청록 그라데이션·금색 외곽선·반짝임으로 꾸밉니다.',
     effectKind: RunRewardEffectKind.ballAppearance,
   ),
   RunReward(
@@ -128,6 +130,12 @@ final List<RunReward> initialRunRewards = List.unmodifiable([
     name: '스테이지 기록 보호',
     description: '스테이지마다 한 번, 클리어 발사 횟수를 1회 줄여 기록합니다.',
     effectKind: RunRewardEffectKind.stageRecordGuard,
+  ),
+  RunReward(
+    id: runRewardNextStageHintAccessId,
+    name: '다음 스테이지 팁 확보',
+    description: '다음에 확정된 패턴의 단계별 클리어 팁을 필요할 때 볼 수 있습니다.',
+    effectKind: RunRewardEffectKind.nextStageHintAccess,
   ),
 ]);
 
@@ -184,14 +192,32 @@ class RunRewardCandidateGenerator {
     required int rootSeed,
     required String stageId,
     required int patternSeed,
+    bool includeNextStageHint = false,
   }) {
     final seed = candidateSeed(
       rootSeed: rootSeed,
       stageId: stageId,
       patternSeed: patternSeed,
     );
-    final shuffled = StableRandom(seed).shuffled(catalog.rewards);
-    return List.unmodifiable(shuffled.take(candidateCount));
+    final hintReward = catalog.rewards
+        .where((reward) => reward.id == runRewardNextStageHintAccessId)
+        .toList(growable: false);
+    // 기존 후보 생성의 seed/순서를 보존하기 위해 새 필수 보상은 일반 pool에
+    // 섞지 않는다. 다음 단계가 있을 때만 아래에서 명시적으로 추가한다.
+    final selectable = catalog.rewards.where(
+      (reward) => reward.id != runRewardNextStageHintAccessId,
+    );
+    final shuffled = StableRandom(seed).shuffled(selectable);
+    if (!includeNextStageHint) {
+      return List.unmodifiable(shuffled.take(candidateCount));
+    }
+    if (hintReward.length != 1) {
+      throw StateError('다음 스테이지 팁 보상이 카탈로그에 정확히 하나 필요합니다.');
+    }
+    return List.unmodifiable([
+      hintReward.single,
+      ...shuffled.take(candidateCount - 1),
+    ]);
   }
 }
 
@@ -200,10 +226,14 @@ List<RunReward> generateRunRewardCandidates({
   required String stageId,
   required int patternSeed,
   RunRewardCatalog? catalog,
+  bool includeNextStageHint = false,
 }) {
-  return RunRewardCandidateGenerator(
-    catalog: catalog,
-  ).generate(rootSeed: rootSeed, stageId: stageId, patternSeed: patternSeed);
+  return RunRewardCandidateGenerator(catalog: catalog).generate(
+    rootSeed: rootSeed,
+    stageId: stageId,
+    patternSeed: patternSeed,
+    includeNextStageHint: includeNextStageHint,
+  );
 }
 
 String runRewardSelectionRecordId({

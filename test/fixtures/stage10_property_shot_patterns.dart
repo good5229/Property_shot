@@ -15,6 +15,10 @@ class Stage10PropertyShotSolution {
     required this.directDegree,
     required this.directPower,
     required this.familyId,
+    this.directFamilyId,
+    this.openedGateBankDegree,
+    this.openedGateBankPower,
+    this.conditionalGateId,
     this.transferTrait,
     this.expectedImpactIds = const [],
     this.expectedEvents = const [],
@@ -33,6 +37,10 @@ class Stage10PropertyShotSolution {
   final int directDegree;
   final double directPower;
   final String familyId;
+  final String? directFamilyId;
+  final int? openedGateBankDegree;
+  final double? openedGateBankPower;
+  final String? conditionalGateId;
   final TraitType? transferTrait;
   final List<String> expectedImpactIds;
   final List<String> expectedEvents;
@@ -59,6 +67,9 @@ const stage10PropertyShotSolutions = <Stage10PropertyShotSolution>[
     directDegree: 40,
     directPower: 0.96,
     familyId: 'heavy_transfer_switch',
+    conditionalGateId: 'a_gate',
+    openedGateBankDegree: 88,
+    openedGateBankPower: 0.60,
     transferTrait: TraitType.heavy,
     expectedImpactIds: ['a_crate', 'a_switch'],
     expectedEvents: ['crate_pushed', 'switch_pressed'],
@@ -77,6 +88,8 @@ const stage10PropertyShotSolutions = <Stage10PropertyShotSolution>[
     directDegree: 239,
     directPower: 0.74,
     familyId: 'slider_reflector_chain',
+    directFamilyId: 'direct_bypass',
+    conditionalGateId: 'sequence_gate_b',
     expectedImpactIds: ['b_reflector', 'b_bumper'],
     expectedEvents: [
       'power_slider_activated',
@@ -91,9 +104,12 @@ const stage10PropertyShotSolutions = <Stage10PropertyShotSolution>[
     firstPower: 0.12,
     secondDegree: 346,
     secondPower: 0.86,
-    directDegree: 298,
-    directPower: 0.38,
+    directDegree: 128,
+    directPower: 0.72,
     familyId: 'sticky_balloon_crate_chain',
+    conditionalGateId: 'sequence_gate_c',
+    openedGateBankDegree: 128,
+    openedGateBankPower: 0.80,
     transferTrait: TraitType.sticky,
     expectedImpactIds: ['spent_ball_1', 'c_crate', 'c_balloon'],
     expectedEvents: [
@@ -112,6 +128,8 @@ const stage10PropertyShotSolutions = <Stage10PropertyShotSolution>[
     directDegree: 266,
     directPower: 0.32,
     familyId: 'slider_stone_wall_past_ball',
+    directFamilyId: 'direct_bypass',
+    conditionalGateId: 'sequence_gate_d',
     expectedImpactIds: ['d_stone', 'd_wall', 'spent_ball_1'],
     expectedEvents: ['power_slider_activated', 'existing_ball_hole_entered'],
   ),

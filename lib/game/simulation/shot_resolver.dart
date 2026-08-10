@@ -847,6 +847,10 @@ class ShotResolver {
           );
           powerSliderActivations.add(activation);
           events.add('power_slider_activated');
+          if (entry.slider.linkId case final gateId?) {
+            entities = _openLinkedEntity(entities, gateId);
+            events.add('slider_gate_opened');
+          }
         }
         consumedDistance = attemptedSpeed * sliderProgress;
         continue;
@@ -1230,7 +1234,9 @@ class ShotResolver {
 
       if (hit.type == EntityType.switchPad) {
         final isBalloonSwitch = hit.id == 'balloon_switch';
-        if (!isBalloonSwitch && !ball.traits.contains(TraitType.heavy)) {
+        final acceptsAnyBall =
+            isBalloonSwitch || hit.id.startsWith('sequence_switch_');
+        if (!acceptsAnyBall && !ball.traits.contains(TraitType.heavy)) {
           position = _separateFromCollision(
             hit,
             ball,
@@ -1310,7 +1316,8 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.stickySurface &&
-          hit.traits.contains(TraitType.sticky)) {
+          hit.traits.contains(TraitType.sticky) &&
+          (hit.linkId == null || ball.traits.contains(TraitType.sticky))) {
         position = _separateFromCollision(
           hit,
           ball,
@@ -1319,6 +1326,10 @@ class ShotResolver {
         );
         path[path.length - 1] = position;
         entities = _replace(entities, hit.copyWith(visualState: 'stuck'));
+        if (hit.linkId case final gateId?) {
+          entities = _openLinkedEntity(entities, gateId);
+          events.add('sticky_gate_opened');
+        }
         moves.add(
           ShotAnimationMove(
             entityId: hit.id,
@@ -3240,6 +3251,10 @@ class ShotResolver {
             ),
           );
           events.add('power_slider_activated');
+          if (sliderEntry.slider.linkId case final gateId?) {
+            entities = _openLinkedEntity(entities, gateId);
+            events.add('slider_gate_opened');
+          }
         }
         continue;
       }
@@ -3625,7 +3640,8 @@ class ShotResolver {
       }
 
       if (hit.type == EntityType.stickySurface &&
-          hit.traits.contains(TraitType.sticky)) {
+          hit.traits.contains(TraitType.sticky) &&
+          (hit.linkId == null || current.traits.contains(TraitType.sticky))) {
         stateTransitions?.add(
           PhysicsStateTransition(
             sourceEntityId: target.id,
@@ -3655,7 +3671,9 @@ class ShotResolver {
 
       if (hit.type == EntityType.switchPad) {
         final isBalloonSwitch = hit.id == 'balloon_switch';
-        if (!isBalloonSwitch &&
+        final acceptsAnyBall =
+            isBalloonSwitch || hit.id.startsWith('sequence_switch_');
+        if (!acceptsAnyBall &&
             !carriesHeavy &&
             !current.traits.contains(TraitType.heavy)) {
           events.add('switch_rejected');

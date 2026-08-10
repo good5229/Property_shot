@@ -112,7 +112,7 @@ void main() {
     expect(telemetry.events.map((event) => event['event_code']), types.values);
   });
 
-  test('총괄 계약의 타입 이벤트 20개를 빠짐없이 안정 코드와 한글 표시명으로 정의한다', () {
+  test('총괄 계약의 타입 이벤트 31개를 빠짐없이 안정 코드와 한글 표시명으로 정의한다', () {
     const expectedCodes = {
       'run_started',
       'stage_pattern_drawn',
@@ -134,9 +134,20 @@ void main() {
       'replay_viewed',
       'daily_challenge_started',
       'run_completed',
+      'hint_reward_offered',
+      'hint_reward_selected',
+      'hint_available',
+      'hint_opened',
+      'hint_level_opened',
+      'key_spawned',
+      'key_collected',
+      'key_ignored',
+      'demo_direct_clear_detected',
+      'power_gauge_charge_started',
+      'power_gauge_cancelled',
     };
 
-    expect(PlayTelemetryEventType.values, hasLength(20));
+    expect(PlayTelemetryEventType.values, hasLength(31));
     expect(
       PlayTelemetryEventType.values.map((type) => type.code).toSet(),
       expectedCodes,
@@ -149,6 +160,204 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('힌트·열쇠·시연 판정 보조 payload를 닫힌 타입으로 JSON과 CSV에 기록한다', () {
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    final stageOutcome = PlayTelemetryStageOutcomePayload(
+      keyCollected: true,
+      directClear: false,
+      hintUsedBeforeClear: true,
+      failureCountBeforeHint: 2,
+      failureCountAfterHint: 1,
+      gimmickTypes: const ['rotating_reflector', 'bumper'],
+      effectiveChainScore: 4,
+    );
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.hintOpened,
+        context: context(),
+        hint: PlayTelemetryHintPayload(
+          source: PlayTelemetryHintSource.stageKey,
+          level: PlayTelemetryHintLevel.two,
+          openedCount: 1,
+          failureCountBeforeOpen: 2,
+          clearedAfterOpen: false,
+        ),
+      ),
+    );
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.keyCollected,
+        context: context(),
+        key: PlayTelemetryKeyPayload(
+          keyId: 'rotating_01_hint_key',
+          shotId: 3,
+          collected: true,
+          shotsUntilCollected: 3,
+        ),
+      ),
+    );
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.stageCleared,
+        context: context(),
+        result: PlayTelemetryResult.cleared,
+        stageOutcome: stageOutcome,
+      ),
+    );
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.demoDirectClearDetected,
+        context: context(),
+        stageOutcome: PlayTelemetryStageOutcomePayload(
+          keyCollected: false,
+          directClear: true,
+          hintUsedBeforeClear: false,
+          failureCountBeforeHint: 0,
+          failureCountAfterHint: 0,
+          effectiveChainScore: 0,
+        ),
+      ),
+    );
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.powerGaugeCancelled,
+        context: context(),
+        powerGauge: PlayTelemetryPowerGaugePayload(
+          chargeStage: 4,
+          power: 0.92,
+          cancelled: true,
+        ),
+      ),
+    );
+
+    final hintEvent = telemetry.events[0];
+    final keyEvent = telemetry.events[1];
+    final clearEvent = telemetry.events[2];
+    expect(hintEvent['hint_source'], 'stage_key');
+    expect(hintEvent['hint_level'], 2);
+    expect(hintEvent['hint_failure_count_before_open'], 2);
+    expect(keyEvent['key_id'], 'rotating_01_hint_key');
+    expect(keyEvent['key_shot_id'], 3);
+    expect(keyEvent['key_shots_until_collected'], 3);
+    expect(clearEvent['key_collected_before_clear'], isTrue);
+    expect(clearEvent['hint_used_before_clear'], isTrue);
+    expect(clearEvent['gimmick_types'], ['rotating_reflector', 'bumper']);
+    expect(clearEvent['effective_chain_score'], 4);
+    expect(telemetry.events[3]['direct_clear'], isTrue);
+    expect(telemetry.events[4]['power_gauge_cancelled'], isTrue);
+    expect(telemetry.exportJson(), contains('rotating_reflector'));
+    expect(telemetry.exportCsv(), contains('hint_source'));
+    expect(telemetry.exportCsv(), contains('key_shots_until_collected'));
+    expect(telemetry.exportCsv(), contains('effective_chain_score'));
+  });
+
+  test('파워 게이지 payload는 다섯 상태 밖의 단계를 거부한다', () {
+    expect(
+      () => PlayTelemetryPowerGaugePayload(
+        chargeStage: 5,
+        power: 1,
+        cancelled: true,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('단계 클리어 typed event는 결과와 전체 단계 outcome을 모두 요구한다', () {
+    expect(
+      () => TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.stageCleared,
+        context: context(),
+        result: PlayTelemetryResult.cleared,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('힌트·열쇠·게이지 이벤트는 타입에 맞는 payload만 허용한다', () {
+    final hint = PlayTelemetryHintPayload(
+      source: PlayTelemetryHintSource.clearReward,
+      level: PlayTelemetryHintLevel.one,
+    );
+    final collectedKey = PlayTelemetryKeyPayload(
+      keyId: 'hint_key',
+      shotId: 1,
+      collected: true,
+      shotsUntilCollected: 1,
+    );
+
+    expect(
+      () => TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.hintOpened,
+        context: context(),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.hintRewardSelected,
+        context: context(),
+        hint: PlayTelemetryHintPayload(
+          source: PlayTelemetryHintSource.stageKey,
+          level: PlayTelemetryHintLevel.one,
+        ),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.keySpawned,
+        context: context(),
+        key: collectedKey,
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.demoDirectClearDetected,
+        context: context(),
+        stageOutcome: PlayTelemetryStageOutcomePayload(
+          keyCollected: false,
+          directClear: false,
+          hintUsedBeforeClear: false,
+          failureCountBeforeHint: 0,
+          failureCountAfterHint: 0,
+          effectiveChainScore: 0,
+        ),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.powerGaugeChargeStarted,
+        context: context(),
+        powerGauge: PlayTelemetryPowerGaugePayload(
+          chargeStage: 1,
+          power: 0.3,
+          cancelled: true,
+        ),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => PlayTelemetryKeyPayload(
+        keyId: 'hint_key',
+        shotId: 1,
+        collected: false,
+        shotsUntilCollected: 1,
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => PlayTelemetryPowerGaugePayload(
+        chargeStage: -1,
+        power: 0.3,
+        cancelled: false,
+      ),
+      throwsArgumentError,
+    );
+    expect(hint.source, PlayTelemetryHintSource.clearReward);
   });
 
   test('타입 이벤트는 공통 문맥과 필수 샷 지표를 JSON과 CSV에 직렬화한다', () {

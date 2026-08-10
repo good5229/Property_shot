@@ -56,6 +56,11 @@ harness_docs/*
 !harness_docs/release/**
 !harness_docs/qa/
 !harness_docs/qa/validation_results.md
+!harness_docs/design/
+!harness_docs/design/**
+!harness_docs/prompts/
+/harness_docs/prompts/*
+!/harness_docs/prompts/prompt_history.md
 !harness_docs/dev-wiki/
 harness_docs/dev-wiki/*
 !harness_docs/dev-wiki/log.md
@@ -64,9 +69,12 @@ harness_docs/dev-wiki/*
 /report/*
 !/report/game_introduction.md
 !/report/ai_technical_report.md
+!/report/demo_playback_manifest.json
+!/report/demo_bouncy_01_actions.json
 !/report/tools/
 /report/tools/*
 !/report/tools/build_submission_reports_docx.py
+!/report/tools/build_submission_reports_pptx.mjs
 !/report/tools/build_final_report_docx.py
 !/report/tools/finalize_submission_pdf.py
 !/report/tools/record_gameplay_frames.py
@@ -74,10 +82,16 @@ harness_docs/dev-wiki/*
 !/report/tools/extract_video_frames.swift
 !/report/tools/compose_gameplay_demo_frames.py
 !/report/tools/capture_latest_pages.py
+!/report/tools/verify_demo_pipeline.py
+!/report/tools/verify_demo_video.swift
+!/report/tools/record_latest_gameplay.py
+!/report/tools/verify_demo_scene_sources.py
 !/report/dist/
 /report/dist/*
 !/report/dist/property_shot_game_guide.pdf
 !/report/dist/property_shot_ai_technical_report.pdf
+!/report/dist/property_shot_game_guide.pptx
+!/report/dist/property_shot_ai_technical_report.pptx
 
 # 로컬 플레이 영상(공모전 보고서용, 원격 저장소 미업로드)
 /recordings/*.mp4
@@ -86,3 +100,5 @@ harness_docs/dev-wiki/*
 /recordings/.recording-frames/
 /recordings/.demo-frames/
 /recordings/.playwright-video/
+/recordings/.debug-video/
+/recordings/.video-qa/

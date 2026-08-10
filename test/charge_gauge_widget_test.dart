@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
@@ -199,10 +200,53 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('중앙 공에서는 left/right 설정이 서로 다른 floating 위치를 쓴다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final initial = levels.first.createState(0, productRules: true);
+    final centered = initial.copyWith(
+      entities: [
+        for (final entity in initial.entities)
+          entity.id == 'active_ball'
+              ? entity.copyWith(position: const Vec2(180, 280))
+              : entity,
+      ],
+    );
+    final centers = <ChargeGaugeSide, double>{};
+    for (final side in ChargeGaugeSide.values) {
+      GameFeedback.chargeGaugeSide = side;
+      await tester.pumpWidget(
+        PropertyShotApp(
+          initialState: centered,
+          showStageSelector: false,
+          loadGameAssets: false,
+        ),
+      );
+      await tester.pump();
+      final area = find.byKey(const Key('aim_area'));
+      final gesture = await tester.createGesture();
+      await gesture.down(
+        _logicalPosition(tester, area, 180, 280),
+        timeStamp: Duration.zero,
+      );
+      await _pumpChargeFrames(tester, const Duration(milliseconds: 600));
+      centers[side] = tester
+          .getRect(find.byKey(const Key('charge_gauge_rail')))
+          .center
+          .dx;
+      await gesture.cancel();
+      await tester.pump();
+    }
+    expect(
+      centers[ChargeGaugeSide.left],
+      lessThan(centers[ChargeGaugeSide.right]!),
+    );
+  });
+
   for (final stageIndex in const [0, 3]) {
     for (final side in ChargeGaugeSide.values) {
       testWidgets(
-        '${stageIndex + 1}단계 핵심 목표와 ${side.name} edge rail은 겹치지 않는다',
+        '${stageIndex + 1}단계 핵심 목표와 ${side.name} floating rail은 겹치지 않는다',
         (tester) async {
           GameFeedback.chargeGaugeSide = side;
           await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -235,7 +279,7 @@ void main() {
               ? find.bySemanticsLabel('홀, 목표 홀')
               : find.bySemanticsLabel('풍선, 풍선');
           expect(target, findsOneWidget);
-          expect(railRect.width, lessThanOrEqualTo(34));
+          expect(railRect.width, lessThanOrEqualTo(40));
           expect(railRect.overlaps(tester.getRect(target)), isFalse);
 
           await gesture.cancel();
@@ -246,10 +290,12 @@ void main() {
   }
 
   for (final fixture in const [
-    (size: Size(320, 700), textScale: 1.5),
+    (size: Size(320, 568), textScale: 1.5),
+    (size: Size(375, 812), textScale: 1.0),
     (size: Size(390, 844), textScale: 1.0),
     (size: Size(430, 932), textScale: 1.0),
     (size: Size(768, 1024), textScale: 1.0),
+    (size: Size(1024, 1366), textScale: 1.0),
   ]) {
     for (final side in ChargeGaugeSide.values) {
       testWidgets(
@@ -286,10 +332,19 @@ void main() {
           final railRect = tester.getRect(rail);
           expect(screenRect.contains(railRect.topLeft), isTrue);
           expect(screenRect.contains(railRect.bottomRight), isTrue);
-          if (side == ChargeGaugeSide.right) {
-            expect(railRect.center.dx, greaterThan(screenRect.center.dx));
-          } else {
-            expect(railRect.center.dx, lessThan(screenRect.center.dx));
+          // 게이지는 더 이상 화면 가장자리에 고정하지 않는다. 공 쪽에
+          // 떠 있으면서도 보드/SafeArea 안에서만 움직여야 한다.
+          expect(railRect.left, greaterThan(screenRect.left));
+          expect(railRect.right, lessThan(screenRect.right));
+          final boardRect = tester.getRect(find.byKey(const Key('aim_area')));
+          final compactControls = find.byKey(
+            const Key('compact_control_panel'),
+          );
+          // Compact 하단 조작 surface는 월드/열쇠가 놓이는 보드 위를 덮지
+          // 않는다. 넓은 화면에서는 sidebar controls를 사용한다.
+          if (compactControls.evaluate().isNotEmpty) {
+            final controlsRect = tester.getRect(compactControls);
+            expect(controlsRect.overlaps(boardRect), isFalse);
           }
           final devicePixelRatio = tester.view.devicePixelRatio;
           expect(

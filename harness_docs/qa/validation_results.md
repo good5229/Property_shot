@@ -1,4 +1,23 @@
-# 최신 통합 검증 · 2026-08-09 KST
+# 최신 통합 검증 · 2026-08-10 KST
+
+## 최종 작업 트리 단일 전체 실행과 표적 복구 · 2026-08-10 KST
+
+- 기준: `main` 작업 트리 / 기반 커밋 `bfb7a39734cad39b458273a6bca55a5485950d7c`
+- 전체 명령은 사용자 요청대로 한 번만 실행: `flutter test --concurrency=1 --reporter compact`
+- 결과: **1,062건 중 997건 통과·65건 실패**. 실패군은 최종 모바일 하단 안내문 단축이 반영되지 않은 Golden 61장과 레벨 7·10 배치 변경 뒤의 replay fixture였다.
+- Golden 조치: 실패 test image와 master/isolated diff를 대조해 모두 하단 `물체를 눌러 속성 고르기` 단일행 영역 변화임을 확인했다. 관련 6개 파일 묶음과 specialized bouncy 화면을 갱신해 **67/67 통과**했다.
+- replay 조치: 7단계 실제 `direct_bypass`와 잔류 공 대표 해법, 10단계 property gate 연쇄와 opened-gate bank를 재생해 지문·종료 단계를 갱신했다. replay fixture·다중 replay·100회 결정론 묶음 **9/9 통과**했다.
+- 핵심 변경 회귀: 기믹 40패턴, RunState v3, 힌트·열쇠, 보상, 게이지, telemetry, widget 복구 묶음 **239/239 통과**했다.
+- 정적 분석: `flutter analyze` 문제 0건. JSON 문법과 `git diff --check` 통과.
+- 출시 빌드: Web release `main.dart.js` 3,709,343바이트, SHA-256 `cb95f03f9bd01828ed04897d9fa45dcf264fc3cb43d900c4916bd7a123cc537f`; Android release APK 63,261,407바이트, SHA-256 `f2a127039375d9a0d76d82e054c7d00a11955237d99566bb28a86bc49f146674`.
+- 로컬 데모 서버: `127.0.0.1:8090`, PID `69389`에서 최신 `build/web` 유지. `/Property_shot/`과 `/Property_shot/main.dart.js` HTTP 200을 2026-08-10 재확인했다.
+- Android ARM64 API 28 에뮬레이터: 최신 APK 설치·foreground 실행, `Displayed +1.943s`, 치명적/Flutter 오류 0건, 시작 화면 시각 확인.
+- 영상: 19개 소스 Golden 68건과 SHA-256 freshness evidence 통과 후 실제 브라우저 촬영을 완료했다. attestation은 `stage_bouncy_01`, 48°·0.90, 벽 사용 4회, `directClear=false`, 콘솔 오류 0건, ending slack 1.855초를 기록한다. 최종 MOV는 60.000초·390×844·8fps·480프레임·H.264/avc1·identity transform이며 SHA-256은 `6e9300750b23554a03fbf4e1029d67054d6f4ef3c521d596a5874fe67f761e7e`다. 27개 대표 프레임에서 상하·좌우 반전, 잘림, 2초 초과 정체가 없음을 확인했다.
+- 공개 배포·commit/push: 영상은 통과했으며 최신 문서 재생성·감사 뒤 수행한다. 현재 Pages URL은 이전 배포본이다.
+- 성능: 에이전트·빌드 작업이 없는 상태에서 뷰포트별 3회 다시 측정했다. 390×844·768×1024 모두 발사 p90 17.2ms, p99 17.6ms, 누락·50ms 초과·Long Task·콘솔 오류 0건이며 평균은 16.664–16.666ms다. 과거 768 자원 경합 급등은 재현되지 않았지만 p90 16.7ms 엄격 목표는 0.5ms 초과해 여전히 미통과다.
+- 최종 판정: `Conditional Go`. 자동 코드·레벨·영상 증거는 준비됐지만 최신 Pages 배포·실기기 성능·외부 플레이테스트·법무 최종 승인이 남았다.
+
+---
 
 ## 최종 제출 전체 회귀 재확인 · 2026-08-09 KST
 

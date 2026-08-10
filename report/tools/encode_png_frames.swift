@@ -96,8 +96,21 @@ func makePixelBuffer(from image: CGImage) -> CVPixelBuffer? {
         space: colorSpace,
         bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue
     ) else { return nil }
-    context.clear(CGRect(x: 0, y: 0, width: width, height: height))
-    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    // Every output is upright 390×844.  Full-screen captures draw 1:1;
+    // short Golden boundaries (such as the 390×500 hint sheet) retain their
+    // aspect ratio and sit at the bottom over the gameplay-coloured matte.
+    context.setFillColor(CGColor(red: 0.22, green: 0.36, blue: 0.33, alpha: 1))
+    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    let scale = min(Double(width) / Double(image.width), Double(height) / Double(image.height))
+    let drawWidth = CGFloat(Double(image.width) * scale)
+    let drawHeight = CGFloat(Double(image.height) * scale)
+    let destination = CGRect(
+        x: (CGFloat(width) - drawWidth) / 2,
+        y: 0,
+        width: drawWidth,
+        height: drawHeight
+    )
+    context.draw(image, in: destination)
     return pixelBuffer
 }
 

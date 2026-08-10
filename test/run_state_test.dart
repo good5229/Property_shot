@@ -4,6 +4,7 @@ import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/stage_pattern.dart';
 import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/run/run_state.dart';
+import 'package:property_shot/game/run/run_hint_state.dart';
 import 'package:property_shot/game/run/stage_shuffle_bag.dart';
 
 void main() {
@@ -29,6 +30,182 @@ void main() {
     expect(fromString.toJson(), original.toJson());
     expect(fromString.startedAt.isUtc, isTrue);
     expect(fromString.updatedAt.isUtc, isTrue);
+  });
+
+  test('schema 1은 빈 힌트·열쇠 컬렉션을 가진 최신 schema로 명시 이행한다', () {
+    final legacy = _state().toJson()
+      ..['schemaVersion'] = 1
+      ..remove('hintEntitlements')
+      ..remove('keyCollections');
+
+    final migrated = RunState.fromJson(legacy);
+
+    expect(migrated.schemaVersion, currentRunStateSchemaVersion);
+    expect(migrated.hintEntitlements, isEmpty);
+    expect(migrated.keyCollections, isEmpty);
+    expect(migrated.toJson()['schemaVersion'], currentRunStateSchemaVersion);
+  });
+
+  test('힌트 entitlement와 열쇠 수집은 canonical JSON으로 왕복한다', () {
+    final identity = HintIdentity(
+      stageId: 'stage_1',
+      patternId: 'pattern_a',
+      hintVersion: 1,
+    );
+    final state = _state(
+      hintEntitlements: [
+        RunHintEntitlement(
+          identity: identity,
+          sources: const [
+            HintEntitlementSource.clearReward,
+            HintEntitlementSource.stageKey,
+          ],
+          unlockedHintLevel: 2,
+          consumed: true,
+          openedCount: 2,
+          failedShotCount: 3,
+          failureCountAtFirstOpen: 2,
+          acquiredAt: DateTime.utc(2026, 8, 6),
+        ),
+      ],
+      keyCollections: [
+        KeyCollectionRecord(
+          identity: identity,
+          keyId: 'hint_key',
+          sourceBallId: 'spent_ball_1',
+          shotIndex: 1,
+          acquiredAt: DateTime.utc(2026, 8, 6, 0, 1),
+        ),
+      ],
+    );
+
+    final restored = RunState.fromJson(state.toJson());
+    expect(restored.toJson(), state.toJson());
+    expect(restored.hintEntitlements.single.sources, {
+      HintEntitlementSource.clearReward,
+      HintEntitlementSource.stageKey,
+    });
+    expect(restored.hintEntitlements.single.failureCountAtFirstOpen, 2);
+  });
+
+  test('schema 2 entitlement는 첫 열람 실패 기준선을 nullable로 이행한다', () {
+    final identity = HintIdentity(
+      stageId: 'stage_1',
+      patternId: 'pattern_a',
+      hintVersion: 1,
+    );
+    final legacy = _state(
+      hintEntitlements: [
+        RunHintEntitlement(
+          identity: identity,
+          sources: const [HintEntitlementSource.stageKey],
+          consumed: true,
+          openedCount: 1,
+          failedShotCount: 3,
+          acquiredAt: DateTime.utc(2026),
+        ),
+      ],
+    ).toJson()..['schemaVersion'] = 2;
+    final entitlement = (legacy['hintEntitlements'] as List).single as Map;
+    entitlement.remove('failureCountAtFirstOpen');
+
+    final migrated = RunState.fromJson(legacy);
+    expect(migrated.schemaVersion, currentRunStateSchemaVersion);
+    expect(migrated.hintEntitlements.single.failureCountAtFirstOpen, isNull);
+  });
+
+  test('invalid_hint_entitlement_restore: 현재 카탈로그에 없는 L3 복원은 거부한다', () {
+    final json = _state().toJson();
+    json['hintEntitlements'] = [
+      {
+        'identity': {
+          'stageId': 'stage_1',
+          'patternId': 'pattern_a',
+          'hintVersion': 1,
+        },
+        'sources': ['stage_key'],
+        'unlockedHintLevel': 3,
+        'consumed': true,
+        'openedCount': 3,
+        'failedShotCount': 4,
+        'failureCountAtFirstOpen': 2,
+        'acquiredAt': DateTime.utc(2026).toIso8601String(),
+      },
+    ];
+
+    expect(() => RunState.fromJson(json), throwsFormatException);
+  });
+
+  test('v2 L3 entitlement는 현재 L1-L2 계약에 맞춰 L2로 이관한다', () {
+    final legacy = _state().toJson()..['schemaVersion'] = 2;
+    legacy['hintEntitlements'] = [
+      {
+        'identity': {
+          'stageId': 'stage_1',
+          'patternId': 'pattern_a',
+          'hintVersion': 1,
+        },
+        'sources': ['stage_key'],
+        'unlockedHintLevel': 3,
+        'consumed': true,
+        'openedCount': 3,
+        'failedShotCount': 4,
+        'acquiredAt': DateTime.utc(2026).toIso8601String(),
+      },
+    ];
+
+    final migrated = RunState.fromJson(legacy);
+
+    expect(migrated.schemaVersion, currentRunStateSchemaVersion);
+    expect(migrated.hintEntitlements.single.unlockedHintLevel, 2);
+    expect(migrated.hintEntitlements.single.openedCount, 3);
+    expect(migrated.hintEntitlements.single.failureCountAtFirstOpen, isNull);
+  });
+
+  test('힌트 열람 상태와 실패 기준선이 모순된 저장값은 복원을 거부한다', () {
+    Map<String, dynamic> invalidEntitlement({
+      required bool consumed,
+      required int openedCount,
+      int failedShotCount = 2,
+      int? failureCountAtFirstOpen,
+    }) {
+      final result = <String, dynamic>{
+        'identity': {
+          'stageId': 'stage_1',
+          'patternId': 'pattern_a',
+          'hintVersion': 1,
+        },
+        'sources': ['stage_key'],
+        'unlockedHintLevel': 1,
+        'consumed': consumed,
+        'openedCount': openedCount,
+        'failedShotCount': failedShotCount,
+        'acquiredAt': DateTime.utc(2026).toIso8601String(),
+      };
+      if (failureCountAtFirstOpen != null) {
+        result['failureCountAtFirstOpen'] = failureCountAtFirstOpen;
+      }
+      return result;
+    }
+
+    for (final entitlement in [
+      invalidEntitlement(consumed: false, openedCount: 1),
+      invalidEntitlement(consumed: true, openedCount: 0),
+      invalidEntitlement(
+        consumed: false,
+        openedCount: 0,
+        failureCountAtFirstOpen: 1,
+      ),
+      invalidEntitlement(
+        consumed: true,
+        openedCount: 1,
+        failedShotCount: 1,
+        failureCountAtFirstOpen: 2,
+      ),
+    ]) {
+      final json = _state().toJson()..['hintEntitlements'] = [entitlement];
+      expect(() => RunState.fromJson(json), throwsFormatException);
+    }
   });
 
   test('컬렉션은 생성자 입력과 외부 수정으로부터 방어된다', () {
@@ -350,6 +527,8 @@ RunState _state({
   int totalScore = 0,
   Map<String, String> replayReferences = const {},
   Iterable<RunShotInput> shotInputLog = const [],
+  Iterable<RunHintEntitlement> hintEntitlements = const [],
+  Iterable<KeyCollectionRecord> keyCollections = const [],
 }) {
   final currentDraw = _draw(
     stageId: 'stage_1',
@@ -397,6 +576,8 @@ RunState _state({
     totalScore: totalScore,
     replayReferences: replayReferences,
     shotInputLog: shotInputLog,
+    hintEntitlements: hintEntitlements,
+    keyCollections: keyCollections,
     startedAt: DateTime.utc(2026, 8, 6, 0, 0),
     updatedAt: DateTime.utc(2026, 8, 6, 0, 1),
   );

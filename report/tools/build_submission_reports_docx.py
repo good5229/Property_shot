@@ -229,13 +229,13 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
     meta = doc.add_paragraph()
     meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
     meta.paragraph_format.space_after = Pt(6)
-    base.set_run_font(meta.add_run("2026-08-09 KST"), size=11, color=NAVY, bold=True)
+    base.set_run_font(meta.add_run("2026-08-10 KST"), size=11, color=NAVY, bold=True)
 
     commit = doc.add_paragraph()
     commit.alignment = WD_ALIGN_PARAGRAPH.CENTER
     commit.paragraph_format.space_after = Pt(10)
     base.set_run_font(
-        commit.add_run("기능 기준 main · f2e0c173ef1b87df9901df47a0583e0a70786a17"),
+        commit.add_run("기능 기준 main 작업 트리 · base bfb7a39734cad39b"),
         size=8.5,
         color=MUTED,
     )

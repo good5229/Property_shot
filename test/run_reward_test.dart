@@ -6,8 +6,8 @@ import 'package:property_shot/game/run/run_reward.dart';
 
 void main() {
   group('런 보상 카탈로그', () {
-    test('초기 보상 8종의 안정 ID와 한글 메타데이터를 정의한다', () {
-      expect(initialRunRewards, hasLength(8));
+    test('초기 보상 9종의 안정 ID와 한글 메타데이터를 정의한다', () {
+      expect(initialRunRewards, hasLength(9));
       expect(initialRunRewards.map((reward) => reward.id), [
         runRewardCloneCoreId,
         runRewardShotCancelAssistId,
@@ -17,6 +17,7 @@ void main() {
         runRewardFailureCauseBoostId,
         runRewardBallAppearanceId,
         runRewardStageRecordGuardId,
+        runRewardNextStageHintAccessId,
       ]);
       expect(
         initialRunRewards.map((reward) => reward.effectKind).toSet(),

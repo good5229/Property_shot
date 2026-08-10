@@ -71,14 +71,14 @@ const stageDrainedAlternativeSolutions = <StageDrainedSolution>[
   StageDrainedSolution(
     patternId: 'stage_drained_02',
     strategyId: 'none',
-    degree: 302,
-    power: 0.66,
+    degree: 52,
+    power: 0.78,
     familyId: 'elastic_bank',
   ),
   StageDrainedSolution(
     patternId: 'stage_drained_03',
     strategyId: 'none',
-    degree: 226,
+    degree: 102,
     power: 1,
     familyId: 'long_side_bypass',
   ),

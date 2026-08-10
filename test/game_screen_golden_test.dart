@@ -21,6 +21,8 @@ void main() {
 
   for (var stageIndex = 0; stageIndex < levels.length; stageIndex++) {
     for (final fixture in const [
+      (name: '320x568', width: 320.0, height: 568.0),
+      (name: '375x812', width: 375.0, height: 812.0),
       (name: '390x844', width: 390.0, height: 844.0),
       (name: '393x852', width: 393.0, height: 852.0),
       (name: '430x932', width: 430.0, height: 932.0),
@@ -78,7 +80,11 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         expect(find.byKey(const Key('aim_area')), findsOneWidget);
-        expect(find.byKey(const Key('compact_message')), findsOneWidget);
+        if (fixture.width < 900) {
+          expect(find.byKey(const Key('compact_message')), findsOneWidget);
+        } else {
+          expect(find.byKey(const Key('compact_message')), findsNothing);
+        }
         expect(find.text(levels[stageIndex].name), findsOneWidget);
         await expectLater(
           find.byKey(const Key('game_screen_golden')),

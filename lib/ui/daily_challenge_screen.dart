@@ -111,6 +111,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   LevelDefinition? _activeLevel;
   GameState? _activeState;
   List<ShotResult> _activeShotResults = const [];
+  List<ShotInput> _activeShotInputs = const [];
   List<RunReward> _activeRewardCandidates = const [];
   String? _activeSelectedRewardId;
   Set<String> _activeAcquiredRewards = const {};
@@ -173,6 +174,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         _activeLevel = null;
         _activeState = null;
         _activeShotResults = const [];
+        _activeShotInputs = const [];
         _activeRewardCandidates = const [];
         _activeSelectedRewardId = null;
         _activeAcquiredRewards = const {};
@@ -395,7 +397,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     }
     if (state?.phase == RunPhase.stageCompleted &&
         state?.currentStageId == stageId) {
-      await session.prepareRewardSelection(stageId: stageId);
+      await session.prepareRewardSelection(
+        stageId: stageId,
+        includeNextStageHint: false,
+      );
       state = await session.loadState();
     }
     StagePatternDraw draw;
@@ -420,16 +425,16 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       copyCoreRewarded: false,
     );
     final results = <ShotResult>[];
+    final inputs = <ShotInput>[];
     for (final saved in session.currentShotInputs) {
       restored = _restoreTraitActions(restored, saved.traitActions);
-      final result = const ShotResolver().resolve(
-        restored,
-        ShotInput(
-          direction: saved.direction,
-          power: saved.power,
-          equippedTrait: saved.equippedTrait,
-        ),
-      );
+      final restoredInput = ShotInput(
+        direction: saved.direction,
+        power: saved.power,
+        equippedTrait: saved.equippedTrait,
+      ).normalized();
+      final result = const ShotResolver().resolve(restored, restoredInput);
+      inputs.add(restoredInput);
       results.add(result);
       restored = result.state;
     }
@@ -440,7 +445,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     final rewards =
         session.state?.phase == RunPhase.rewardSelectionPending ||
             session.state?.phase == RunPhase.rewardSelectionCompleted
-        ? await session.prepareRewardSelection(stageId: draw.stageId)
+        ? await session.prepareRewardSelection(
+            stageId: draw.stageId,
+            includeNextStageHint: false,
+          )
         : const <RunReward>[];
     if (!mounted) return;
     setState(() {
@@ -453,6 +461,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
             : '${results.length}발 진행 상태를 복원했습니다.',
       );
       _activeShotResults = List.unmodifiable(results);
+      _activeShotInputs = List.unmodifiable(inputs);
       _activeRewardCandidates = List.unmodifiable(rewards);
       _activeSelectedRewardId = session.state?.selectedRewardId;
       _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
@@ -644,7 +653,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     final session = _session;
     if (session == null) return const [];
     final stageId = generatedStageCatalog.stages[levelIndex].stageId;
-    final rewards = await session.prepareRewardSelection(stageId: stageId);
+    final rewards = await session.prepareRewardSelection(
+      stageId: stageId,
+      includeNextStageHint: false,
+    );
     if (mounted) {
       setState(() {
         _activeRewardCandidates = List.unmodifiable(rewards);
@@ -833,6 +845,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         key: ValueKey('daily_stage_${_activeStage}_${_activeLevel!.patternId}'),
         initialState: _activeState,
         initialShotResults: _activeShotResults,
+        initialShotInputs: _activeShotInputs,
         initialRewardCandidates: _activeRewardCandidates,
         initialSelectedRewardId: _activeSelectedRewardId,
         initialAcquiredRewards: _activeAcquiredRewards,
@@ -895,6 +908,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       _activeLevel = null;
       _activeState = null;
       _activeShotResults = const [];
+      _activeShotInputs = const [];
       _activeRewardCandidates = const [];
       _activeSelectedRewardId = null;
       _activeTotalScore = 0;
