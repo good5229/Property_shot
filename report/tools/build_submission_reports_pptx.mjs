@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Build editable A4-portrait PPTX companions for the two submission PDFs. */
+/** Build editable A4-portrait evaluator-facing report decks. */
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -37,6 +37,8 @@ const CONFIGS = [
     title: "속성 한방(Property Shot)",
     subtitle: "게임 소개 및 설명",
     running: "Property Shot · Game Guide",
+    tagline: "속성을 옮기고, 실패까지 다음 해법으로 바꾸는 물리 퍼즐",
+    coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/390x844-current-play-audit.png"),
   },
   {
     source: path.join(ROOT, "report/ai_technical_report.md"),
@@ -45,6 +47,18 @@ const CONFIGS = [
     title: "속성 한방(Property Shot)",
     subtitle: "AI 활용 기술 문서",
     running: "Property Shot · AI Technical Report",
+    tagline: "프롬프트를 제작 계약으로 바꾸고, 독립 감사로 검증한 AI 협업",
+    coverImage: path.join(ROOT, "test/goldens/difficulty_easy_first_arrival_390x844.png"),
+  },
+  {
+    source: path.join(ROOT, "report/portfolio.md"),
+    output: path.join(ROOT, "report/dist/property_shot_portfolio.pptx"),
+    kicker: "GAME · AI · PRODUCT CASE STUDY",
+    title: "속성 한방(Property Shot)",
+    subtitle: "프로젝트 포트폴리오",
+    running: "Property Shot · Portfolio",
+    tagline: "게임 디렉팅, AI 오케스트레이션, 검증 가능한 제품 제작",
+    coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/stage4-property-ready.png"),
   },
 ];
 
@@ -241,7 +255,7 @@ function addChrome(slide, config, title, pageNumber, continued = false) {
   });
 }
 
-function addCover(presentation, config, pageNumber) {
+async function addCover(presentation, config, pageNumber) {
   const slide = presentation.slides.add();
   slide.background.fill = COLORS.cream;
   slide.shapes.add({
@@ -274,12 +288,22 @@ function addCover(presentation, config, pageNumber) {
     fill: COLORS.gold,
     line: { style: "solid", fill: "none", width: 0 },
   });
-  addTextBox(slide, "cover-description", "속성을 옮기고, 장면의 상태를 설계하는 세로형 물리 퍼즐", { left: 78, top: 570, width: 610, height: 110 }, {
+  addTextBox(slide, "cover-description", config.tagline, { left: 78, top: 570, width: 340, height: 160 }, {
     fontSize: 22,
     color: COLORS.muted,
     lineSpacing: 1.25,
   });
-  addTextBox(slide, "cover-meta", "2026-08-10 KST\nhttps://good5229.github.io/Property_shot/", { left: 78, top: 920, width: 610, height: 76 }, {
+  const coverBytes = await fs.readFile(config.coverImage);
+  slide.images.add({
+    blob: coverBytes,
+    contentType: "image/png",
+    alt: "속성 한방 실제 플레이 화면",
+    fit: "contain",
+    geometry: "roundRect",
+    borderRadius: "rounded-xl",
+    position: { left: 470, top: 560, width: 230, height: 330 },
+  });
+  addTextBox(slide, "cover-meta", "NAN 2026 Game × AI 해커톤 사전 과제\n2026-08-10", { left: 78, top: 920, width: 610, height: 76 }, {
     fontSize: 17,
     color: COLORS.ink,
     lineSpacing: 1.3,
@@ -289,7 +313,7 @@ function addCover(presentation, config, pageNumber) {
     color: COLORS.muted,
     alignment: "right",
   });
-  slide.speakerNotes.textFrame.setText("[Sources]\n- Project report source and local repository assets\n- https://good5229.github.io/Property_shot/");
+  slide.speakerNotes.textFrame.setText("[Sources]\n- Project report source and local repository assets\n- https://nan2026.nhn.com/");
   return slide;
 }
 
@@ -464,7 +488,7 @@ async function buildDeck(config) {
   const parsed = parseMarkdown(markdown, config.source);
   const presentation = Presentation.create({ slideSize: PAGE });
   let pageNumber = 1;
-  addCover(presentation, config, pageNumber);
+  await addCover(presentation, config, pageNumber);
   pageNumber += 1;
 
   let currentSection = "문서 개요";

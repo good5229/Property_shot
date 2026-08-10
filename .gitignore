@@ -69,6 +69,7 @@ harness_docs/dev-wiki/*
 /report/*
 !/report/game_introduction.md
 !/report/ai_technical_report.md
+!/report/portfolio.md
 !/report/demo_playback_manifest.json
 !/report/demo_bouncy_01_actions.json
 !/report/tools/
@@ -92,6 +93,8 @@ harness_docs/dev-wiki/*
 !/report/dist/property_shot_ai_technical_report.pdf
 !/report/dist/property_shot_game_guide.pptx
 !/report/dist/property_shot_ai_technical_report.pptx
+!/report/dist/property_shot_portfolio.pdf
+!/report/dist/property_shot_portfolio.pptx
 
 # 로컬 플레이 영상(공모전 보고서용, 원격 저장소 미업로드)
 /recordings/*.mp4

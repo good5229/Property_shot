@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the two submission DOCX files from their Markdown sources.
+"""Build evaluator-facing submission DOCX files from Markdown sources.
 
 The game guide uses the documents skill's compact_reference_guide preset.
 The AI report uses standard_business_brief. Both use editorial_cover and a
@@ -44,6 +44,8 @@ class ReportConfig:
     running_label: str
     preset: str
     header_fill: str
+    tagline: str
+    cover_image: Path
 
 
 def set_document_language(doc: Document) -> None:
@@ -78,6 +80,8 @@ CONFIGS = {
         running_label="Property Shot · Game Guide",
         preset="compact_reference_guide",
         header_fill="E8EEF5",
+        tagline="속성을 옮기고, 실패까지 다음 해법으로 바꾸는 물리 퍼즐",
+        cover_image=ROOT / "screenshots" / "commercial-vertical-slice" / "390x844-current-play-audit.png",
     ),
     "ai": ReportConfig(
         source=ROOT / "report" / "ai_technical_report.md",
@@ -88,14 +92,28 @@ CONFIGS = {
         running_label="Property Shot · AI Technical Report",
         preset="standard_business_brief",
         header_fill="F2F4F7",
+        tagline="프롬프트를 제작 계약으로 바꾸고, 독립 감사로 검증한 AI 협업",
+        cover_image=ROOT / "test" / "goldens" / "difficulty_easy_first_arrival_390x844.png",
+    ),
+    "portfolio": ReportConfig(
+        source=ROOT / "report" / "portfolio.md",
+        output=ROOT / "report" / "dist" / "property_shot_portfolio.docx",
+        title="속성 한방(Property Shot)",
+        subtitle="프로젝트 포트폴리오",
+        kicker="GAME · AI · PRODUCT CASE STUDY",
+        running_label="Property Shot · Portfolio",
+        preset="compact_reference_guide",
+        header_fill="E8F4F1",
+        tagline="게임 디렉팅, AI 오케스트레이션, 검증 가능한 제품 제작",
+        cover_image=ROOT / "screenshots" / "commercial-vertical-slice" / "stage4-property-ready.png",
     ),
 }
 
 
 def configure_styles(doc: Document, config: ReportConfig) -> dict[str, float]:
     section = doc.sections[0]
-    section.page_width = Inches(8.5)
-    section.page_height = Inches(11)
+    section.page_width = Inches(8.27)
+    section.page_height = Inches(11.69)
     section.top_margin = Inches(1)
     section.bottom_margin = Inches(1)
     section.left_margin = Inches(1)
@@ -219,35 +237,29 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
 
     strap = doc.add_paragraph()
     strap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    strap.paragraph_format.space_after = Pt(72)
+    strap.paragraph_format.space_after = Pt(18)
     base.set_run_font(
-        strap.add_run("속성을 옮기고, 장면의 상태를 설계하는 세로형 물리 퍼즐"),
+        strap.add_run(config.tagline),
         size=10.5,
         color=GOLD,
     )
+
+    hero = doc.add_paragraph()
+    hero.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    hero.paragraph_format.space_after = Pt(18)
+    picture = hero.add_run().add_picture(str(config.cover_image), width=Inches(1.7))
+    picture._inline.docPr.set("descr", "속성 한방 실제 플레이 화면")
+    picture._inline.docPr.set("title", "Property Shot gameplay")
 
     meta = doc.add_paragraph()
     meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
     meta.paragraph_format.space_after = Pt(6)
     base.set_run_font(meta.add_run("2026-08-10 KST"), size=11, color=NAVY, bold=True)
 
-    commit = doc.add_paragraph()
-    commit.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    commit.paragraph_format.space_after = Pt(10)
-    base.set_run_font(
-        commit.add_run("기능 기준 main · deployed 69744c6d3183"),
-        size=8.5,
-        color=MUTED,
-    )
-
-    play = doc.add_paragraph()
-    play.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    base.add_hyperlink(
-        play,
-        "good5229.github.io/Property_shot/",
-        "https://good5229.github.io/Property_shot/",
-        bold=True,
-    )
+    event = doc.add_paragraph()
+    event.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    event.paragraph_format.space_after = Pt(10)
+    base.set_run_font(event.add_run("NAN 2026 Game × AI 해커톤 사전 과제"), size=10, color=MUTED)
     doc.add_page_break()
 
 

@@ -8,5 +8,6 @@
 6. 보상·기믹·시연 개선: 무료 아이콘 우선의 9종 런 보상, 청록/금색 공 본체 변화, 모든 단계에서 기믹 사용 우위, 반전 없는 60초 영상을 요청. 결과로 Material Icons 매핑, 공 그라데이션·금색 외곽선, 40패턴 동일-grid/인과 검증, 고정 bouncy 시연 계약을 추가했다.
 7. 모바일 UI·힌트·열쇠: 작은 클리어 팝업 하단 잘림 개선, 다음 단계 팁 보상, 패턴별 구체적 L1/L2, 비물리 열쇠, 더 눈에 띄는 게이지를 요청. 결과로 SafeArea 고정 footer·scroll fade, HintCatalog v1, RunState v3 entitlement, 결정론 열쇠 수집, 팁 UI·계측을 연결했다.
 8. 최종 산출물·토큰 관리: 두 PDF와 동일 내용을 편집 가능한 A4 세로 PPTX 두 개로 만들고, 불필요한 에이전트를 중지한 뒤 한 번의 전체 직렬 테스트와 표적 수정을 요청. 결과로 게임 소개 17장·AI 기술 19장의 A4 세로 PPTX와 재생성 도구를 추가하고 36장 전체 렌더·overflow 검사를 통과했다. 전체 회귀는 1회 1,062건만 실행한 뒤 stale Golden·replay 실패군을 표적으로 재검증했고, 추가한 375×812 전체 10단계 Golden도 통과했다. 실행 한도 갱신 뒤 telemetry-attested 22초 브라우저 촬영과 19개×2초 기능 장면을 합성해 정확히 60초 H.264 MOV를 완성·검증했다. 릴리스 커밋 `69744c6d…`을 push하고 Pages run `31373105599`와 공개 번들 해시까지 확인했다.
+9. NAN 2026 평가관 중심 보고서: 커밋·저장소 증빙보다 게임의 가치, 구조, 주요 기능, 실제 프롬프트와 작업 결과를 앞세우고 독립 평가 에이전트가 공개 평가 관점을 조사하도록 요청. 결과로 게임 소개·AI 기술 PDF/PPT를 평가 서사로 개편하고, 실제 프롬프트→제약→작업→검증 사례와 프로젝트 포트폴리오 PDF/PPT, `harness_docs/qa/nan2026_evaluator_report_audit.md`를 추가했다.
 
 결과물 정의는 README의 `프롬프트 및 결과물 요약`, 이 파일, `harness_docs/final/ai_usage_summary.md`, `harness_docs/final/change_summary.md`를 함께 기준으로 한다.
