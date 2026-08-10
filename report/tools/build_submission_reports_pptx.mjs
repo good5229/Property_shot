@@ -36,7 +36,7 @@ const CONFIGS = [
     kicker: "GAME GUIDE",
     title: "속성 한방(Property Shot)",
     running: "Property Shot · Game Guide",
-    tagline: "속성을 옮기고, 실패까지 다음 해법으로 바꾸는 물리 퍼즐",
+    tagline: "",
     coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/390x844-current-play-audit.png"),
   },
   {
@@ -45,7 +45,7 @@ const CONFIGS = [
     kicker: "AI TECHNICAL REPORT",
     title: "속성 한방(Property Shot)",
     running: "Property Shot · AI Technical Report",
-    tagline: "프롬프트를 제작 계약으로 바꾸고, 독립 감사로 검증한 AI 협업",
+    tagline: "",
     coverImage: path.join(ROOT, "test/goldens/difficulty_easy_first_arrival_390x844.png"),
   },
   {
@@ -54,7 +54,7 @@ const CONFIGS = [
     kicker: "GAME · AI · PRODUCT CASE STUDY",
     title: "속성 한방(Property Shot)",
     running: "Property Shot · Portfolio",
-    tagline: "게임 디렉팅, AI 오케스트레이션, 검증 가능한 제품 제작",
+    tagline: "",
     coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/stage4-property-ready.png"),
   },
 ];
@@ -106,6 +106,16 @@ function parseMarkdown(markdown, sourcePath) {
     }
     if (line === "[[WORKFLOW]]") {
       blocks.push({ type: "workflow", raw: line });
+      index += 1;
+      continue;
+    }
+    if (line === "[[ROLE_MAP]]") {
+      blocks.push({ type: "roleMap", raw: line });
+      index += 1;
+      continue;
+    }
+    if (line === "[[VALIDATOR_FLOW]]") {
+      blocks.push({ type: "validatorFlow", raw: line });
       index += 1;
       continue;
     }
@@ -285,11 +295,6 @@ async function addCover(presentation, config, pageNumber) {
     fill: COLORS.gold,
     line: { style: "solid", fill: "none", width: 0 },
   });
-  addTextBox(slide, "cover-description", config.tagline, { left: 78, top: 478, width: 340, height: 160 }, {
-    fontSize: 22,
-    color: COLORS.muted,
-    lineSpacing: 1.25,
-  });
   const coverBytes = await fs.readFile(config.coverImage);
   slide.images.add({
     blob: coverBytes,
@@ -298,7 +303,7 @@ async function addCover(presentation, config, pageNumber) {
     fit: "contain",
     geometry: "roundRect",
     borderRadius: "rounded-xl",
-    position: { left: 470, top: 468, width: 230, height: 330 },
+    position: { left: 282, top: 468, width: 230, height: 330 },
   });
   addTextBox(slide, "cover-meta", "NAN 2026 Game × AI 해커톤 사전 과제\n2026-08-10", { left: 78, top: 900, width: 610, height: 76 }, {
     fontSize: 17,
@@ -431,6 +436,120 @@ function addWorkflowDiagram(slide, y) {
   return 166;
 }
 
+function addRoleMap(slide, y) {
+  const cards = [
+    {
+      title: "사람",
+      body: "재미·난이도 기준 결정\n최종 화면과 결과 승인",
+      fill: "#FFF4DB",
+      line: COLORS.gold,
+    },
+    {
+      title: "AI 실행",
+      body: "코드·데이터·문서 구현\n표적 테스트와 대안 제시",
+      fill: COLORS.paleTeal,
+      line: COLORS.teal,
+    },
+    {
+      title: "독립 AI 감사",
+      body: "수치·복구·접근성 재검증\nP0/P1/P2 근거 보고",
+      fill: "#FFF0EC",
+      line: COLORS.coral,
+    },
+  ];
+  const gap = 30;
+  const width = (CONTENT_WIDTH - gap * 2) / 3;
+  for (let index = 0; index < cards.length - 1; index += 1) {
+    slide.shapes.add({
+      geometry: "rightArrow",
+      name: `role-arrow-${y}-${index}`,
+      position: { left: MARGIN + width + index * (width + gap) + 5, top: y + 72, width: gap - 10, height: 26 },
+      fill: COLORS.gold,
+      line: { style: "solid", fill: "none", width: 0 },
+    });
+  }
+  cards.forEach((card, index) => {
+    const left = MARGIN + index * (width + gap);
+    slide.shapes.add({
+      geometry: "roundRect",
+      name: `role-card-${y}-${index}`,
+      position: { left, top: y, width, height: 166 },
+      fill: card.fill,
+      line: { style: "solid", fill: card.line, width: 1.6 },
+      borderRadius: "rounded-lg",
+    });
+    addTextBox(slide, `role-title-${y}-${index}`, card.title, { left: left + 12, top: y + 22, width: width - 24, height: 34 }, {
+      fontSize: 19,
+      bold: true,
+      color: card.line,
+      alignment: "center",
+    });
+    addTextBox(slide, `role-body-${y}-${index}`, card.body, { left: left + 14, top: y + 70, width: width - 28, height: 72 }, {
+      fontSize: 14,
+      color: COLORS.ink,
+      alignment: "center",
+      verticalAlignment: "middle",
+      lineSpacing: 1.18,
+    });
+  });
+  addTextBox(slide, `role-note-${y}`, "판단 → 실행 → 검증을 분리하고, 채택 여부는 사람이 다시 결정한다.", { left: MARGIN, top: y + 183, width: CONTENT_WIDTH, height: 34 }, {
+    fontSize: 14,
+    color: COLORS.muted,
+    alignment: "center",
+  });
+  return 232;
+}
+
+function addValidatorFlow(slide, y) {
+  const steps = [
+    ["1  새 패턴", "Stage data · Hint · Key"],
+    ["2  정적 검사", "겹침 · 필드 이탈 · ID/연결 · Hint/Key 참조"],
+    ["3  물리 탐색", "홀 접근 · 직선 클리어 · 기믹 경로 · 관통/터널링/무한 반사"],
+    ["4  결정론 반복", "같은 입력의 결과와 오류 코드가 반복 실행에서도 동일"],
+    ["5  Invalid fixture 역검증", "일부러 잘못 만든 패턴을 실제로 잡는지 확인"],
+    ["6  PASS → 게임 등록", "검증을 통과한 패턴만 생성 카탈로그에 반영"],
+  ];
+  const nodeLeft = MARGIN + 42;
+  const nodeWidth = CONTENT_WIDTH - 84;
+  const nodeHeight = 62;
+  const gap = 20;
+  for (let index = 0; index < steps.length - 1; index += 1) {
+    slide.shapes.add({
+      geometry: "downArrow",
+      name: `validator-arrow-${y}-${index}`,
+      position: { left: MARGIN + CONTENT_WIDTH / 2 - 10, top: y + nodeHeight + index * (nodeHeight + gap) + 2, width: 20, height: gap - 4 },
+      fill: COLORS.gold,
+      line: { style: "solid", fill: "none", width: 0 },
+    });
+  }
+  steps.forEach(([title, body], index) => {
+    const top = y + index * (nodeHeight + gap);
+    const isAudit = index === 4;
+    const isPass = index === 5;
+    const fill = isAudit ? "#FFF0EC" : isPass ? "#FFF4DB" : COLORS.paleTeal;
+    const line = isAudit ? COLORS.coral : isPass ? COLORS.gold : COLORS.teal;
+    slide.shapes.add({
+      geometry: "roundRect",
+      name: `validator-node-${y}-${index}`,
+      position: { left: nodeLeft, top, width: nodeWidth, height: nodeHeight },
+      fill,
+      line: { style: "solid", fill: line, width: 1.4 },
+      borderRadius: "rounded-lg",
+    });
+    addTextBox(slide, `validator-title-${y}-${index}`, title, { left: nodeLeft + 16, top: top + 10, width: 180, height: 28 }, {
+      fontSize: 16,
+      bold: true,
+      color: COLORS.ink,
+    });
+    addTextBox(slide, `validator-body-${y}-${index}`, body, { left: nodeLeft + 198, top: top + 10, width: nodeWidth - 214, height: 38 }, {
+      fontSize: 13,
+      color: COLORS.muted,
+      verticalAlignment: "middle",
+    });
+  });
+  return steps.length * nodeHeight + (steps.length - 1) * gap + 12;
+}
+
 function tableMetrics(rows) {
   const columns = Math.max(...rows.map((row) => row.length));
   const normalized = rows.map((row) => Array.from({ length: columns }, (_, index) => row[index] ?? ""));
@@ -488,6 +607,8 @@ function blockHeight(block) {
   if (block.type === "image") return 384;
   if (block.type === "table") return tableMetrics(block.rows).height + 16;
   if (block.type === "workflow") return 166;
+  if (block.type === "roleMap") return 232;
+  if (block.type === "validatorFlow") return 484;
   return 0;
 }
 
@@ -577,6 +698,10 @@ async function buildDeck(config) {
         y += addTable(slide, block.rows, y);
       } else if (block.type === "workflow") {
         y += addWorkflowDiagram(slide, y);
+      } else if (block.type === "roleMap") {
+        y += addRoleMap(slide, y);
+      } else if (block.type === "validatorFlow") {
+        y += addValidatorFlow(slide, y);
       }
     }
     finishSlide();

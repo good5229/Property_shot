@@ -32,6 +32,8 @@ DARK_BLUE = base.DARK_BLUE
 NAVY = base.NAVY
 MUTED = base.MUTED
 GOLD = base.GOLD
+TEAL = RGBColor(35, 124, 103)
+CORAL = RGBColor(198, 82, 64)
 DOCUMENT_LANGUAGE = "ko-KR"
 
 
@@ -79,7 +81,7 @@ CONFIGS = {
         running_label="Property Shot · Game Guide",
         preset="compact_reference_guide",
         header_fill="E8EEF5",
-        tagline="속성을 옮기고, 실패까지 다음 해법으로 바꾸는 물리 퍼즐",
+        tagline="",
         cover_image=ROOT / "screenshots" / "commercial-vertical-slice" / "390x844-current-play-audit.png",
     ),
     "ai": ReportConfig(
@@ -90,7 +92,7 @@ CONFIGS = {
         running_label="Property Shot · AI Technical Report",
         preset="standard_business_brief",
         header_fill="F2F4F7",
-        tagline="프롬프트를 제작 계약으로 바꾸고, 독립 감사로 검증한 AI 협업",
+        tagline="",
         cover_image=ROOT / "test" / "goldens" / "difficulty_easy_first_arrival_390x844.png",
     ),
     "portfolio": ReportConfig(
@@ -101,7 +103,7 @@ CONFIGS = {
         running_label="Property Shot · Portfolio",
         preset="compact_reference_guide",
         header_fill="E8F4F1",
-        tagline="게임 디렉팅, AI 오케스트레이션, 검증 가능한 제품 제작",
+        tagline="",
         cover_image=ROOT / "screenshots" / "commercial-vertical-slice" / "stage4-property-ready.png",
     ),
 }
@@ -227,14 +229,15 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
     title.paragraph_format.space_after = Pt(8)
     base.set_run_font(title.add_run(config.title), size=30, color=NAVY, bold=True)
 
-    strap = doc.add_paragraph()
-    strap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    strap.paragraph_format.space_after = Pt(18)
-    base.set_run_font(
-        strap.add_run(config.tagline),
-        size=10.5,
-        color=GOLD,
-    )
+    if config.tagline:
+        strap = doc.add_paragraph()
+        strap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        strap.paragraph_format.space_after = Pt(18)
+        base.set_run_font(
+            strap.add_run(config.tagline),
+            size=10.5,
+            color=GOLD,
+        )
 
     hero = doc.add_paragraph()
     hero.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -297,6 +300,97 @@ def add_workflow_diagram(doc: Document) -> None:
     note.paragraph_format.space_before = Pt(4)
     note.paragraph_format.space_after = Pt(10)
     base.set_run_font(note.add_run("감사에서 문제가 발견되면 기능 계약 단계로 돌아간다."), size=8.5, color=MUTED)
+
+
+def add_role_map(doc: Document) -> None:
+    """Add an editable map of human direction, AI execution, and AI audit."""
+    headers = ["사람", "AI 실행", "독립 AI 감사"]
+    details = [
+        "재미·난이도 기준 결정\n최종 화면과 결과 승인",
+        "코드·데이터·문서 구현\n표적 테스트와 대안 제시",
+        "수치·복구·접근성 재검증\nP0/P1/P2 근거 보고",
+    ]
+    table = doc.add_table(rows=2, cols=3)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    colors = ["FFF4DB", "E8F4F1", "FFF0EC"]
+    accents = [GOLD, TEAL, CORAL]
+    for column in range(3):
+        for row in range(2):
+            cell = table.cell(row, column)
+            cell.width = Inches(2.05)
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            shading = OxmlElement("w:shd")
+            shading.set(qn("w:fill"), colors[column])
+            cell._tc.get_or_add_tcPr().append(shading)
+            paragraph = cell.paragraphs[0]
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.space_before = Pt(7)
+            paragraph.paragraph_format.space_after = Pt(7)
+            text = headers[column] if row == 0 else details[column]
+            base.set_run_font(
+                paragraph.add_run(text),
+                size=10 if row == 0 else 8.5,
+                color=accents[column] if row == 0 else NAVY,
+                bold=row == 0,
+            )
+    note = doc.add_paragraph()
+    note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    note.paragraph_format.space_before = Pt(5)
+    note.paragraph_format.space_after = Pt(10)
+    base.set_run_font(
+        note.add_run("판단 → 실행 → 검증을 분리하고, 채택 여부는 사람이 다시 결정한다."),
+        size=8.5,
+        color=MUTED,
+    )
+
+
+def add_validator_flow(doc: Document) -> None:
+    """Add an editable vertical StagePatternValidator flowchart."""
+    # The flow is evidence in its own right; keep the whole sequence together
+    # instead of allowing Word to split it after the first few nodes.
+    doc.add_page_break()
+    steps = [
+        ("1  새 패턴", "Stage data · Hint · Key"),
+        ("2  정적 검사", "겹침 · 필드 이탈 · ID/연결 · Hint/Key 참조"),
+        ("3  물리 탐색", "홀 접근 · 직선 클리어 · 기믹 경로 · 관통/터널링/무한 반사"),
+        ("4  결정론 반복", "같은 입력의 결과와 오류 코드가 반복 실행에서도 동일"),
+        ("5  Invalid fixture 역검증", "일부러 잘못 만든 패턴을 실제로 잡는지 확인"),
+        ("6  PASS → 게임 등록", "검증을 통과한 패턴만 생성 카탈로그에 반영"),
+    ]
+    table = doc.add_table(rows=len(steps) * 2 - 1, cols=1)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    for index, (title, detail) in enumerate(steps):
+        row = index * 2
+        cell = table.cell(row, 0)
+        cell.width = Inches(6.1)
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        shading = OxmlElement("w:shd")
+        shading.set(qn("w:fill"), "E8F4F1" if index not in (4, 5) else ("FFF0EC" if index == 4 else "FFF4DB"))
+        cell._tc.get_or_add_tcPr().append(shading)
+        paragraph = cell.paragraphs[0]
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        paragraph.paragraph_format.space_before = Pt(5)
+        paragraph.paragraph_format.space_after = Pt(5)
+        base.set_run_font(paragraph.add_run(f"{title}\n"), size=9.5, color=NAVY, bold=True)
+        base.set_run_font(paragraph.add_run(detail), size=8, color=MUTED)
+        if index < len(steps) - 1:
+            arrow = table.cell(row + 1, 0).paragraphs[0]
+            arrow.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            arrow.paragraph_format.space_before = Pt(0)
+            arrow.paragraph_format.space_after = Pt(0)
+            base.set_run_font(arrow.add_run("↓"), size=11, color=GOLD, bold=True)
+    note = doc.add_paragraph()
+    note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    note.paragraph_format.space_before = Pt(5)
+    note.paragraph_format.space_after = Pt(10)
+    base.set_run_font(
+        note.add_run("검증기가 있다고 믿지 않고, 검증기가 오류를 잡는지도 다시 검증했다."),
+        size=8.5,
+        color=CORAL,
+        bold=True,
+    )
 
 
 def next_num_id(doc: Document) -> int:
@@ -437,6 +531,14 @@ def build(config: ReportConfig) -> Path:
             continue
         if line.strip() == "[[WORKFLOW]]":
             add_workflow_diagram(doc)
+            idx += 1
+            continue
+        if line.strip() == "[[ROLE_MAP]]":
+            add_role_map(doc)
+            idx += 1
+            continue
+        if line.strip() == "[[VALIDATOR_FLOW]]":
+            add_validator_flow(doc)
             idx += 1
             continue
         if line.startswith("|") and idx + 1 < len(lines) and lines[idx + 1].startswith("|"):
