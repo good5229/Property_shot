@@ -119,6 +119,10 @@ function parseMarkdown(markdown, sourcePath) {
       index += 1;
       continue;
     }
+    if (line === "[[PAGE_BREAK]]") {
+      index += 1;
+      continue;
+    }
     if (line.startsWith("## ")) {
       blocks.push({ type: "section", text: cleanInline(line.slice(3)), raw: line });
       index += 1;
@@ -727,7 +731,12 @@ async function buildDeck(config) {
 
 async function main() {
   const results = [];
-  for (const config of CONFIGS) results.push(await buildDeck(config));
+  const requestedKind = process.env.PROPERTY_SHOT_REPORT_KIND?.trim();
+  const configs = requestedKind
+    ? CONFIGS.filter((config) => path.basename(config.source, ".md") === requestedKind)
+    : CONFIGS;
+  if (!configs.length) throw new Error(`Unknown report kind: ${requestedKind}`);
+  for (const config of configs) results.push(await buildDeck(config));
   console.log(JSON.stringify(results, null, 2));
 }
 

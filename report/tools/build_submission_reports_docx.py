@@ -541,6 +541,10 @@ def build(config: ReportConfig) -> Path:
             add_validator_flow(doc)
             idx += 1
             continue
+        if line.strip() == "[[PAGE_BREAK]]":
+            doc.add_page_break()
+            idx += 1
+            continue
         if line.startswith("|") and idx + 1 < len(lines) and lines[idx + 1].startswith("|"):
             rows = [base.split_table_row(line)]
             idx += 2
