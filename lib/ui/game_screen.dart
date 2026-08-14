@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import '../game/analysis/creative_chain_score.dart';
 import '../game/analysis/assist_recommendation.dart';
+import '../game/analysis/counterfactual_shot_advice.dart';
 import '../game/analysis/failure_replay.dart';
 import '../game/analysis/stage_discovery.dart';
 import '../game/analysis/solution_mastery.dart';
@@ -113,6 +114,9 @@ class GameScreen extends StatefulWidget {
     this.onSolutionDiscovered,
     this.debugHintKeyVfxId,
     this.demoLaunchInput,
+    this.objectiveOverride,
+    this.showDiscoveryHud = true,
+    this.exitTooltipOverride,
   });
 
   final GameState? initialState;
@@ -180,6 +184,9 @@ class GameScreen extends StatefulWidget {
   @visibleForTesting
   final String? debugHintKeyVfxId;
   final ShotInput? demoLaunchInput;
+  final String? objectiveOverride;
+  final bool showDiscoveryHud;
+  final String? exitTooltipOverride;
 
   /// 오늘의 도전처럼 일반 섬 진행을 오염시키면 안 되는 흐름은 disabled로 둔다.
   final GameProgressPersistencePolicy progressPersistencePolicy;
@@ -194,6 +201,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final ProgressStore _progressStore;
   final _feedback = GameFeedback();
   final _launchInputSession = LaunchInputSession();
+  final _aimFocusNode = FocusNode(debugLabel: 'game_board');
+  bool _aimHasFocus = false;
   final _launchInputLatency = LaunchInputLatencyTracker();
   final _framePerformance = FramePerformanceTracker();
   late final LocalPlayTelemetry _telemetry;
@@ -2448,7 +2457,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _showClearPopup = false;
       _showFailurePopup = !cleared;
     });
-    if (!cleared) _refreshAssistRecommendation();
+    if (!cleared) {
+      _refreshAssistRecommendation();
+      unawaited(_refreshCounterfactualAdvice());
+    }
     if (cleared) {
       final key = _currentHintKey;
       if (key != null && !_collectedHintKeyIds.contains(key.id)) {
@@ -2506,6 +2518,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
       _feedback.shotFailed();
     }
+  }
+
+  Future<void> _refreshCounterfactualAdvice() async {
+    final failure = _failureReplay;
+    if (failure == null) return;
+    // 실패 팝업을 먼저 그린 뒤 주변 후보를 계산한다. 느린 기기에서는 기존
+    // 인과 조언을 유지해 이 분석이 재시도 UI를 붙잡지 않게 한다.
+    await Future<void>.delayed(Duration.zero);
+    final stopwatch = Stopwatch()..start();
+    final counterfactual = CounterfactualShotCoach().analyze(
+      stageId: _currentLevel.stageId ?? _currentLevel.id,
+      failure: failure,
+    );
+    stopwatch.stop();
+    if (!mounted || !_showFailurePopup || !identical(_failureReplay, failure)) {
+      return;
+    }
+    if (counterfactual == null || stopwatch.elapsedMilliseconds > 12) {
+      return;
+    }
+    final causal = widget.showTutorialFailureHints
+        ? tutorialCausalHintForStage(_state.levelIndex)
+        : null;
+    setState(() {
+      _failureAdvice = causal == null
+          ? counterfactual.message
+          : '${counterfactual.message} $causal';
+    });
   }
 
   void _onAnimationImpact(ShotAnimationMove move) {
@@ -3520,6 +3560,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     Size fieldSize,
     Duration timeStamp,
   ) {
+    _aimFocusNode.requestFocus();
     if (!_shotResolver.canLaunch(_state) ||
         _isAnimatingShot ||
         _isCommittingShot ||
@@ -3842,6 +3883,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _chargeFeedbackTimer?.cancel();
     _keyCollectionVfxTimer?.cancel();
     _launchInputSession.reset();
+    _aimFocusNode.dispose();
     super.dispose();
   }
 
@@ -3951,46 +3993,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               return Stack(
                 children: [
                   const Positioned.fill(child: _GameplayBackdrop()),
-                  AbsorbPointer(
-                    absorbing: inputBlocked,
-                    child: ExcludeSemantics(
-                      excluding: inputBlocked,
-                      child: Center(
-                        child: SizedBox(
-                          width: contentWidth,
-                          height: safeSize.height,
-                          child: Column(
-                            children: [
-                              if (!compactLayout)
-                                _Hud(
-                                  tutorialActive: tutorialTarget != null,
-                                  state: _state,
-                                  discoveryMilestones: _discoveryMilestones,
-                                  rewardGuide: _stageRewardGuide,
-                                  unlockedLevel: _unlockedLevel,
-                                  onSelectLevel: _selectLevel,
-                                  showStageSelector: widget.showStageSelector,
-                                  onPause: _togglePause,
-                                  onExit: widget.onExit == null
-                                      ? null
-                                      : _exitStage,
-                                  exitToMainMenu: widget.exitToMainMenu,
-                                  hudScore: widget.hudScore,
-                                  onDebug: widget.showDebugControls
-                                      ? _openDebugMenu
-                                      : null,
-                                ),
-                              if (compactLayout)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    6,
-                                    6,
-                                    6,
-                                    0,
-                                  ),
-                                  child: _Hud(
-                                    compact: true,
-                                    dense: denseCompact,
+                  ExcludeFocus(
+                    excluding: inputBlocked,
+                    child: AbsorbPointer(
+                      absorbing: inputBlocked,
+                      child: ExcludeSemantics(
+                        excluding: inputBlocked,
+                        child: Center(
+                          child: SizedBox(
+                            width: contentWidth,
+                            height: safeSize.height,
+                            child: Column(
+                              children: [
+                                if (!compactLayout)
+                                  _Hud(
                                     tutorialActive: tutorialTarget != null,
                                     state: _state,
                                     discoveryMilestones: _discoveryMilestones,
@@ -4007,374 +4023,545 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     onDebug: widget.showDebugControls
                                         ? _openDebugMenu
                                         : null,
+                                    objectiveOverride: widget.objectiveOverride,
+                                    showDiscovery: widget.showDiscoveryHud,
+                                    exitTooltipOverride:
+                                        widget.exitTooltipOverride,
                                   ),
-                                ),
-                              if (persistentTutorialHint != null)
-                                PersistentTutorialHintCard(
-                                  text: persistentTutorialHint,
-                                ),
-                              Expanded(
-                                child: AbsorbPointer(
-                                  absorbing: inputBlocked,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: compactLayout ? 0 : 12,
+                                if (compactLayout)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      6,
+                                      6,
+                                      6,
+                                      0,
                                     ),
-                                    child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        final semanticLaunch =
-                                            CustomSemanticsAction(
-                                              label: '공 발사',
-                                            );
-                                        final semanticAimRight =
-                                            CustomSemanticsAction(
-                                              label: '오른쪽으로 조준',
-                                            );
-                                        final semanticAimLeft =
-                                            CustomSemanticsAction(
-                                              label: '왼쪽으로 조준',
-                                            );
-                                        final semanticAimUp =
-                                            CustomSemanticsAction(
-                                              label: '위쪽으로 조준',
-                                            );
-                                        final semanticAimDown =
-                                            CustomSemanticsAction(
-                                              label: '아래쪽으로 조준',
-                                            );
-                                        final fieldSize = constraints.biggest;
-                                        final scale = math.min(
-                                          fieldSize.width / logicalSize.x,
-                                          fieldSize.height / logicalSize.y,
-                                        );
-                                        final boardSize = Size(
-                                          logicalSize.x * scale,
-                                          logicalSize.y * scale,
-                                        );
-                                        return Align(
-                                          alignment: Alignment.topCenter,
-                                          child: SizedBox(
-                                            width: boardSize.width,
-                                            height: boardSize.height,
-                                            child: Stack(
-                                              fit: StackFit.expand,
-                                              children: [
-                                                Positioned(
-                                                  left: 0,
-                                                  top: 0,
-                                                  width: boardSize.width,
-                                                  height: boardSize.height,
-                                                  child: Listener(
-                                                    key: const Key('aim_area'),
-                                                    behavior:
-                                                        HitTestBehavior.opaque,
-                                                    onPointerDown: (event) =>
-                                                        _handlePointerDown(
-                                                          event.pointer,
-                                                          event.localPosition,
-                                                          boardSize,
-                                                          event.timeStamp,
-                                                        ),
-                                                    onPointerMove: (event) =>
-                                                        _handlePointerMove(
-                                                          event.pointer,
-                                                          event.localPosition,
-                                                          boardSize,
-                                                          event.timeStamp,
-                                                        ),
-                                                    onPointerUp: (event) =>
-                                                        _handlePointerUp(
-                                                          event.pointer,
-                                                          event.localPosition,
-                                                          boardSize,
-                                                          event.timeStamp,
-                                                        ),
-                                                    onPointerCancel: (event) =>
-                                                        _handlePointerCancel(
-                                                          pointer:
-                                                              event.pointer,
-                                                        ),
-                                                    child: Semantics(
-                                                      container: true,
-                                                      label: '공을 조준하는 게임 화면',
-                                                      value: _chargeGaugeActive
-                                                          ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                          : [
-                                                              '힘 ${(_state.aimPower * 100).round()}퍼센트',
-                                                              ?_firstArrivalSemanticsValue,
-                                                            ].join(', '),
-                                                      increasedValue:
-                                                          _chargeGaugeActive
-                                                          ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                          : '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                                      decreasedValue:
-                                                          _chargeGaugeActive
-                                                          ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                          : '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
-                                                      hint: _chargeGaugeActive
-                                                          ? '현재 ${_chargeGaugeStateLabel(_chargeGaugeState)}. 손을 떼면 발사하거나 과충전 시 취소됩니다.'
-                                                          : _difficulty ==
-                                                                PlayerDifficulty
-                                                                    .easy
-                                                          ? '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하면 마름모와 예상 라벨로 첫 도착 위치를 안내합니다'
-                                                          : '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
-                                                      onIncrease: () =>
-                                                          _adjustPower(0.055),
-                                                      onDecrease: () =>
-                                                          _adjustPower(-0.055),
-                                                      customSemanticsActions: {
-                                                        semanticLaunch: _launch,
-                                                        semanticAimRight: () =>
-                                                            _nudgeAim(
-                                                              math.pi / 18,
-                                                            ),
-                                                        semanticAimLeft: () =>
-                                                            _nudgeAim(
-                                                              -math.pi / 18,
-                                                            ),
-                                                        semanticAimUp: () =>
-                                                            _nudgeAim(
-                                                              -math.pi / 18,
-                                                            ),
-                                                        semanticAimDown: () =>
-                                                            _nudgeAim(
-                                                              math.pi / 18,
-                                                            ),
-                                                      },
-                                                      child: ClipRRect(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                        child: GameWidget(
-                                                          game: _game,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                if (tutorialTarget != null)
+                                    child: _Hud(
+                                      compact: true,
+                                      dense: denseCompact,
+                                      tutorialActive: tutorialTarget != null,
+                                      state: _state,
+                                      discoveryMilestones: _discoveryMilestones,
+                                      rewardGuide: _stageRewardGuide,
+                                      unlockedLevel: _unlockedLevel,
+                                      onSelectLevel: _selectLevel,
+                                      showStageSelector:
+                                          widget.showStageSelector,
+                                      onPause: _togglePause,
+                                      onExit: widget.onExit == null
+                                          ? null
+                                          : _exitStage,
+                                      exitToMainMenu: widget.exitToMainMenu,
+                                      hudScore: widget.hudScore,
+                                      onDebug: widget.showDebugControls
+                                          ? _openDebugMenu
+                                          : null,
+                                      objectiveOverride:
+                                          widget.objectiveOverride,
+                                      showDiscovery: widget.showDiscoveryHud,
+                                      exitTooltipOverride:
+                                          widget.exitTooltipOverride,
+                                    ),
+                                  ),
+                                if (persistentTutorialHint != null)
+                                  PersistentTutorialHintCard(
+                                    text: persistentTutorialHint,
+                                  ),
+                                Expanded(
+                                  child: AbsorbPointer(
+                                    absorbing: inputBlocked,
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: compactLayout ? 0 : 12,
+                                      ),
+                                      child: LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final semanticLaunch =
+                                              CustomSemanticsAction(
+                                                label: '공 발사',
+                                              );
+                                          final semanticAimRight =
+                                              CustomSemanticsAction(
+                                                label: '시계 방향으로 조준',
+                                              );
+                                          final semanticAimLeft =
+                                              CustomSemanticsAction(
+                                                label: '반시계 방향으로 조준',
+                                              );
+                                          final fieldSize = constraints.biggest;
+                                          final scale = math.min(
+                                            fieldSize.width / logicalSize.x,
+                                            fieldSize.height / logicalSize.y,
+                                          );
+                                          final boardSize = Size(
+                                            logicalSize.x * scale,
+                                            logicalSize.y * scale,
+                                          );
+                                          return Align(
+                                            alignment: Alignment.topCenter,
+                                            child: SizedBox(
+                                              width: boardSize.width,
+                                              height: boardSize.height,
+                                              child: Stack(
+                                                fit: StackFit.expand,
+                                                children: [
                                                   Positioned(
-                                                    left: math.min(
-                                                      math.max(
-                                                        6.0,
-                                                        (tutorialTarget
-                                                                    .position
-                                                                    .x -
-                                                                58) *
-                                                            scale,
-                                                      ),
-                                                      math.max(
-                                                        6.0,
-                                                        boardSize.width - 150,
-                                                      ),
-                                                    ),
-                                                    top: math.min(
-                                                      math.max(
-                                                        6.0,
-                                                        (tutorialTarget
-                                                                    .position
-                                                                    .y -
-                                                                66) *
-                                                            scale,
-                                                      ),
-                                                      math.max(
-                                                        6.0,
-                                                        boardSize.height - 54,
-                                                      ),
-                                                    ),
-                                                    child: IgnorePointer(
-                                                      child: _TutorialCoachMark(
-                                                        text: _tutorialHint,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                for (final entity
-                                                    in _state.entities)
-                                                  if (entity.active)
-                                                    Positioned(
-                                                      left: _semanticEntityRect(
-                                                        entity,
-                                                        scale,
-                                                      ).left,
-                                                      top: _semanticEntityRect(
-                                                        entity,
-                                                        scale,
-                                                      ).top,
-                                                      width:
-                                                          _semanticEntityRect(
-                                                            entity,
-                                                            scale,
-                                                          ).width,
-                                                      height:
-                                                          _semanticEntityRect(
-                                                            entity,
-                                                            scale,
-                                                          ).height,
-                                                      child: Semantics(
-                                                        container: true,
-                                                        button: true,
-                                                        label:
-                                                            _semanticEntityLabel(
-                                                              entity,
-                                                            ),
-                                                        hint:
-                                                            entity
-                                                                .traits
-                                                                .isNotEmpty
-                                                            ? '선택하면 속성 정보를 확인할 수 있습니다'
-                                                            : '선택하면 물체 정보를 확인할 수 있습니다',
-                                                        onTap: () =>
-                                                            _handleSemanticEntity(
-                                                              entity.id,
-                                                            ),
-                                                        child:
-                                                            const SizedBox.expand(),
-                                                      ),
-                                                    ),
-                                                if (_currentHintKey
-                                                    case final key?
-                                                    when !_collectedHintKeyIds
-                                                            .contains(key.id) ||
-                                                        (widget.debugHintKeyVfxId ??
-                                                                _keyCollectionVfxId) ==
-                                                            key.id)
-                                                  Positioned(
-                                                    left:
-                                                        (key.position.x -
-                                                            key.size.x / 2) *
-                                                        scale,
-                                                    top:
-                                                        (key.position.y -
-                                                            key.size.y / 2) *
-                                                        scale,
-                                                    width: key.size.x * scale,
-                                                    height: key.size.y * scale,
-                                                    child: Semantics(
-                                                      container: true,
-                                                      label: '힌트 열쇠',
-                                                      value:
-                                                          '공으로 닿으면 현재 스테이지 팁을 해금합니다',
-                                                      child: IgnorePointer(
-                                                        child: _HintKeyOverlay(
-                                                          vfxActive:
-                                                              (widget.debugHintKeyVfxId ??
-                                                                  _keyCollectionVfxId) ==
-                                                              key.id,
-                                                          reducedMotion:
-                                                              GameFeedback
-                                                                  .reducedMotionEnabled,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                if (_patternHintEntry != null)
-                                                  Positioned(
-                                                    top: 10,
-                                                    right: 10,
-                                                    child: _HintAccessButton(
-                                                      available: _hintAvailable,
-                                                      keyAvailable:
-                                                          _currentHintKey !=
-                                                              null &&
-                                                          !_collectedHintKeyIds
-                                                              .contains(
-                                                                _currentHintKey!
-                                                                    .id,
-                                                              ),
-                                                      onPressed: _hintAvailable
-                                                          ? _showPatternHintSheet
-                                                          : null,
-                                                    ),
-                                                  ),
-                                                if (widget.demoLaunchInput !=
-                                                    null)
-                                                  Positioned(
+                                                    left: 0,
                                                     top: 0,
-                                                    left:
-                                                        boardSize.width / 2 -
-                                                        22,
-                                                    child: Semantics(
-                                                      button: true,
-                                                      label:
-                                                          '검증된 48도 90퍼센트 시연 발사',
-                                                      child: GestureDetector(
+                                                    width: boardSize.width,
+                                                    height: boardSize.height,
+                                                    child: Focus(
+                                                      key: const Key(
+                                                        'aim_keyboard_focus',
+                                                      ),
+                                                      onFocusChange: (focused) {
+                                                        if (mounted) {
+                                                          setState(
+                                                            () => _aimHasFocus =
+                                                                focused &&
+                                                                FocusManager
+                                                                        .instance
+                                                                        .highlightMode ==
+                                                                    FocusHighlightMode
+                                                                        .traditional,
+                                                          );
+                                                        }
+                                                      },
+                                                      focusNode: _aimFocusNode,
+                                                      onKeyEvent: (node, event) {
+                                                        if (event
+                                                                is KeyRepeatEvent ||
+                                                            event
+                                                                is! KeyDownEvent) {
+                                                          return KeyEventResult
+                                                              .ignored;
+                                                        }
+                                                        if (!_aimHasFocus &&
+                                                            mounted) {
+                                                          setState(
+                                                            () => _aimHasFocus =
+                                                                true,
+                                                          );
+                                                        }
+                                                        final key =
+                                                            event.logicalKey;
+                                                        if (key ==
+                                                            LogicalKeyboardKey
+                                                                .arrowLeft) {
+                                                          _nudgeAim(
+                                                            -math.pi / 18,
+                                                          );
+                                                        } else if (key ==
+                                                            LogicalKeyboardKey
+                                                                .arrowRight) {
+                                                          _nudgeAim(
+                                                            math.pi / 18,
+                                                          );
+                                                        } else if (key ==
+                                                                LogicalKeyboardKey
+                                                                    .arrowUp ||
+                                                            key ==
+                                                                LogicalKeyboardKey
+                                                                    .add ||
+                                                            key ==
+                                                                LogicalKeyboardKey
+                                                                    .pageUp) {
+                                                          _adjustPower(0.055);
+                                                        } else if (key ==
+                                                                LogicalKeyboardKey
+                                                                    .arrowDown ||
+                                                            key ==
+                                                                LogicalKeyboardKey
+                                                                    .minus ||
+                                                            key ==
+                                                                LogicalKeyboardKey
+                                                                    .pageDown) {
+                                                          _adjustPower(-0.055);
+                                                        } else if (key ==
+                                                            LogicalKeyboardKey
+                                                                .space) {
+                                                          _launch();
+                                                        } else if (key ==
+                                                                LogicalKeyboardKey
+                                                                    .escape &&
+                                                            _isCharging) {
+                                                          _handlePointerCancel();
+                                                        } else {
+                                                          return KeyEventResult
+                                                              .ignored;
+                                                        }
+                                                        return KeyEventResult
+                                                            .handled;
+                                                      },
+                                                      child: DecoratedBox(
                                                         key: const Key(
-                                                          'verified_demo_launch',
+                                                          'aim_focus_indicator',
                                                         ),
-                                                        behavior:
-                                                            HitTestBehavior
-                                                                .opaque,
-                                                        onTap:
-                                                            _launchVerifiedDemoShot,
-                                                        child: Opacity(
-                                                          opacity: 0.01,
-                                                          child: Container(
-                                                            width: 44,
-                                                            height: 44,
-                                                            color: Colors.white,
+                                                        position:
+                                                            DecorationPosition
+                                                                .foreground,
+                                                        decoration: BoxDecoration(
+                                                          border: _aimHasFocus
+                                                              ? Border.all(
+                                                                  color: const Color(
+                                                                    0xFF176B78,
+                                                                  ),
+                                                                  width: 3,
+                                                                )
+                                                              : null,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                10,
+                                                              ),
+                                                        ),
+                                                        child: Listener(
+                                                          key: const Key(
+                                                            'aim_area',
+                                                          ),
+                                                          behavior:
+                                                              HitTestBehavior
+                                                                  .opaque,
+                                                          onPointerDown: (event) =>
+                                                              _handlePointerDown(
+                                                                event.pointer,
+                                                                event
+                                                                    .localPosition,
+                                                                boardSize,
+                                                                event.timeStamp,
+                                                              ),
+                                                          onPointerMove: (event) =>
+                                                              _handlePointerMove(
+                                                                event.pointer,
+                                                                event
+                                                                    .localPosition,
+                                                                boardSize,
+                                                                event.timeStamp,
+                                                              ),
+                                                          onPointerUp: (event) =>
+                                                              _handlePointerUp(
+                                                                event.pointer,
+                                                                event
+                                                                    .localPosition,
+                                                                boardSize,
+                                                                event.timeStamp,
+                                                              ),
+                                                          onPointerCancel: (event) =>
+                                                              _handlePointerCancel(
+                                                                pointer: event
+                                                                    .pointer,
+                                                              ),
+                                                          child: Semantics(
+                                                            container: true,
+                                                            label:
+                                                                '공을 조준하는 게임 화면',
+                                                            value:
+                                                                _chargeGaugeActive
+                                                                ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                                : [
+                                                                    '힘 ${(_state.aimPower * 100).round()}퍼센트',
+                                                                    ?_firstArrivalSemanticsValue,
+                                                                  ].join(', '),
+                                                            increasedValue:
+                                                                _chargeGaugeActive
+                                                                ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                                : '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                            decreasedValue:
+                                                                _chargeGaugeActive
+                                                                ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
+                                                                : '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                            hint:
+                                                                _chargeGaugeActive
+                                                                ? '현재 ${_chargeGaugeStateLabel(_chargeGaugeState)}. 손을 떼면 발사하거나 과충전 시 취소됩니다.'
+                                                                : _difficulty ==
+                                                                      PlayerDifficulty
+                                                                          .easy
+                                                                ? '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하면 마름모와 예상 라벨로 첫 도착 위치를 안내합니다'
+                                                                : '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
+                                                            onIncrease: () =>
+                                                                _adjustPower(
+                                                                  0.055,
+                                                                ),
+                                                            onDecrease: () =>
+                                                                _adjustPower(
+                                                                  -0.055,
+                                                                ),
+                                                            customSemanticsActions: {
+                                                              semanticLaunch:
+                                                                  _launch,
+                                                              semanticAimRight:
+                                                                  () =>
+                                                                      _nudgeAim(
+                                                                        math.pi /
+                                                                            18,
+                                                                      ),
+                                                              semanticAimLeft:
+                                                                  () => _nudgeAim(
+                                                                    -math.pi /
+                                                                        18,
+                                                                  ),
+                                                            },
+                                                            child: ClipRRect(
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
+                                                              child: GameWidget(
+                                                                game: _game,
+                                                              ),
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
                                                     ),
                                                   ),
-                                                if (_previousAimInput != null)
-                                                  Positioned(
-                                                    left: 0,
-                                                    top: 0,
-                                                    child: Semantics(
-                                                      key: const Key(
-                                                        'previous_aim_semantics',
+                                                  if (tutorialTarget != null)
+                                                    Positioned(
+                                                      left: math.min(
+                                                        math.max(
+                                                          6.0,
+                                                          (tutorialTarget
+                                                                      .position
+                                                                      .x -
+                                                                  58) *
+                                                              scale,
+                                                        ),
+                                                        math.max(
+                                                          6.0,
+                                                          boardSize.width - 150,
+                                                        ),
                                                       ),
-                                                      label:
-                                                          _successAimGhostActive
-                                                          ? '직전 성공 조준이 회색으로 표시됨'
-                                                          : '직전 조준 비교선이 회색으로 표시됨',
-                                                      child: const SizedBox(
-                                                        width: 1,
-                                                        height: 1,
+                                                      top: math.min(
+                                                        math.max(
+                                                          6.0,
+                                                          (tutorialTarget
+                                                                      .position
+                                                                      .y -
+                                                                  66) *
+                                                              scale,
+                                                        ),
+                                                        math.max(
+                                                          6.0,
+                                                          boardSize.height - 54,
+                                                        ),
+                                                      ),
+                                                      child: IgnorePointer(
+                                                        child:
+                                                            _TutorialCoachMark(
+                                                              text:
+                                                                  _tutorialHint,
+                                                            ),
                                                       ),
                                                     ),
-                                                  ),
-                                                if (_chargeGaugeActive)
-                                                  _FloatingChargeGauge(
-                                                    boardSize: boardSize,
-                                                    scale: scale,
-                                                    state: _state,
-                                                    hintKey: _currentHintKey,
-                                                    gaugeState:
-                                                        _chargeGaugeState,
-                                                    power: _state.aimPower,
-                                                    side: GameFeedback
-                                                        .chargeGaugeSide,
-                                                    reducedMotion: GameFeedback
-                                                        .reducedMotionEnabled,
-                                                    strongFlash: GameFeedback
-                                                        .strongFlashEnabled,
-                                                  ),
-                                              ],
+                                                  for (final entity
+                                                      in _state.entities)
+                                                    if (entity.active)
+                                                      Positioned(
+                                                        left:
+                                                            _semanticEntityRect(
+                                                              entity,
+                                                              scale,
+                                                            ).left,
+                                                        top:
+                                                            _semanticEntityRect(
+                                                              entity,
+                                                              scale,
+                                                            ).top,
+                                                        width:
+                                                            _semanticEntityRect(
+                                                              entity,
+                                                              scale,
+                                                            ).width,
+                                                        height:
+                                                            _semanticEntityRect(
+                                                              entity,
+                                                              scale,
+                                                            ).height,
+                                                        child: Semantics(
+                                                          container: true,
+                                                          button: true,
+                                                          label:
+                                                              _semanticEntityLabel(
+                                                                entity,
+                                                              ),
+                                                          hint:
+                                                              entity
+                                                                  .traits
+                                                                  .isNotEmpty
+                                                              ? '선택하면 속성 정보를 확인할 수 있습니다'
+                                                              : '선택하면 물체 정보를 확인할 수 있습니다',
+                                                          onTap: () =>
+                                                              _handleSemanticEntity(
+                                                                entity.id,
+                                                              ),
+                                                          child:
+                                                              const SizedBox.expand(),
+                                                        ),
+                                                      ),
+                                                  if (_currentHintKey
+                                                      case final key?
+                                                      when !_collectedHintKeyIds
+                                                              .contains(
+                                                                key.id,
+                                                              ) ||
+                                                          (widget.debugHintKeyVfxId ??
+                                                                  _keyCollectionVfxId) ==
+                                                              key.id)
+                                                    Positioned(
+                                                      left:
+                                                          (key.position.x -
+                                                              key.size.x / 2) *
+                                                          scale,
+                                                      top:
+                                                          (key.position.y -
+                                                              key.size.y / 2) *
+                                                          scale,
+                                                      width: key.size.x * scale,
+                                                      height:
+                                                          key.size.y * scale,
+                                                      child: Semantics(
+                                                        container: true,
+                                                        label: '힌트 열쇠',
+                                                        value:
+                                                            '공으로 닿으면 현재 스테이지 팁을 해금합니다',
+                                                        child: IgnorePointer(
+                                                          child: _HintKeyOverlay(
+                                                            vfxActive:
+                                                                (widget.debugHintKeyVfxId ??
+                                                                    _keyCollectionVfxId) ==
+                                                                key.id,
+                                                            reducedMotion:
+                                                                GameFeedback
+                                                                    .reducedMotionEnabled,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (_patternHintEntry != null)
+                                                    Positioned(
+                                                      top: 10,
+                                                      right: 10,
+                                                      child: _HintAccessButton(
+                                                        available:
+                                                            _hintAvailable,
+                                                        keyAvailable:
+                                                            _currentHintKey !=
+                                                                null &&
+                                                            !_collectedHintKeyIds
+                                                                .contains(
+                                                                  _currentHintKey!
+                                                                      .id,
+                                                                ),
+                                                        onPressed:
+                                                            _hintAvailable
+                                                            ? _showPatternHintSheet
+                                                            : null,
+                                                      ),
+                                                    ),
+                                                  if (widget.demoLaunchInput !=
+                                                      null)
+                                                    Positioned(
+                                                      top: 0,
+                                                      left:
+                                                          boardSize.width / 2 -
+                                                          22,
+                                                      child: Semantics(
+                                                        button: true,
+                                                        label:
+                                                            '검증된 48도 90퍼센트 시연 발사',
+                                                        child: GestureDetector(
+                                                          key: const Key(
+                                                            'verified_demo_launch',
+                                                          ),
+                                                          behavior:
+                                                              HitTestBehavior
+                                                                  .opaque,
+                                                          onTap:
+                                                              _launchVerifiedDemoShot,
+                                                          child: Opacity(
+                                                            opacity: 0.01,
+                                                            child: Container(
+                                                              width: 44,
+                                                              height: 44,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (_previousAimInput != null)
+                                                    Positioned(
+                                                      left: 0,
+                                                      top: 0,
+                                                      child: Semantics(
+                                                        key: const Key(
+                                                          'previous_aim_semantics',
+                                                        ),
+                                                        label:
+                                                            _successAimGhostActive
+                                                            ? '직전 성공 조준이 회색으로 표시됨'
+                                                            : '직전 조준 비교선이 회색으로 표시됨',
+                                                        child: const SizedBox(
+                                                          width: 1,
+                                                          height: 1,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (_chargeGaugeActive)
+                                                    _FloatingChargeGauge(
+                                                      boardSize: boardSize,
+                                                      scale: scale,
+                                                      state: _state,
+                                                      hintKey: _currentHintKey,
+                                                      gaugeState:
+                                                          _chargeGaugeState,
+                                                      power: _state.aimPower,
+                                                      side: GameFeedback
+                                                          .chargeGaugeSide,
+                                                      reducedMotion: GameFeedback
+                                                          .reducedMotionEnabled,
+                                                      strongFlash: GameFeedback
+                                                          .strongFlashEnabled,
+                                                    ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        );
-                                      },
+                                          );
+                                        },
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              if (compactLayout)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    6,
-                                    4,
-                                    6,
-                                    6,
+                                if (compactLayout)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      6,
+                                      4,
+                                      6,
+                                      6,
+                                    ),
+                                    child: _ControlPanel(
+                                      compact: true,
+                                      dense: denseCompact,
+                                      tutorialActive:
+                                          tutorialTarget != null &&
+                                          _state.equippedTrait == null,
+                                      state: _state,
+                                      effectFeedback: _traitEffectFeedback,
+                                      onRewind: _rewind,
+                                      onReset: _restartCurrentStage,
+                                      canCancelReward:
+                                          _isCharging &&
+                                          _rewardInventory.availableUseCount(
+                                                runRewardShotCancelAssistId,
+                                              ) >
+                                              0,
+                                      onCancelReward: () =>
+                                          unawaited(_cancelLaunchWithReward()),
+                                    ),
                                   ),
-                                  child: _ControlPanel(
-                                    compact: true,
-                                    dense: denseCompact,
-                                    tutorialActive:
-                                        tutorialTarget != null &&
-                                        _state.equippedTrait == null,
+                                if (!compactLayout)
+                                  _ControlPanel(
                                     state: _state,
                                     effectFeedback: _traitEffectFeedback,
                                     onRewind: _rewind,
@@ -4388,23 +4575,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     onCancelReward: () =>
                                         unawaited(_cancelLaunchWithReward()),
                                   ),
-                                ),
-                              if (!compactLayout)
-                                _ControlPanel(
-                                  state: _state,
-                                  effectFeedback: _traitEffectFeedback,
-                                  onRewind: _rewind,
-                                  onReset: _restartCurrentStage,
-                                  canCancelReward:
-                                      _isCharging &&
-                                      _rewardInventory.availableUseCount(
-                                            runRewardShotCancelAssistId,
-                                          ) >
-                                          0,
-                                  onCancelReward: () =>
-                                      unawaited(_cancelLaunchWithReward()),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -4443,7 +4615,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     _FailurePopup(
                       state: _state,
                       advice: _failureAdvice,
-                      discoveries: _discoveryMilestones,
+                      discoveries: widget.showDiscoveryHud
+                          ? _discoveryMilestones
+                          : const [],
                       failureReplay: _failureReplay,
                       assistRecommendation: _assistRecommendation,
                       assistFeedback: _assistRecommendationFeedback,
@@ -4480,7 +4654,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ClearResultPopup(
                       state: _state,
                       level: _currentLevel,
-                      discoveries: _discoveryMilestones,
+                      discoveries: widget.showDiscoveryHud
+                          ? _discoveryMilestones
+                          : const [],
                       solutionEntries: _solutionEntries,
                       solutionTargetCount: math.min(
                         2,
@@ -6149,6 +6325,11 @@ class _FailurePopup extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: 2),
+                      const Text(
+                        '이번에 바꿀 것',
+                        key: Key('failure_change_heading'),
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
                       Text(
                         advice,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -7217,11 +7398,7 @@ class _CompactHudDetailsState extends State<_CompactHudDetails> {
                         key: const Key('compact_message'),
                         liveRegion: true,
                         label: '게임 안내: ${widget.message}',
-                        child: Offstage(
-                          child: Text(
-                            widget.message,
-                          ),
-                        ),
+                        child: Offstage(child: Text(widget.message)),
                       )
                     else
                       Semantics(
@@ -7232,10 +7409,8 @@ class _CompactHudDetailsState extends State<_CompactHudDetails> {
                           key: const Key('compact_message'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                            height: 1.2,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontSize: 12, height: 1.2),
                         ),
                       ),
                   ],
@@ -7307,6 +7482,9 @@ class _Hud extends StatelessWidget {
     this.exitToMainMenu = false,
     this.hudScore,
     this.onDebug,
+    this.objectiveOverride,
+    this.showDiscovery = true,
+    this.exitTooltipOverride,
   });
 
   final bool compact;
@@ -7323,11 +7501,16 @@ class _Hud extends StatelessWidget {
   final bool exitToMainMenu;
   final int? hudScore;
   final VoidCallback? onDebug;
+  final String? objectiveOverride;
+  final bool showDiscovery;
+  final String? exitTooltipOverride;
 
   @override
   Widget build(BuildContext context) {
-    final progressHint = _levelProgressHint(state);
-    final compactProgressHint = _compactLevelProgressHint(state);
+    final progressHint = showDiscovery ? _levelProgressHint(state) : null;
+    final compactProgressHint = showDiscovery
+        ? _compactLevelProgressHint(state)
+        : null;
     final discoveries = discoveryMilestones
         .where((milestone) => milestone.achieved)
         .length;
@@ -7395,7 +7578,9 @@ class _Hud extends StatelessWidget {
                 if (!showStageSelector && onExit != null)
                   IconButton(
                     key: const Key('home_button'),
-                    tooltip: exitToMainMenu ? '메인 메뉴' : '섬 지도',
+                    tooltip:
+                        exitTooltipOverride ??
+                        (exitToMainMenu ? '메인 메뉴' : '섬 지도'),
                     onPressed: onExit,
                     icon: Icon(
                       exitToMainMenu ? Icons.home_rounded : Icons.map_outlined,
@@ -7469,8 +7654,9 @@ class _Hud extends StatelessWidget {
               ),
             _CompactHudDetails(
               objective:
+                  objectiveOverride ??
                   '발견 $discoveries/${discoveryMilestones.length} · '
-                  '${stageDiscoveryCompactPath(state.levelIndex)}',
+                      '${stageDiscoveryCompactPath(state.levelIndex)}',
               message: state.message,
               tutorialActive: tutorialActive,
               progressHint: compactProgressHint,
@@ -7498,7 +7684,9 @@ class _Hud extends StatelessWidget {
               if (!showStageSelector && onExit != null)
                 IconButton(
                   key: const Key('home_button'),
-                  tooltip: exitToMainMenu ? '메인 메뉴' : '섬 지도',
+                  tooltip:
+                      exitTooltipOverride ??
+                      (exitToMainMenu ? '메인 메뉴' : '섬 지도'),
                   onPressed: onExit,
                   icon: Icon(
                     exitToMainMenu ? Icons.home_rounded : Icons.map_outlined,
@@ -7528,18 +7716,21 @@ class _Hud extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              stageDiscoveryQuestion(state.levelIndex),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF46584E),
-                fontWeight: FontWeight.w600,
+          if (showDiscovery || objectiveOverride != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                objectiveOverride ?? stageDiscoveryQuestion(state.levelIndex),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF46584E),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
-          _DiscoveryProgressRow(milestones: discoveryMilestones),
+          if (showDiscovery) ...[
+            const SizedBox(height: 4),
+            _DiscoveryProgressRow(milestones: discoveryMilestones),
+          ],
           if (rewardGuide != null) ...[
             const SizedBox(height: 4),
             Align(

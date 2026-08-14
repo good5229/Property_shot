@@ -71,6 +71,9 @@
 - 자동 리플레이 저장·재생·공유 코드 가져오기
 - 저모션·강한 점멸·화면 흔들림·효과음·배경음 등 접근성 설정
 - Web 합성음과 프로젝트 자체 생성 배경 음악
+- 캠페인 기록을 바꾸지 않고 다섯 핵심 규칙을 연습하는 물리 실험실
+- Web 보드 키보드 조작: 좌우 방향키 조준, 상하 방향키 힘 조절, Space 발사
+- 방금 실패한 상태의 주변 입력을 재판정해 한 번에 한 축만 제안하는 `이번에 바꿀 것`
 
 ## 시스템 구조
 
@@ -119,6 +122,7 @@ lib/
     replay/               리플레이 문서·공유 코드·무결성 검사
     run/                  RunState v3·보상·패턴 세션·복구
     analysis/             발견·섬 복구·해법 도장·연쇄 점수 분석
+    lab/                  저장과 분리된 고정 물리 실험 시나리오
     simulation/           결정론적 속성·샷 판정
     validation/           패턴 정적·런타임 검증
   ui/                     Flutter 화면·HUD·접근성·텔레메트리
@@ -192,6 +196,8 @@ dart run tool/generate_stage_catalog.dart --check --validate-runtime
 현재 production 런타임 프로브에는 `stage_property_shot_a`와 `stage_property_shot_c`의 보상 없는 대체 경로·해법군 대표 증거가 런타임 매니페스트와 동기화되지 않은 공백이 있습니다. 실제 `ShotResolver` 기반 10단계 집중 테스트와 40패턴 기믹 우위 테스트는 통과하지만, 이 증거 목록이 보강되기 전까지 런타임 프로브 통과로 표기하지 않습니다.
 
 상세 근거는 [통합 검증 기록](harness_docs/qa/validation_results.md), [기믹 우위 검증](harness_docs/qa/gimmick_advantage_validation.md), [StagePatternValidator 검증](harness_docs/qa/stage_pattern_validator_validation.md)에 있습니다.
+
+대리 플레이 에이전트는 공개 화면의 발견 가능성과 인과 설명 회귀만 선별합니다. 실제 재미나 장기 몰입을 대신 판정하지 않으며, 역할·행동 제한·결과 JSON·해석 한계는 [플레이테스트 프로토콜](harness_docs/design/playtest_protocol.md)에 고정했습니다.
 
 공개 Web 빌드와 제출 문서 제작은 완료됐지만, 현재 개발 검증 판정은 **Conditional Go**입니다. 위 런타임 대표 증거 공백과 실제 iPhone·iPad·Android 기기의 성능·보조기술, 외부 사용자 플레이테스트, 생성 에셋의 최종 법무 검토는 별도 확인이 필요합니다.
 

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "property-shot-proxy-playtest/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "run_id", "build", "agent", "isolation", "steps", "objective", "judgment", "limitations"],
+  "properties": {
+    "schema": {"const": "property-shot-proxy-playtest/v1"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 80},
+    "build": {
+      "type": "object", "additionalProperties": false,
+      "required": ["git_sha", "url", "viewport", "locale"],
+      "properties": {
+        "git_sha": {"type": "string", "minLength": 7, "maxLength": 64},
+        "url": {"type": "string", "format": "uri", "maxLength": 500},
+        "viewport": {"type": "array", "prefixItems": [{"type": "integer", "minimum": 240, "maximum": 4096}, {"type": "integer", "minimum": 320, "maximum": 4096}], "minItems": 2, "maxItems": 2},
+        "locale": {"enum": ["ko-KR"]}
+      }
+    },
+    "agent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profile", "prompt_version", "model"],
+      "properties": {
+        "profile": {"enum": ["novice_impatient", "observant_novice", "semantics_only", "abnormal_input"]},
+        "prompt_version": {"const": "1"},
+        "model": {"type": "string", "minLength": 1, "maxLength": 80}
+      }
+    },
+    "isolation": {"type": "object", "additionalProperties": false, "required": ["unchanged", "checked_domains"], "properties": {"unchanged": {"type": "boolean"}, "checked_domains": {"type": "array", "items": {"enum": ["progress", "campaign_run", "expedition", "daily", "solutions", "replays", "rewards"]}, "uniqueItems": true}}},
+    "steps": {"type": "array", "maxItems": 50, "items": {"type": "object", "additionalProperties": false, "required": ["seq", "t_ms", "action", "target", "no_op"], "properties": {"seq": {"type": "integer", "minimum": 1, "maximum": 50}, "t_ms": {"type": "integer", "minimum": 0, "maximum": 120000}, "action": {"enum": ["read", "activate", "increase", "decrease", "custom", "pointer_shot", "wait", "answer"]}, "target": {"type": "string", "maxLength": 160}, "no_op": {"type": "boolean"}}}},
+    "objective": {"type": "object", "additionalProperties": false, "required": ["status", "shots", "retries", "first_meaningful_action_ms", "no_op_actions"], "properties": {"status": {"enum": ["completed", "failed", "timeout", "blocked"]}, "shots": {"type": "integer", "minimum": 0, "maximum": 5}, "retries": {"type": "integer", "minimum": 0, "maximum": 5}, "first_meaningful_action_ms": {"type": "integer", "minimum": 0, "maximum": 120000}, "no_op_actions": {"type": "integer", "minimum": 0, "maximum": 50}}},
+    "judgment": {"type": "object", "additionalProperties": false, "required": ["goal_clarity", "control_discoverability", "causal_readability", "frustration", "retry_desire", "causal_explanation"], "properties": {"goal_clarity": {"type": "integer", "minimum": 1, "maximum": 5}, "control_discoverability": {"type": "integer", "minimum": 1, "maximum": 5}, "causal_readability": {"type": "integer", "minimum": 1, "maximum": 5}, "frustration": {"type": "integer", "minimum": 1, "maximum": 5}, "retry_desire": {"type": "integer", "minimum": 1, "maximum": 5}, "causal_explanation": {"type": "string", "minLength": 1, "maxLength": 1000}}},
+    "limitations": {"type": "array", "contains": {"const": "agent_proxy_not_human"}, "items": {"type": "string", "maxLength": 120}, "maxItems": 12}
+  }
+}

@@ -39,6 +39,7 @@ import 'ui/daily_challenge_screen.dart';
 import 'ui/game_ball_painter.dart';
 import 'ui/bonus_goal.dart';
 import 'ui/play_telemetry.dart';
+import 'ui/physics_lab_screen.dart';
 import 'ui/replay_library_screen.dart';
 import 'ui/run_difficulty_attribution_store.dart';
 import 'ui/tutorial_experiment.dart';
@@ -305,6 +306,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int _completedRunBestShots = 0;
   int _completedRunRewardCount = 0;
   bool _showStageSelect = false;
+  bool _showPhysicsLab = false;
   bool _showDailyChallenge = false;
   bool _showReplayLibrary = false;
   bool _showRewardInventory = false;
@@ -1604,6 +1606,11 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         telemetry: _telemetry,
       );
     }
+    if (_showPhysicsLab) {
+      return PhysicsLabScreen(
+        onBack: () => _changeSurface(() => _showPhysicsLab = false),
+      );
+    }
     final activeStage = _activeStage;
     final activeLevel = _activeLevel;
     final activeState = _activeState;
@@ -1680,6 +1687,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         islandSupportFocus: _islandSupportFocus,
         onIslandSupportSelected: (landmark) =>
             unawaited(_selectIslandSupport(landmark)),
+        onPhysicsLab: () => _changeSurface(() => _showPhysicsLab = true),
       );
     }
     return _HomeScreen(
@@ -3070,16 +3078,20 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<PlayerDifficulty>(
                   key: const Key('player_difficulty_dropdown'),
-                  decoration: const InputDecoration(labelText: '게임 난이도'),
+                  decoration: const InputDecoration(
+                    labelText: '예상 첫 도착 표시',
+                    helperText: '켜고 시작한 단계는 최고 기록과 선택 도전 기록에서 분리됩니다.',
+                    helperMaxLines: 3,
+                  ),
                   initialValue: GameFeedback.playerDifficulty,
                   items: const [
                     DropdownMenuItem(
                       value: PlayerDifficulty.normal,
-                      child: Text('보통'),
+                      child: Text('끄기 · 직접 탐색'),
                     ),
                     DropdownMenuItem(
                       value: PlayerDifficulty.easy,
-                      child: Text('쉬움'),
+                      child: Text('켜기 · 예상 위치 표시'),
                     ),
                   ],
                   onChanged: (difficulty) {
@@ -3318,6 +3330,7 @@ class _StageSelectScreen extends StatelessWidget {
     required this.solutionCountsByStageId,
     required this.islandSupportFocus,
     required this.onIslandSupportSelected,
+    this.onPhysicsLab,
   });
 
   final VoidCallback onBack;
@@ -3327,6 +3340,7 @@ class _StageSelectScreen extends StatelessWidget {
   final Map<String, int> solutionCountsByStageId;
   final IslandLandmark? islandSupportFocus;
   final ValueChanged<IslandLandmark> onIslandSupportSelected;
+  final VoidCallback? onPhysicsLab;
 
   @override
   Widget build(BuildContext context) {
@@ -3425,6 +3439,56 @@ class _StageSelectScreen extends StatelessWidget {
                               const Icon(
                                 Icons.chevron_right_rounded,
                                 color: Color(0xFF4F8460),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Material(
+                      color: const Color(0xE6FFF7D6),
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        key: const Key('physics_lab_button'),
+                        onTap: onPhysicsLab,
+                        borderRadius: BorderRadius.circular(16),
+                        child: const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.science_outlined,
+                                size: 28,
+                                color: Color(0xFF6D5720),
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '물리 실험실',
+                                      style: TextStyle(
+                                        color: Color(0xFF5B4715),
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    SizedBox(height: 3),
+                                    Text(
+                                      '무거움·탄성·점착·뾰족함·스위치를 기록 없이 연습하세요.',
+                                      style: TextStyle(
+                                        color: Color(0xFF715F35),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: Color(0xFF6D5720),
                               ),
                             ],
                           ),
