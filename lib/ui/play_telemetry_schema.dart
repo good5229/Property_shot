@@ -126,7 +126,8 @@ enum PlayTelemetryRewardTrigger {
 enum PlayTelemetryHintSource {
   clearReward('clear_reward'),
   stageKey('stage_key'),
-  failureAssist('failure_assist');
+  failureAssist('failure_assist'),
+  restorationLighthouse('restoration_lighthouse');
 
   const PlayTelemetryHintSource(this.code);
 

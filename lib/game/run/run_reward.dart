@@ -286,6 +286,7 @@ class RunRewardCandidateGenerator {
     required String stageId,
     required int patternSeed,
     bool includeNextStageHint = false,
+    Set<String> excludedRewardIds = const {},
   }) {
     final seed = candidateSeed(
       rootSeed: rootSeed,
@@ -298,7 +299,9 @@ class RunRewardCandidateGenerator {
     // 기존 후보 생성의 seed/순서를 보존하기 위해 새 필수 보상은 일반 pool에
     // 섞지 않는다. 다음 단계가 있을 때만 아래에서 명시적으로 추가한다.
     final selectable = catalog.rewards.where(
-      (reward) => reward.id != runRewardNextStageHintAccessId,
+      (reward) =>
+          reward.id != runRewardNextStageHintAccessId &&
+          !excludedRewardIds.contains(reward.id),
     );
     final shuffled = StableRandom(seed).shuffled(selectable).toList();
     final chosen = <RunReward>[];
@@ -350,12 +353,14 @@ List<RunReward> generateRunRewardCandidates({
   required int patternSeed,
   RunRewardCatalog? catalog,
   bool includeNextStageHint = false,
+  Set<String> excludedRewardIds = const {},
 }) {
   return RunRewardCandidateGenerator(catalog: catalog).generate(
     rootSeed: rootSeed,
     stageId: stageId,
     patternSeed: patternSeed,
     includeNextStageHint: includeNextStageHint,
+    excludedRewardIds: excludedRewardIds,
   );
 }
 
@@ -442,6 +447,11 @@ class RunRewardInventory {
   bool get ballAppearanceEnabled =>
       acquiredRewards.contains(runRewardBallAppearanceId) ||
       has(runRewardBallAppearanceId);
+
+  /// 관측소 복구처럼 선택 레코드 없이 부여된 영구 분석 강화도 허용한다.
+  bool get failureCauseBoostEnabled =>
+      acquiredRewards.contains(runRewardFailureCauseBoostId) ||
+      has(runRewardFailureCauseBoostId);
 
   RunRewardSelectionRecord? selectionFor({
     required String stageId,

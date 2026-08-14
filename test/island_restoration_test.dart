@@ -8,13 +8,16 @@ void main() {
     final observatory = IslandRestorationProgress(discoveryCount: 3);
     expect(observatory.isRestored(IslandLandmark.observatory), isTrue);
     expect(observatory.nextLandmark, IslandLandmark.lighthouse);
+    expect(IslandLandmark.observatory.benefitLabel, '분석 강화');
 
     final lighthouse = IslandRestorationProgress(discoveryCount: 12);
     expect(lighthouse.isRestored(IslandLandmark.lighthouse), isTrue);
     expect(lighthouse.nextLandmark, IslandLandmark.bridge);
+    expect(IslandLandmark.lighthouse.benefitDescription, contains('실패 전'));
 
     final complete = IslandRestorationProgress(discoveryCount: 30);
     expect(complete.restoredCount, 3);
+    expect(complete.restoredLandmarks, IslandLandmark.values);
     expect(complete.nextLandmark, isNull);
     expect(complete.statusText, contains('모두 복구'));
   });

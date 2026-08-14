@@ -545,6 +545,15 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
             ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
             : null,
       );
+      final restoration = IslandRestorationProgress.fromDiscoveries(
+        discoveriesByStageId: _discoveriesByStageId,
+        stageIds: levels.map((level) => level.id).toList(growable: false),
+      );
+      await session.applyIslandRestorationBenefits(
+        observatoryRestored: restoration.isRestored(IslandLandmark.observatory),
+        lighthouseRestored: restoration.isRestored(IslandLandmark.lighthouse),
+        bridgeRestored: restoration.isRestored(IslandLandmark.bridge),
+      );
       final selectedRunState = session.state;
       if (selectedRunState != null &&
           selectedRunState.phase == RunPhase.playing) {
@@ -3372,7 +3381,8 @@ class _IslandRestorationCard extends StatelessWidget {
       container: true,
       label:
           '섬 복구 ${progress.restoredCount}/3. ${progress.statusText}. '
-          '발견 ${progress.discoveryCount}/${progress.total}',
+          '발견 ${progress.discoveryCount}/${progress.total}. '
+          '${progress.restoredLandmarks.map((landmark) => '${landmark.label}: ${landmark.benefitDescription}').join(' ')}',
       child: Container(
         key: const Key('island_restoration_card'),
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -3465,7 +3475,7 @@ class _IslandRestorationCard extends StatelessWidget {
                                 ),
                                 Text(
                                   restored
-                                      ? '복구 완료'
+                                      ? landmark.benefitLabel
                                       : '${landmark.requiredDiscoveries}개',
                                   style: const TextStyle(fontSize: 10),
                                 ),
@@ -3488,6 +3498,18 @@ class _IslandRestorationCard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
+            for (final landmark in progress.restoredLandmarks) ...[
+              const SizedBox(height: 5),
+              Text(
+                '✓ ${landmark.label} · ${landmark.benefitDescription}',
+                key: Key('island_benefit_${landmark.name}'),
+                style: const TextStyle(
+                  color: Color(0xFF315C46),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ],
         ),
       ),

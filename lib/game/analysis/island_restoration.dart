@@ -20,6 +20,18 @@ extension IslandLandmarkCopy on IslandLandmark {
     IslandLandmark.lighthouse => 3,
     IslandLandmark.bridge => 12,
   };
+
+  String get benefitLabel => switch (this) {
+    IslandLandmark.observatory => '분석 강화',
+    IslandLandmark.lighthouse => 'L1 즉시',
+    IslandLandmark.bridge => '코어 +1',
+  };
+
+  String get benefitDescription => switch (this) {
+    IslandLandmark.observatory => '이후 런에서 실패 원인과 충돌 순서를 자세히 보여 줍니다.',
+    IslandLandmark.lighthouse => '각 스테이지의 첫 번째 팁을 실패 전부터 열 수 있습니다.',
+    IslandLandmark.bridge => '각 런에 속성 복사 코어 1개를 보급합니다.',
+  };
 }
 
 class IslandRestorationProgress {
@@ -67,6 +79,9 @@ class IslandRestorationProgress {
   }
 
   int get restoredCount => IslandLandmark.values.where(isRestored).length;
+
+  Iterable<IslandLandmark> get restoredLandmarks =>
+      IslandLandmark.values.where(isRestored);
 
   String get statusText {
     final next = nextLandmark;

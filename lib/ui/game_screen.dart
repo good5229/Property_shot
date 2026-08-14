@@ -535,7 +535,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final reward = initialRunRewards
           .where((item) => item.id == rewardId)
           .firstOrNull;
-      if (reward == null || !_rewardInventory.has(rewardId)) continue;
+      final owned = rewardId == runRewardFailureCauseBoostId
+          ? _rewardInventory.failureCauseBoostEnabled
+          : _rewardInventory.has(rewardId);
+      if (reward == null || !owned) continue;
       final available = switch (reward.activationKind) {
         RunRewardActivationKind.manual || RunRewardActivationKind.automatic =>
           rewardId == runRewardStageRecordGuardId
@@ -558,6 +561,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ? PlayTelemetryHintSource.stageKey
       : entitlement.sources.contains(HintEntitlementSource.clearReward)
       ? PlayTelemetryHintSource.clearReward
+      : entitlement.sources.contains(
+          HintEntitlementSource.restorationLighthouse,
+        )
+      ? PlayTelemetryHintSource.restorationLighthouse
       : PlayTelemetryHintSource.failureAssist;
 
   PlayTelemetryHintLevel _hintLevelFor(int level) => switch (level) {
@@ -1940,7 +1947,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _failureAdvice = widget.showTutorialFailureHints
         ? _failureAdviceFor(result.events, levelIndex: result.state.levelIndex)
         : _baseFailureAdviceFor(result.events);
-    if (_rewardInventory.has(runRewardFailureCauseBoostId) &&
+    if (_rewardInventory.failureCauseBoostEnabled &&
         result.state.phase != GamePhase.success &&
         result.impacts.isNotEmpty) {
       final collisionOrder = result.impacts

@@ -94,6 +94,14 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('island_landmark_bridge')), findsOneWidget);
+      expect(
+        find.byKey(const Key('island_benefit_observatory')),
+        fixture.name == '390x844' ? findsOneWidget : findsNothing,
+      );
+      expect(
+        find.textContaining('실패 원인과 충돌 순서를 자세히'),
+        fixture.name == '390x844' ? findsOneWidget : findsNothing,
+      );
       await expectLater(
         find.byKey(const Key('stage_select_golden')),
         matchesGoldenFile('goldens/stage_select_${fixture.name}.png'),

@@ -24,6 +24,11 @@ typedef StagePatternDrawPolicy =
 
 typedef HintVersionResolver = int Function(String stageId, String patternId);
 
+const String restorationBridgeSupplyMarker =
+    'island_restoration_bridge_supply_v1';
+const String restorationLighthouseAccessMarker =
+    'island_restoration_lighthouse_access_v1';
+
 /// 스테이지 선택 화면과 결정론 패턴 런 상태를 연결한다.
 class StagePatternSession {
   StagePatternSession({
@@ -118,6 +123,72 @@ class StagePatternSession {
     _loaded = true;
     _legacyCurrentShotHistoryAmbiguous = false;
     _ambiguousLegacyCopyActionCount = 0;
+  });
+
+  /// 복구된 섬 시설의 영구 지원을 현재 런에 한 번씩 적용한다.
+  ///
+  /// 관측소는 기존 실패 분석 보상을 지속 효과로 켜고, 등대는 현재 패턴의
+  /// L1 접근권을 열며, 다리는 새 런마다 복사 코어 하나를 보급한다.
+  Future<bool> applyIslandRestorationBenefits({
+    required bool observatoryRestored,
+    required bool lighthouseRestored,
+    required bool bridgeRestored,
+  }) => _enqueueOperation(() async {
+    await _loadOnce();
+    final current = _state;
+    if (current == null || current.phase != RunPhase.playing) return false;
+
+    final acquiredRewards = {...current.acquiredRewards};
+    var cloneCoreCount = current.cloneCoreCount;
+    var hintEntitlements = current.hintEntitlements;
+    var changed = false;
+
+    if (observatoryRestored &&
+        acquiredRewards.add(runRewardFailureCauseBoostId)) {
+      changed = true;
+    }
+    if (bridgeRestored && acquiredRewards.add(restorationBridgeSupplyMarker)) {
+      cloneCoreCount++;
+      changed = true;
+    }
+    if (lighthouseRestored) {
+      if (acquiredRewards.add(restorationLighthouseAccessMarker)) {
+        changed = true;
+      }
+      final identity = HintIdentity(
+        stageId: current.currentStageId!,
+        patternId: current.currentPatternId!,
+        hintVersion: _hintVersionFor(
+          current.currentStageId!,
+          current.currentPatternId!,
+        ),
+      );
+      final before = _hintEntitlementFor(current, identity);
+      if (before == null ||
+          !before.sources.contains(
+            HintEntitlementSource.restorationLighthouse,
+          )) {
+        hintEntitlements = _mergeHintEntitlement(
+          hintEntitlements,
+          identity,
+          HintEntitlementSource.restorationLighthouse,
+        );
+        changed = true;
+      }
+    }
+    if (!changed) return false;
+
+    final next = _copyState(
+      current,
+      phase: current.phase,
+      nextDraw: _savedNextDraw(current),
+      cloneCoreCount: cloneCoreCount,
+      acquiredRewards: acquiredRewards,
+      hintEntitlements: hintEntitlements,
+    );
+    await _store.save(next);
+    _state = next;
+    return true;
   });
 
   List<RunShotInput> get currentShotInputs {
@@ -455,11 +526,22 @@ class StagePatternSession {
       throw StateError('클리어가 저장된 뒤에만 보상 후보를 준비할 수 있습니다.');
     }
     final generator = RunRewardCandidateGenerator();
+    final restorationRewardExclusions = <String>{
+      if (current.acquiredRewards.contains(runRewardFailureCauseBoostId))
+        runRewardFailureCauseBoostId,
+    };
+    final lighthouseAccessRestored = current.acquiredRewards.contains(
+      restorationLighthouseAccessMarker,
+    );
     final rewards = generator.generate(
       rootSeed: current.rootSeed,
       stageId: stageId,
       patternSeed: current.currentPatternSeed!,
-      includeNextStageHint: includeNextStageHint && current.nextStageId != null,
+      includeNextStageHint:
+          includeNextStageHint &&
+          current.nextStageId != null &&
+          !lighthouseAccessRestored,
+      excludedRewardIds: restorationRewardExclusions,
     );
     final previousSelection = RunRewardInventory(
       current.acquiredRewards,
