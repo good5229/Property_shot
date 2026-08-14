@@ -72,7 +72,7 @@ void main() {
     expect(restoredExpedition.state, isNull);
   });
 
-  testWidgets('홈에서 세 가지 탐사 목표를 고르고 첫 단계를 시작할 수 있다', (tester) async {
+  testWidgets('홈에서 네 가지 탐사 목표를 고르고 첫 단계를 시작할 수 있다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
@@ -92,6 +92,13 @@ void main() {
     expect(find.text('발견 탐사'), findsOneWidget);
     expect(find.text('정밀 탐사'), findsOneWidget);
     expect(find.text('연쇄 탐사'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('expedition_contract_creative')),
+      findsOneWidget,
+    );
+    expect(find.text('창의 탐사'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('expedition_contract_discovery')));
     await _pumpForAsyncWork(tester);

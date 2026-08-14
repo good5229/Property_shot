@@ -28,6 +28,14 @@ const String restorationBridgeSupplyMarker =
     'island_restoration_bridge_supply_v1';
 const String restorationLighthouseAccessMarker =
     'island_restoration_lighthouse_access_v1';
+const String restorationObservatoryFocusMarker =
+    'island_restoration_focus_observatory_v1';
+const String restorationLighthouseFocusMarker =
+    'island_restoration_focus_lighthouse_v1';
+const String restorationBridgeFocusMarker =
+    'island_restoration_focus_bridge_v1';
+const String restorationBridgeFocusSupplyMarker =
+    'island_restoration_bridge_focus_supply_v1';
 
 /// 스테이지 선택 화면과 결정론 패턴 런 상태를 연결한다.
 class StagePatternSession {
@@ -133,6 +141,9 @@ class StagePatternSession {
     required bool observatoryRestored,
     required bool lighthouseRestored,
     required bool bridgeRestored,
+    bool observatoryFocused = false,
+    bool lighthouseFocused = false,
+    bool bridgeFocused = false,
   }) => _enqueueOperation(() async {
     await _loadOnce();
     final current = _state;
@@ -142,9 +153,38 @@ class StagePatternSession {
     var cloneCoreCount = current.cloneCoreCount;
     var hintEntitlements = current.hintEntitlements;
     var changed = false;
+    final requestedFocus = switch ((
+      observatoryRestored && observatoryFocused,
+      lighthouseRestored && lighthouseFocused,
+      bridgeRestored && bridgeFocused,
+    )) {
+      (true, false, false) => restorationObservatoryFocusMarker,
+      (false, true, false) => restorationLighthouseFocusMarker,
+      (false, false, true) => restorationBridgeFocusMarker,
+      _ => null,
+    };
+    String? effectiveFocus;
+    for (final reward in acquiredRewards) {
+      if (reward == restorationObservatoryFocusMarker ||
+          reward == restorationLighthouseFocusMarker ||
+          reward == restorationBridgeFocusMarker) {
+        effectiveFocus = reward;
+        break;
+      }
+    }
+    if (effectiveFocus == null && requestedFocus != null) {
+      acquiredRewards.add(requestedFocus);
+      effectiveFocus = requestedFocus;
+      changed = true;
+    }
 
     if (observatoryRestored &&
         acquiredRewards.add(runRewardFailureCauseBoostId)) {
+      changed = true;
+    }
+    if (observatoryRestored &&
+        effectiveFocus == restorationObservatoryFocusMarker &&
+        acquiredRewards.add(runRewardPrecisionChargeId)) {
       changed = true;
     }
     if (bridgeRestored && acquiredRewards.add(restorationBridgeSupplyMarker)) {
@@ -175,6 +215,20 @@ class StagePatternSession {
         );
         changed = true;
       }
+      if (effectiveFocus == restorationLighthouseFocusMarker) {
+        hintEntitlements = [
+          for (final entitlement in hintEntitlements)
+            entitlement.identity.storageKey == identity.storageKey
+                ? entitlement.copyWith(unlockedHintLevel: 2)
+                : entitlement,
+        ];
+      }
+    }
+    if (bridgeRestored &&
+        effectiveFocus == restorationBridgeFocusMarker &&
+        acquiredRewards.add(restorationBridgeFocusSupplyMarker)) {
+      cloneCoreCount++;
+      changed = true;
     }
     if (!changed) return false;
 
@@ -529,6 +583,8 @@ class StagePatternSession {
     final restorationRewardExclusions = <String>{
       if (current.acquiredRewards.contains(runRewardFailureCauseBoostId))
         runRewardFailureCauseBoostId,
+      if (current.acquiredRewards.contains(runRewardPrecisionChargeId))
+        runRewardPrecisionChargeId,
     };
     final lighthouseAccessRestored = current.acquiredRewards.contains(
       restorationLighthouseAccessMarker,

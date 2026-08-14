@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/analysis/creative_chain_score.dart';
 import 'game/analysis/island_restoration.dart';
+import 'game/analysis/solution_mastery.dart';
 import 'game/analysis/stage_chain_challenge.dart';
 import 'game/analysis/stage_discovery.dart';
 import 'game/domain/entity_state.dart';
@@ -298,6 +299,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   PatternHintEntry? _activePatternHintEntry;
   RunHintEntitlement? _activeHintEntitlement;
   Set<String> _activeCollectedHintKeyIds = const {};
+  List<SolutionMasteryEntry> _activeSolutionEntries = const [];
   bool _showRunResult = false;
   int _completedRunScore = 0;
   int _completedRunBestShots = 0;
@@ -316,6 +318,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
   Map<String, Set<String>> _discoveriesByStageId = <String, Set<String>>{};
+  Map<String, int> _solutionCountsByStageId = const {};
+  IslandLandmark? _islandSupportFocus;
   PlayerDifficulty _activeDifficulty = PlayerDifficulty.normal;
   late TutorialExperimentVariant _tutorialVariant = widget.tutorialVariant;
   late final ProgressStore _progressStore =
@@ -330,6 +334,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   late final Future<RunDifficultyAttributionStore>
   _difficultyAttributionStoreFuture;
   late final Future<ExpeditionContractStore> _expeditionStoreFuture;
+  late final Future<SolutionMasteryStore> _solutionMasteryStoreFuture;
   ExpeditionContractProgress? _expeditionProgress;
   bool _activeIsExpedition = false;
   late final Future<void> _progressLoadFuture;
@@ -347,6 +352,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _replayLibraryFuture = _createReplayLibrary();
     _difficultyAttributionStoreFuture = _createDifficultyAttributionStore();
     _expeditionStoreFuture = _createExpeditionStore();
+    _solutionMasteryStoreFuture = _createSolutionMasteryStore();
     _progressLoadFuture = _loadCopyCore();
     unawaited(_loadExpedition());
   }
@@ -386,6 +392,11 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Future<ExpeditionContractStore> _createExpeditionStore() async {
     final preferences = await SharedPreferences.getInstance();
     return ExpeditionContractStore(preferences);
+  }
+
+  Future<SolutionMasteryStore> _createSolutionMasteryStore() async {
+    final preferences = await SharedPreferences.getInstance();
+    return SolutionMasteryStore(preferences);
   }
 
   Future<void> _loadExpedition() async {
@@ -454,6 +465,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     unawaited(GameFeedback.activateBackgroundMusic());
     try {
       final progress = await _progressStore.load();
+      final preferences = await SharedPreferences.getInstance();
+      final supportFocus = IslandSupportStore(preferences).load();
+      final solutionCounts = await (await _solutionMasteryStoreFuture)
+          .loadCountsByStage();
       if (!mounted) {
         return;
       }
@@ -467,6 +482,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           for (final entry in progress.discoveriesByStageId.entries)
             entry.key: {...entry.value},
         };
+        _islandSupportFocus = supportFocus;
+        _solutionCountsByStageId = solutionCounts;
       });
     } on Object {
       // 저장소를 사용할 수 없어도 기본 진행 상태로 홈을 표시한다.
@@ -486,6 +503,24 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       _rewardInventoryFuture = _loadRewardInventory();
       _showRewardInventory = true;
     });
+  }
+
+  Future<void> _selectIslandSupport(IslandLandmark landmark) async {
+    final restoration = IslandRestorationProgress.fromDiscoveries(
+      discoveriesByStageId: _discoveriesByStageId,
+      stageIds: levels.map((level) => level.id).toList(growable: false),
+    );
+    if (!restoration.isRestored(landmark)) return;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await IslandSupportStore(preferences).save(landmark);
+      if (mounted) setState(() => _islandSupportFocus = landmark);
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('집중 지원 선택을 저장하지 못했습니다. 다시 시도해 주세요.')),
+      );
+    }
   }
 
   Future<void> _startStage(
@@ -553,6 +588,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         observatoryRestored: restoration.isRestored(IslandLandmark.observatory),
         lighthouseRestored: restoration.isRestored(IslandLandmark.lighthouse),
         bridgeRestored: restoration.isRestored(IslandLandmark.bridge),
+        observatoryFocused: _islandSupportFocus == IslandLandmark.observatory,
+        lighthouseFocused: _islandSupportFocus == IslandLandmark.lighthouse,
+        bridgeFocused: _islandSupportFocus == IslandLandmark.bridge,
       );
       final selectedRunState = session.state;
       if (selectedRunState != null &&
@@ -691,6 +729,12 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
                 )
                 .map((record) => record.keyId)
                 .toSet();
+      final solutionEntries = expedition
+          ? const <SolutionMasteryEntry>[]
+          : await (await _solutionMasteryStoreFuture).loadFor(
+              draw.stageId,
+              draw.patternId,
+            );
       restoredState = restoredState.copyWith(
         copyCoreCount: session.state?.cloneCoreCount ?? _copyCoreCount,
         copyCoreRewarded: _copyCoreRewarded,
@@ -718,6 +762,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _activePatternHintEntry = hintEntry;
         _activeHintEntitlement = session.currentHintEntitlement;
         _activeCollectedHintKeyIds = collectedHintKeyIds;
+        _activeSolutionEntries = solutionEntries;
       });
       final context = _normalTelemetryContext();
       if (!_runStartedRecorded) {
@@ -1333,6 +1378,33 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
   }
 
+  Future<SolutionMasteryRecordResult> _recordSolutionRoute(
+    SolutionRoute route,
+  ) async {
+    final level = _activeLevel;
+    if (level == null || _activeIsExpedition) {
+      return const SolutionMasteryRecordResult(entries: [], isNew: false);
+    }
+    final store = await _solutionMasteryStoreFuture;
+    final result = await store.record(
+      stageId: level.stageId ?? level.id,
+      patternId: level.patternId ?? '${level.id}_default',
+      route: route,
+    );
+    if (mounted) {
+      setState(() {
+        _activeSolutionEntries = result.entries;
+        _solutionCountsByStageId = {
+          ..._solutionCountsByStageId,
+          level.stageId ?? level.id:
+              (_solutionCountsByStageId[level.stageId ?? level.id] ?? 0) +
+              (result.isNew ? 1 : 0),
+        };
+      });
+    }
+    return result;
+  }
+
   Future<RunHintEntitlement?> _recordCurrentHintFailure() async {
     final session = await _activePatternSessionFuture;
     final entitlement = await session.recordHintFailure();
@@ -1538,6 +1610,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         initialDiscoveredMilestoneIds: _activeIsExpedition
             ? const {}
             : _discoveriesByStageId[levels[activeStage].id] ?? const {},
+        initialSolutionEntries: _activeSolutionEntries,
+        onSolutionDiscovered: _activeIsExpedition ? null : _recordSolutionRoute,
         levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
@@ -1590,6 +1664,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onSelectStage: (index) => unawaited(_startStage(index)),
         unlockedLevel: _unlockedLevel,
         discoveriesByStageId: _discoveriesByStageId,
+        solutionCountsByStageId: _solutionCountsByStageId,
+        islandSupportFocus: _islandSupportFocus,
+        onIslandSupportSelected: (landmark) =>
+            unawaited(_selectIslandSupport(landmark)),
       );
     }
     return _HomeScreen(
@@ -1633,6 +1711,7 @@ class _ExpeditionContractScreen extends StatelessWidget {
     ExpeditionContractType.discovery => Icons.travel_explore_rounded,
     ExpeditionContractType.precision => Icons.center_focus_strong_rounded,
     ExpeditionContractType.chain => Icons.hub_rounded,
+    ExpeditionContractType.creative => Icons.auto_awesome_rounded,
   };
 
   @override
@@ -3009,12 +3088,18 @@ class _StageSelectScreen extends StatelessWidget {
     required this.onSelectStage,
     required this.unlockedLevel,
     required this.discoveriesByStageId,
+    required this.solutionCountsByStageId,
+    required this.islandSupportFocus,
+    required this.onIslandSupportSelected,
   });
 
   final VoidCallback onBack;
   final ValueChanged<int> onSelectStage;
   final int unlockedLevel;
   final Map<String, Set<String>> discoveriesByStageId;
+  final Map<String, int> solutionCountsByStageId;
+  final IslandLandmark? islandSupportFocus;
+  final ValueChanged<IslandLandmark> onIslandSupportSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -3117,6 +3202,8 @@ class _StageSelectScreen extends StatelessWidget {
                     discoveriesByStageId: discoveriesByStageId,
                     stageIds: levels.map((level) => level.id).toList(),
                   ),
+                  selectedFocus: islandSupportFocus,
+                  onFocusSelected: onIslandSupportSelected,
                 ),
                 const SizedBox(height: 12),
                 Container(
@@ -3203,6 +3290,10 @@ class _StageSelectScreen extends StatelessWidget {
                                           discoveriesByStageId[levels[index]
                                               .id] ??
                                           const {},
+                                      solutionStampCount:
+                                          solutionCountsByStageId[levels[index]
+                                              .id] ??
+                                          0,
                                       onTap: () => onSelectStage(index),
                                     ),
                                   ),
@@ -3364,9 +3455,15 @@ class _DiscoveryAtlasSheet extends StatelessWidget {
 }
 
 class _IslandRestorationCard extends StatelessWidget {
-  const _IslandRestorationCard({required this.progress});
+  const _IslandRestorationCard({
+    required this.progress,
+    required this.selectedFocus,
+    required this.onFocusSelected,
+  });
 
   final IslandRestorationProgress progress;
+  final IslandLandmark? selectedFocus;
+  final ValueChanged<IslandLandmark> onFocusSelected;
 
   IconData _icon(IslandLandmark landmark) => switch (landmark) {
     IslandLandmark.observatory => Icons.science_rounded,
@@ -3508,6 +3605,39 @@ class _IslandRestorationCard extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                 ),
+              ),
+            ],
+            if (progress.restoredCount > 0) ...[
+              const SizedBox(height: 10),
+              const Text(
+                '집중 지원 시설',
+                style: TextStyle(
+                  color: Color(0xFF315C46),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final landmark in progress.restoredLandmarks)
+                    ChoiceChip(
+                      key: Key('island_focus_${landmark.name}'),
+                      selected: selectedFocus == landmark,
+                      onSelected: (_) => onFocusSelected(landmark),
+                      avatar: Icon(_icon(landmark), size: 16),
+                      label: Text(switch (landmark) {
+                        IslandLandmark.observatory => '정밀 충전',
+                        IslandLandmark.lighthouse => 'L2까지',
+                        IslandLandmark.bridge => '코어 +1 추가',
+                      }),
+                    ),
+                ],
+              ),
+              const Text(
+                '기본 복구 효과는 유지됩니다. 진행 중인 런에는 처음 적용된 시설 하나가 끝까지 지원합니다.',
+                style: TextStyle(fontSize: 10, color: Color(0xFF52706A)),
               ),
             ],
           ],
@@ -3668,6 +3798,7 @@ class _StageTile extends StatelessWidget {
     required this.index,
     required this.onTap,
     this.discoveredMilestoneIds = const {},
+    this.solutionStampCount = 0,
     this.locked = false,
   });
 
@@ -3675,6 +3806,7 @@ class _StageTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool locked;
   final Set<String> discoveredMilestoneIds;
+  final int solutionStampCount;
 
   @override
   Widget build(BuildContext context) {
@@ -3823,6 +3955,18 @@ class _StageTile extends StatelessWidget {
                               ),
                         ),
                         const SizedBox(height: 7),
+                        if (solutionStampCount > 0) ...[
+                          Text(
+                            '해법 도장 $solutionStampCount개',
+                            key: Key('stage_solution_stamps_$index'),
+                            style: const TextStyle(
+                              color: Color(0xFF8A5B19),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
                         DecoratedBox(
                           decoration: BoxDecoration(
                             color: const Color(0x1F4EAAA5),

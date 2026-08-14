@@ -2,25 +2,28 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum ExpeditionContractType { discovery, precision, chain }
+enum ExpeditionContractType { discovery, precision, chain, creative }
 
 extension ExpeditionContractTypeCopy on ExpeditionContractType {
   String get title => switch (this) {
     ExpeditionContractType.discovery => '발견 탐사',
     ExpeditionContractType.precision => '정밀 탐사',
     ExpeditionContractType.chain => '연쇄 탐사',
+    ExpeditionContractType.creative => '창의 탐사',
   };
 
   String get summary => switch (this) {
     ExpeditionContractType.discovery => '각 단계에서 물리 발견 2개 이상 기록',
     ExpeditionContractType.precision => '각 단계를 파 횟수 안에 클리어',
     ExpeditionContractType.chain => '각 단계에서 속성·기믹 사건 3종 이상 연결',
+    ExpeditionContractType.creative => '각 단계에서 창의 연쇄 점수 1,400점 이상 달성',
   };
 
   String get iconName => switch (this) {
     ExpeditionContractType.discovery => 'discovery',
     ExpeditionContractType.precision => 'precision',
     ExpeditionContractType.chain => 'chain',
+    ExpeditionContractType.creative => 'creative',
   };
 }
 
@@ -81,6 +84,7 @@ class ExpeditionContractProgress {
     ExpeditionContractType.discovery => outcome.discoveryCount >= 2,
     ExpeditionContractType.precision => outcome.shotCount <= outcome.parShots,
     ExpeditionContractType.chain => outcome.gimmickCount >= 3,
+    ExpeditionContractType.creative => outcome.chainScore >= 1400,
   };
 
   ExpeditionContractProgress record(ExpeditionStageOutcome outcome) {

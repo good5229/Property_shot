@@ -1,5 +1,7 @@
 import 'stage_discovery.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 enum IslandLandmark { observatory, lighthouse, bridge }
 
 extension IslandLandmarkCopy on IslandLandmark {
@@ -32,6 +34,28 @@ extension IslandLandmarkCopy on IslandLandmark {
     IslandLandmark.lighthouse => '각 스테이지의 첫 번째 팁을 실패 전부터 열 수 있습니다.',
     IslandLandmark.bridge => '각 런에 속성 복사 코어 1개를 보급합니다.',
   };
+}
+
+class IslandSupportStore {
+  IslandSupportStore(this._preferences);
+  static const storageKey = 'property_shot_island_support_focus_v1';
+  final SharedPreferences _preferences;
+
+  IslandLandmark? load() {
+    final raw = _preferences.getString(storageKey);
+    if (raw == null) return null;
+    try {
+      return IslandLandmark.values.byName(raw);
+    } on ArgumentError {
+      _preferences.remove(storageKey);
+      return null;
+    }
+  }
+
+  Future<void> save(IslandLandmark landmark) async {
+    final succeeded = await _preferences.setString(storageKey, landmark.name);
+    if (!succeeded) throw StateError('섬 연구 지원 선택을 저장하지 못했습니다.');
+  }
 }
 
 class IslandRestorationProgress {

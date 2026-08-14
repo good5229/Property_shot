@@ -453,6 +453,10 @@ class RunRewardInventory {
       acquiredRewards.contains(runRewardFailureCauseBoostId) ||
       has(runRewardFailureCauseBoostId);
 
+  bool get precisionChargeEnabled =>
+      acquiredRewards.contains(runRewardPrecisionChargeId) ||
+      has(runRewardPrecisionChargeId);
+
   RunRewardSelectionRecord? selectionFor({
     required String stageId,
     required int patternSeed,

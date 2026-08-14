@@ -13,6 +13,7 @@ import '../game/analysis/creative_chain_score.dart';
 import '../game/analysis/assist_recommendation.dart';
 import '../game/analysis/failure_replay.dart';
 import '../game/analysis/stage_discovery.dart';
+import '../game/analysis/solution_mastery.dart';
 import '../game/analysis/stage_chain_challenge.dart';
 import '../game/domain/entity_state.dart';
 import '../game/domain/game_state.dart';
@@ -108,6 +109,8 @@ class GameScreen extends StatefulWidget {
     this.initialDiscoveredMilestoneIds = const {},
     this.onDiscoveriesRecorded,
     this.onExpeditionStageCompleted,
+    this.initialSolutionEntries = const [],
+    this.onSolutionDiscovered,
     this.debugHintKeyVfxId,
     this.demoLaunchInput,
   });
@@ -168,6 +171,9 @@ class GameScreen extends StatefulWidget {
   final Future<bool> Function(Set<String> milestoneIds)? onDiscoveriesRecorded;
   final Future<void> Function(ExpeditionStageOutcome outcome)?
   onExpeditionStageCompleted;
+  final List<SolutionMasteryEntry> initialSolutionEntries;
+  final Future<SolutionMasteryRecordResult> Function(SolutionRoute route)?
+  onSolutionDiscovered;
 
   /// Golden test에서만 수집 직후의 짧은 열쇠 반짝임을 결정론적으로 고정한다.
   /// 실제 플레이의 저장·물리·타이머 흐름에는 관여하지 않는다.
@@ -278,6 +284,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   ShotInput? _previousAimInput;
   late final Set<String> _persistedMilestoneIds;
   Future<void> _discoveryWriteTail = Future<void>.value();
+  late List<SolutionMasteryEntry> _solutionEntries;
+  bool _newSolutionStamp = false;
+  bool _successAimGhostActive = false;
 
   RunRewardInventory get _rewardInventory =>
       RunRewardInventory(_acquiredRewards);
@@ -363,6 +372,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _patternHintEntry = widget.patternHintEntry;
     _hintEntitlement = widget.initialHintEntitlement;
     _collectedHintKeyIds = Set.of(widget.initialCollectedHintKeyIds);
+    _solutionEntries = List.of(widget.initialSolutionEntries);
     _persistedMilestoneIds = Set.of(widget.initialDiscoveredMilestoneIds);
     _discoveredMilestoneIds.addAll(_persistedMilestoneIds);
     _captureDiscoveries(_state);
@@ -400,6 +410,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ids: _debugShowIds,
       stats: _debugShowStats,
     );
+    if (_solutionEntries.isNotEmpty &&
+        _stageShotInputs.isEmpty &&
+        GameFeedback.previousAimComparisonEnabled) {
+      final ghost = _solutionEntries.last;
+      _successAimGhostActive = true;
+      _setPreviousAimInput(
+        ShotInput(
+          direction: Vec2(ghost.firstDirectionX, ghost.firstDirectionY),
+          power: ghost.firstPower,
+        ).normalized(),
+      );
+    }
     _showClearPopup = _state.phase == GamePhase.success;
     _bestShotsLoadFuture = _loadBestShots();
     _telemetry.record('단계 시작', stage: _state.levelIndex);
@@ -535,9 +557,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final reward = initialRunRewards
           .where((item) => item.id == rewardId)
           .firstOrNull;
-      final owned = rewardId == runRewardFailureCauseBoostId
-          ? _rewardInventory.failureCauseBoostEnabled
-          : _rewardInventory.has(rewardId);
+      final owned = switch (rewardId) {
+        runRewardFailureCauseBoostId =>
+          _rewardInventory.failureCauseBoostEnabled,
+        runRewardPrecisionChargeId => _rewardInventory.precisionChargeEnabled,
+        _ => _rewardInventory.has(rewardId),
+      };
       if (reward == null || !owned) continue;
       final available = switch (reward.activationKind) {
         RunRewardActivationKind.manual || RunRewardActivationKind.automatic =>
@@ -1259,6 +1284,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showClearPopup = false;
     _showFailurePopup = false;
     _failureReplay = null;
+    _successAimGhostActive = false;
     _setPreviousAimInput(null);
     _aimStartedForShot = false;
     _pendingLaunchDirection = null;
@@ -2183,6 +2209,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return false;
     }
     final expeditionCallback = widget.onExpeditionStageCompleted;
+    final route = deriveSolutionRoute(
+      inputs: _stageShotInputs,
+      results: _stageShotResults,
+    );
+    final solutionCallback = widget.onSolutionDiscovered;
+    if (route != null && solutionCallback != null) {
+      try {
+        final recorded = await solutionCallback(route);
+        if (mounted) {
+          setState(() {
+            _solutionEntries = recorded.entries;
+            _newSolutionStamp = recorded.isNew;
+          });
+        }
+      } on Object {
+        // 해법 도감 저장 실패가 이미 저장된 클리어·보상을 되돌리지는 않는다.
+      }
+    }
     if (expeditionCallback != null) {
       try {
         await expeditionCallback(
@@ -2209,6 +2253,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!persisted) return;
     if (!mounted || _state.phase != GamePhase.success) return;
     setState(() => _showClearPopup = true);
+  }
+
+  Future<void> _shareSolution(SolutionMasteryEntry entry) async {
+    final code = SolutionShareCardCodec.encode(entry);
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('해법 카드 코드를 복사했습니다. 친구와 같은 접근을 비교할 수 있어요.')),
+    );
   }
 
   Future<void> _retryAfterClear() async {
@@ -3480,7 +3533,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final logical = _toLogicalPosition(localPosition, fieldSize);
     final onBall = logical.distanceTo(_state.activeBall.position) <= 42;
     _launchInputSession.chargeRateScale =
-        _rewardInventory.has(runRewardPrecisionChargeId) ? 0.75 : 1.0;
+        _rewardInventory.precisionChargeEnabled ? 0.75 : 1.0;
     if (!_launchInputSession.begin(
       pointer: pointer,
       logicalPosition: logical,
@@ -4274,7 +4327,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                         'previous_aim_semantics',
                                                       ),
                                                       label:
-                                                          '직전 조준 비교선이 회색으로 표시됨',
+                                                          _successAimGhostActive
+                                                          ? '직전 성공 조준이 회색으로 표시됨'
+                                                          : '직전 조준 비교선이 회색으로 표시됨',
                                                       child: const SizedBox(
                                                         width: 1,
                                                         height: 1,
@@ -4426,6 +4481,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       state: _state,
                       level: _currentLevel,
                       discoveries: _discoveryMilestones,
+                      solutionEntries: _solutionEntries,
+                      solutionTargetCount: math.min(
+                        2,
+                        math.max(1, _currentLevel.solutionFamilies.length),
+                      ),
+                      newSolutionStamp: _newSolutionStamp,
+                      onShareSolution: _solutionEntries.isEmpty
+                          ? null
+                          : () => _shareSolution(_solutionEntries.last),
                       chainScoreAnalysis: _chainScoreAnalysis,
                       bestShot: _bestShots[_state.levelIndex],
                       bonusAchieved: _bonusChallengeAchieved,
@@ -4464,6 +4528,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final showPreviousAim = GameFeedback.previousAimComparisonEnabled;
     setState(() {
       _showFailurePopup = false;
+      _successAimGhostActive = false;
       _setPreviousAimInput(showPreviousAim ? replay.input : null);
       _state = _state.copyWith(
         message: showPreviousAim
@@ -5036,6 +5101,10 @@ class ClearResultPopup extends StatelessWidget {
     this.isSelectingReward = false,
     this.rewardSelectionError,
     this.onRewardSelected,
+    this.solutionEntries = const [],
+    this.solutionTargetCount = 1,
+    this.newSolutionStamp = false,
+    this.onShareSolution,
   });
 
   final GameState state;
@@ -5052,6 +5121,10 @@ class ClearResultPopup extends StatelessWidget {
   final bool isSelectingReward;
   final String? rewardSelectionError;
   final ValueChanged<String>? onRewardSelected;
+  final List<SolutionMasteryEntry> solutionEntries;
+  final int solutionTargetCount;
+  final bool newSolutionStamp;
+  final VoidCallback? onShareSolution;
 
   @override
   Widget build(BuildContext context) {
@@ -5181,6 +5254,90 @@ class ClearResultPopup extends StatelessWidget {
                                                 _DiscoveryResultCard(
                                                   milestones: discoveries,
                                                   cleared: true,
+                                                ),
+                                              ],
+                                              if (solutionEntries
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 10),
+                                                Container(
+                                                  key: const Key(
+                                                    'solution_mastery_card',
+                                                  ),
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets.all(
+                                                    10,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFE4F3EA,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFF79A98C,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        newSolutionStamp
+                                                            ? '새 해법 도장 획득!'
+                                                            : '해법 도감 ${solutionEntries.length}/$solutionTargetCount',
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w900,
+                                                          color: Color(
+                                                            0xFF236B4A,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      for (final entry
+                                                          in solutionEntries.take(
+                                                            solutionTargetCount,
+                                                          ))
+                                                        Text(
+                                                          '✓ ${entry.label}',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                              ),
+                                                        ),
+                                                      if (solutionEntries
+                                                              .length <
+                                                          solutionTargetCount)
+                                                        const Text(
+                                                          '○ 다른 충돌 순서로 클리어해 새 도장을 찾아보세요.',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      if (onShareSolution !=
+                                                          null)
+                                                        TextButton.icon(
+                                                          key: const Key(
+                                                            'share_solution_card_button',
+                                                          ),
+                                                          onPressed:
+                                                              onShareSolution,
+                                                          icon: const Icon(
+                                                            Icons
+                                                                .ios_share_rounded,
+                                                            size: 17,
+                                                          ),
+                                                          label: const Text(
+                                                            '해법 카드 복사',
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ],
                                               if (rewardCandidates
@@ -5623,7 +5780,14 @@ class ClearResultPopup extends StatelessWidget {
                                             ? null
                                             : onRetry,
                                         icon: const Icon(Icons.refresh),
-                                        label: const Text('기록 다시 도전'),
+                                        label: Text(
+                                          solutionEntries.isEmpty
+                                              ? '기록 다시 도전'
+                                              : solutionEntries.length <
+                                                    solutionTargetCount
+                                              ? '다른 해법 찾기'
+                                              : '내 기록 다시 도전',
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -5971,6 +6135,17 @@ class _FailurePopup extends StatelessWidget {
                         _DiscoveryResultCard(
                           milestones: discoveries,
                           cleared: false,
+                        ),
+                      ],
+                      if (discoveries.any((item) => !item.achieved)) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '다음 실험: ${discoveries.firstWhere((item) => !item.achieved).label}에 집중해 보세요.',
+                          key: const Key('failure_next_experiment'),
+                          style: const TextStyle(
+                            color: Color(0xFF285B7D),
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ],
                       const SizedBox(height: 2),

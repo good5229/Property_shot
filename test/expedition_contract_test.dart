@@ -31,7 +31,7 @@ void main() {
     );
   });
 
-  test('발견·정밀·연쇄 목표는 서로 다른 성취를 판정한다', () {
+  test('발견·정밀·연쇄·창의 목표는 서로 다른 성취를 판정한다', () {
     ExpeditionContractProgress progress(ExpeditionContractType type) =>
         ExpeditionContractProgress(
           id: type.name,
@@ -57,6 +57,23 @@ void main() {
     );
     expect(
       progress(ExpeditionContractType.chain).goalAchieved(outcome),
+      isTrue,
+    );
+    expect(
+      progress(ExpeditionContractType.creative).goalAchieved(outcome),
+      isFalse,
+    );
+    expect(
+      progress(ExpeditionContractType.creative).goalAchieved(
+        const ExpeditionStageOutcome(
+          stageId: 'stage_heavy',
+          shotCount: 5,
+          parShots: 2,
+          discoveryCount: 0,
+          gimmickCount: 1,
+          chainScore: 1400,
+        ),
+      ),
       isTrue,
     );
   });

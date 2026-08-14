@@ -22,6 +22,12 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Recently Closed
 
+- [x] 반복 플레이·섬 지원 확장
+  - branch: codex/island-progression
+  - issue: 없음
+  - summary: 패턴별 해법 도장과 공유 카드, 직전 성공 조준 비교, 실패 다음 실험, 복구 시설 집중 지원, 창의 탐사를 추가했다.
+  - notes: 집중 지원은 한 런에서 최초 선택 하나만 적용하며, 손상·과도한 저장값과 변조된 공유 코드는 안전하게 거부한다.
+
 - [x] 건강한 몰입 루프 1~6 고도화
   - branch: codex/engagement-loop
   - issue: 없음

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/analysis/stage_discovery.dart';
+import 'package:property_shot/game/analysis/island_restoration.dart';
 import 'package:property_shot/game/hint/generated_hint_catalog.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
@@ -106,6 +107,94 @@ void main() {
     );
   });
 
+  test('집중 지원은 복구 효과를 유지하며 런당 한 번만 강화한다', () async {
+    final backend = MemoryRunStateBackend();
+
+    final observatory = _session(backend);
+    await observatory.selectStage('stage_heavy');
+    expect(
+      await observatory.applyIslandRestorationBenefits(
+        observatoryRestored: true,
+        lighthouseRestored: false,
+        bridgeRestored: false,
+        observatoryFocused: true,
+      ),
+      isTrue,
+    );
+    final observatoryInventory = RunRewardInventory(
+      observatory.state!.acquiredRewards,
+    );
+    expect(observatoryInventory.failureCauseBoostEnabled, isTrue);
+    expect(observatoryInventory.precisionChargeEnabled, isTrue);
+    expect(
+      await observatory.applyIslandRestorationBenefits(
+        observatoryRestored: true,
+        lighthouseRestored: false,
+        bridgeRestored: false,
+        observatoryFocused: true,
+      ),
+      isFalse,
+    );
+
+    final bridgeBackend = MemoryRunStateBackend();
+    final bridge = _session(bridgeBackend);
+    await bridge.selectStage('stage_heavy');
+    await bridge.applyIslandRestorationBenefits(
+      observatoryRestored: false,
+      lighthouseRestored: false,
+      bridgeRestored: true,
+      bridgeFocused: true,
+    );
+    expect(bridge.state!.cloneCoreCount, 2);
+    await bridge.applyIslandRestorationBenefits(
+      observatoryRestored: true,
+      lighthouseRestored: false,
+      bridgeRestored: true,
+      observatoryFocused: true,
+    );
+    expect(
+      RunRewardInventory(bridge.state!.acquiredRewards).precisionChargeEnabled,
+      isFalse,
+      reason: '런 중에 지원 시설을 바꿔 강화 효과를 중복 누적하면 안 된다.',
+    );
+    expect(
+      await bridge.applyIslandRestorationBenefits(
+        observatoryRestored: false,
+        lighthouseRestored: false,
+        bridgeRestored: true,
+        bridgeFocused: true,
+      ),
+      isFalse,
+    );
+    expect(bridge.state!.cloneCoreCount, 2);
+
+    final lighthouseBackend = MemoryRunStateBackend();
+    final lighthouse = _session(lighthouseBackend);
+    await lighthouse.selectStage('stage_heavy');
+    await lighthouse.applyIslandRestorationBenefits(
+      observatoryRestored: false,
+      lighthouseRestored: true,
+      bridgeRestored: false,
+      lighthouseFocused: true,
+    );
+    expect(lighthouse.currentHintEntitlement!.unlockedHintLevel, 2);
+    expect(
+      lighthouse.currentHintEntitlement!.sources,
+      contains(HintEntitlementSource.restorationLighthouse),
+    );
+  });
+
+  test('섬 지원 저장은 손상된 값을 정리하고 정상 값만 복원한다', () async {
+    final preferences = await SharedPreferences.getInstance();
+    final store = IslandSupportStore(preferences);
+    await preferences.setString(IslandSupportStore.storageKey, 'unknown');
+    expect(store.load(), isNull);
+    expect(preferences.containsKey(IslandSupportStore.storageKey), isFalse);
+
+    await store.save(IslandLandmark.lighthouse);
+    expect(IslandSupportStore(preferences).load(), IslandLandmark.lighthouse);
+  });
+
   testWidgets('24개 발견으로 시작한 실제 게임에는 세 시설 지원이 모두 연결된다', (tester) async {
     final records = <String>[];
     for (var stageIndex = 0; stageIndex < 8; stageIndex++) {
@@ -165,7 +254,38 @@ void main() {
       await tester.ensureVisible(benefit);
       await tester.pumpAndSettle();
     }
+    final focus = find.byKey(const Key('island_focus_lighthouse'));
+    expect(focus, findsOneWidget);
+    await tester.ensureVisible(focus);
+    await tester.tap(focus);
+    await _pumpForAsyncWork(tester);
+    expect(
+      IslandSupportStore(await SharedPreferences.getInstance()).load(),
+      IslandLandmark.lighthouse,
+    );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('복구하지 않은 시설은 집중 선택지로 노출되지 않는다', (tester) async {
+    final records = <String>[];
+    for (var stageIndex = 0; stageIndex < 3; stageIndex++) {
+      for (final milestoneId in stageDiscoveryMilestoneIds(stageIndex)) {
+        records.add('${levels[stageIndex].id}::$milestoneId');
+      }
+    }
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      ProgressStore.discoveryRecordsKey: records,
+    });
+    await tester.pumpWidget(
+      const PropertyShotApp(showHome: true, loadGameAssets: false),
+    );
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.byKey(const Key('island_focus_observatory')), findsOneWidget);
+    expect(find.byKey(const Key('island_focus_lighthouse')), findsNothing);
+    expect(find.byKey(const Key('island_focus_bridge')), findsNothing);
   });
 }
 
