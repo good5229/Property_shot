@@ -19,6 +19,7 @@ void main() {
   });
 
   for (final fixture in const [
+    (name: '320x568', width: 320.0, height: 568.0),
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
   ]) {
@@ -85,15 +86,26 @@ void main() {
       await tester.tap(find.byKey(const Key('discovery_atlas_close')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('island_restoration_card')), findsOneWidget);
-      expect(
-        find.byKey(const Key('island_landmark_observatory')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('island_landmark_lighthouse')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('island_landmark_bridge')), findsOneWidget);
+      if (fixture.name == '320x568') {
+        expect(
+          find.byKey(const Key('island_restoration_expand')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('island_landmark_observatory')),
+          findsNothing,
+        );
+      } else {
+        expect(
+          find.byKey(const Key('island_landmark_observatory')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('island_landmark_lighthouse')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('island_landmark_bridge')), findsOneWidget);
+      }
       expect(
         find.byKey(const Key('island_benefit_observatory')),
         fixture.name == '390x844' ? findsOneWidget : findsNothing,
@@ -107,19 +119,21 @@ void main() {
         matchesGoldenFile('goldens/stage_select_${fixture.name}.png'),
       );
 
-      await tester.ensureVisible(find.byKey(const Key('stage_tile_8')));
-      await tester.pumpAndSettle();
-      await expectLater(
-        find.byKey(const Key('stage_select_golden')),
-        matchesGoldenFile('goldens/stage_select_stage9_${fixture.name}.png'),
-      );
+      if (fixture.name != '320x568') {
+        await tester.ensureVisible(find.byKey(const Key('stage_tile_8')));
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byKey(const Key('stage_select_golden')),
+          matchesGoldenFile('goldens/stage_select_stage9_${fixture.name}.png'),
+        );
 
-      await tester.ensureVisible(find.byKey(const Key('stage_tile_9')));
-      await tester.pumpAndSettle();
-      await expectLater(
-        find.byKey(const Key('stage_select_golden')),
-        matchesGoldenFile('goldens/stage_select_stage10_${fixture.name}.png'),
-      );
+        await tester.ensureVisible(find.byKey(const Key('stage_tile_9')));
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byKey(const Key('stage_select_golden')),
+          matchesGoldenFile('goldens/stage_select_stage10_${fixture.name}.png'),
+        );
+      }
     });
   }
 }

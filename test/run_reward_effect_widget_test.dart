@@ -71,7 +71,13 @@ void main() {
 
     expect(usedRewards, [runRewardShotCancelAssistId]);
     expect(find.textContaining('시도 0'), findsOneWidget);
-    expect(find.textContaining('다시 조준할 수 있습니다'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('compact_message')))
+          .getSemanticsData()
+          .label,
+      contains('다시 조준할 수 있습니다'),
+    );
   });
 
   testWidgets('공 꾸미기 보상은 게임판의 공 렌더 설정에 연결된다', (tester) async {
@@ -217,6 +223,9 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.byKey(const Key('active_reward_guide')), findsNothing);
+    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    await tester.pump();
     expect(find.byKey(const Key('active_reward_guide')), findsOneWidget);
     expect(find.textContaining('충전 속도 25% 완화'), findsOneWidget);
     expect(

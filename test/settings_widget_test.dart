@@ -60,7 +60,34 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('help_reset_button')), findsOneWidget);
+    expect(find.byType(Scrollbar), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('빠른 설정은 편안한 플레이 도움을 한 번에 저장한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('feedback_settings_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings_preset_comfortable')));
+    await _pumpForAsyncWork(tester);
+
+    expect(GameFeedback.playerDifficulty, PlayerDifficulty.easy);
+    expect(GameFeedback.previousAimComparisonEnabled, isTrue);
+    expect(GameFeedback.reducedMotionEnabled, isTrue);
+    expect(GameFeedback.screenShakeEnabled, isFalse);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
+      PlayerDifficulty.easy.name,
+    );
+    expect(
+      preferences.getBool(GameFeedback.reducedMotionPreferenceKey),
+      isTrue,
+    );
+    expect(preferences.getBool(GameFeedback.screenShakePreferenceKey), isFalse);
   });
 
   testWidgets('직전 조준 비교를 독립적으로 끄고 저장한다', (tester) async {

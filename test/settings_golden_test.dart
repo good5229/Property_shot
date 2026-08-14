@@ -21,6 +21,7 @@ void main() {
   tearDown(GameFeedback.resetForTesting);
 
   for (final fixture in const [
+    (name: '320x568', width: 320.0, height: 568.0),
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
   ]) {

@@ -248,6 +248,9 @@ void main() {
     await tester.tap(find.byKey(const Key('stage_select_button')));
     await _pumpForAsyncWork(tester);
 
+    await tester.tap(find.byKey(const Key('island_restoration_expand')));
+    await tester.pumpAndSettle();
+
     for (final landmark in const ['observatory', 'lighthouse', 'bridge']) {
       final benefit = find.byKey(Key('island_benefit_$landmark'));
       expect(benefit, findsOneWidget);

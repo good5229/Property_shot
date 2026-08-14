@@ -51,13 +51,25 @@ void main() {
       timeStamp: Duration.zero,
     );
     await _pumpChargeFrames(tester, const Duration(milliseconds: 2280));
-    expect(find.textContaining('손을 떼고 새로 누르세요'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('charge_gauge_live_state')))
+          .getSemanticsData()
+          .value,
+      '회색 · 발사 취소',
+    );
     expect(find.textContaining('회색 · 발사 취소 · 손을 떼면 발사됩니다'), findsNothing);
     await gesture.up(timeStamp: const Duration(milliseconds: 2280));
     await tester.pump();
 
     expect(find.textContaining('시도 0'), findsOneWidget);
-    expect(find.textContaining('과충전되어 발사를 취소했습니다'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('compact_message')))
+          .getSemanticsData()
+          .label,
+      contains('과충전되어 발사를 취소했습니다'),
+    );
     expect(find.byKey(const Key('charge_gauge_rail')), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 449));
     expect(find.byKey(const Key('charge_gauge_rail')), findsOneWidget);

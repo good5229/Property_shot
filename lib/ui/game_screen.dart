@@ -7162,6 +7162,135 @@ class _DiscoveryProgressRow extends StatelessWidget {
   );
 }
 
+class _CompactHudDetails extends StatefulWidget {
+  const _CompactHudDetails({
+    required this.objective,
+    required this.message,
+    required this.tutorialActive,
+    this.progressHint,
+    this.rewardGuide,
+  });
+
+  final String objective;
+  final String message;
+  final bool tutorialActive;
+  final String? progressHint;
+  final String? rewardGuide;
+
+  @override
+  State<_CompactHudDetails> createState() => _CompactHudDetailsState();
+}
+
+class _CompactHudDetailsState extends State<_CompactHudDetails> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDetails =
+        widget.progressHint != null || widget.rewardGuide != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 44,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.objective,
+                      key: const Key('compact_objective'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF46584E),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (widget.tutorialActive)
+                      Semantics(
+                        key: const Key('compact_message'),
+                        liveRegion: true,
+                        label: '게임 안내: ${widget.message}',
+                        child: Offstage(
+                          child: Text(
+                            widget.message,
+                          ),
+                        ),
+                      )
+                    else
+                      Semantics(
+                        liveRegion: true,
+                        label: '게임 안내: ${widget.message}',
+                        child: Text(
+                          widget.message,
+                          key: const Key('compact_message'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (hasDetails)
+                Semantics(
+                  button: true,
+                  expanded: _expanded,
+                  label: _expanded ? '보상과 추가 정보 접기' : '보상과 추가 정보 펼치기',
+                  child: IconButton(
+                    key: const Key('hud_details_toggle'),
+                    tooltip: _expanded ? '추가 정보 접기' : '보상과 추가 정보',
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 44,
+                      height: 44,
+                    ),
+                    icon: Icon(
+                      _expanded
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (_expanded && widget.progressHint != null)
+          Text(
+            widget.progressHint!,
+            key: const Key('level_progress'),
+            maxLines: 2,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF2F8A62),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        if (_expanded && widget.rewardGuide != null)
+          Text(
+            '보상 · ${widget.rewardGuide}',
+            key: const Key('active_reward_guide'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF7A5420),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _Hud extends StatelessWidget {
   const _Hud({
     this.compact = false,
@@ -7205,7 +7334,7 @@ class _Hud extends StatelessWidget {
     if (compact) {
       return Container(
         key: const Key('compact_hud'),
-        padding: EdgeInsets.fromLTRB(8, dense ? 5 : 6, 8, dense ? 5 : 6),
+        padding: EdgeInsets.fromLTRB(8, dense ? 2 : 6, 8, dense ? 2 : 6),
         decoration: BoxDecoration(
           color: const Color(0xE6F7FAF3),
           borderRadius: BorderRadius.circular(10),
@@ -7226,42 +7355,30 @@ class _Hud extends StatelessWidget {
               children: [
                 Expanded(
                   child: showStageSelector && dense
-                      ? SizedBox(
-                          height: 30,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: [
-                              for (
-                                var index = 0;
-                                index < levels.length;
-                                index++
-                              )
-                                Semantics(
+                      ? Stack(
+                          fit: StackFit.passthrough,
+                          children: [
+                            Text(
+                              state.levelName,
+                              key: const Key('dense_stage_title'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            for (var index = 0; index < levels.length; index++)
+                              Positioned.fill(
+                                child: Semantics(
+                                  container: true,
                                   label: index <= unlockedLevel
                                       ? '${index + 1}단계 선택'
                                       : '${index + 1}단계 잠김. ${unlockedLevel + 1}단계 클리어 후 열림',
                                   button: index <= unlockedLevel,
                                   selected: state.levelIndex == index,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: ChoiceChip(
-                                      key: Key('level_$index'),
-                                      label: Text(
-                                        state.levelIndex == index
-                                            ? state.levelName
-                                            : '${index + 1}',
-                                      ),
-                                      visualDensity: VisualDensity.compact,
-                                      padding: EdgeInsets.zero,
-                                      selected: state.levelIndex == index,
-                                      onSelected: index <= unlockedLevel
-                                          ? (_) => onSelectLevel(index)
-                                          : null,
-                                    ),
-                                  ),
+                                  child: const SizedBox.expand(),
                                 ),
-                            ],
-                          ),
+                              ),
+                          ],
                         )
                       : Text(
                           state.levelName,
@@ -7283,7 +7400,11 @@ class _Hud extends StatelessWidget {
                     icon: Icon(
                       exitToMainMenu ? Icons.home_rounded : Icons.map_outlined,
                     ),
-                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 44,
+                      height: 44,
+                    ),
                   ),
                 if (!showStageSelector)
                   IconButton(
@@ -7295,7 +7416,11 @@ class _Hud extends StatelessWidget {
                           ? Icons.play_arrow
                           : Icons.pause,
                     ),
-                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 44,
+                      height: 44,
+                    ),
                   ),
                 if (onDebug != null)
                   IconButton(
@@ -7303,7 +7428,11 @@ class _Hud extends StatelessWidget {
                     tooltip: '개발 진단 메뉴',
                     onPressed: onDebug,
                     icon: const Icon(Icons.bug_report_outlined),
-                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 44,
+                      height: 44,
+                    ),
                   ),
               ],
             ),
@@ -7338,64 +7467,15 @@ class _Hud extends StatelessWidget {
                   ],
                 ),
               ),
-            Text(
-              '발견 $discoveries/${discoveryMilestones.length} · '
-              '${stageDiscoveryCompactPath(state.levelIndex)}',
-              key: const Key('compact_objective'),
-              maxLines: 1,
-              softWrap: true,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF46584E),
-                fontWeight: FontWeight.w600,
-              ),
+            _CompactHudDetails(
+              objective:
+                  '발견 $discoveries/${discoveryMilestones.length} · '
+                  '${stageDiscoveryCompactPath(state.levelIndex)}',
+              message: state.message,
+              tutorialActive: tutorialActive,
+              progressHint: compactProgressHint,
+              rewardGuide: rewardGuide,
             ),
-            if (compactProgressHint != null)
-              Text(
-                compactProgressHint,
-                key: const Key('level_progress'),
-                maxLines: 2,
-                softWrap: true,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF2F8A62),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            if (rewardGuide != null)
-              Text(
-                '보상 · $rewardGuide',
-                key: const Key('active_reward_guide'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF7A5420),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            if (tutorialActive)
-              Opacity(
-                opacity: 0,
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    state.message,
-                    key: const Key('compact_message'),
-                    style: const TextStyle(fontSize: 0, height: 0),
-                  ),
-                ),
-              )
-            else
-              Semantics(
-                liveRegion: true,
-                label: '게임 안내: ${state.message}',
-                child: Text(
-                  state.message,
-                  key: const Key('compact_message'),
-                  maxLines: 2,
-                  softWrap: true,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
           ],
         ),
       );

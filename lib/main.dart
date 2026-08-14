@@ -451,7 +451,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Future<void> _playExpeditionStage(String stageId) async {
     final index = levels.indexWhere((level) => level.id == stageId);
     if (index < 0 || index > _unlockedLevel) return;
-    setState(() => _showExpedition = false);
+    _changeSurface(() => _showExpedition = false);
     await _startStage(index, expedition: true);
   }
 
@@ -498,8 +498,18 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     );
   }
 
+  void _dismissTransientMessages() {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.removeCurrentSnackBar();
+  }
+
+  void _changeSurface(VoidCallback change) {
+    _dismissTransientMessages();
+    setState(change);
+  }
+
   void _openRewardInventory() {
-    setState(() {
+    _changeSurface(() {
       _rewardInventoryFuture = _loadRewardInventory();
       _showRewardInventory = true;
     });
@@ -531,6 +541,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     if ((index > _unlockedLevel && !allowStoredRunResume) || _selectingStage) {
       return;
     }
+    _dismissTransientMessages();
     _selectingStage = true;
     try {
       await _progressLoadFuture;
@@ -786,7 +797,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         final resumeRequired = _requiresCurrentRunResume(error);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            duration: const Duration(seconds: 6),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
             content: Text(_stageSelectionErrorMessage(error)),
             action: resumeRequired
                 ? SnackBarAction(
@@ -876,7 +888,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   void _returnHome() {
-    setState(() {
+    _changeSurface(() {
       _activeIsExpedition = false;
       _activeStage = null;
       _activeLevel = null;
@@ -1525,7 +1537,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           if (snapshot.hasData) {
             return _RewardInventoryScreen(
               acquiredRewards: snapshot.requireData,
-              onBack: () => setState(() => _showRewardInventory = false),
+              onBack: () => _changeSurface(() => _showRewardInventory = false),
             );
           }
           return const Scaffold(
@@ -1543,7 +1555,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onClear: () => unawaited(_clearExpedition()),
         onShare: () => unawaited(_shareExpedition()),
         onImport: _importExpedition,
-        onBack: () => setState(() => _showExpedition = false),
+        onBack: () => _changeSurface(() => _showExpedition = false),
       );
     }
     if (_showReplayLibrary) {
@@ -1553,7 +1565,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           if (snapshot.hasData) {
             return ReplayLibraryScreen(
               store: snapshot.requireData,
-              onBack: () => setState(() => _showReplayLibrary = false),
+              onBack: () => _changeSurface(() => _showReplayLibrary = false),
               onReplayViewed: (document) {
                 _telemetry.recordTyped(
                   TypedPlayTelemetryEvent(
@@ -1586,7 +1598,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     if (_showDailyChallenge) {
       return DailyChallengeScreen(
         key: const Key('daily_challenge_flow'),
-        onExit: () => setState(() => _showDailyChallenge = false),
+        onExit: () => _changeSurface(() => _showDailyChallenge = false),
         showDebugControls: widget.showDebugControls,
         tutorialVariant: _tutorialVariant,
         telemetry: _telemetry,
@@ -1660,7 +1672,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
     if (_showStageSelect) {
       return _StageSelectScreen(
-        onBack: () => setState(() => _showStageSelect = false),
+        onBack: () => _changeSurface(() => _showStageSelect = false),
         onSelectStage: (index) => unawaited(_startStage(index)),
         unlockedLevel: _unlockedLevel,
         discoveriesByStageId: _discoveriesByStageId,
@@ -1672,11 +1684,11 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
     return _HomeScreen(
       onStart: () => unawaited(_startOrResume()),
-      onStageSelect: () => setState(() => _showStageSelect = true),
+      onStageSelect: () => _changeSurface(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
-      onExpedition: () => setState(() => _showExpedition = true),
-      onDailyChallenge: () => setState(() => _showDailyChallenge = true),
-      onReplayLibrary: () => setState(() => _showReplayLibrary = true),
+      onExpedition: () => _changeSurface(() => _showExpedition = true),
+      onDailyChallenge: () => _changeSurface(() => _showDailyChallenge = true),
+      onReplayLibrary: () => _changeSurface(() => _showReplayLibrary = true),
       showDebugControls: widget.showDebugControls,
       tutorialVariant: _tutorialVariant,
       onTutorialVariantChanged: (variant) {
@@ -2445,6 +2457,60 @@ class _HomeScreen extends StatelessWidget {
         child: Stack(
           children: [
             const Positioned.fill(child: _IslandBackdrop()),
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth <= 360;
+                  final tablet = constraints.maxWidth >= 700;
+                  final hero = _HomeHero(compact: compact);
+                  final actions = _HomeActions(
+                    appFontFamily: appFontFamily,
+                    onStart: onStart,
+                    onExpedition: onExpedition,
+                    onStageSelect: onStageSelect,
+                    onRewardInventory: onRewardInventory,
+                    onReplayLibrary: onReplayLibrary,
+                    onDailyChallenge: onDailyChallenge,
+                  );
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      compact ? 18 : 24,
+                      tablet ? 56 : 20,
+                      compact ? 18 : 24,
+                      28,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: tablet ? 940 : 430,
+                          minHeight: math.max(0, constraints.maxHeight - 104),
+                        ),
+                        child: tablet
+                            ? Row(
+                                key: const Key('home_tablet_layout'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(child: hero),
+                                  const SizedBox(width: 56),
+                                  SizedBox(width: 360, child: actions),
+                                ],
+                              )
+                            : Column(
+                                key: const Key('home_mobile_layout'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  hero,
+                                  SizedBox(height: compact ? 18 : 24),
+                                  actions,
+                                ],
+                              ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
             if (showDebugControls)
               Positioned(
                 top: 8,
@@ -2475,116 +2541,6 @@ class _HomeScreen extends StatelessWidget {
                 icon: const Icon(Icons.tune_rounded),
               ),
             ),
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 430),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      const _HomePlayPreview(),
-                      const SizedBox(height: 12),
-                      Text(
-                        '속성 한방',
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                              color: const Color(0xFF173F43),
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '주변 물체의 성질을 공에 담아\n한 번의 샷으로 연쇄 반응을 완성하세요.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: const Color(0xFF285C5D),
-                          height: 1.35,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 26),
-                      FilledButton.icon(
-                        key: const Key('start_game_button'),
-                        onPressed: onStart,
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('첫 섬에서 시작하기'),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(54),
-                          backgroundColor: const Color(0xFFEF765E),
-                          foregroundColor: Colors.white,
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ).copyWith(fontFamily: appFontFamily),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        key: const Key('expedition_entry_button'),
-                        onPressed: onExpedition,
-                        icon: const Icon(Icons.explore_outlined),
-                        label: const Text('3단계 탐사'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          foregroundColor: const Color(0xFF7A4B1F),
-                          side: const BorderSide(color: Color(0xFFB5783A)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        key: const Key('reward_inventory_entry_button'),
-                        onPressed: onRewardInventory,
-                        icon: const Icon(Icons.backpack_outlined),
-                        label: const Text('내 런 보상'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          foregroundColor: const Color(0xFF6B4B20),
-                          side: const BorderSide(color: Color(0xFFA77A3E)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        key: const Key('stage_select_button'),
-                        onPressed: onStageSelect,
-                        icon: const Icon(Icons.map_outlined),
-                        label: const Text('스테이지 선택'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          foregroundColor: const Color(0xFF245B60),
-                          side: const BorderSide(color: Color(0xFF4D8580)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        key: const Key('replay_library_entry_button'),
-                        onPressed: onReplayLibrary,
-                        icon: const Icon(Icons.movie_filter_outlined),
-                        label: const Text('나의 리플레이'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          foregroundColor: const Color(0xFF5A536F),
-                          side: const BorderSide(color: Color(0xFF81779B)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        key: const Key('daily_challenge_entry_button'),
-                        onPressed: onDailyChallenge,
-                        icon: const Icon(Icons.today_rounded),
-                        label: const Text('오늘의 도전'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          foregroundColor: const Color(0xFF9A5D35),
-                          side: const BorderSide(color: Color(0xFFC9875A)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -2592,8 +2548,177 @@ class _HomeScreen extends StatelessWidget {
   }
 }
 
+class _HomeHero extends StatelessWidget {
+  const _HomeHero({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const Key('home_hero'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _HomePlayPreview(compact: compact),
+        SizedBox(height: compact ? 8 : 12),
+        Text(
+          '속성 한방',
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            color: const Color(0xFF173F43),
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          compact
+              ? '주변 속성을 공에 담아\n연쇄 반응을 완성하세요.'
+              : '주변 물체의 성질을 공에 담아\n한 번의 샷으로 연쇄 반응을 완성하세요.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: const Color(0xFF285C5D),
+            height: 1.35,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeActions extends StatelessWidget {
+  const _HomeActions({
+    required this.appFontFamily,
+    required this.onStart,
+    required this.onExpedition,
+    required this.onStageSelect,
+    required this.onRewardInventory,
+    required this.onReplayLibrary,
+    required this.onDailyChallenge,
+  });
+
+  final String? appFontFamily;
+  final VoidCallback onStart;
+  final VoidCallback onExpedition;
+  final VoidCallback onStageSelect;
+  final VoidCallback onRewardInventory;
+  final VoidCallback onReplayLibrary;
+  final VoidCallback onDailyChallenge;
+
+  Widget _secondary({
+    required Key key,
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+    required Color foreground,
+    required Color border,
+  }) => OutlinedButton.icon(
+    key: key,
+    onPressed: onPressed,
+    icon: Icon(icon, size: 19),
+    label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+    style: OutlinedButton.styleFrom(
+      minimumSize: const Size.fromHeight(50),
+      foregroundColor: foreground,
+      side: BorderSide(color: border, width: 1.3),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const Key('home_actions'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          key: const Key('start_game_button'),
+          onPressed: onStart,
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('항해 시작·이어가기'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(56),
+            backgroundColor: const Color(0xFFEF765E),
+            foregroundColor: Colors.white,
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ).copyWith(fontFamily: appFontFamily),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _secondary(
+                key: const Key('expedition_entry_button'),
+                onPressed: onExpedition,
+                icon: Icons.explore_outlined,
+                label: '3단계 탐사',
+                foreground: const Color(0xFF704315),
+                border: const Color(0xFF9F6529),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _secondary(
+                key: const Key('stage_select_button'),
+                onPressed: onStageSelect,
+                icon: Icons.map_outlined,
+                label: '스테이지',
+                foreground: const Color(0xFF245B60),
+                border: const Color(0xFF3E7773),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _secondary(
+                key: const Key('reward_inventory_entry_button'),
+                onPressed: onRewardInventory,
+                icon: Icons.backpack_outlined,
+                label: '보상',
+                foreground: const Color(0xFF6B4B20),
+                border: const Color(0xFF946B35),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _secondary(
+                key: const Key('replay_library_entry_button'),
+                onPressed: onReplayLibrary,
+                icon: Icons.movie_filter_outlined,
+                label: '리플레이',
+                foreground: const Color(0xFF514B66),
+                border: const Color(0xFF70678A),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _secondary(
+                key: const Key('daily_challenge_entry_button'),
+                onPressed: onDailyChallenge,
+                icon: Icons.today_rounded,
+                label: '오늘',
+                foreground: const Color(0xFF874D2B),
+                border: const Color(0xFFB06E45),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _HomePlayPreview extends StatelessWidget {
-  const _HomePlayPreview();
+  const _HomePlayPreview({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -2601,7 +2726,7 @@ class _HomePlayPreview extends StatelessWidget {
       image: true,
       label: '공과 상자와 무거운 돌이 있는 목표 홀 보드',
       child: Container(
-        height: 174,
+        height: compact ? 154 : 174,
         width: double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFFFFE3A1),
@@ -2727,6 +2852,8 @@ class _PreviewBoardPainter extends CustomPainter {
   bool shouldRepaint(covariant _PreviewBoardPainter oldDelegate) => false;
 }
 
+enum _SettingsPreset { recommended, comfortable, direct }
+
 class _FeedbackSettingsDialog extends StatefulWidget {
   const _FeedbackSettingsDialog();
 
@@ -2736,6 +2863,64 @@ class _FeedbackSettingsDialog extends StatefulWidget {
 }
 
 class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
+  final ScrollController _scrollController = ScrollController();
+  bool _applyingPreset = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _applyPreset(_SettingsPreset preset) async {
+    if (_applyingPreset) return;
+    setState(() => _applyingPreset = true);
+    final enableGuidance = preset != _SettingsPreset.direct;
+    final comfortable = preset == _SettingsPreset.comfortable;
+    await Future.wait([
+      GameFeedback.setPlayerDifficulty(
+        comfortable ? PlayerDifficulty.easy : PlayerDifficulty.normal,
+      ),
+      GameFeedback.setPreviousAimComparisonEnabled(enableGuidance),
+      GameFeedback.setLastShotSlowMotionEnabled(enableGuidance),
+      GameFeedback.setCollisionOrderEnabled(enableGuidance),
+      GameFeedback.setLastContactHighlightEnabled(enableGuidance),
+      GameFeedback.setNearestHoleEnabled(enableGuidance),
+      GameFeedback.setTraitActivationEnabled(enableGuidance),
+      GameFeedback.setGimmickCausalityEnabled(enableGuidance),
+      GameFeedback.setCollisionPathIconsEnabled(enableGuidance),
+      GameFeedback.setChainScoreDetailsEnabled(enableGuidance),
+      GameFeedback.setReducedMotionEnabled(comfortable),
+      GameFeedback.setScreenShakeEnabled(!comfortable),
+    ]);
+    if (!mounted) return;
+    setState(() => _applyingPreset = false);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Text(switch (preset) {
+            _SettingsPreset.recommended => '추천 도움 설정을 적용했습니다.',
+            _SettingsPreset.comfortable => '편안한 플레이 설정을 적용했습니다.',
+            _SettingsPreset.direct => '직접 탐색 설정을 적용했습니다.',
+          }),
+        ),
+      );
+  }
+
+  Widget _presetChip({
+    required Key key,
+    required _SettingsPreset preset,
+    required String label,
+    required IconData icon,
+  }) => ActionChip(
+    key: key,
+    avatar: Icon(icon, size: 18),
+    label: Text(label),
+    onPressed: _applyingPreset ? null : () => unawaited(_applyPreset(preset)),
+  );
+
   Widget _sectionHeader({
     required Key key,
     required String title,
@@ -2813,206 +2998,248 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
       title: const Text('게임 설정'),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 620),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _sectionHeader(
-                key: const Key('aim_help_settings_section'),
-                title: '조준 도움',
-                description: '정답을 바꾸지 않고 조준을 읽기 쉽게 만듭니다.',
-                icon: Icons.adjust,
-              ),
-              DropdownButtonFormField<ChargeGaugeSide>(
-                key: const Key('charge_gauge_side_dropdown'),
-                decoration: const InputDecoration(labelText: '충전 게이지 위치'),
-                initialValue: GameFeedback.chargeGaugeSide,
-                items: const [
-                  DropdownMenuItem(
-                    value: ChargeGaugeSide.right,
-                    child: Text('오른쪽 (기본)'),
-                  ),
-                  DropdownMenuItem(
-                    value: ChargeGaugeSide.left,
-                    child: Text('왼쪽'),
-                  ),
-                ],
-                onChanged: (side) {
-                  if (side == null) return;
-                  setState(() => GameFeedback.chargeGaugeSide = side);
-                  unawaited(GameFeedback.setChargeGaugeSide(side));
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<PlayerDifficulty>(
-                key: const Key('player_difficulty_dropdown'),
-                decoration: const InputDecoration(labelText: '게임 난이도'),
-                initialValue: GameFeedback.playerDifficulty,
-                items: const [
-                  DropdownMenuItem(
-                    value: PlayerDifficulty.normal,
-                    child: Text('보통'),
-                  ),
-                  DropdownMenuItem(
-                    value: PlayerDifficulty.easy,
-                    child: Text('쉬움'),
-                  ),
-                ],
-                onChanged: (difficulty) {
-                  if (difficulty == null) return;
-                  setState(() => GameFeedback.playerDifficulty = difficulty);
-                  unawaited(GameFeedback.setPlayerDifficulty(difficulty));
-                },
-              ),
-              _settingSwitch(
-                key: const Key('previous_aim_comparison_toggle'),
-                title: '직전 조준 비교',
-                subtitle: '실패 후 직전 각도와 힘을 회색선으로 남깁니다.',
-                value: GameFeedback.previousAimComparisonEnabled,
-                onChanged: GameFeedback.setPreviousAimComparisonEnabled,
-              ),
-              _sectionHeader(
-                key: const Key('route_memory_settings_section'),
-                title: '경로 기억',
-                description: '방금 무엇에 부딪혀 어디까지 갔는지 복기합니다.',
-                icon: Icons.route_outlined,
-              ),
-              _settingSwitch(
-                key: const Key('last_shot_slow_motion_toggle'),
-                title: '마지막 샷 슬로모션',
-                subtitle: '실패 장면을 반속도로 되돌려 봅니다.',
-                value: GameFeedback.lastShotSlowMotionEnabled,
-                onChanged: GameFeedback.setLastShotSlowMotionEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('collision_order_toggle'),
-                title: '충돌 순서 표시',
-                value: GameFeedback.collisionOrderEnabled,
-                onChanged: GameFeedback.setCollisionOrderEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('last_contact_highlight_toggle'),
-                title: '마지막 접촉 대상 강조',
-                value: GameFeedback.lastContactHighlightEnabled,
-                onChanged: GameFeedback.setLastContactHighlightEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('nearest_hole_toggle'),
-                title: '홀 최근접 위치',
-                value: GameFeedback.nearestHoleEnabled,
-                onChanged: GameFeedback.setNearestHoleEnabled,
-              ),
-              _sectionHeader(
-                key: const Key('causality_settings_section'),
-                title: '인과 이해',
-                description: '속성과 기믹이 어떤 결과를 만들었는지 보여 줍니다.',
-                icon: Icons.hub_outlined,
-              ),
-              _settingSwitch(
-                key: const Key('trait_activation_toggle'),
-                title: '속성 발동 표시',
-                value: GameFeedback.traitActivationEnabled,
-                onChanged: GameFeedback.setTraitActivationEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('gimmick_causality_toggle'),
-                title: '기믹 인과 표시',
-                value: GameFeedback.gimmickCausalityEnabled,
-                onChanged: GameFeedback.setGimmickCausalityEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('collision_path_icons_toggle'),
-                title: '충돌 경로 아이콘',
-                value: GameFeedback.collisionPathIconsEnabled,
-                onChanged: GameFeedback.setCollisionPathIconsEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('chain_score_details_toggle'),
-                title: '연쇄 점수 상세 표시',
-                subtitle: '끄더라도 획득한 총점은 그대로 유지됩니다.',
-                value: GameFeedback.chainScoreDetailsEnabled,
-                onChanged: GameFeedback.setChainScoreDetailsEnabled,
-              ),
-              _sectionHeader(
-                key: const Key('sensory_settings_section'),
-                title: '화면과 소리',
-                description: '움직임·점멸·진동·소리 강도를 내게 맞춥니다.',
-                icon: Icons.tune,
-              ),
-              _settingSwitch(
-                key: const Key('haptics_toggle'),
-                title: '진동',
-                value: GameFeedback.hapticsEnabled,
-                onChanged: GameFeedback.setHapticsEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('reduced_motion_toggle'),
-                title: '저모션',
-                subtitle: '충돌 인과는 유지하고 흔들림과 반복 효과를 줄입니다.',
-                value: GameFeedback.reducedMotionEnabled,
-                onChanged: GameFeedback.setReducedMotionEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('screen_shake_toggle'),
-                title: '화면 흔들림',
-                value: GameFeedback.screenShakeEnabled,
-                onChanged: GameFeedback.setScreenShakeEnabled,
-              ),
-              DropdownButtonFormField<int>(
-                key: const Key('screen_shake_strength_dropdown'),
-                decoration: const InputDecoration(labelText: '화면 흔들림 강도'),
-                initialValue: GameFeedback.screenShakeStrength,
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('끔')),
-                  DropdownMenuItem(value: 1, child: Text('약하게')),
-                  DropdownMenuItem(value: 2, child: Text('보통')),
-                  DropdownMenuItem(value: 3, child: Text('강하게')),
-                ],
-                onChanged: (strength) {
-                  if (strength == null) return;
-                  setState(() {
-                    GameFeedback.screenShakeStrength = strength;
-                    GameFeedback.screenShakeEnabled = strength > 0;
-                  });
-                  unawaited(GameFeedback.setScreenShakeStrength(strength));
-                },
-              ),
-              _settingSwitch(
-                key: const Key('strong_flash_toggle'),
-                title: '강한 점멸 효과',
-                subtitle: '끄면 반복 점멸을 정적인 밝기와 윤곽으로 바꿉니다.',
-                value: GameFeedback.strongFlashEnabled,
-                onChanged: GameFeedback.setStrongFlashEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('sound_toggle'),
-                title: '효과음',
-                value: GameFeedback.soundEnabled,
-                onChanged: GameFeedback.setSoundEnabled,
-              ),
-              _settingSwitch(
-                key: const Key('background_music_toggle'),
-                title: '배경 음악',
-                subtitle: '잔잔한 섬 테마를 반복 재생합니다.',
-                value: GameFeedback.backgroundMusicEnabled,
-                onChanged: GameFeedback.setBackgroundMusicEnabled,
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  key: const Key('help_reset_button'),
-                  onPressed: () async {
-                    await GameFeedback.resetHelpPreferences();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('도움말을 다음 화면에서 다시 보여 드립니다.')),
-                    );
-                  },
-                  icon: const Icon(Icons.help_outline),
-                  label: const Text('도움말 다시 보기'),
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            key: const Key('settings_scroll_view'),
+            controller: _scrollController,
+            padding: const EdgeInsets.only(right: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _sectionHeader(
+                  key: const Key('settings_preset_section'),
+                  title: '빠른 설정',
+                  description: '플레이 방식부터 고른 뒤 세부 항목을 원하는 만큼 바꿀 수 있습니다.',
+                  icon: Icons.tune_rounded,
                 ),
-              ),
-            ],
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: [
+                      _presetChip(
+                        key: const Key('settings_preset_recommended'),
+                        preset: _SettingsPreset.recommended,
+                        label: '추천',
+                        icon: Icons.thumb_up_alt_outlined,
+                      ),
+                      _presetChip(
+                        key: const Key('settings_preset_comfortable'),
+                        preset: _SettingsPreset.comfortable,
+                        label: '편안하게',
+                        icon: Icons.accessibility_new_rounded,
+                      ),
+                      _presetChip(
+                        key: const Key('settings_preset_direct'),
+                        preset: _SettingsPreset.direct,
+                        label: '직접 탐색',
+                        icon: Icons.explore_outlined,
+                      ),
+                    ],
+                  ),
+                ),
+                _sectionHeader(
+                  key: const Key('aim_help_settings_section'),
+                  title: '조준 도움',
+                  description: '정답을 바꾸지 않고 조준을 읽기 쉽게 만듭니다.',
+                  icon: Icons.adjust,
+                ),
+                DropdownButtonFormField<ChargeGaugeSide>(
+                  key: const Key('charge_gauge_side_dropdown'),
+                  decoration: const InputDecoration(labelText: '충전 게이지 위치'),
+                  initialValue: GameFeedback.chargeGaugeSide,
+                  items: const [
+                    DropdownMenuItem(
+                      value: ChargeGaugeSide.right,
+                      child: Text('오른쪽 (기본)'),
+                    ),
+                    DropdownMenuItem(
+                      value: ChargeGaugeSide.left,
+                      child: Text('왼쪽'),
+                    ),
+                  ],
+                  onChanged: (side) {
+                    if (side == null) return;
+                    setState(() => GameFeedback.chargeGaugeSide = side);
+                    unawaited(GameFeedback.setChargeGaugeSide(side));
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<PlayerDifficulty>(
+                  key: const Key('player_difficulty_dropdown'),
+                  decoration: const InputDecoration(labelText: '게임 난이도'),
+                  initialValue: GameFeedback.playerDifficulty,
+                  items: const [
+                    DropdownMenuItem(
+                      value: PlayerDifficulty.normal,
+                      child: Text('보통'),
+                    ),
+                    DropdownMenuItem(
+                      value: PlayerDifficulty.easy,
+                      child: Text('쉬움'),
+                    ),
+                  ],
+                  onChanged: (difficulty) {
+                    if (difficulty == null) return;
+                    setState(() => GameFeedback.playerDifficulty = difficulty);
+                    unawaited(GameFeedback.setPlayerDifficulty(difficulty));
+                  },
+                ),
+                _settingSwitch(
+                  key: const Key('previous_aim_comparison_toggle'),
+                  title: '직전 조준 비교',
+                  subtitle: '실패 후 직전 각도와 힘을 회색선으로 남깁니다.',
+                  value: GameFeedback.previousAimComparisonEnabled,
+                  onChanged: GameFeedback.setPreviousAimComparisonEnabled,
+                ),
+                _sectionHeader(
+                  key: const Key('route_memory_settings_section'),
+                  title: '경로 기억',
+                  description: '방금 무엇에 부딪혀 어디까지 갔는지 복기합니다.',
+                  icon: Icons.route_outlined,
+                ),
+                _settingSwitch(
+                  key: const Key('last_shot_slow_motion_toggle'),
+                  title: '마지막 샷 슬로모션',
+                  subtitle: '실패 장면을 반속도로 되돌려 봅니다.',
+                  value: GameFeedback.lastShotSlowMotionEnabled,
+                  onChanged: GameFeedback.setLastShotSlowMotionEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('collision_order_toggle'),
+                  title: '충돌 순서 표시',
+                  value: GameFeedback.collisionOrderEnabled,
+                  onChanged: GameFeedback.setCollisionOrderEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('last_contact_highlight_toggle'),
+                  title: '마지막 접촉 대상 강조',
+                  value: GameFeedback.lastContactHighlightEnabled,
+                  onChanged: GameFeedback.setLastContactHighlightEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('nearest_hole_toggle'),
+                  title: '홀 최근접 위치',
+                  value: GameFeedback.nearestHoleEnabled,
+                  onChanged: GameFeedback.setNearestHoleEnabled,
+                ),
+                _sectionHeader(
+                  key: const Key('causality_settings_section'),
+                  title: '인과 이해',
+                  description: '속성과 기믹이 어떤 결과를 만들었는지 보여 줍니다.',
+                  icon: Icons.hub_outlined,
+                ),
+                _settingSwitch(
+                  key: const Key('trait_activation_toggle'),
+                  title: '속성 발동 표시',
+                  value: GameFeedback.traitActivationEnabled,
+                  onChanged: GameFeedback.setTraitActivationEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('gimmick_causality_toggle'),
+                  title: '기믹 인과 표시',
+                  value: GameFeedback.gimmickCausalityEnabled,
+                  onChanged: GameFeedback.setGimmickCausalityEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('collision_path_icons_toggle'),
+                  title: '충돌 경로 아이콘',
+                  value: GameFeedback.collisionPathIconsEnabled,
+                  onChanged: GameFeedback.setCollisionPathIconsEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('chain_score_details_toggle'),
+                  title: '연쇄 점수 상세 표시',
+                  subtitle: '끄더라도 획득한 총점은 그대로 유지됩니다.',
+                  value: GameFeedback.chainScoreDetailsEnabled,
+                  onChanged: GameFeedback.setChainScoreDetailsEnabled,
+                ),
+                _sectionHeader(
+                  key: const Key('sensory_settings_section'),
+                  title: '화면과 소리',
+                  description: '움직임·점멸·진동·소리 강도를 내게 맞춥니다.',
+                  icon: Icons.tune,
+                ),
+                _settingSwitch(
+                  key: const Key('haptics_toggle'),
+                  title: '진동',
+                  value: GameFeedback.hapticsEnabled,
+                  onChanged: GameFeedback.setHapticsEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('reduced_motion_toggle'),
+                  title: '저모션',
+                  subtitle: '충돌 인과는 유지하고 흔들림과 반복 효과를 줄입니다.',
+                  value: GameFeedback.reducedMotionEnabled,
+                  onChanged: GameFeedback.setReducedMotionEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('screen_shake_toggle'),
+                  title: '화면 흔들림',
+                  value: GameFeedback.screenShakeEnabled,
+                  onChanged: GameFeedback.setScreenShakeEnabled,
+                ),
+                DropdownButtonFormField<int>(
+                  key: const Key('screen_shake_strength_dropdown'),
+                  decoration: const InputDecoration(labelText: '화면 흔들림 강도'),
+                  initialValue: GameFeedback.screenShakeStrength,
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('끔')),
+                    DropdownMenuItem(value: 1, child: Text('약하게')),
+                    DropdownMenuItem(value: 2, child: Text('보통')),
+                    DropdownMenuItem(value: 3, child: Text('강하게')),
+                  ],
+                  onChanged: (strength) {
+                    if (strength == null) return;
+                    setState(() {
+                      GameFeedback.screenShakeStrength = strength;
+                      GameFeedback.screenShakeEnabled = strength > 0;
+                    });
+                    unawaited(GameFeedback.setScreenShakeStrength(strength));
+                  },
+                ),
+                _settingSwitch(
+                  key: const Key('strong_flash_toggle'),
+                  title: '강한 점멸 효과',
+                  subtitle: '끄면 반복 점멸을 정적인 밝기와 윤곽으로 바꿉니다.',
+                  value: GameFeedback.strongFlashEnabled,
+                  onChanged: GameFeedback.setStrongFlashEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('sound_toggle'),
+                  title: '효과음',
+                  value: GameFeedback.soundEnabled,
+                  onChanged: GameFeedback.setSoundEnabled,
+                ),
+                _settingSwitch(
+                  key: const Key('background_music_toggle'),
+                  title: '배경 음악',
+                  subtitle: '잔잔한 섬 테마를 반복 재생합니다.',
+                  value: GameFeedback.backgroundMusicEnabled,
+                  onChanged: GameFeedback.setBackgroundMusicEnabled,
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('help_reset_button'),
+                    onPressed: () async {
+                      await GameFeedback.resetHelpPreferences();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('도움말을 다음 화면에서 다시 보여 드립니다.'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.help_outline),
+                    label: const Text('도움말 다시 보기'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -3103,213 +3330,228 @@ class _StageSelectScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: const Key('stage_select_screen'),
-      backgroundColor: const Color(0xFFBFE8E3),
-      body: Stack(
-        children: [
-          const Positioned.fill(child: _IslandBackdrop()),
-          SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
-              children: [
-                Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth <= 360;
+        return Scaffold(
+          key: const Key('stage_select_screen'),
+          backgroundColor: const Color(0xFFBFE8E3),
+          body: Stack(
+            children: [
+              const Positioned.fill(child: _IslandBackdrop()),
+              SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
                   children: [
-                    IconButton(
-                      tooltip: '처음 화면',
-                      onPressed: onBack,
-                      icon: const Icon(Icons.arrow_back),
-                      color: const Color(0xFF173F43),
+                    Row(
+                      children: [
+                        IconButton(
+                          tooltip: '처음 화면',
+                          onPressed: onBack,
+                          icon: const Icon(Icons.arrow_back),
+                          color: const Color(0xFF173F43),
+                        ),
+                        const Expanded(
+                          child: Text(
+                            '섬 지도',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF173F43),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
                     ),
-                    const Expanded(
-                      child: Text(
-                        '섬 지도',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF173F43),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
+                    const SizedBox(height: 8),
+                    Text(
+                      compact
+                          ? '섬을 골라 물리 반응을 실험하세요.'
+                          : '실험 섬을 골라 속성의 반응을 직접 확인해 보세요.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: const Color(0xFF285C5D),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Material(
+                      key: const Key('map_hint_card'),
+                      color: const Color(0xD9E8F4D9),
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        key: const Key('discovery_atlas_button'),
+                        onTap: () => _showDiscoveryAtlas(context),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.explore_rounded,
+                                size: 28,
+                                color: Color(0xFF4F8460),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '섬 물리 관측일지',
+                                      style: TextStyle(
+                                        color: Color(0xFF315C46),
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      compact
+                                          ? '발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
+                                                '${levels.length * 3} · 눌러서 도감 보기'
+                                          : '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
+                                                '${levels.length * 3} · 눌러서 발견 도감을 확인하세요.',
+                                      style: const TextStyle(
+                                        color: Color(0xFF52706A),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: Color(0xFF4F8460),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '실험 섬을 골라 속성의 반응을 직접 확인해 보세요.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF285C5D),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Material(
-                  key: const Key('map_hint_card'),
-                  color: const Color(0xD9E8F4D9),
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    key: const Key('discovery_atlas_button'),
-                    onTap: () => _showDiscoveryAtlas(context),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.explore_rounded,
-                            size: 28,
-                            color: Color(0xFF4F8460),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '섬 물리 관측일지',
-                                  style: TextStyle(
-                                    color: Color(0xFF315C46),
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                    const SizedBox(height: 12),
+                    _IslandRestorationCard(
+                      progress: IslandRestorationProgress.fromDiscoveries(
+                        discoveriesByStageId: discoveriesByStageId,
+                        stageIds: levels.map((level) => level.id).toList(),
+                      ),
+                      selectedFocus: islandSupportFocus,
+                      onFocusSelected: onIslandSupportSelected,
+                      compact: compact,
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      key: const Key('stage_route_map'),
+                      padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xB8FFFDF3),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: const Color(0x6687B5A8),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final narrow = constraints.maxWidth < 500;
+                          final cardWidth =
+                              constraints.maxWidth * (narrow ? 0.92 : 0.82);
+                          final cardStep = narrow ? 136.0 : 120.0;
+                          final mapHeight = math.max(
+                            350.0,
+                            8 + levels.length * cardStep,
+                          );
+                          return Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.route_rounded,
+                                      size: 18,
+                                      color: Color(0xFF397372),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '첫 항해 진행',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: const Color(0xFF397372),
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      '${(unlockedLevel + 1).clamp(1, levels.length)} / ${levels.length}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: const Color(0xFF52706A),
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
-                                  '${levels.length * 3} · 눌러서 발견 도감을 확인하세요.',
-                                  style: const TextStyle(
-                                    color: Color(0xFF52706A),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                              ),
+                              SizedBox(
+                                height: mapHeight,
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: CustomPaint(
+                                          painter: _StageRoutePainter(
+                                            unlockedLevel: unlockedLevel,
+                                            cardStep: cardStep,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    for (
+                                      var index = 0;
+                                      index < levels.length;
+                                      index++
+                                    )
+                                      Positioned(
+                                        top: 8 + index * cardStep,
+                                        left: index.isEven ? 0 : null,
+                                        right: index.isOdd ? 0 : null,
+                                        width: cardWidth,
+                                        child: _StageTile(
+                                          index: index,
+                                          locked: index > unlockedLevel,
+                                          discoveredMilestoneIds:
+                                              discoveriesByStageId[levels[index]
+                                                  .id] ??
+                                              const {},
+                                          solutionStampCount:
+                                              solutionCountsByStageId[levels[index]
+                                                  .id] ??
+                                              0,
+                                          onTap: () => onSelectStage(index),
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            color: Color(0xFF4F8460),
-                          ),
-                        ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                _IslandRestorationCard(
-                  progress: IslandRestorationProgress.fromDiscoveries(
-                    discoveriesByStageId: discoveriesByStageId,
-                    stageIds: levels.map((level) => level.id).toList(),
-                  ),
-                  selectedFocus: islandSupportFocus,
-                  onFocusSelected: onIslandSupportSelected,
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  key: const Key('stage_route_map'),
-                  padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xB8FFFDF3),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0x6687B5A8),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final narrow = constraints.maxWidth < 500;
-                      final cardWidth =
-                          constraints.maxWidth * (narrow ? 0.92 : 0.82);
-                      final cardStep = narrow ? 136.0 : 120.0;
-                      final mapHeight = math.max(
-                        350.0,
-                        8 + levels.length * cardStep,
-                      );
-                      return Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.route_rounded,
-                                  size: 18,
-                                  color: Color(0xFF397372),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '첫 항해 진행',
-                                  style: Theme.of(context).textTheme.labelLarge
-                                      ?.copyWith(
-                                        color: const Color(0xFF397372),
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '${(unlockedLevel + 1).clamp(1, levels.length)} / ${levels.length}',
-                                  style: Theme.of(context).textTheme.labelLarge
-                                      ?.copyWith(
-                                        color: const Color(0xFF52706A),
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            height: mapHeight,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: IgnorePointer(
-                                    child: CustomPaint(
-                                      painter: _StageRoutePainter(
-                                        unlockedLevel: unlockedLevel,
-                                        cardStep: cardStep,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                for (
-                                  var index = 0;
-                                  index < levels.length;
-                                  index++
-                                )
-                                  Positioned(
-                                    top: 8 + index * cardStep,
-                                    left: index.isEven ? 0 : null,
-                                    right: index.isOdd ? 0 : null,
-                                    width: cardWidth,
-                                    child: _StageTile(
-                                      index: index,
-                                      locked: index > unlockedLevel,
-                                      discoveredMilestoneIds:
-                                          discoveriesByStageId[levels[index]
-                                              .id] ??
-                                          const {},
-                                      solutionStampCount:
-                                          solutionCountsByStageId[levels[index]
-                                              .id] ??
-                                          0,
-                                      onTap: () => onSelectStage(index),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -3459,11 +3701,13 @@ class _IslandRestorationCard extends StatelessWidget {
     required this.progress,
     required this.selectedFocus,
     required this.onFocusSelected,
+    this.compact = false,
   });
 
   final IslandRestorationProgress progress;
   final IslandLandmark? selectedFocus;
   final ValueChanged<IslandLandmark> onFocusSelected;
+  final bool compact;
 
   IconData _icon(IslandLandmark landmark) => switch (landmark) {
     IslandLandmark.observatory => Icons.science_rounded,
@@ -3473,6 +3717,69 @@ class _IslandRestorationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Semantics(
+        container: true,
+        button: true,
+        label:
+            '섬 복구 ${progress.restoredCount}/3. ${progress.statusText}. 자세히 보기',
+        child: Material(
+          key: const Key('island_restoration_card'),
+          color: Colors.transparent,
+          child: InkWell(
+            key: const Key('island_restoration_expand'),
+            onTap: () => _showDetails(context),
+            borderRadius: BorderRadius.circular(16),
+            child: Ink(
+              padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF4CF), Color(0xFFE7F4DE)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF92B18B)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.home_work_rounded, color: Color(0xFF396A50)),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '섬 복구 ${progress.restoredCount}/3',
+                          style: const TextStyle(
+                            color: Color(0xFF315C46),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          progress.statusText,
+                          key: const Key('island_restoration_status'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF52706A),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.expand_more_rounded,
+                    color: Color(0xFF396A50),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final reduceMotion = GameFeedback.reducedMotionEnabled;
     return Semantics(
       container: true,
@@ -3645,6 +3952,44 @@ class _IslandRestorationCard extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _showDetails(BuildContext context) => showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFFFFF9E8),
+    builder: (sheetContext) => FractionallySizedBox(
+      heightFactor: 0.82,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '섬 복구와 지원 기능',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                ),
+                IconButton(
+                  key: const Key('island_restoration_close'),
+                  tooltip: '섬 복구 상세 닫기',
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            _IslandRestorationCard(
+              progress: progress,
+              selectedFocus: selectedFocus,
+              onFocusSelected: onFocusSelected,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _StageBalloonPainter extends CustomPainter {

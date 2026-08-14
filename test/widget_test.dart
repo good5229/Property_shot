@@ -285,6 +285,9 @@ void main() {
 
     expect(find.text('9. 판을 돌려 놓아라'), findsOneWidget);
     expect(find.textContaining('반사판 회전 → 다음 경로'), findsOneWidget);
+    expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsNothing);
+    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    await tester.pump();
     expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsOneWidget);
   });
 
@@ -299,6 +302,9 @@ void main() {
 
     expect(find.text('10. 속성 한방'), findsOneWidget);
     expect(find.textContaining('속성 → 기믹 연계 → 홀'), findsOneWidget);
+    expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsNothing);
+    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    await tester.pump();
     expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsOneWidget);
   });
 
@@ -355,6 +361,51 @@ void main() {
       tester.widget<GameScreen>(find.byType(GameScreen)).levelOverride?.id,
       levels[1].id,
     );
+    expect(find.textContaining('다른 스테이지가 진행 중'), findsNothing);
+  });
+
+  testWidgets('스테이지 제한 안내는 지도에서 나가면 다른 화면을 가리지 않는다', (tester) async {
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    await session.selectStage(levels[1].id);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_tile_0')));
+    await _pumpForAsyncWork(tester);
+    expect(find.textContaining('다른 스테이지가 진행 중'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('처음 화면'));
+    await tester.pump();
+    expect(find.byKey(const Key('home_screen_golden')), findsOneWidget);
+    expect(find.textContaining('다른 스테이지가 진행 중'), findsNothing);
+  });
+
+  testWidgets('320 화면은 복구 현황을 접어 첫 스테이지를 첫 화면에 노출한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(find.byKey(const Key('stage_select_screen'))).width,
+      320,
+    );
+    expect(find.byKey(const Key('island_restoration_expand')), findsOneWidget);
+    final firstStage = tester.getRect(find.byKey(const Key('stage_tile_0')));
+    expect(firstStage.top, lessThan(568));
+    expect(firstStage.height, greaterThanOrEqualTo(100));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('영구 발견 기록은 재시작 뒤 섬 지도 진행도로 복원된다', (tester) async {
@@ -1161,7 +1212,13 @@ void main() {
 
     expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
     expect(find.textContaining('무거움 · 상자 밀기 · 무게 스위치'), findsOneWidget);
-    expect(find.textContaining('추천 경로를 준비했습니다'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('compact_message')))
+          .getSemanticsData()
+          .label,
+      contains('추천 경로를 준비했습니다'),
+    );
     expect(find.text('공을 길게 눌러 발사해요'), findsOneWidget);
     expect(find.text('공을 길게 눌러 힘을 모으세요'), findsOneWidget);
   });
@@ -1224,8 +1281,14 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
-    expect(find.textContaining('복사했습니다'), findsOneWidget);
-    expect(find.textContaining('복제 코어 0개 남음'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('compact_message')))
+          .getSemanticsData()
+          .label,
+      contains('복사했습니다'),
+    );
+    expect(find.byKey(const Key('copy_button')), findsNothing);
     expect(find.textContaining('선택:'), findsNothing);
   });
 
@@ -1483,7 +1546,13 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('시도 0'), findsOneWidget);
-    expect(find.textContaining('발사를 취소했습니다'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('compact_message')))
+          .getSemanticsData()
+          .label,
+      contains('발사를 취소했습니다'),
+    );
   });
 
   testWidgets('롱프레스가 활성화되기 전에 취소되면 발사하지 않는다', (tester) async {
@@ -1687,7 +1756,9 @@ void main() {
         ..addFont(rootBundle.load('assets/fonts/NanumGothic-Regular.ttf'))
         ..addFont(rootBundle.load('assets/fonts/NanumGothic-Bold.ttf'))
         ..addFont(rootBundle.load('assets/fonts/NanumGothic-ExtraBold.ttf'));
-      await loader.load();
+      final materialIcons = FontLoader('MaterialIcons')
+        ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+      await Future.wait([loader.load(), materialIcons.load()]);
       await tester.binding.setSurfaceSize(Size(fixture.width, fixture.height));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -1789,9 +1860,6 @@ void main() {
     await tester.pump();
 
     expect(find.bySemanticsLabel('2단계 잠김. 1단계 클리어 후 열림'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('level_1')));
-    await tester.pump();
-
     expect(find.textContaining('1. 무거움 익히기'), findsOneWidget);
   });
 
@@ -2225,18 +2293,12 @@ void main() {
     expect(compactObjective.data, '발견 0/3 · 무거움 → 상자 → 홀');
     expect(compactObjective.maxLines, 1);
     expect(find.byKey(const Key('compact_message')), findsOneWidget);
-    expect(
-      tester.widget<Text>(find.byKey(const Key('compact_message'))).data,
-      contains('방향 조정'),
-    );
-    expect(
-      tester.widget<Text>(find.byKey(const Key('compact_message'))).data,
-      isNot(contains('상자를 밀어 홀로')),
-    );
-    expect(
-      tester.widget<Text>(find.byKey(const Key('compact_message'))).overflow,
-      isNull,
-    );
+    final compactMessage = tester
+        .getSemantics(find.byKey(const Key('compact_message')))
+        .getSemanticsData()
+        .label;
+    expect(compactMessage, contains('방향 조정'));
+    expect(compactMessage, isNot(contains('상자를 밀어 홀로')));
     expect(tester.takeException(), isNull);
     await tester.binding.setSurfaceSize(null);
   });
@@ -2250,7 +2312,10 @@ void main() {
     await tester.pump();
 
     expect(
-      tester.widget<Text>(find.byKey(const Key('compact_message'))).data,
+      tester
+          .getSemantics(find.byKey(const Key('compact_message')))
+          .getSemanticsData()
+          .label,
       contains('길게 누르기'),
     );
     expect(tester.takeException(), isNull);
@@ -2486,6 +2551,9 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.byKey(const Key('level_progress')), findsNothing);
+    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    await tester.pump();
     expect(find.byKey(const Key('level_progress')), findsOneWidget);
     expect(find.text('무거움은 스위치 · 점착은 공 고정'), findsOneWidget);
   });

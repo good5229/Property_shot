@@ -17,6 +17,7 @@ void main() {
   });
 
   for (final fixture in const [
+    (name: '320x568', width: 320.0, height: 568.0),
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
   ]) {
@@ -54,4 +55,45 @@ void main() {
       );
     });
   }
+
+  testWidgets('320 홈은 핵심 행동과 기록 메뉴를 첫 화면에 배치한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pumpAndSettle();
+
+    for (final key in const [
+      'start_game_button',
+      'expedition_entry_button',
+      'stage_select_button',
+      'reward_inventory_entry_button',
+      'replay_library_entry_button',
+      'daily_challenge_entry_button',
+    ]) {
+      expect(find.byKey(Key(key)).hitTestable(), findsOneWidget, reason: key);
+    }
+    expect(
+      tester
+          .getRect(find.byKey(const Key('daily_challenge_entry_button')))
+          .bottom,
+      lessThanOrEqualTo(568),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('태블릿 홈은 미리보기와 행동 메뉴를 2열로 사용한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.binding.setSurfaceSize(const Size(768, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('home_tablet_layout')), findsOneWidget);
+    final hero = tester.getRect(find.byKey(const Key('home_hero')));
+    final actions = tester.getRect(find.byKey(const Key('home_actions')));
+    expect(hero.right, lessThan(actions.left));
+    expect(actions.width, greaterThanOrEqualTo(350));
+    expect(tester.takeException(), isNull);
+  });
 }
