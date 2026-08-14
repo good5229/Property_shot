@@ -254,6 +254,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _challengeGuardAppliedForClear = false;
   bool _recordGuardAppliedForClear = false;
   PlayTelemetryShotPayload? _lastTypedShot;
+  String? _traitEffectFeedback;
   late PatternHintEntry? _patternHintEntry;
   RunHintEntitlement? _hintEntitlement;
   late Set<String> _collectedHintKeyIds;
@@ -1044,6 +1045,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _selectedRewardId = null;
     _rewardSelectionError = null;
     _guidedImpactLabel = null;
+    _traitEffectFeedback = null;
     _challengeGuardAppliedForClear = false;
     _recordGuardAppliedForClear = false;
     if (sameStage && _state.shotCount > 0) {
@@ -1160,6 +1162,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           );
           _stageCopyCoreAtStart = _state.copyCoreCount;
           _feedback.copyCoreAwarded(1);
+        }
+        if (selected.effectKind == RunRewardEffectKind.precisionCharge) {
+          _state = _state.copyWith(message: '정밀 충전 조절 활성 · 충전 속도가 25% 느려집니다.');
         }
       });
       _recordTyped(
@@ -1409,6 +1414,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _feedback.traitTransferred();
+    _traitEffectFeedback = null;
     _showBallInfo = false;
     _inspectedEntityId = null;
     final next = _traitResolver
@@ -1467,6 +1473,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     _feedback.traitCopied();
+    _traitEffectFeedback = null;
     _showBallInfo = false;
     _inspectedEntityId = null;
     final next = _traitResolver.copySelectedTrait(_state);
@@ -1604,6 +1611,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
     final shotStartState = _state;
     final result = _shotResolver.resolve(shotStartState, normalizedInput);
+    _traitEffectFeedback = _traitEffectFeedbackFor(normalizedInput, result);
     final inputLatencyMs = _launchInputLatency.elapsedMillisecondsSince(
       inputReleasedAt,
     );
@@ -1709,6 +1717,39 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       unawaited(persistence);
     }
     _isCommittingShot = false;
+  }
+
+  String? _traitEffectFeedbackFor(ShotInput input, ShotResult result) {
+    final trait = input.equippedTrait;
+    if (trait == null) return null;
+    return switch (trait) {
+      TraitType.heavy =>
+        result.events.contains('switch_pressed') ||
+                result.events.contains('crate_pushed')
+            ? '무거움 발동 · 무게를 이용한 상호작 성공'
+            : '무거움 사용 · 상자나 무게 스위치를 노려보세요',
+      TraitType.bouncy => () {
+        final wallBounces = result.impacts
+            .where(
+              (impact) =>
+                  impact.sourceEntityId == 'active_ball' &&
+                  (impact.entityType == EntityType.wall ||
+                      impact.entityType == EntityType.gate),
+            )
+            .length;
+        return wallBounces == 0
+            ? '탄성 사용 · 벽에 닿으면 반사할 때마다 효과가 유지됩니다'
+            : '탄성 유지 · 벽·문 $wallBounces회 강한 반사';
+      }(),
+      TraitType.sticky =>
+        result.events.contains('sticky_attached')
+            ? '점착 발동 · 첫 유효 표면에 공이 고정됨'
+            : '점착 미발동 · 붙을 수 있는 표면을 노려보세요',
+      TraitType.sharp =>
+        result.events.contains('sharpness_consumed')
+            ? '뾰족함 발동 · 풍선을 터뜨리고 속성 소모'
+            : '뾰족함 미발동 · 풍선에 닿아야 발동합니다',
+    };
   }
 
   Future<bool> _persistClearResult(
@@ -2620,6 +2661,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       }
       if (!mounted) return;
       _showFailurePopup = false;
+      _traitEffectFeedback = null;
       _telemetry.record(
         '재시도',
         stage: _state.levelIndex,
@@ -2675,7 +2717,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     final aim = logical - _state.activeBall.position;
-    if (!_aimStartedForShot) {
+    final aimWasStarted = _aimStartedForShot;
+    if (!aimWasStarted) {
       _aimStartedForShot = true;
       _recordTyped(PlayTelemetryEventType.aimStarted);
     }
@@ -2686,7 +2729,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     // Pointer move는 1도 bucket 안에서 수십 번 들어올 수 있다. 실제 발사에는
     // 위의 정밀 방향을 보존하되, 표시·예측·telemetry는 bucket이 바뀔 때만
     // 갱신해 전체 GameScreen rebuild와 중복 ShotResolver 실행을 막는다.
-    if (quantizedAim == _state.aimDirection) {
+    if (aimWasStarted && quantizedAim == _state.aimDirection) {
       return;
     }
     final guidedImpactLabel = _previewFirstImpact(
@@ -3104,6 +3147,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     timeStamp = _effectivePointerTimeStamp(timeStamp);
     final logical = _toLogicalPosition(localPosition, fieldSize);
     final onBall = logical.distanceTo(_state.activeBall.position) <= 42;
+    _launchInputSession.chargeRateScale =
+        _rewardInventory.has(runRewardPrecisionChargeId) ? 0.75 : 1.0;
     if (!_launchInputSession.begin(
       pointer: pointer,
       logicalPosition: logical,
@@ -3926,6 +3971,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                         tutorialTarget != null &&
                                         _state.equippedTrait == null,
                                     state: _state,
+                                    effectFeedback: _traitEffectFeedback,
                                     onRewind: _rewind,
                                     onReset: _restartCurrentStage,
                                     canCancelReward:
@@ -3941,6 +3987,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               if (!compactLayout)
                                 _ControlPanel(
                                   state: _state,
+                                  effectFeedback: _traitEffectFeedback,
                                   onRewind: _rewind,
                                   onReset: _restartCurrentStage,
                                   canCancelReward:
@@ -5288,6 +5335,12 @@ class _RunRewardIcon extends StatelessWidget {
         icon: Icons.lightbulb_rounded,
         foreground: const Color(0xFF8A5B00),
         background: const Color(0xFFFFF0B8),
+      );
+    case RunRewardEffectKind.precisionCharge:
+      return (
+        icon: Icons.slow_motion_video_rounded,
+        foreground: const Color(0xFF315E8B),
+        background: const Color(0xFFDDEBFF),
       );
   }
 }
@@ -6856,6 +6909,7 @@ class _ControlPanel extends StatelessWidget {
     this.dense = false,
     this.tutorialActive = false,
     required this.state,
+    this.effectFeedback,
     required this.onRewind,
     required this.onReset,
     this.canCancelReward = false,
@@ -6866,6 +6920,7 @@ class _ControlPanel extends StatelessWidget {
   final bool dense;
   final bool tutorialActive;
   final GameState state;
+  final String? effectFeedback;
   final VoidCallback onRewind;
   final VoidCallback onReset;
   final bool canCancelReward;
@@ -6891,19 +6946,28 @@ class _ControlPanel extends StatelessWidget {
         ),
         child: Row(
           children: [
-            if (!tutorialActive && !dense)
+            if (effectFeedback != null || (!tutorialActive && !dense))
               Expanded(
-                child: Text(
-                  state.equippedTrait != null
-                      ? '공을 길게 눌러 힘 모으기'
-                      : state.selectedTrait == null
-                      ? state.traitSources.isEmpty
+                child: Semantics(
+                  key: const Key('trait_effect_feedback_semantics'),
+                  container: true,
+                  liveRegion: effectFeedback != null,
+                  label: effectFeedback,
+                  excludeSemantics: effectFeedback != null,
+                  child: Text(
+                    effectFeedback ??
+                        (state.equippedTrait != null
                             ? '공을 길게 눌러 힘 모으기'
-                            : '물체를 눌러 속성 고르기'
-                      : '선택: ${state.selectedTrait!.label}',
-                  maxLines: 2,
-                  softWrap: true,
-                  style: Theme.of(context).textTheme.bodySmall,
+                            : state.selectedTrait == null
+                            ? state.traitSources.isEmpty
+                                  ? '공을 길게 눌러 힘 모으기'
+                                  : '물체를 눌러 속성 고르기'
+                            : '선택: ${state.selectedTrait!.label}'),
+                    key: const Key('trait_effect_feedback'),
+                    maxLines: 2,
+                    softWrap: true,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
               )
             else if (state.equippedTrait != null)
@@ -6919,7 +6983,10 @@ class _ControlPanel extends StatelessWidget {
               const Spacer(),
             Flexible(
               child: Text(
-                '공 속성: ${state.equippedTrait?.label ?? '없음'}',
+                state.equippedTrait == null
+                    ? '공 속성: 없음'
+                    : '공 속성: ${state.equippedTrait!.label} · '
+                          '${state.equippedTrait!.compactEffect}',
                 maxLines: dense ? 1 : 2,
                 overflow: TextOverflow.ellipsis,
                 softWrap: !dense,
@@ -6962,14 +7029,23 @@ class _ControlPanel extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  state.equippedTrait != null
-                      ? '공을 길게 눌러 힘 모으기'
-                      : state.selectedTrait == null
-                      ? state.traitSources.isEmpty
+                child: Semantics(
+                  key: const Key('trait_effect_feedback_semantics'),
+                  container: true,
+                  liveRegion: effectFeedback != null,
+                  label: effectFeedback,
+                  excludeSemantics: effectFeedback != null,
+                  child: Text(
+                    effectFeedback ??
+                        (state.equippedTrait != null
                             ? '공을 길게 눌러 힘 모으기'
-                            : '물체를 눌러 속성 고르기'
-                      : '선택: ${state.selectedTrait!.label}',
+                            : state.selectedTrait == null
+                            ? state.traitSources.isEmpty
+                                  ? '공을 길게 눌러 힘 모으기'
+                                  : '물체를 눌러 속성 고르기'
+                            : '선택: ${state.selectedTrait!.label}'),
+                    key: const Key('trait_effect_feedback'),
+                  ),
                 ),
               ),
             ],
@@ -6978,7 +7054,12 @@ class _ControlPanel extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('공 속성: ${state.equippedTrait?.label ?? '없음'}'),
+                child: Text(
+                  state.equippedTrait == null
+                      ? '공 속성: 없음'
+                      : '공 속성: ${state.equippedTrait!.label} · '
+                            '${state.equippedTrait!.compactEffect}',
+                ),
               ),
               IconButton(
                 key: const Key('rewind_button'),

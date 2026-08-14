@@ -87,6 +87,57 @@ void main() {
     expect(find.byKey(const Key('start_game_button')), findsOneWidget);
   });
 
+  testWidgets('홈의 내 런 보상은 선택 이력과 실제 도움 상태를 보여준다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final preferences = await SharedPreferences.getInstance();
+    final store = RunStateStore(
+      backend: SharedPreferencesRunStateBackend(preferences),
+    );
+    var selected = false;
+    for (var offset = 0; offset < 128 && !selected; offset++) {
+      await store.reset();
+      final session = StagePatternSession(
+        catalog: generatedStageCatalog,
+        store: store,
+        now: () => DateTime.fromMicrosecondsSinceEpoch(offset, isUtc: true),
+      );
+      await session.selectStage('stage_heavy');
+      await session.completeCurrentStage(
+        stageId: 'stage_heavy',
+        nextStageId: 'stage_bouncy',
+        shotCount: 2,
+      );
+      final rewards = await session.prepareRewardSelection(
+        stageId: 'stage_heavy',
+      );
+      if (rewards.any((reward) => reward.id == runRewardPrecisionChargeId)) {
+        await session.selectReward(runRewardPrecisionChargeId);
+        selected = true;
+      }
+    }
+    expect(selected, isTrue);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+    expect(
+      find.byKey(const Key('reward_inventory_entry_button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('reward_inventory_entry_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.byKey(const Key('reward_inventory_screen')), findsOneWidget);
+    expect(find.text('정밀 충전 조절'), findsOneWidget);
+    expect(find.text('런 동안 계속 활성'), findsOneWidget);
+    expect(find.textContaining('충전 속도를 25% 늦춰'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reward_inventory_back_button')));
+    await tester.pump();
+    expect(find.byKey(const Key('home_screen_golden')), findsOneWidget);
+  });
+
   testWidgets('저장된 런 완료 상태는 새 런을 만들지 않고 결과 화면을 복원한다', (tester) async {
     final preferences = await SharedPreferences.getInstance();
     final session = StagePatternSession(
@@ -263,6 +314,41 @@ void main() {
       find.byKey(const Key('stage_tile_0')),
     );
     expect(semantics.getSemanticsData().hint, '한 번 누르면 스테이지를 시작합니다');
+  });
+
+  testWidgets('진행 중인 다른 스테이지가 있으면 선택 제한 이유와 이어하기를 안내한다', (tester) async {
+    final preferences = await SharedPreferences.getInstance();
+    final session = StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(
+        backend: SharedPreferencesRunStateBackend(preferences),
+      ),
+    );
+    await session.selectStage(levels[1].id);
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_tile_0')));
+    await _pumpForAsyncWork(tester);
+
+    expect(
+      find.text(
+        '다른 스테이지가 진행 중이어서 이 섬을 선택할 수 없어요. '
+        '현재 스테이지를 먼저 이어서 플레이해 주세요.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('이어하기'), findsOneWidget);
+
+    await tester.tap(find.text('이어하기'));
+    await _pumpForAsyncWork(tester);
+    expect(find.byType(GameScreen), findsOneWidget);
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).levelOverride?.id,
+      levels[1].id,
+    );
   });
 
   testWidgets('클리어 진행 상태가 섬 지도에서 4단계를 연다', (tester) async {
@@ -1048,9 +1134,18 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
+    expect(find.textContaining('무거움 · 상자 밀기 · 무게 스위치'), findsOneWidget);
     expect(find.textContaining('추천 경로를 준비했습니다'), findsOneWidget);
     expect(find.text('공을 길게 눌러 발사해요'), findsOneWidget);
     expect(find.text('공을 길게 눌러 힘을 모으세요'), findsOneWidget);
+  });
+
+  test('네 속성은 발동 조건과 소모 규칙을 짧게 안내한다', () {
+    expect(TraitType.heavy.compactEffect, contains('무게 스위치'));
+    expect(TraitType.bouncy.compactEffect, contains('때마다'));
+    expect(TraitType.bouncy.description, contains('탄성을 유지'));
+    expect(TraitType.sticky.compactEffect, contains('첫 유효 표면'));
+    expect(TraitType.sharp.compactEffect, contains('소모'));
   });
 
   testWidgets('속성 행동은 런 저장이 끝난 뒤에만 화면에 적용된다', (tester) async {

@@ -46,6 +46,9 @@ class LaunchInputRelease {
 
 /// Pointer 입력과 충전 계산을 렌더링 프레임에서 분리한다.
 class LaunchInputSession {
+  LaunchInputSession({double chargeRateScale = 1.0})
+    : _chargeRateScale = _validatedChargeRateScale(chargeRateScale);
+
   static const activationDelay = Duration(milliseconds: 450);
   static const moveThreshold = 8.0;
   static const minimumPower = 0.12;
@@ -56,6 +59,19 @@ class LaunchInputSession {
   static const redPower = 0.70;
   static const warningRedPower = 0.90;
   static const cancelledGrayChargeElapsed = Duration(milliseconds: 1680);
+
+  double _chargeRateScale;
+
+  double get chargeRateScale => _chargeRateScale;
+
+  set chargeRateScale(double value) {
+    _chargeRateScale = _validatedChargeRateScale(value);
+  }
+
+  Duration get effectiveCancelledGrayChargeElapsed => Duration(
+    microseconds: (cancelledGrayChargeElapsed.inMicroseconds / _chargeRateScale)
+        .round(),
+  );
 
   int? get activePointer => _activePointer;
   bool get isActive => _activePointer != null;
@@ -141,7 +157,7 @@ class LaunchInputSession {
     }
     final elapsedMicros = timeStamp.inMicroseconds - startedAt.inMicroseconds;
     final periods = elapsedMicros / chargePeriod.inMicroseconds;
-    return (minimumPower + periods * powerPerChargePeriod)
+    return (minimumPower + periods * powerPerChargePeriod * _chargeRateScale)
         .clamp(minimumPower, maximumPower)
         .toDouble();
   }
@@ -158,7 +174,7 @@ class LaunchInputSession {
       return _gaugeState;
     }
     final chargeElapsed = timeStamp - startedAt;
-    if (chargeElapsed > cancelledGrayChargeElapsed) {
+    if (chargeElapsed > effectiveCancelledGrayChargeElapsed) {
       _overchargeLatched = true;
       _gaugeState = ChargeGaugeState.cancelledGray;
       return _gaugeState;
@@ -239,5 +255,12 @@ class LaunchInputSession {
     _chargeCancelled = false;
     _overchargeLatched = false;
     _gaugeState = ChargeGaugeState.green;
+  }
+
+  static double _validatedChargeRateScale(double value) {
+    if (!value.isFinite || value <= 0 || value > 1) {
+      throw ArgumentError.value(value, 'chargeRateScale', '0보다 크고 1 이하여야 합니다.');
+    }
+    return value;
   }
 }

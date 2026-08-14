@@ -121,6 +121,7 @@ class PropertyShotGame extends FlameGame {
   List<ShotAnimationMove> _animationMoves = const [];
   List<ShotImpact> _animationImpacts = const [];
   List<PhysicsEvent> _animationPhysicsEvents = const [];
+  int _nextAnimationEventIndex = 0;
   GameState? _animationStartState;
   double _animationCursor = 0;
   int _animationUpdateCount = 0;
@@ -183,7 +184,7 @@ class PropertyShotGame extends FlameGame {
       _animationPath = path;
       _animationMoves = moves;
       _animationImpacts = impacts;
-      _animationPhysicsEvents = physicsEvents.isEmpty
+      final unsortedPhysicsEvents = physicsEvents.isEmpty
           ? buildPhysicsEvents(
               path: path,
               impacts: impacts,
@@ -191,6 +192,9 @@ class PropertyShotGame extends FlameGame {
               chainSafetyDiagnostics: const [],
             )
           : physicsEvents;
+      _animationPhysicsEvents = [...unsortedPhysicsEvents]
+        ..sort(_compareAnimationEvents);
+      _nextAnimationEventIndex = 0;
       _animationStartState = transitionStart;
       _animationCursor = 0;
       _animationUpdateCount = 0;
@@ -239,6 +243,7 @@ class PropertyShotGame extends FlameGame {
     _animationMoves = const [];
     _animationImpacts = const [];
     _animationPhysicsEvents = const [];
+    _nextAnimationEventIndex = 0;
     _animationStartState = null;
     _animationTrait = null;
     onAnimationFinished?.call();
@@ -285,24 +290,13 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _emitDueAnimationEvents() {
-    final events = [..._animationPhysicsEvents]
-      ..sort((left, right) {
-        final byPath = left.pathIndex.compareTo(right.pathIndex);
-        if (byPath != 0) {
-          return byPath;
-        }
-        final byKind = left.kind.index.compareTo(right.kind.index);
-        if (byKind != 0) {
-          return byKind;
-        }
-        return left.eventId.compareTo(right.eventId);
-      });
-
-    for (final event in events) {
-      if (event.pathIndex > _animationCursor ||
-          !_reportedImpactKeys.add(event.eventId)) {
-        continue;
-      }
+    // 사건 순서는 snapshot 적용 때 한 번만 정렬한다. 이전에는 모든 Flame
+    // 프레임에서 리스트를 복사·정렬해 긴 연쇄 샷일수록 불필요한 할당이 컸다.
+    while (_nextAnimationEventIndex < _animationPhysicsEvents.length) {
+      final event = _animationPhysicsEvents[_nextAnimationEventIndex];
+      if (event.pathIndex > _animationCursor) break;
+      _nextAnimationEventIndex += 1;
+      if (!_reportedImpactKeys.add(event.eventId)) continue;
       onPhysicsEvent?.call(event);
       final impact = event.impact;
       if (impact != null) {
@@ -311,6 +305,14 @@ class PropertyShotGame extends FlameGame {
         onAnimationImpact?.call(event.move!);
       }
     }
+  }
+
+  static int _compareAnimationEvents(PhysicsEvent left, PhysicsEvent right) {
+    final byPath = left.pathIndex.compareTo(right.pathIndex);
+    if (byPath != 0) return byPath;
+    final byKind = left.kind.index.compareTo(right.kind.index);
+    if (byKind != 0) return byKind;
+    return left.eventId.compareTo(right.eventId);
   }
 
   @override
@@ -769,6 +771,26 @@ class PropertyShotGame extends FlameGame {
         center + Offset(normal.y, -normal.x) * (8 + progress * 7),
         flash,
       );
+      final isElasticWallRebound =
+          impact.sourceTraits.contains(TraitType.bouncy) &&
+          (impact.entityType == EntityType.wall ||
+              impact.entityType == EntityType.gate);
+      if (isElasticWallRebound) {
+        final elasticWave = Paint()
+          ..color = const Color(
+            0xFF4FE0AD,
+          ).withValues(alpha: 0.9 * (1 - progress))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4.2 * (1 - progress) + 1.2;
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: center,
+            width: 18 + progress * 34,
+            height: 10 + progress * 16,
+          ),
+          elasticWave,
+        );
+      }
     }
   }
 
@@ -3233,13 +3255,57 @@ class PropertyShotGame extends FlameGame {
               : latest,
         );
     if (holeImpact == null || _animationCursor < holeImpact.pathIndex) {
-      _drawEntity(canvas, entity, false);
+      _drawAnimatedBallBody(canvas, entity);
       return;
     }
     final progress = ((_animationCursor - holeImpact.pathIndex) / 8)
         .clamp(0.0, 1.0)
         .toDouble();
     _drawCapturedBall(canvas, entity, progress);
+  }
+
+  void _drawAnimatedBallBody(Canvas canvas, EntityState entity) {
+    final trait = _animationTrait;
+    if (trait != TraitType.bouncy || reducedMotion) {
+      _drawEntity(canvas, entity, false);
+      return;
+    }
+    ShotImpact? latestWallImpact;
+    for (final impact in _animationImpacts) {
+      if (impact.sourceEntityId != 'active_ball' ||
+          !impact.sourceTraits.contains(TraitType.bouncy) ||
+          (impact.entityType != EntityType.wall &&
+              impact.entityType != EntityType.gate) ||
+          impact.pathIndex > _animationCursor) {
+        continue;
+      }
+      if (latestWallImpact == null ||
+          impact.pathIndex > latestWallImpact.pathIndex) {
+        latestWallImpact = impact;
+      }
+    }
+    if (latestWallImpact == null) {
+      _drawEntity(canvas, entity, false);
+      return;
+    }
+    final elapsed = _animationCursor - latestWallImpact.pathIndex;
+    if (elapsed > 6) {
+      _drawEntity(canvas, entity, false);
+      return;
+    }
+    final rebound = (1 - elapsed / 6).clamp(0.0, 1.0);
+    final compression = 0.22 * rebound;
+    final normal = latestWallImpact.normal.normalized();
+    final angle = math.atan2(normal.y, normal.x);
+    final center = _project(entity.position);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angle);
+    canvas.scale(1 - compression, 1 + compression * 0.75);
+    canvas.rotate(-angle);
+    canvas.translate(-center.dx, -center.dy);
+    _drawEntity(canvas, entity, false);
+    canvas.restore();
   }
 
   void _drawCueStrike(Canvas canvas, int index, Vec2 position) {

@@ -6,8 +6,8 @@ import 'package:property_shot/game/run/run_reward.dart';
 
 void main() {
   group('런 보상 카탈로그', () {
-    test('초기 보상 9종의 안정 ID와 한글 메타데이터를 정의한다', () {
-      expect(initialRunRewards, hasLength(9));
+    test('초기 보상 10종의 안정 ID와 한글 메타데이터를 정의한다', () {
+      expect(initialRunRewards, hasLength(10));
       expect(initialRunRewards.map((reward) => reward.id), [
         runRewardCloneCoreId,
         runRewardShotCancelAssistId,
@@ -18,6 +18,7 @@ void main() {
         runRewardBallAppearanceId,
         runRewardStageRecordGuardId,
         runRewardNextStageHintAccessId,
+        runRewardPrecisionChargeId,
       ]);
       expect(
         initialRunRewards.map((reward) => reward.effectKind).toSet(),
@@ -95,8 +96,8 @@ void main() {
         2980854957,
       );
       expect(first.map((reward) => reward.id), [
+        runRewardCloneCoreId,
         runRewardStageRecordGuardId,
-        runRewardFailureCauseBoostId,
         runRewardBallAppearanceId,
       ]);
       expect(
@@ -122,6 +123,31 @@ void main() {
         );
         expect(rewards, hasLength(3));
         expect(rewards.map((reward) => reward.id).toSet(), hasLength(3));
+      }
+    });
+
+    test('일반 후보는 전략 도구·안전망·지속 효과를 하나씩 포함한다', () {
+      const tactical = {
+        runRewardCloneCoreId,
+        runRewardSpentBallRecoveryId,
+        runRewardFirstImpactGuideId,
+        runRewardPrecisionChargeId,
+      };
+      const safety = {
+        runRewardShotCancelAssistId,
+        runRewardOptionalChallengeGuardId,
+        runRewardStageRecordGuardId,
+      };
+      const growth = {runRewardFailureCauseBoostId, runRewardBallAppearanceId};
+      for (var seed = 0; seed < 100; seed++) {
+        final ids = generateRunRewardCandidates(
+          rootSeed: seed,
+          stageId: 'stage_reward',
+          patternSeed: seed * 17,
+        ).map((reward) => reward.id).toSet();
+        expect(ids.intersection(tactical), hasLength(1));
+        expect(ids.intersection(safety), hasLength(1));
+        expect(ids.intersection(growth), hasLength(1));
       }
     });
 

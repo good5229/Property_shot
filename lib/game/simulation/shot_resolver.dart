@@ -705,6 +705,11 @@ class _ReflectorSatContact {
 class ShotResolver {
   const ShotResolver();
 
+  /// 탄성 속성은 첫 충돌 연출이 아니라 발사 전체에 적용되는 물성이다.
+  /// 일반 벽(0.72)과 두 번 이상 반사한 뒤에도 플레이어가 차이를
+  /// 눈으로 확인할 수 있도록 모든 벽 충돌에 이 하한을 반복 적용한다.
+  static const double bouncyWallRestitutionFloor = 0.88;
+
   bool canLaunch(GameState state) {
     if (state.phase != GamePhase.planning) return false;
     final ball = state.entityById('active_ball');
@@ -2745,7 +2750,7 @@ class ShotResolver {
       return incoming;
     }
     final restitution = moving.traits.contains(TraitType.bouncy)
-        ? math.max(wall.restitution, 0.88)
+        ? math.max(wall.restitution, bouncyWallRestitutionFloor)
         : wall.restitution;
     final tangent = incoming - n * normalSpeed;
     final tangentRetention = _tangentRetention(wall);

@@ -12,6 +12,7 @@ import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/run/run_reward.dart';
 import 'package:property_shot/game/run/stage_pattern_session.dart';
 import 'package:property_shot/ui/game_screen.dart';
+import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -195,6 +196,31 @@ void main() {
     await launch.up(timeStamp: const Duration(milliseconds: 1920));
     await tester.pump();
     expect(usedRewards, contains(runRewardFirstImpactGuideId));
+  });
+
+  testWidgets('정밀 충전 보상은 실제 발사의 힘 상승을 25% 늦춘다', (tester) async {
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    await tester.pumpWidget(
+      _gameApp(
+        state: _directClearState(),
+        acquiredRewards: _acquired(runRewardPrecisionChargeId),
+        onRewardUsed: (_, _, _) async => true,
+        telemetry: telemetry,
+      ),
+    );
+    await tester.pump();
+
+    final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
+    await tester.pump(const Duration(milliseconds: 920));
+    await launch.up(timeStamp: const Duration(milliseconds: 1920));
+    await tester.pump();
+
+    final released = telemetry.events.lastWhere(
+      (event) =>
+          event['event_code'] == PlayTelemetryEventType.shotReleased.code,
+    );
+    expect(released['힘'], isA<double>());
+    expect(released['힘'] as double, closeTo(0.362, 0.02));
   });
 
   testWidgets('선택 도전과 기록 보호는 실제 클리어 저장값을 바꾼다', (tester) async {
@@ -386,6 +412,7 @@ Widget _gameApp({
   Future<Set<String>> Function()? onShotRewound,
   Future<RunReward> Function(String)? onRewardSelected,
   List<RunReward> rewardCandidates = const [],
+  LocalPlayTelemetry? telemetry,
 }) {
   return MaterialApp(
     home: GameScreen(
@@ -398,6 +425,7 @@ Widget _gameApp({
       onShotRewound: onShotRewound,
       initialRewardCandidates: rewardCandidates,
       onRewardSelected: onRewardSelected,
+      telemetry: telemetry,
     ),
   );
 }

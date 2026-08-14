@@ -258,18 +258,17 @@ void main() {
   });
 
   test('2라운드는 탄성 속성으로 벽 반사 경로를 제공한다', () {
+    // 현재 baseline 패턴의 검증된 48° 다중 반사 대표 입력.
+    const direction = Vec2(0.669130606, 0.743144825);
     final state = traits.transferSelectedTrait(
       traits.selectSource(levels[1].createState(1), 'jelly'),
     );
-    final aimed = state.copyWith(
-      aimDirection: const Vec2(1, -1.5),
-      aimPower: 1,
-    );
+    final aimed = state.copyWith(aimDirection: direction, aimPower: 0.9);
     final result = shots.resolve(
       aimed,
       const ShotInput(
-        direction: Vec2(1, -1.5),
-        power: 1,
+        direction: direction,
+        power: 0.9,
         equippedTrait: TraitType.bouncy,
       ),
     );
@@ -637,6 +636,38 @@ void main() {
 
     expect(result.events, contains('bounced'));
     expect(result.path.last.x, lessThan(106));
+  });
+
+  test('탄성 공은 연속 벽 반사 후에도 일반 공보다 속도를 유지한다', () {
+    const input = ShotInput(direction: Vec2(1, 0), power: 1);
+    final normal = shots.resolve(_bounceCorridorState(), input);
+    final bouncy = shots.resolve(
+      _bounceCorridorState(equippedTrait: TraitType.bouncy),
+      const ShotInput(
+        direction: Vec2(1, 0),
+        power: 1,
+        equippedTrait: TraitType.bouncy,
+      ),
+    );
+
+    List<PhysicsEvent> wallImpacts(ShotResult result) => result.physicsEvents
+        .where(
+          (event) =>
+              event.kind == PhysicsEventKind.impact &&
+              event.targetType == EntityType.wall &&
+              event.sourceEntityId == 'active_ball',
+        )
+        .toList();
+
+    final normalImpacts = wallImpacts(normal);
+    final bouncyImpacts = wallImpacts(bouncy);
+    expect(normalImpacts, hasLength(greaterThanOrEqualTo(2)));
+    expect(bouncyImpacts, hasLength(greaterThanOrEqualTo(2)));
+    expect(
+      bouncyImpacts[1].resultingVelocity.length,
+      greaterThan(normalImpacts[1].resultingVelocity.length * 1.5),
+    );
+    expect(bouncyImpacts[1].sourceTraits, contains(TraitType.bouncy));
   });
 
   test('일반 공도 벽에 맞으면 반사되고 벽은 움직이지 않는다', () {
@@ -1483,6 +1514,46 @@ GameState _wallState({required TraitType? equippedTrait}) {
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(280, 80),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
+}
+
+GameState _bounceCorridorState({TraitType? equippedTrait}) {
+  return GameState(
+    levelIndex: 208,
+    levelName: '연속 반사 테스트',
+    ballSpawn: const Vec2(180, 280),
+    equippedTrait: equippedTrait,
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: const Vec2(180, 280),
+        size: const Vec2(24, 24),
+        traits: equippedTrait == null ? const {} : {equippedTrait},
+        movable: true,
+      ),
+      const EntityState(
+        id: 'corridor_left',
+        type: EntityType.wall,
+        position: Vec2(80, 280),
+        size: Vec2(24, 260),
+        restitution: 0.72,
+      ),
+      const EntityState(
+        id: 'corridor_right',
+        type: EntityType.wall,
+        position: Vec2(280, 280),
+        size: Vec2(24, 260),
+        restitution: 0.72,
+      ),
+      const EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(180, 60),
         size: Vec2(34, 34),
         solid: false,
       ),

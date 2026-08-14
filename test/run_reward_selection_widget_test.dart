@@ -105,7 +105,7 @@ void main() {
     );
   });
 
-  testWidgets('런 보상 8종은 서로 다른 무료 Material 아이콘을 사용한다', (tester) async {
+  testWidgets('런 보상 10종은 서로 다른 무료 Material 아이콘을 사용한다', (tester) async {
     await tester.pumpWidget(_popupApp(rewards: initialRunRewards));
     await tester.pumpAndSettle();
 
@@ -122,9 +122,7 @@ void main() {
     expect(icons, hasLength(initialRunRewards.length));
   });
 
-  testWidgets('320x568에서는 다음 스테이지 팁 보상이 첫 viewport에 보인다', (
-    tester,
-  ) async {
+  testWidgets('320x568에서는 다음 스테이지 팁 보상이 첫 viewport에 보인다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final hintReward = initialRunRewards.firstWhere(

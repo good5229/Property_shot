@@ -12,6 +12,7 @@ const String runRewardFailureCauseBoostId = 'failure_cause_boost';
 const String runRewardBallAppearanceId = 'ball_appearance_set';
 const String runRewardStageRecordGuardId = 'stage_record_guard_once';
 const String runRewardNextStageHintAccessId = 'next_stage_hint_access';
+const String runRewardPrecisionChargeId = 'precision_charge_control';
 const String _selectionPrefix = 'run_reward:';
 const String _usedPrefix = 'run_reward_used:';
 const String _stageUsedPrefix = 'run_reward_stage_used:';
@@ -27,7 +28,8 @@ enum RunRewardEffectKind {
   failureCauseBoost('failure_cause_boost'),
   ballAppearance('ball_appearance'),
   stageRecordGuard('stage_record_guard'),
-  nextStageHintAccess('next_stage_hint_access');
+  nextStageHintAccess('next_stage_hint_access'),
+  precisionCharge('precision_charge');
 
   const RunRewardEffectKind(this.schemaName);
 
@@ -137,6 +139,12 @@ final List<RunReward> initialRunRewards = List.unmodifiable([
     description: '다음에 확정된 패턴의 단계별 클리어 팁을 필요할 때 볼 수 있습니다.',
     effectKind: RunRewardEffectKind.nextStageHintAccess,
   ),
+  RunReward(
+    id: runRewardPrecisionChargeId,
+    name: '정밀 충전 조절',
+    description: '런 동안 충전 속도를 25% 늦춰 원하는 힘에서 손을 떼기 쉽게 만듭니다.',
+    effectKind: RunRewardEffectKind.precisionCharge,
+  ),
 ]);
 
 /// 비어 있거나 중복된 보상 ID가 후보 생성에 들어오지 않도록 막는다.
@@ -207,16 +215,51 @@ class RunRewardCandidateGenerator {
     final selectable = catalog.rewards.where(
       (reward) => reward.id != runRewardNextStageHintAccessId,
     );
-    final shuffled = StableRandom(seed).shuffled(selectable);
+    final shuffled = StableRandom(seed).shuffled(selectable).toList();
+    final tactical = <String>{
+      runRewardCloneCoreId,
+      runRewardSpentBallRecoveryId,
+      runRewardFirstImpactGuideId,
+      runRewardPrecisionChargeId,
+    };
+    final safety = <String>{
+      runRewardShotCancelAssistId,
+      runRewardOptionalChallengeGuardId,
+      runRewardStageRecordGuardId,
+    };
+    final growth = <String>{
+      runRewardFailureCauseBoostId,
+      runRewardBallAppearanceId,
+    };
+    final chosen = <RunReward>[];
+
+    void chooseFrom(Set<String> ids) {
+      final match = shuffled
+          .where((reward) => ids.contains(reward.id))
+          .firstOrNull;
+      if (match == null) return;
+      chosen.add(match);
+      shuffled.remove(match);
+    }
+
+    // 매 선택지에 전략 확장·안전망·지속 효과가 하나씩 들어오게 해
+    // 외형 보상만 모이거나 점수 보호만 모이는 무의미한 후보 조합을 피한다.
+    chooseFrom(tactical);
+    chooseFrom(safety);
+    if (!includeNextStageHint) chooseFrom(growth);
+    for (final reward in shuffled) {
+      if (chosen.length >= (includeNextStageHint ? 2 : candidateCount)) break;
+      chosen.add(reward);
+    }
     if (!includeNextStageHint) {
-      return List.unmodifiable(shuffled.take(candidateCount));
+      return List.unmodifiable(chosen.take(candidateCount));
     }
     if (hintReward.length != 1) {
       throw StateError('다음 스테이지 팁 보상이 카탈로그에 정확히 하나 필요합니다.');
     }
     return List.unmodifiable([
       hintReward.single,
-      ...shuffled.take(candidateCount - 1),
+      ...chosen.take(candidateCount - 1),
     ]);
   }
 }

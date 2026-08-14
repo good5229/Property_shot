@@ -3,6 +3,35 @@ import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/ui/launch_input_session.dart';
 
 void main() {
+  test('정밀 충전은 힘 상승과 과충전 시점을 함께 25% 늦춘다', () {
+    final normal = LaunchInputSession();
+    final precise = LaunchInputSession(chargeRateScale: 0.75);
+    for (final session in [normal, precise]) {
+      expect(
+        session.begin(
+          pointer: 1,
+          logicalPosition: const Vec2(56, 456),
+          timeStamp: Duration.zero,
+          onBall: true,
+        ),
+        isTrue,
+      );
+    }
+
+    const sample = Duration(milliseconds: 1250);
+    expect(precise.powerAt(sample), lessThan(normal.powerAt(sample)));
+    expect(
+      precise.effectiveCancelledGrayChargeElapsed,
+      greaterThan(LaunchInputSession.cancelledGrayChargeElapsed),
+    );
+    const lateSample = Duration(milliseconds: 2250);
+    expect(normal.gaugeStateAt(lateSample), ChargeGaugeState.cancelledGray);
+    expect(
+      precise.gaugeStateAt(lateSample),
+      isNot(ChargeGaugeState.cancelledGray),
+    );
+  });
+
   test('발사 입력 지연은 포인터 해제부터 판정 준비까지 단조 시계로 계산한다', () {
     var now = const Duration(seconds: 3);
     final tracker = LaunchInputLatencyTracker(now: () => now);

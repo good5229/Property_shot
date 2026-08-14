@@ -301,6 +301,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showStageSelect = false;
   bool _showDailyChallenge = false;
   bool _showReplayLibrary = false;
+  bool _showRewardInventory = false;
+  Future<Set<String>>? _rewardInventoryFuture;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
   bool _copyCoreRewarded = false;
@@ -378,6 +380,21 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     } on Object {
       // 저장소를 사용할 수 없어도 기본 진행 상태로 홈을 표시한다.
     }
+  }
+
+  Future<Set<String>> _loadRewardInventory() async {
+    final session = await _patternSessionFuture;
+    await session.loadState();
+    return Set<String>.unmodifiable(
+      session.state?.acquiredRewards ?? const <String>{},
+    );
+  }
+
+  void _openRewardInventory() {
+    setState(() {
+      _rewardInventoryFuture = _loadRewardInventory();
+      _showRewardInventory = true;
+    });
   }
 
   Future<void> _startStage(
@@ -607,6 +624,22 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           context: context,
         ),
       );
+    } on StateError catch (error) {
+      if (mounted) {
+        final resumeRequired = _requiresCurrentRunResume(error);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 6),
+            content: Text(_stageSelectionErrorMessage(error)),
+            action: resumeRequired
+                ? SnackBarAction(
+                    label: '이어하기',
+                    onPressed: () => unawaited(_startOrResume()),
+                  )
+                : null,
+          ),
+        );
+      }
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -617,6 +650,21 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       _selectingStage = false;
     }
   }
+
+  bool _requiresCurrentRunResume(StateError error) =>
+      error.message == '보상을 먼저 선택해 주세요.' ||
+      error.message == '진행 중인 단계를 먼저 이어서 플레이해 주세요.' ||
+      error.message == '미리 준비된 다음 단계를 먼저 플레이해 주세요.';
+
+  String _stageSelectionErrorMessage(StateError error) =>
+      switch (error.message) {
+        '보상을 먼저 선택해 주세요.' => '지금 스테이지의 클리어 보상을 선택해야 다른 섬으로 이동할 수 있어요.',
+        '진행 중인 단계를 먼저 이어서 플레이해 주세요.' =>
+          '다른 스테이지가 진행 중이어서 이 섬을 선택할 수 없어요. 현재 스테이지를 먼저 이어서 플레이해 주세요.',
+        '미리 준비된 다음 단계를 먼저 플레이해 주세요.' =>
+          '런의 순서를 유지하려면 미리 준비된 다음 스테이지를 먼저 플레이해야 해요.',
+        _ => '단계 정보를 불러오지 못했습니다. 다시 시도해 주세요.',
+      };
 
   bool _sameStageIdentity(RunState? left, RunState right) =>
       left != null &&
@@ -1225,6 +1273,22 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showRewardInventory) {
+      return FutureBuilder<Set<String>>(
+        future: _rewardInventoryFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return _RewardInventoryScreen(
+              acquiredRewards: snapshot.requireData,
+              onBack: () => setState(() => _showRewardInventory = false),
+            );
+          }
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      );
+    }
     if (_showReplayLibrary) {
       return FutureBuilder<ReplayLibraryStore>(
         future: _replayLibraryFuture,
@@ -1334,6 +1398,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return _HomeScreen(
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => setState(() => _showStageSelect = true),
+      onRewardInventory: _openRewardInventory,
       onDailyChallenge: () => setState(() => _showDailyChallenge = true),
       onReplayLibrary: () => setState(() => _showReplayLibrary = true),
       showDebugControls: widget.showDebugControls,
@@ -1461,10 +1526,285 @@ class _RunResultRow extends StatelessWidget {
   }
 }
 
+class _RewardInventoryScreen extends StatelessWidget {
+  const _RewardInventoryScreen({
+    required this.acquiredRewards,
+    required this.onBack,
+  });
+
+  final Set<String> acquiredRewards;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final inventory = RunRewardInventory(acquiredRewards);
+    final grouped = <String, List<RunRewardSelectionRecord>>{};
+    for (final record in inventory.selections) {
+      grouped.putIfAbsent(record.rewardId, () => []).add(record);
+    }
+    final catalogById = {
+      for (final reward in initialRunRewards) reward.id: reward,
+    };
+    final entries = grouped.entries
+        .where((entry) => catalogById.containsKey(entry.key))
+        .toList(growable: false);
+
+    return Scaffold(
+      key: const Key('reward_inventory_screen'),
+      backgroundColor: const Color(0xFFBFE8E3),
+      appBar: AppBar(
+        leading: IconButton(
+          key: const Key('reward_inventory_back_button'),
+          tooltip: '메인 메뉴로 돌아가기',
+          onPressed: onBack,
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('내 런 보상'),
+        backgroundColor: const Color(0xFFFFF4CF),
+        foregroundColor: const Color(0xFF173F43),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+          children: [
+            Text(
+              '이번 런에서 선택한 보상',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF173F43),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              entries.isEmpty
+                  ? '아직 선택한 보상이 없습니다. 스테이지를 클리어하면 다음 플레이를 도울 보상을 고를 수 있어요.'
+                  : '보상이 어떤 도움을 주는지와 남은 사용 상태를 확인할 수 있어요.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF315E60),
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (entries.isEmpty)
+              const _RewardInventoryEmptyState()
+            else
+              for (final entry in entries) ...[
+                _RewardInventoryCard(
+                  reward: catalogById[entry.key]!,
+                  selectedCount: entry.value.length,
+                  status: _rewardInventoryStatus(
+                    catalogById[entry.key]!,
+                    inventory,
+                    entry.value.length,
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RewardInventoryEmptyState extends StatelessWidget {
+  const _RewardInventoryEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7DB),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFB89C64)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.backpack_outlined, size: 42, color: Color(0xFF8A6527)),
+          SizedBox(height: 10),
+          Text(
+            '첫 보상을 얻으러 가볼까요?',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardInventoryCard extends StatelessWidget {
+  const _RewardInventoryCard({
+    required this.reward,
+    required this.selectedCount,
+    required this.status,
+  });
+
+  final RunReward reward;
+  final int selectedCount;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = _rewardInventoryIcon(reward.effectKind);
+    return Semantics(
+      container: true,
+      label: '${reward.name}, $status, ${reward.description}',
+      child: Container(
+        key: Key('reward_inventory_${reward.id}'),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF9E8),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF9D8258)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x22000000),
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: icon.background,
+              foregroundColor: icon.foreground,
+              child: Icon(icon.icon),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          reward.name,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      if (selectedCount > 1)
+                        Text(
+                          '$selectedCount개',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(reward.description),
+                  const SizedBox(height: 8),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2E7),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        status,
+                        style: const TextStyle(
+                          color: Color(0xFF286343),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _rewardInventoryStatus(
+  RunReward reward,
+  RunRewardInventory inventory,
+  int selectedCount,
+) {
+  return switch (reward.effectKind) {
+    RunRewardEffectKind.cloneCore => '복제 코어 지급 완료',
+    RunRewardEffectKind.failureCauseBoost ||
+    RunRewardEffectKind.ballAppearance ||
+    RunRewardEffectKind.precisionCharge => '런 동안 계속 활성',
+    RunRewardEffectKind.optionalChallengeGuard ||
+    RunRewardEffectKind.stageRecordGuard => '스테이지마다 자동 적용',
+    RunRewardEffectKind.nextStageHintAccess => '다음 스테이지 팁 권한 지급',
+    _ => '남은 사용 ${inventory.availableUseCount(reward.id)}/$selectedCount회',
+  };
+}
+
+({IconData icon, Color foreground, Color background}) _rewardInventoryIcon(
+  RunRewardEffectKind kind,
+) => switch (kind) {
+  RunRewardEffectKind.cloneCore => (
+    icon: Icons.copy_all_rounded,
+    foreground: const Color(0xFF236B4A),
+    background: const Color(0xFFDDF3D5),
+  ),
+  RunRewardEffectKind.shotCancelAssist => (
+    icon: Icons.undo_rounded,
+    foreground: const Color(0xFF285B7D),
+    background: const Color(0xFFDCEEFF),
+  ),
+  RunRewardEffectKind.spentBallRecovery => (
+    icon: Icons.replay_circle_filled_rounded,
+    foreground: const Color(0xFF704A8F),
+    background: const Color(0xFFEEDFF7),
+  ),
+  RunRewardEffectKind.firstImpactGuide => (
+    icon: Icons.center_focus_strong_rounded,
+    foreground: const Color(0xFF9B5A22),
+    background: const Color(0xFFFFE9C8),
+  ),
+  RunRewardEffectKind.optionalChallengeGuard => (
+    icon: Icons.shield_rounded,
+    foreground: const Color(0xFF356072),
+    background: const Color(0xFFDCECF0),
+  ),
+  RunRewardEffectKind.failureCauseBoost => (
+    icon: Icons.account_tree_rounded,
+    foreground: const Color(0xFF9A3F3F),
+    background: const Color(0xFFFFDDDC),
+  ),
+  RunRewardEffectKind.ballAppearance => (
+    icon: Icons.auto_awesome_rounded,
+    foreground: const Color(0xFF087F7A),
+    background: const Color(0xFFFFE9A8),
+  ),
+  RunRewardEffectKind.stageRecordGuard => (
+    icon: Icons.workspace_premium_rounded,
+    foreground: const Color(0xFF8A651D),
+    background: const Color(0xFFFFE8A9),
+  ),
+  RunRewardEffectKind.nextStageHintAccess => (
+    icon: Icons.lightbulb_rounded,
+    foreground: const Color(0xFF8A5B00),
+    background: const Color(0xFFFFF0B8),
+  ),
+  RunRewardEffectKind.precisionCharge => (
+    icon: Icons.slow_motion_video_rounded,
+    foreground: const Color(0xFF315E8B),
+    background: const Color(0xFFDDEBFF),
+  ),
+};
+
 class _HomeScreen extends StatelessWidget {
   const _HomeScreen({
     required this.onStart,
     required this.onStageSelect,
+    required this.onRewardInventory,
     required this.onDailyChallenge,
     required this.onReplayLibrary,
     required this.showDebugControls,
@@ -1474,6 +1814,7 @@ class _HomeScreen extends StatelessWidget {
 
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
+  final VoidCallback onRewardInventory;
   final VoidCallback onDailyChallenge;
   final VoidCallback onReplayLibrary;
   final bool showDebugControls;
@@ -1563,6 +1904,18 @@ class _HomeScreen extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ).copyWith(fontFamily: appFontFamily),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('reward_inventory_entry_button'),
+                        onPressed: onRewardInventory,
+                        icon: const Icon(Icons.backpack_outlined),
+                        label: const Text('내 런 보상'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          foregroundColor: const Color(0xFF6B4B20),
+                          side: const BorderSide(color: Color(0xFFA77A3E)),
                         ),
                       ),
                       const SizedBox(height: 10),
