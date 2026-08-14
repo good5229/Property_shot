@@ -88,6 +88,44 @@ void main() {
     expect(find.text('클리어 완료 · 목표는 다음에 재도전 가능'), findsOneWidget);
   });
 
+  testWidgets('탐사 코드를 입력하면 같은 목표와 세 단계를 새로 시작한다', (tester) async {
+    final source = ExpeditionContractProgress(
+      id: 'source',
+      type: ExpeditionContractType.chain,
+      stageIds: const ['stage_heavy', 'stage_bouncy', 'stage_chain_gate'],
+      completedStageIds: const {'stage_heavy'},
+    );
+    await tester.pumpWidget(
+      const PropertyShotApp(
+        showHome: true,
+        fontFamilyOverride: 'GoldenNanumGothic',
+      ),
+    );
+    await _pumpForAsyncWork(tester);
+    final entry = find.byKey(const Key('expedition_entry_button'));
+    await tester.ensureVisible(entry);
+    await tester.tap(entry);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('expedition_import_button')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('expedition_import_dialog')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('expedition_import_field')),
+      ExpeditionShareCodec.encode(source),
+    );
+    await tester.tap(find.byKey(const Key('expedition_import_confirm')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.text('연쇄 탐사'), findsOneWidget);
+    expect(find.textContaining('진행 0/3 · 달성 0/3'), findsOneWidget);
+    final restored = await ExpeditionContractStore(
+      await SharedPreferences.getInstance(),
+    ).load();
+    expect(restored?.stageIds, source.stageIds);
+    expect(restored?.completedCount, 0);
+  });
+
   testWidgets('탐사 선택 화면 320x568 Golden', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));

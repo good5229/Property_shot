@@ -125,8 +125,13 @@ class PropertyShotGame extends FlameGame {
 
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
+  Map<String, List<ShotAnimationMove>> _animationMovesByEntity = const {};
+  Map<ShotAnimationMove, double> _animationMoveDistances = const {};
+  Map<ShotAnimationMove, double> _animationMoveDurations = const {};
   List<ShotImpact> _animationImpacts = const [];
   List<PhysicsEvent> _animationPhysicsEvents = const [];
+  List<_ReflectorAnimationStep> _animationReflectorSchedule = const [];
+  double _animationEndCursorCached = 0;
   int _nextAnimationEventIndex = 0;
   GameState? _animationStartState;
   double _animationCursor = 0;
@@ -200,6 +205,7 @@ class PropertyShotGame extends FlameGame {
           : physicsEvents;
       _animationPhysicsEvents = [...unsortedPhysicsEvents]
         ..sort(_compareAnimationEvents);
+      _prepareAnimationCaches();
       _nextAnimationEventIndex = 0;
       _animationStartState = transitionStart;
       _animationCursor = 0;
@@ -247,8 +253,13 @@ class PropertyShotGame extends FlameGame {
     _animationCompletionTimer = null;
     _animationPath = const [];
     _animationMoves = const [];
+    _animationMovesByEntity = const {};
+    _animationMoveDistances = const {};
+    _animationMoveDurations = const {};
     _animationImpacts = const [];
     _animationPhysicsEvents = const [];
+    _animationReflectorSchedule = const [];
+    _animationEndCursorCached = 0;
     _nextAnimationEventIndex = 0;
     _animationStartState = null;
     _animationTrait = null;
@@ -815,12 +826,7 @@ class PropertyShotGame extends FlameGame {
 
   EntityState _entityAtAnimationTime(EntityState entity) {
     var animated = entity;
-    final moves =
-        _animationMoves.where((move) => move.entityId == entity.id).toList()
-          ..sort(
-            (first, second) =>
-                first.triggerPathIndex.compareTo(second.triggerPathIndex),
-          );
+    final moves = _animationMovesByEntity[entity.id] ?? const [];
     for (final move in moves) {
       final elapsed = _animationCursor - move.triggerPathIndex;
       if (elapsed < 0) {
@@ -834,7 +840,7 @@ class PropertyShotGame extends FlameGame {
         visualState: local > 0 ? move.visualState : entity.visualState,
       );
     }
-    for (final step in _reflectorAnimationSchedule().where(
+    for (final step in _animationReflectorSchedule.where(
       (step) => step.event.targetEntityId == entity.id,
     )) {
       final event = step.event;
@@ -866,7 +872,7 @@ class PropertyShotGame extends FlameGame {
     if (_animationPath.isEmpty || entity.type != EntityType.rotatingReflector) {
       return orientation;
     }
-    for (final step in _reflectorAnimationSchedule().where(
+    for (final step in _animationReflectorSchedule.where(
       (step) => step.event.targetEntityId == entity.id,
     )) {
       final event = step.event;
@@ -888,6 +894,8 @@ class PropertyShotGame extends FlameGame {
   }
 
   double _moveDuration(ShotAnimationMove move) {
+    final cached = _animationMoveDurations[move];
+    if (cached != null) return cached;
     if (move.path.length < 2) {
       return 12;
     }
@@ -933,7 +941,40 @@ class PropertyShotGame extends FlameGame {
     ];
   }
 
-  double get _animationEndCursor {
+  double get _animationEndCursor => _animationEndCursorCached;
+
+  void _prepareAnimationCaches() {
+    final movesByEntity = <String, List<ShotAnimationMove>>{};
+    final distances = <ShotAnimationMove, double>{};
+    final durations = <ShotAnimationMove, double>{};
+    for (final move in _animationMoves) {
+      movesByEntity
+          .putIfAbsent(move.entityId, () => <ShotAnimationMove>[])
+          .add(move);
+      final points = move.path.length >= 2 ? move.path : [move.from, move.to];
+      final distance = _pathDistance(points);
+      distances[move] = distance;
+      durations[move] = move.path.length < 2 || distance <= 0.001
+          ? 12
+          : math.max(1, distance / 4.0).toDouble();
+    }
+    for (final moves in movesByEntity.values) {
+      moves.sort(
+        (first, second) =>
+            first.triggerPathIndex.compareTo(second.triggerPathIndex),
+      );
+    }
+    _animationMovesByEntity =
+        Map<String, List<ShotAnimationMove>>.unmodifiable({
+          for (final entry in movesByEntity.entries)
+            entry.key: List<ShotAnimationMove>.unmodifiable(entry.value),
+        });
+    _animationMoveDistances = Map.unmodifiable(distances);
+    _animationMoveDurations = Map.unmodifiable(durations);
+    _animationReflectorSchedule = List.unmodifiable(
+      _reflectorAnimationSchedule(),
+    );
+
     var end = math.max(0, _animationPath.length - 1).toDouble();
     for (final move in _animationMoves) {
       end = math.max(end, move.triggerPathIndex + _moveDuration(move));
@@ -945,18 +986,19 @@ class PropertyShotGame extends FlameGame {
         end = math.max(end, event.pathIndex.toDouble());
       }
     } else {
-      for (final step in _reflectorAnimationSchedule()) {
+      for (final step in _animationReflectorSchedule) {
         end = math.max(end, step.end);
       }
     }
-    return end;
+    _animationEndCursorCached = end;
   }
 
   Vec2 _sampleMovePath(ShotAnimationMove move, double elapsed) {
     final points = move.path.length >= 2 ? move.path : [move.from, move.to];
     final duration = _moveDuration(move);
     final progress = (elapsed / duration).clamp(0.0, 1.0);
-    return _samplePathByDistance(points, _pathDistance(points) * progress);
+    final distance = _animationMoveDistances[move] ?? _pathDistance(points);
+    return _samplePathByDistance(points, distance * progress);
   }
 
   Vec2 _samplePathByDistance(List<Vec2> points, double distance) {

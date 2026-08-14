@@ -124,6 +124,70 @@ class ExpeditionContractProgress {
   }
 }
 
+/// 서버 없이 같은 목표와 같은 세 단계를 전달하는 짧은 탐사 코드다.
+/// 진행도는 공유하지 않아 받는 사람은 처음부터 직접 탐사한다.
+class ExpeditionShareCodec {
+  const ExpeditionShareCodec._();
+
+  static const String prefix = 'PSX1-';
+
+  static String encode(ExpeditionContractProgress progress) {
+    final payload = jsonEncode({
+      'type': progress.type.name,
+      'stageIds': progress.stageIds,
+    });
+    final bytes = utf8.encode(payload);
+    final body = base64Url.encode(bytes).replaceAll('=', '');
+    return '$prefix$body-${_checksum(bytes).toRadixString(16).padLeft(8, '0')}';
+  }
+
+  static ExpeditionContractProgress decode(String value) {
+    final normalized = value.trim();
+    if (!normalized.startsWith(prefix)) {
+      throw const FormatException('속성 한방 탐사 코드가 아닙니다.');
+    }
+    final encoded = normalized.substring(prefix.length);
+    final separator = encoded.lastIndexOf('-');
+    if (separator <= 0 || separator == encoded.length - 1) {
+      throw const FormatException('탐사 코드 형식이 올바르지 않습니다.');
+    }
+    final body = encoded.substring(0, separator);
+    final checksum = int.tryParse(encoded.substring(separator + 1), radix: 16);
+    try {
+      final padded = body.padRight((body.length + 3) ~/ 4 * 4, '=');
+      final bytes = base64Url.decode(padded);
+      if (checksum == null || checksum != _checksum(bytes)) {
+        throw const FormatException('탐사 코드가 손상되었습니다.');
+      }
+      final decoded = jsonDecode(utf8.decode(bytes));
+      if (decoded is! Map<String, dynamic> || decoded['stageIds'] is! List) {
+        throw const FormatException('탐사 코드 내용이 올바르지 않습니다.');
+      }
+      final type = ExpeditionContractType.values.byName(
+        decoded['type'] as String,
+      );
+      final stageIds = (decoded['stageIds'] as List).cast<String>();
+      return ExpeditionContractProgress(
+        id: 'expedition:${type.name}:shared:v1',
+        type: type,
+        stageIds: stageIds,
+      );
+    } on FormatException {
+      rethrow;
+    } on Object {
+      throw const FormatException('탐사 코드를 읽을 수 없습니다.');
+    }
+  }
+
+  static int _checksum(List<int> bytes) {
+    var hash = 0x811c9dc5;
+    for (final byte in bytes) {
+      hash = ((hash ^ byte) * 0x01000193) & 0xffffffff;
+    }
+    return hash;
+  }
+}
+
 class ExpeditionContractStore {
   ExpeditionContractStore(this._preferences);
 
@@ -157,6 +221,18 @@ class ExpeditionContractStore {
       type: type,
       stageIds: stages,
     );
+    await _save(progress);
+    return progress;
+  }
+
+  Future<ExpeditionContractProgress> importCode(
+    String code, {
+    required Set<String> knownStageIds,
+  }) async {
+    final progress = ExpeditionShareCodec.decode(code);
+    if (!knownStageIds.containsAll(progress.stageIds)) {
+      throw const FormatException('현재 버전에 없는 스테이지가 포함되어 있습니다.');
+    }
     await _save(progress);
     return progress;
   }

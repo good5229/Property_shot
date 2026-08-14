@@ -10,6 +10,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import '../game/analysis/creative_chain_score.dart';
+import '../game/analysis/assist_recommendation.dart';
 import '../game/analysis/failure_replay.dart';
 import '../game/analysis/stage_discovery.dart';
 import '../game/analysis/stage_chain_challenge.dart';
@@ -234,6 +235,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
   bool _hintWasVisible = false;
   String _failureAdvice = '';
+  AssistRecommendation? _assistRecommendation;
+  String? _assistRecommendationFeedback;
+  final Set<String> _handledAssistRecommendationIds = <String>{};
   FailureReplayData? _failureReplay;
   bool _bestShotsLoaded = false;
   Future<void>? _bestShotsLoadFuture;
@@ -616,10 +620,94 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (updated != null && mounted) {
         setState(() => _hintEntitlement = updated);
         _recordHintAvailableIfNeeded();
+        _refreshAssistRecommendation();
       }
     } on Object {
       // 힌트의 실패 횟수 기록은 플레이 결과를 되돌리지 않는다.
     }
+  }
+
+  void _refreshAssistRecommendation() {
+    if (!mounted || !_showFailurePopup) return;
+    final failures = _stageShotResults
+        .where((result) => result.state.phase != GamePhase.success)
+        .toList(growable: false);
+    final entitlement = _hintEntitlement;
+    final next = const AssistRecommendationEngine().recommend(
+      AssistRecommendationContext(
+        failureCount: failures.length,
+        latestResult: failures.lastOrNull,
+        hintAvailable: entitlement != null,
+        hintConsumed: entitlement?.consumed ?? false,
+        hintLevel: entitlement?.unlockedHintLevel ?? 0,
+        hintOpenedCount: entitlement?.openedCount ?? 0,
+        previousAimEnabled: GameFeedback.previousAimComparisonEnabled,
+        collisionOrderEnabled: GameFeedback.collisionOrderEnabled,
+        causalityEnabled: GameFeedback.gimmickCausalityEnabled,
+      ),
+      handledIds: _handledAssistRecommendationIds,
+    );
+    if (next?.id == _assistRecommendation?.id) return;
+    setState(() => _assistRecommendation = next);
+    if (next != null) {
+      _telemetry.record(
+        '도움 추천 표시',
+        stage: _state.levelIndex,
+        attempt: _state.shotCount,
+        eventCode: 'assist_recommendation_presented',
+        action: next.id,
+      );
+    }
+  }
+
+  Future<void> _acceptAssistRecommendation() async {
+    final recommendation = _assistRecommendation;
+    if (recommendation == null) return;
+    _handledAssistRecommendationIds.add(recommendation.id);
+    _telemetry.record(
+      '도움 추천 수락',
+      stage: _state.levelIndex,
+      attempt: _state.shotCount,
+      eventCode: 'assist_recommendation_accepted',
+      action: recommendation.id,
+    );
+    if (recommendation.action == AssistRecommendationAction.openHint) {
+      setState(() {
+        _showFailurePopup = false;
+        _assistRecommendation = null;
+      });
+      await _showPatternHintSheet();
+      return;
+    }
+    switch (recommendation.action) {
+      case AssistRecommendationAction.enablePreviousAim:
+        await GameFeedback.setPreviousAimComparisonEnabled(true);
+      case AssistRecommendationAction.enableCollisionOrder:
+        await GameFeedback.setCollisionOrderEnabled(true);
+      case AssistRecommendationAction.enableCausality:
+        await GameFeedback.setGimmickCausalityEnabled(true);
+      case AssistRecommendationAction.openHint:
+        break;
+    }
+    if (!mounted) return;
+    setState(() {
+      _assistRecommendation = null;
+      _assistRecommendationFeedback = '${recommendation.title} 도움을 켰어요.';
+    });
+  }
+
+  void _dismissAssistRecommendation() {
+    final recommendation = _assistRecommendation;
+    if (recommendation == null) return;
+    _handledAssistRecommendationIds.add(recommendation.id);
+    _telemetry.record(
+      '도움 추천 건너뜀',
+      stage: _state.levelIndex,
+      attempt: _state.shotCount,
+      eventCode: 'assist_recommendation_dismissed',
+      action: recommendation.id,
+    );
+    setState(() => _assistRecommendation = null);
   }
 
   bool _isDirectClear(Iterable<ShotResult> results) {
@@ -2300,6 +2388,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _showClearPopup = false;
       _showFailurePopup = !cleared;
     });
+    if (!cleared) _refreshAssistRecommendation();
     if (cleared) {
       final key = _currentHintKey;
       if (key != null && !_collectedHintKeyIds.contains(key.id)) {
@@ -4294,6 +4383,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       advice: _failureAdvice,
                       discoveries: _discoveryMilestones,
                       failureReplay: _failureReplay,
+                      assistRecommendation: _assistRecommendation,
+                      assistFeedback: _assistRecommendationFeedback,
+                      onAcceptAssist: () =>
+                          unawaited(_acceptAssistRecommendation()),
+                      onDismissAssist: _dismissAssistRecommendation,
                       onReplay: _openFailureReplay,
                       onRetry: _resumeAfterFailure,
                       onRewind: _rewind,
@@ -5139,7 +5233,7 @@ class ClearResultPopup extends StatelessWidget {
                                                               reward.id,
                                                           label: reward.name,
                                                           hint:
-                                                              '${reward.description} ${reward.activationLabel}. ${reward.usageHint}',
+                                                              '${reward.role.label}. ${reward.description} ${reward.activationLabel}. ${reward.usageHint}',
                                                           child: OutlinedButton(
                                                             key: Key(
                                                               'run_reward_${reward.id}',
@@ -5205,6 +5299,21 @@ class ClearResultPopup extends StatelessWidget {
                                                                           fontWeight:
                                                                               FontWeight.w800,
                                                                         ),
+                                                                      ),
+                                                                      Text(
+                                                                        '${reward.role.label} · ${reward.role.description}',
+                                                                        key: Key(
+                                                                          'run_reward_role_${reward.id}',
+                                                                        ),
+                                                                        style:
+                                                                            Theme.of(
+                                                                              context,
+                                                                            ).textTheme.labelSmall?.copyWith(
+                                                                              color: const Color(
+                                                                                0xFF8A6527,
+                                                                              ),
+                                                                              fontWeight: FontWeight.w800,
+                                                                            ),
                                                                       ),
                                                                       const SizedBox(
                                                                         height:
@@ -5778,6 +5887,10 @@ class _FailurePopup extends StatelessWidget {
     required this.advice,
     required this.discoveries,
     required this.failureReplay,
+    required this.assistRecommendation,
+    required this.assistFeedback,
+    required this.onAcceptAssist,
+    required this.onDismissAssist,
     required this.onReplay,
     required this.onRetry,
     required this.onRewind,
@@ -5789,6 +5902,10 @@ class _FailurePopup extends StatelessWidget {
   final String advice;
   final List<StageDiscoveryMilestone> discoveries;
   final FailureReplayData? failureReplay;
+  final AssistRecommendation? assistRecommendation;
+  final String? assistFeedback;
+  final VoidCallback onAcceptAssist;
+  final VoidCallback onDismissAssist;
   final VoidCallback onReplay;
   final VoidCallback onRetry;
   final VoidCallback onRewind;
@@ -5868,6 +5985,24 @@ class _FailurePopup extends StatelessWidget {
                               ),
                         ),
                       ],
+                      if (assistRecommendation != null) ...[
+                        const SizedBox(height: 8),
+                        _AssistRecommendationCard(
+                          recommendation: assistRecommendation!,
+                          onAccept: onAcceptAssist,
+                          onDismiss: onDismissAssist,
+                        ),
+                      ] else if (assistFeedback != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          assistFeedback!,
+                          key: const Key('assist_recommendation_feedback'),
+                          style: const TextStyle(
+                            color: Color(0xFF286343),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 6,
@@ -5917,6 +6052,85 @@ class _FailurePopup extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+@visibleForTesting
+Widget buildAssistRecommendationCardForTesting({
+  required AssistRecommendation recommendation,
+  required VoidCallback onAccept,
+  required VoidCallback onDismiss,
+}) => _AssistRecommendationCard(
+  recommendation: recommendation,
+  onAccept: onAccept,
+  onDismiss: onDismiss,
+);
+
+class _AssistRecommendationCard extends StatelessWidget {
+  const _AssistRecommendationCard({
+    required this.recommendation,
+    required this.onAccept,
+    required this.onDismiss,
+  });
+
+  final AssistRecommendation recommendation;
+  final VoidCallback onAccept;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: '선택형 도움 추천. ${recommendation.title}. ${recommendation.reason}',
+      child: Container(
+        key: const Key('assist_recommendation_card'),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE7F2FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF6D91B2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.tune_rounded,
+                  size: 19,
+                  color: Color(0xFF315E8B),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    recommendation.title,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(recommendation.reason),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                FilledButton(
+                  key: const Key('assist_recommendation_accept'),
+                  onPressed: onAccept,
+                  child: Text(recommendation.actionLabel),
+                ),
+                const SizedBox(width: 6),
+                TextButton(
+                  key: const Key('assist_recommendation_dismiss'),
+                  onPressed: onDismiss,
+                  child: const Text('지금은 괜찮아요'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

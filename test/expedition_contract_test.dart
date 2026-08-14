@@ -132,4 +132,41 @@ void main() {
       isFalse,
     );
   });
+
+  test('공유 코드는 목표와 세 단계만 보존하고 진행도는 새로 시작한다', () {
+    final progress = ExpeditionContractProgress(
+      id: 'source',
+      type: ExpeditionContractType.chain,
+      stageIds: stages.take(3),
+      completedStageIds: const {'stage_heavy'},
+      achievedStageIds: const {'stage_heavy'},
+    );
+    final code = ExpeditionShareCodec.encode(progress);
+    final decoded = ExpeditionShareCodec.decode(code);
+    expect(code, startsWith(ExpeditionShareCodec.prefix));
+    expect(decoded.type, ExpeditionContractType.chain);
+    expect(decoded.stageIds, stages.take(3));
+    expect(decoded.completedCount, 0);
+    expect(decoded.achievedCount, 0);
+  });
+
+  test('손상되거나 알 수 없는 단계가 있는 공유 코드를 거부한다', () async {
+    final progress = ExpeditionContractProgress(
+      id: 'source',
+      type: ExpeditionContractType.discovery,
+      stageIds: stages.take(3),
+    );
+    final code = ExpeditionShareCodec.encode(progress);
+    expect(
+      () =>
+          ExpeditionShareCodec.decode('${code.substring(0, code.length - 1)}0'),
+      throwsFormatException,
+    );
+    final preferences = await SharedPreferences.getInstance();
+    final store = ExpeditionContractStore(preferences);
+    expect(
+      () => store.importCode(code, knownStageIds: const {'stage_heavy'}),
+      throwsFormatException,
+    );
+  });
 }

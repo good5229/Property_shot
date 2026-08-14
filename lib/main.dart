@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/analysis/creative_chain_score.dart';
@@ -393,6 +394,26 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Future<void> _clearExpedition() async {
     await (await _expeditionStoreFuture).clear();
     if (mounted) setState(() => _expeditionProgress = null);
+  }
+
+  Future<void> _shareExpedition() async {
+    final progress = _expeditionProgress;
+    if (progress == null) return;
+    await Clipboard.setData(
+      ClipboardData(text: ExpeditionShareCodec.encode(progress)),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('탐사 코드가 복사되었습니다.')));
+  }
+
+  Future<void> _importExpedition(String code) async {
+    final progress = await (await _expeditionStoreFuture).importCode(
+      code,
+      knownStageIds: levels.map((level) => level.id).toSet(),
+    );
+    if (mounted) setState(() => _expeditionProgress = progress);
   }
 
   Future<void> _recordExpeditionOutcome(ExpeditionStageOutcome outcome) async {
@@ -1367,6 +1388,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onStart: (type) => unawaited(_startExpedition(type)),
         onPlayStage: (stageId) => unawaited(_playExpeditionStage(stageId)),
         onClear: () => unawaited(_clearExpedition()),
+        onShare: () => unawaited(_shareExpedition()),
+        onImport: _importExpedition,
         onBack: () => setState(() => _showExpedition = false),
       );
     }
@@ -1504,6 +1527,8 @@ class _ExpeditionContractScreen extends StatelessWidget {
     required this.onStart,
     required this.onPlayStage,
     required this.onClear,
+    required this.onShare,
+    required this.onImport,
     required this.onBack,
   });
 
@@ -1512,6 +1537,8 @@ class _ExpeditionContractScreen extends StatelessWidget {
   final ValueChanged<ExpeditionContractType> onStart;
   final ValueChanged<String> onPlayStage;
   final VoidCallback onClear;
+  final VoidCallback onShare;
+  final Future<void> Function(String) onImport;
   final VoidCallback onBack;
 
   IconData _icon(ExpeditionContractType type) => switch (type) {
@@ -1560,7 +1587,14 @@ class _ExpeditionContractScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            if (active == null)
+            if (active == null) ...[
+              OutlinedButton.icon(
+                key: const Key('expedition_import_button'),
+                onPressed: () => _showExpeditionImportDialog(context),
+                icon: const Icon(Icons.input_rounded),
+                label: const Text('받은 탐사 코드 입력'),
+              ),
+              const SizedBox(height: 12),
               for (final type in ExpeditionContractType.values) ...[
                 Semantics(
                   button: true,
@@ -1605,8 +1639,8 @@ class _ExpeditionContractScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-              ]
-            else ...[
+              ],
+            ] else ...[
               LinearProgressIndicator(
                 key: const Key('expedition_progress_bar'),
                 value: active.completedCount / 3,
@@ -1649,6 +1683,13 @@ class _ExpeditionContractScreen extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 14),
+              FilledButton.tonalIcon(
+                key: const Key('expedition_share_button'),
+                onPressed: onShare,
+                icon: const Icon(Icons.ios_share_rounded),
+                label: const Text('이 탐사 코드 복사'),
+              ),
+              const SizedBox(height: 8),
               OutlinedButton.icon(
                 key: const Key('expedition_change_contract_button'),
                 onPressed: onClear,
@@ -1660,6 +1701,57 @@ class _ExpeditionContractScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showExpeditionImportDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    String? error;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          key: const Key('expedition_import_dialog'),
+          title: const Text('탐사 코드 입력'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('같은 목표와 같은 3개 스테이지를 처음부터 플레이합니다.'),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('expedition_import_field'),
+                controller: controller,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  labelText: 'PSX1-로 시작하는 코드',
+                  errorText: error,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const Key('expedition_import_confirm'),
+              onPressed: () async {
+                try {
+                  await onImport(controller.text);
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                } on FormatException catch (exception) {
+                  setDialogState(() => error = exception.message);
+                }
+              },
+              child: const Text('탐사 시작'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
   }
 }
 
@@ -1984,7 +2076,7 @@ class _RewardInventoryCard extends StatelessWidget {
     return Semantics(
       container: true,
       label:
-          '${reward.name}, ${reward.activationLabel}, $status, ${reward.description}, '
+          '${reward.name}, ${reward.role.label}, ${reward.activationLabel}, $status, ${reward.description}, '
           '사용법 ${reward.usageHint}',
       child: Container(
         key: Key('reward_inventory_${reward.id}'),
@@ -2029,6 +2121,15 @@ class _RewardInventoryCard extends StatelessWidget {
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                     ],
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${reward.role.label} · ${reward.role.description}',
+                    key: Key('reward_inventory_role_${reward.id}'),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: const Color(0xFF8A6527),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(reward.description),

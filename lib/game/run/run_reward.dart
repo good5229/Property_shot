@@ -46,7 +46,32 @@ enum RunRewardEffectKind {
 /// 보상이 실제 플레이에 개입하는 시점을 플레이어와 계측에 동일하게 설명한다.
 enum RunRewardActivationKind { manual, automatic, passive, immediate }
 
+/// 후보 세 개가 서로 다른 플레이 약속을 제공하는지 검증하는 역할 분류다.
+enum RunRewardRole {
+  experiment('실험 확장', '새로운 속성·경로를 시험해요.'),
+  safety('안전망', '실패 부담을 줄이고 다시 시도해요.'),
+  mastery('숙련·표현', '조작을 다듬거나 플레이를 꾸며요.');
+
+  const RunRewardRole(this.label, this.description);
+
+  final String label;
+  final String description;
+}
+
 extension RunRewardEffectGuidance on RunRewardEffectKind {
+  RunRewardRole get role => switch (this) {
+    RunRewardEffectKind.cloneCore ||
+    RunRewardEffectKind.spentBallRecovery ||
+    RunRewardEffectKind.firstImpactGuide => RunRewardRole.experiment,
+    RunRewardEffectKind.shotCancelAssist ||
+    RunRewardEffectKind.optionalChallengeGuard ||
+    RunRewardEffectKind.stageRecordGuard ||
+    RunRewardEffectKind.nextStageHintAccess => RunRewardRole.safety,
+    RunRewardEffectKind.failureCauseBoost ||
+    RunRewardEffectKind.ballAppearance ||
+    RunRewardEffectKind.precisionCharge => RunRewardRole.mastery,
+  };
+
   RunRewardActivationKind get activationKind => switch (this) {
     RunRewardEffectKind.cloneCore || RunRewardEffectKind.nextStageHintAccess =>
       RunRewardActivationKind.immediate,
@@ -116,6 +141,7 @@ class RunReward {
   final RunRewardEffectKind effectKind;
 
   RunRewardActivationKind get activationKind => effectKind.activationKind;
+  RunRewardRole get role => effectKind.role;
   String get activationLabel => effectKind.activationLabel;
   String get usageHint => effectKind.usageHint;
   String get stageGuide => effectKind.stageGuide;
@@ -275,37 +301,20 @@ class RunRewardCandidateGenerator {
       (reward) => reward.id != runRewardNextStageHintAccessId,
     );
     final shuffled = StableRandom(seed).shuffled(selectable).toList();
-    final tactical = <String>{
-      runRewardCloneCoreId,
-      runRewardSpentBallRecoveryId,
-      runRewardFirstImpactGuideId,
-      runRewardPrecisionChargeId,
-    };
-    final safety = <String>{
-      runRewardShotCancelAssistId,
-      runRewardOptionalChallengeGuardId,
-      runRewardStageRecordGuardId,
-    };
-    final growth = <String>{
-      runRewardFailureCauseBoostId,
-      runRewardBallAppearanceId,
-    };
     final chosen = <RunReward>[];
 
-    void chooseFrom(Set<String> ids) {
-      final match = shuffled
-          .where((reward) => ids.contains(reward.id))
-          .firstOrNull;
+    void chooseRole(RunRewardRole role) {
+      final match = shuffled.where((reward) => reward.role == role).firstOrNull;
       if (match == null) return;
       chosen.add(match);
       shuffled.remove(match);
     }
 
-    // 매 선택지에 전략 확장·안전망·지속 효과가 하나씩 들어오게 해
-    // 외형 보상만 모이거나 점수 보호만 모이는 무의미한 후보 조합을 피한다.
-    chooseFrom(tactical);
-    chooseFrom(safety);
-    if (!includeNextStageHint) chooseFrom(growth);
+    // 매 선택지에 실험 확장·안전망·숙련을 하나씩 넣어 선택 결과가
+    // 실제 다음 플레이의 방향 차이로 이어지게 한다.
+    chooseRole(RunRewardRole.experiment);
+    if (!includeNextStageHint) chooseRole(RunRewardRole.safety);
+    chooseRole(RunRewardRole.mastery);
     for (final reward in shuffled) {
       if (chosen.length >= (includeNextStageHint ? 2 : candidateCount)) break;
       chosen.add(reward);

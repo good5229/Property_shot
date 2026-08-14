@@ -32,6 +32,8 @@ void main() {
         expect(reward.usageHint, isNotEmpty);
         expect(reward.stageGuide, isNotEmpty);
         expect(reward.activationLabel, isNotEmpty);
+        expect(reward.role.label, isNotEmpty);
+        expect(reward.role.description, isNotEmpty);
       }
       expect(
         initialRunRewards.map((reward) => reward.activationKind).toSet(),
@@ -133,28 +135,30 @@ void main() {
       }
     });
 
-    test('일반 후보는 전략 도구·안전망·지속 효과를 하나씩 포함한다', () {
-      const tactical = {
-        runRewardCloneCoreId,
-        runRewardSpentBallRecoveryId,
-        runRewardFirstImpactGuideId,
-        runRewardPrecisionChargeId,
-      };
-      const safety = {
-        runRewardShotCancelAssistId,
-        runRewardOptionalChallengeGuardId,
-        runRewardStageRecordGuardId,
-      };
-      const growth = {runRewardFailureCauseBoostId, runRewardBallAppearanceId};
+    test('일반 후보는 실험 확장·안전망·숙련 역할을 하나씩 포함한다', () {
       for (var seed = 0; seed < 100; seed++) {
-        final ids = generateRunRewardCandidates(
+        final roles = generateRunRewardCandidates(
           rootSeed: seed,
           stageId: 'stage_reward',
           patternSeed: seed * 17,
-        ).map((reward) => reward.id).toSet();
-        expect(ids.intersection(tactical), hasLength(1));
-        expect(ids.intersection(safety), hasLength(1));
-        expect(ids.intersection(growth), hasLength(1));
+        ).map((reward) => reward.role).toSet();
+        expect(roles, RunRewardRole.values.toSet());
+      }
+    });
+
+    test('팁이 필수 후보여도 세 역할을 모두 제공한다', () {
+      for (var seed = 0; seed < 100; seed++) {
+        final rewards = generateRunRewardCandidates(
+          rootSeed: seed,
+          stageId: 'stage_reward',
+          patternSeed: seed * 17,
+          includeNextStageHint: true,
+        );
+        expect(rewards.first.id, runRewardNextStageHintAccessId);
+        expect(
+          rewards.map((reward) => reward.role).toSet(),
+          RunRewardRole.values.toSet(),
+        );
       }
     });
 
