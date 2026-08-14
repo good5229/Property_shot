@@ -65,8 +65,8 @@ extension RunRewardEffectGuidance on RunRewardEffectKind {
     RunRewardEffectKind.firstImpactGuide => RunRewardRole.experiment,
     RunRewardEffectKind.shotCancelAssist ||
     RunRewardEffectKind.optionalChallengeGuard ||
-    RunRewardEffectKind.stageRecordGuard ||
-    RunRewardEffectKind.nextStageHintAccess => RunRewardRole.safety,
+    RunRewardEffectKind.stageRecordGuard => RunRewardRole.safety,
+    RunRewardEffectKind.nextStageHintAccess => RunRewardRole.experiment,
     RunRewardEffectKind.failureCauseBoost ||
     RunRewardEffectKind.ballAppearance ||
     RunRewardEffectKind.precisionCharge => RunRewardRole.mastery,
@@ -312,8 +312,8 @@ class RunRewardCandidateGenerator {
 
     // 매 선택지에 실험 확장·안전망·숙련을 하나씩 넣어 선택 결과가
     // 실제 다음 플레이의 방향 차이로 이어지게 한다.
-    chooseRole(RunRewardRole.experiment);
-    if (!includeNextStageHint) chooseRole(RunRewardRole.safety);
+    if (!includeNextStageHint) chooseRole(RunRewardRole.experiment);
+    chooseRole(RunRewardRole.safety);
     chooseRole(RunRewardRole.mastery);
     for (final reward in shuffled) {
       if (chosen.length >= (includeNextStageHint ? 2 : candidateCount)) break;
