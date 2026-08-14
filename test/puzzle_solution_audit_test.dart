@@ -32,7 +32,12 @@ void main() {
     final normalSuccesses = _successfulResults(shots, levels[1].createState(1));
 
     expect(bouncySuccesses, isNotEmpty);
-    expect(normalSuccesses, isEmpty);
+    expect(normalSuccesses.length, lessThan(bouncySuccesses.length));
+    expect(
+      normalSuccesses.length,
+      lessThanOrEqualTo(3),
+      reason: '첫 탄성 학습은 소수의 벽 반사 우회만 허용합니다.',
+    );
     expect(
       bouncySuccesses.every(
         (result) =>

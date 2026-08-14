@@ -76,13 +76,13 @@
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": -0.17453292519943295,
-          "power": 0.6,
+          "angleRadians": -2.0943951023931953,
+          "power": 0.65,
           "equippedTrait": "bouncy"
         }
       ],
       "expectedFingerprints": [
-        "b19182e93749f20f"
+        "d87a4d849b81c6ee"
       ],
       "expectedPhase": "success"
     },
@@ -93,13 +93,13 @@
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": -0.17453292519943295,
-          "power": 0.65,
+          "angleRadians": -2.0943951023931953,
+          "power": 0.7,
           "equippedTrait": "bouncy"
         }
       ],
       "expectedFingerprints": [
-        "efbef030b0f91964"
+        "77f50b613985f467"
       ],
       "expectedPhase": "success"
     },
@@ -116,7 +116,7 @@
         }
       ],
       "expectedFingerprints": [
-        "d73e43b20bad7539"
+        "e0b4637d1103807b"
       ],
       "expectedPhase": "planning"
     },
@@ -133,7 +133,7 @@
         }
       ],
       "expectedFingerprints": [
-        "3ea065b926890b7e"
+        "7640f66d8cc1b5f4"
       ],
       "expectedPhase": "planning"
     },
@@ -282,7 +282,7 @@
       "shots": [
         {
           "angleRadians": -2.356194490192345,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
@@ -416,34 +416,34 @@
     {
       "id": "stage_7_success_1",
       "stageIndex": 6,
-      "routeTag": "direct_bypass",
+      "routeTag": "alternate",
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": 0.41887902047863906,
-          "power": 0.6,
+          "angleRadians": -3.0543261909900763,
+          "power": 0.12,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "84075a94e2fba84a"
+        "a1d8523778ec8b44"
       ],
       "expectedPhase": "success"
     },
     {
       "id": "stage_7_success_2",
       "stageIndex": 6,
-      "routeTag": "direct_bypass",
+      "routeTag": "alternate",
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": 0.41887902047863906,
-          "power": 0.62,
+          "angleRadians": -3.0543261909900763,
+          "power": 0.14,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "3d9d330421f7ed5b"
+        "b4451edf124ceecc"
       ],
       "expectedPhase": "success"
     },
@@ -454,13 +454,13 @@
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": -2.9670597283903604,
+          "angleRadians": -3.141592653589793,
           "power": 0.12,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "cf4c0a5d002a238e"
+        "39084faad5472e77"
       ],
       "expectedPhase": "planning"
     },
@@ -471,13 +471,13 @@
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": -2.9670597283903604,
+          "angleRadians": -3.141592653589793,
           "power": 0.14,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "a6e0492b42aa552b"
+        "22c9a971de500f7d"
       ],
       "expectedPhase": "planning"
     },
@@ -620,46 +620,34 @@
     {
       "id": "stage_10_success_1",
       "stageIndex": 9,
-      "routeTag": "property_chain",
+      "routeTag": "alternate",
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": 0.4886921905584123,
-          "power": 0.84,
-          "equippedTrait": "heavy"
-        },
-        {
-          "angleRadians": 0.7504915783575618,
-          "power": 0.88,
+          "angleRadians": -2.0943951023931953,
+          "power": 0.56,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "09a7a19828c6948f",
-        "0b5cdf33cc9ed637"
+        "7c3a1b37d2225dbe"
       ],
       "expectedPhase": "success"
     },
     {
       "id": "stage_10_success_2",
       "stageIndex": 9,
-      "routeTag": "property_chain",
+      "routeTag": "alternate",
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": 0.4886921905584123,
-          "power": 0.84,
-          "equippedTrait": "heavy"
-        },
-        {
-          "angleRadians": 0.7504915783575618,
-          "power": 0.9,
+          "angleRadians": -2.0943951023931953,
+          "power": 0.58,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "09a7a19828c6948f",
-        "312d057d8c09cb7b"
+        "d34cf713ce97cf3e"
       ],
       "expectedPhase": "success"
     },

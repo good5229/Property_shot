@@ -55,12 +55,10 @@ void main() {
   final file = File('harness_docs/qa/replays/single_shot_fixtures.json');
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(
-    const JsonEncoder.withIndent('  ')
-        .convert({'schemaVersion': 1, 'fixtures': <Map<String, Object?>>[]})
-        .replaceFirst(
-          '[]',
-          jsonEncode(fixtures.map((item) => item.toJson()).toList()),
-        ),
+    const JsonEncoder.withIndent('  ').convert({
+      'schemaVersion': 1,
+      'fixtures': fixtures.map((item) => item.toJson()).toList(),
+    }),
   );
   print('리플레이 픽스처 ${fixtures.length}개 생성: ${file.path}');
 }
