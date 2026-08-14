@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import '../game/analysis/creative_chain_score.dart';
 import '../game/analysis/failure_replay.dart';
+import '../game/analysis/stage_discovery.dart';
 import '../game/analysis/stage_chain_challenge.dart';
 import '../game/domain/entity_state.dart';
 import '../game/domain/game_state.dart';
@@ -199,6 +200,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Vec2? _firstArrivalDirection;
   int? _firstArrivalPowerBucket;
   TraitType? _firstArrivalTrait;
+  List<EntityState>? _previewResultEntities;
+  int? _previewResultShotCount;
+  Vec2? _previewResultDirection;
+  double? _previewResultPower;
+  TraitType? _previewResultTrait;
+  ShotResult? _previewResult;
   bool _isCharging = false;
   bool _chargeStartRecorded = false;
   ChargeGaugeState _chargeGaugeState = ChargeGaugeState.green;
@@ -254,6 +261,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Timer? _keyCollectionVfxTimer;
   bool _keySpawnRecorded = false;
   bool _hintAvailableRecorded = false;
+  final Set<String> _discoveredMilestoneIds = <String>{};
 
   RunRewardInventory get _rewardInventory =>
       RunRewardInventory(_acquiredRewards);
@@ -339,6 +347,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _patternHintEntry = widget.patternHintEntry;
     _hintEntitlement = widget.initialHintEntitlement;
     _collectedHintKeyIds = Set.of(widget.initialCollectedHintKeyIds);
+    _captureDiscoveries(_state);
     _restoreStageOutcomeHistory();
     _chainScoreAnalysis = _analyzeSuccessfulStage(
       state: _state,
@@ -440,7 +449,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   PlayTelemetryHintSource _hintSourceFor(RunHintEntitlement entitlement) =>
       entitlement.sources.contains(HintEntitlementSource.stageKey)
       ? PlayTelemetryHintSource.stageKey
-      : PlayTelemetryHintSource.clearReward;
+      : entitlement.sources.contains(HintEntitlementSource.clearReward)
+      ? PlayTelemetryHintSource.clearReward
+      : PlayTelemetryHintSource.failureAssist;
 
   PlayTelemetryHintLevel _hintLevelFor(int level) => switch (level) {
     1 => PlayTelemetryHintLevel.one,
@@ -501,6 +512,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final updated = await widget.onHintFailure!.call();
       if (updated != null && mounted) {
         setState(() => _hintEntitlement = updated);
+        _recordHintAvailableIfNeeded();
       }
     } on Object {
       // 힌트의 실패 횟수 기록은 플레이 결과를 되돌리지 않는다.
@@ -573,6 +585,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       }
     }
     return types;
+  }
+
+  List<StageDiscoveryMilestone> get _discoveryMilestones {
+    final current = stageDiscoveryMilestones(
+      state: _state,
+      shotInputs: _stageShotInputs,
+      shotResults: _stageShotResults,
+    );
+    return [
+      for (final milestone in current)
+        StageDiscoveryMilestone(
+          id: milestone.id,
+          label: milestone.label,
+          achieved:
+              milestone.achieved ||
+              _discoveredMilestoneIds.contains(milestone.id),
+        ),
+    ];
+  }
+
+  void _captureDiscoveries(GameState state) {
+    final milestones = stageDiscoveryMilestones(
+      state: state,
+      shotInputs: _stageShotInputs,
+      shotResults: _stageShotResults,
+    );
+    _discoveredMilestoneIds.addAll(
+      milestones.where((item) => item.achieved).map((item) => item.id),
+    );
   }
 
   PlayTelemetryStageOutcomePayload _stageOutcomePayload() {
@@ -974,6 +1015,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_isAnimatingShot || index > _unlockedLevel) {
       return;
     }
+    final sameStage = index == _state.levelIndex;
     _showBallInfo = false;
     _inspectedEntityId = null;
     _showClearPopup = false;
@@ -993,6 +1035,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusDrainedSourceHistory.clear();
     _stageShotResults.clear();
     _stageShotInputs.clear();
+    if (!sameStage) _discoveredMilestoneIds.clear();
     _chainScoreAnalysis = null;
     _clearPersistenceFuture = null;
     _clearPersistenceRetry = null;
@@ -1003,7 +1046,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _guidedImpactLabel = null;
     _challengeGuardAppliedForClear = false;
     _recordGuardAppliedForClear = false;
-    final sameStage = index == _state.levelIndex;
     if (sameStage && _state.shotCount > 0) {
       _telemetry.record(
         '재시도',
@@ -1274,13 +1316,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_rewardInventory.availableUseCount(runRewardFirstImpactGuideId) < 1) {
       return null;
     }
-    final preview = _shotResolver.resolve(
-      _state,
+    final preview = _previewShotResult(
       ShotInput(
         direction: direction,
         power: power,
         equippedTrait: _state.equippedTrait,
-      ),
+      ).normalized(),
     );
     return preview.impacts.isEmpty
         ? null
@@ -1291,7 +1332,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     ChargeGaugeState gaugeState,
     double power,
   ) {
-    _guidedImpactLabel = _previewFirstImpact(_state.aimDirection, power);
+    _guidedImpactLabel = _previewFirstImpact(
+      _pendingLaunchDirection ?? _state.aimDirection,
+      power,
+    );
     final guide = _guidedImpactLabel;
     return guide == null
         ? _chargeGaugeMessage(gaugeState)
@@ -1574,6 +1618,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _stageShotResults.add(result);
     _stageShotInputs.add(normalizedInput);
+    _captureDiscoveries(result.state);
     _chainScoreAnalysis = _analyzeSuccessfulStage(
       state: result.state,
       shotResults: _stageShotResults,
@@ -2638,8 +2683,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _pendingLaunchDirection = aim.length == 0
         ? _state.aimDirection.normalized()
         : aim.normalized();
+    // Pointer move는 1도 bucket 안에서 수십 번 들어올 수 있다. 실제 발사에는
+    // 위의 정밀 방향을 보존하되, 표시·예측·telemetry는 bucket이 바뀔 때만
+    // 갱신해 전체 GameScreen rebuild와 중복 ShotResolver 실행을 막는다.
+    if (quantizedAim == _state.aimDirection) {
+      return;
+    }
     final guidedImpactLabel = _previewFirstImpact(
-      quantizedAim,
+      _pendingLaunchDirection ?? quantizedAim,
       _state.aimPower,
     );
     _guidedImpactLabel = guidedImpactLabel;
@@ -2719,7 +2770,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _firstArrivalTrait == _state.equippedTrait) {
       return;
     }
-    final preview = _shotResolver.firstArrival(_state, normalizedInput);
+    final preview = _shotResolver.firstArrivalFromResult(
+      _previewShotResult(normalizedInput),
+    );
     _firstArrivalPreview = preview;
     _firstArrivalInputSnapshot = normalizedInput;
     _firstArrivalEntities = _state.entities;
@@ -2728,6 +2781,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _firstArrivalPowerBucket = powerBucket;
     _firstArrivalTrait = _state.equippedTrait;
     _game.setFirstArrivalPreview(preview);
+  }
+
+  ShotResult _previewShotResult(ShotInput normalizedInput) {
+    if (identical(_previewResultEntities, _state.entities) &&
+        _previewResultShotCount == _state.shotCount &&
+        _previewResultDirection == normalizedInput.direction &&
+        _previewResultPower == normalizedInput.power &&
+        _previewResultTrait == normalizedInput.equippedTrait &&
+        _previewResult != null) {
+      return _previewResult!;
+    }
+    final result = _shotResolver.resolve(_state, normalizedInput);
+    _previewResultEntities = _state.entities;
+    _previewResultShotCount = _state.shotCount;
+    _previewResultDirection = normalizedInput.direction;
+    _previewResultPower = normalizedInput.power;
+    _previewResultTrait = normalizedInput.equippedTrait;
+    _previewResult = result;
+    return result;
   }
 
   void _clearFirstArrivalPreview() {
@@ -3463,6 +3535,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 _Hud(
                                   tutorialActive: tutorialTarget != null,
                                   state: _state,
+                                  discoveryMilestones: _discoveryMilestones,
                                   unlockedLevel: _unlockedLevel,
                                   onSelectLevel: _selectLevel,
                                   showStageSelector: widget.showStageSelector,
@@ -3489,6 +3562,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     dense: denseCompact,
                                     tutorialActive: tutorialTarget != null,
                                     state: _state,
+                                    discoveryMilestones: _discoveryMilestones,
                                     unlockedLevel: _unlockedLevel,
                                     onSelectLevel: _selectLevel,
                                     showStageSelector: widget.showStageSelector,
@@ -3917,6 +3991,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     _FailurePopup(
                       state: _state,
                       advice: _failureAdvice,
+                      discoveries: _discoveryMilestones,
                       failureReplay: _failureReplay,
                       onReplay: _openFailureReplay,
                       onRetry: () => setState(() => _showFailurePopup = false),
@@ -3948,6 +4023,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ClearResultPopup(
                       state: _state,
                       level: _currentLevel,
+                      discoveries: _discoveryMilestones,
                       chainScoreAnalysis: _chainScoreAnalysis,
                       bestShot: _bestShots[_state.levelIndex],
                       bonusAchieved: _bonusChallengeAchieved,
@@ -4517,6 +4593,7 @@ class ClearResultPopup extends StatelessWidget {
     super.key,
     required this.state,
     required this.level,
+    this.discoveries = const [],
     required this.onNext,
     required this.onRetry,
     required this.isFinal,
@@ -4532,6 +4609,7 @@ class ClearResultPopup extends StatelessWidget {
 
   final GameState state;
   final LevelDefinition level;
+  final List<StageDiscoveryMilestone> discoveries;
   final VoidCallback onNext;
   final VoidCallback onRetry;
   final bool isFinal;
@@ -4667,6 +4745,13 @@ class ClearResultPopup extends StatelessWidget {
                                                           FontWeight.w800,
                                                     ),
                                               ),
+                                              if (discoveries.isNotEmpty) ...[
+                                                const SizedBox(height: 10),
+                                                _DiscoveryResultCard(
+                                                  milestones: discoveries,
+                                                  cleared: true,
+                                                ),
+                                              ],
                                               if (rewardCandidates
                                                   .isNotEmpty) ...[
                                                 const SizedBox(height: 10),
@@ -5277,10 +5362,66 @@ class _ClearPersistenceErrorPopup extends StatelessWidget {
   }
 }
 
+class _DiscoveryResultCard extends StatelessWidget {
+  const _DiscoveryResultCard({required this.milestones, required this.cleared});
+
+  final List<StageDiscoveryMilestone> milestones;
+  final bool cleared;
+
+  @override
+  Widget build(BuildContext context) {
+    final achieved = milestones.where((item) => item.achieved).toList();
+    final pending = milestones.where((item) => !item.achieved).toList();
+    final next = pending.isEmpty ? null : pending.first;
+    return Container(
+      key: Key(
+        cleared ? 'clear_discovery_summary' : 'failure_discovery_summary',
+      ),
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE5F4E9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF83B998)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            cleared ? '이번 탐사 기록' : '실패해도 발견은 남아요',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: const Color(0xFF236B4A),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            achieved.isEmpty
+                ? '아직 확인한 반응이 없어요.'
+                : achieved.map((item) => '✓ ${item.label}').join(' · '),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (!cleared && next != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              '다음 한 가지: ${next.label}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF466557),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _FailurePopup extends StatelessWidget {
   const _FailurePopup({
     required this.state,
     required this.advice,
+    required this.discoveries,
     required this.failureReplay,
     required this.onReplay,
     required this.onRetry,
@@ -5291,6 +5432,7 @@ class _FailurePopup extends StatelessWidget {
 
   final GameState state;
   final String advice;
+  final List<StageDiscoveryMilestone> discoveries;
   final FailureReplayData? failureReplay;
   final VoidCallback onReplay;
   final VoidCallback onRetry;
@@ -5345,6 +5487,13 @@ class _FailurePopup extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(state.message),
+                      if (discoveries.any((item) => item.achieved)) ...[
+                        const SizedBox(height: 8),
+                        _DiscoveryResultCard(
+                          milestones: discoveries,
+                          cleared: false,
+                        ),
+                      ],
                       const SizedBox(height: 2),
                       Text(
                         advice,
@@ -5424,58 +5573,6 @@ class _LeaderboardRow {
 
   final String name;
   final int shots;
-}
-
-String _levelObjective(int levelIndex) {
-  return switch (levelIndex) {
-    0 => '추천: 무거움을 옮겨 상자를 밀어 보세요. 다른 충돌 경로도 홀에 닿으면 성공합니다.',
-    1 => '추천: 탄성을 옮겨 벽에 반사시켜 보세요. 다른 각도와 경로도 시도할 수 있습니다.',
-    2 => '추천: 무거움으로 스위치를 눌러 문을 열어 보세요. 점착은 공을 고정하는 선택지입니다.',
-    3 => '풍선을 밀거나 터뜨린 뒤 여러 경로로 홀에 가 보세요. 터뜨리면 뒤의 스위치가 보여요.',
-    4 => '속성을 옮기면 공은 능력을 얻고 원본은 능력을 잃습니다. 두 변화를 함께 이용해 보세요.',
-    5 => '공은 처음 빠르고 점점 느려집니다. 약하게 쏜 뒤 발판으로 속도를 되살려 보세요.',
-    6 => '첫 공을 남겨 쿠션·스위치·스토퍼로 활용하며 여러 발의 인과를 만들어 보세요.',
-    7 => '홀에 바로 넣어도 성공합니다. 벽과 기물을 더 많이 이으면 연쇄 점수가 높아집니다.',
-    8 => '반사판은 현재 면으로 공을 튕긴 뒤 90도 돕니다. 바뀐 면은 다음 충돌부터 적용됩니다.',
-    9 => '새 규칙은 없습니다. 속성, 발판, 과거 공과 반사판을 원하는 순서로 엮어 보세요.',
-    _ => '기물의 상태 변화를 살펴보며 여러 경로로 홀에 도전해 보세요.',
-  };
-}
-
-String _objectiveForState(GameState state) {
-  if (state.levelIndex == 7 || state.levelIndex == 8 || state.levelIndex == 9) {
-    return _levelObjective(state.levelIndex);
-  }
-  if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
-    return '파워 슬라이더로 공의 속력을 높여 여러 경로로 홀에 도전해 보세요.';
-  }
-  return _levelObjective(state.levelIndex);
-}
-
-String _compactLevelObjective(int levelIndex) {
-  return switch (levelIndex) {
-    0 => '무거움으로 상자를 밀어 홀로 보내기',
-    1 => '탄성으로 벽에 반사해 홀로 보내기',
-    2 => '스위치와 문을 열어 홀로 가기',
-    3 => '풍선을 밀거나 터뜨려 여러 경로로 홀에 가기',
-    4 => '공과 비워진 원본을 함께 이용해 홀로 가기',
-    5 => '감속·반사·발판으로 속도를 되살려 홀로 가기',
-    6 => '과거 공을 남겨 두 공으로 홀로 가기',
-    7 => '짧은 길로 성공하거나 기물을 이어 연쇄 점수 높이기',
-    8 => '반사판을 돌려 다음 공의 반사 방향 바꾸기',
-    9 => '배운 속성과 기물을 엮어 나만의 경로 만들기',
-    _ => '기물의 상태를 바꾸며 여러 경로로 홀에 가기',
-  };
-}
-
-String _compactObjectiveForState(GameState state) {
-  if (state.levelIndex == 7 || state.levelIndex == 8 || state.levelIndex == 9) {
-    return _compactLevelObjective(state.levelIndex);
-  }
-  if (state.entities.any((entity) => entity.type == EntityType.powerSlider)) {
-    return '파워 슬라이더 · 속력 높이기';
-  }
-  return _compactLevelObjective(state.levelIndex);
 }
 
 int _starsForShot(int shotCount, int parShots) {
@@ -6254,12 +6351,73 @@ List<_LeaderboardRow> _leaderboardRows(GameState state) {
   return rows.take(4).toList();
 }
 
+class _DiscoveryProgressRow extends StatelessWidget {
+  const _DiscoveryProgressRow({required this.milestones});
+
+  final List<StageDiscoveryMilestone> milestones;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label:
+        '이번 탐사 발견 ${milestones.where((item) => item.achieved).length}/${milestones.length}',
+    child: ExcludeSemantics(
+      child: Wrap(
+        key: const Key('discovery_progress'),
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final milestone in milestones)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: milestone.achieved
+                    ? const Color(0xFFDDF3E5)
+                    : const Color(0xFFECEDE7),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(
+                  color: milestone.achieved
+                      ? const Color(0xFF58A778)
+                      : const Color(0xFFB6B9AE),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      milestone.achieved
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      size: 14,
+                      color: milestone.achieved
+                          ? const Color(0xFF2F8A62)
+                          : const Color(0xFF747A72),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      milestone.label,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _Hud extends StatelessWidget {
   const _Hud({
     this.compact = false,
     this.dense = false,
     this.tutorialActive = false,
     required this.state,
+    required this.discoveryMilestones,
     required this.unlockedLevel,
     required this.onSelectLevel,
     this.showStageSelector = true,
@@ -6274,6 +6432,7 @@ class _Hud extends StatelessWidget {
   final bool dense;
   final bool tutorialActive;
   final GameState state;
+  final List<StageDiscoveryMilestone> discoveryMilestones;
   final int unlockedLevel;
   final ValueChanged<int> onSelectLevel;
   final bool showStageSelector;
@@ -6287,6 +6446,9 @@ class _Hud extends StatelessWidget {
   Widget build(BuildContext context) {
     final progressHint = _levelProgressHint(state);
     final compactProgressHint = _compactLevelProgressHint(state);
+    final discoveries = discoveryMilestones
+        .where((milestone) => milestone.achieved)
+        .length;
     if (compact) {
       return Container(
         key: const Key('compact_hud'),
@@ -6424,10 +6586,12 @@ class _Hud extends StatelessWidget {
                 ),
               ),
             Text(
-              _compactObjectiveForState(state),
+              '발견 $discoveries/${discoveryMilestones.length} · '
+              '${stageDiscoveryCompactPath(state.levelIndex)}',
               key: const Key('compact_objective'),
-              maxLines: state.levelIndex >= 3 ? 2 : 1,
+              maxLines: 1,
               softWrap: true,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
                 fontWeight: FontWeight.w600,
@@ -6523,13 +6687,15 @@ class _Hud extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              _objectiveForState(state),
+              stageDiscoveryQuestion(state.levelIndex),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF46584E),
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
+          const SizedBox(height: 4),
+          _DiscoveryProgressRow(milestones: discoveryMilestones),
           const _AimInstruction(),
           if (progressHint != null)
             Align(

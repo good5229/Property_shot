@@ -834,6 +834,20 @@ void main() {
     expect(entitlement.failedShotCount, 1);
   });
 
+  test('힌트 접근권이 없어도 첫 실패 뒤 현재 패턴 L1을 선택해 볼 수 있다', () async {
+    final session = _session(RunStateStore(backend: _MemoryRunStateBackend()));
+    await session.selectStage('stage_bouncy');
+    expect(session.currentHintEntitlement, isNull);
+
+    final entitlement = await session.recordHintFailure();
+
+    expect(entitlement, isNotNull);
+    expect(entitlement!.failedShotCount, 1);
+    expect(entitlement.sources, contains(HintEntitlementSource.failureAssist));
+    expect(entitlement.consumed, isFalse);
+    expect(entitlement.unlockedHintLevel, 1);
+  });
+
   test('열쇠·실패·단계 완료는 호출 순서대로 저장되어 완료 상태에도 모두 남는다', () async {
     final backend = _MemoryRunStateBackend();
     final session = _session(RunStateStore(backend: backend));

@@ -624,18 +624,21 @@ class StagePatternSession {
       hintVersion: resolvedHintVersion,
     );
     final existing = _hintEntitlementFor(current, identity);
-    if (existing == null) return null;
-    final updated = existing.copyWith(
-      failedShotCount: existing.failedShotCount + 1,
-    );
+    final updated = existing == null
+        ? RunHintEntitlement(
+            identity: identity,
+            sources: const [HintEntitlementSource.failureAssist],
+            failedShotCount: 1,
+            acquiredAt: _now().toUtc(),
+          )
+        : existing.copyWith(failedShotCount: existing.failedShotCount + 1);
     final next = _copyState(
       current,
       phase: current.phase,
       nextDraw: _savedNextDraw(current),
-      hintEntitlements: _replaceHintEntitlement(
-        current.hintEntitlements,
-        updated,
-      ),
+      hintEntitlements: existing == null
+          ? List.unmodifiable([...current.hintEntitlements, updated])
+          : _replaceHintEntitlement(current.hintEntitlements, updated),
     );
     await _store.save(next);
     _state = next;

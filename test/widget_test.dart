@@ -65,6 +65,8 @@ void main() {
     await _pumpUntilFound(tester, find.byKey(const Key('aim_area')));
     expect(find.byKey(const Key('aim_area')), findsOneWidget);
     expect(find.byKey(const Key('home_button')), findsOneWidget);
+    expect(find.byKey(const Key('compact_objective')), findsOneWidget);
+    expect(find.textContaining('발견 0/3 · 무거움'), findsOneWidget);
     expect(find.byKey(const Key('level_1')), findsNothing);
     expect(
       telemetry.events.map((event) => event['event_code']),
@@ -225,7 +227,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('9. 판을 돌려 놓아라'), findsOneWidget);
-    expect(find.text('반사판을 돌려 다음 공의 반사 방향 바꾸기'), findsOneWidget);
+    expect(find.textContaining('반사판 회전 → 다음 경로'), findsOneWidget);
     expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsOneWidget);
   });
 
@@ -239,7 +241,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('10. 속성 한방'), findsOneWidget);
-    expect(find.text('배운 속성과 기물을 엮어 나만의 경로 만들기'), findsOneWidget);
+    expect(find.textContaining('속성 → 기믹 연계 → 홀'), findsOneWidget);
     expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsOneWidget);
   });
 
@@ -2054,7 +2056,7 @@ void main() {
     final compactObjective = tester.widget<Text>(
       find.byKey(const Key('compact_objective')),
     );
-    expect(compactObjective.data, '무거움으로 상자를 밀어 홀로 보내기');
+    expect(compactObjective.data, '발견 0/3 · 무거움 → 상자 → 홀');
     expect(compactObjective.maxLines, 1);
     expect(find.byKey(const Key('compact_message')), findsOneWidget);
     expect(
@@ -2309,7 +2311,7 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    expect(find.text('무거움으로 상자를 밀어 홀로 보내기'), findsOneWidget);
+    expect(find.textContaining('발견 0/3 · 무거움'), findsOneWidget);
   });
 
   testWidgets('3단계는 스위치 경로와 점착의 고정 역할을 첫 화면에 표시한다', (tester) async {

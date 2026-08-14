@@ -113,7 +113,8 @@ enum PlayTelemetryDifficulty { normal, easy }
 /// 힌트 접근권을 부여한 경로다. 저장 모델의 schemaName과 동일하게 유지한다.
 enum PlayTelemetryHintSource {
   clearReward('clear_reward'),
-  stageKey('stage_key');
+  stageKey('stage_key'),
+  failureAssist('failure_assist');
 
   const PlayTelemetryHintSource(this.code);
 

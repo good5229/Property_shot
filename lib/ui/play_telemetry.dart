@@ -186,7 +186,9 @@ class LocalPlayTelemetry {
     this.buildId = 'property-shot-dev',
     LocalPlayTelemetryStore? store,
     this.persistLocally = true,
-  }) : sessionId =
+    this.maxMemoryEvents = 2000,
+  }) : assert(maxMemoryEvents > 0),
+       sessionId =
            sessionId ??
            DateTime.now().toUtc().microsecondsSinceEpoch.toString(),
        _store = store ?? LocalPlayTelemetryStore();
@@ -194,6 +196,7 @@ class LocalPlayTelemetry {
   final String sessionId;
   final String buildId;
   final bool persistLocally;
+  final int maxMemoryEvents;
   final LocalPlayTelemetryStore _store;
   final List<Map<String, Object?>> _events = [];
   final List<Map<String, Object?>> _pendingPersistence = [];
@@ -301,6 +304,10 @@ class LocalPlayTelemetry {
 
   void _appendEvent(Map<String, Object?> event) {
     _events.add(event);
+    final overflow = _events.length - maxMemoryEvents;
+    if (overflow > 0) {
+      _events.removeRange(0, overflow);
+    }
     if (persistLocally) {
       _pendingPersistence.add(Map<String, Object?>.from(event));
       _schedulePersistence();

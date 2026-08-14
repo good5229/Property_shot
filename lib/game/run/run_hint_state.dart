@@ -7,7 +7,8 @@ const int currentHintVersion = 1;
 
 enum HintEntitlementSource {
   clearReward('clear_reward'),
-  stageKey('stage_key');
+  stageKey('stage_key'),
+  failureAssist('failure_assist');
 
   const HintEntitlementSource(this.schemaName);
 

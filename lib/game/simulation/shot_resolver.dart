@@ -1849,7 +1849,12 @@ class ShotResolver {
   /// 실제 발사 판정과 같은 규칙으로 첫 충돌·홀 진입·파워 슬라이더 진입을
   /// 찾는다. 아무 사건도 없으면 사거리 끝을 반환한다.
   FirstArrivalPreview firstArrival(GameState state, ShotInput rawInput) {
-    final result = resolve(state, rawInput);
+    return firstArrivalFromResult(resolve(state, rawInput));
+  }
+
+  /// 조준 보조와 첫 충돌 보상이 같은 판정 결과를 공유할 수 있게 한다.
+  /// 실제 발사는 이 캐시를 사용하지 않고 [resolve]를 다시 실행한다.
+  FirstArrivalPreview firstArrivalFromResult(ShotResult result) {
     ShotImpact? impact;
     for (final candidate in result.impacts) {
       if (impact == null || candidate.pathIndex < impact.pathIndex) {

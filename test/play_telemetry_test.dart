@@ -621,6 +621,19 @@ void main() {
     ]);
   });
 
+  test('장시간 플레이의 메모리 이벤트도 고정 상한을 유지한다', () {
+    final telemetry = LocalPlayTelemetry(
+      persistLocally: false,
+      maxMemoryEvents: 3,
+    );
+    for (var index = 0; index < 5; index++) {
+      telemetry.record('조준 방향 변경', stage: 0, attempt: index);
+    }
+
+    expect(telemetry.events, hasLength(3));
+    expect(telemetry.events.map((event) => event['시도']), [2, 3, 4]);
+  });
+
   test('플레이 계측은 개인정보 없이 로컬 저장소에 보관되고 복원된다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final telemetry = LocalPlayTelemetry(

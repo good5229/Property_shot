@@ -2102,7 +2102,7 @@ class _StageSelectScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '한 번의 발사, 여러 갈래의 길',
+                              '섬 물리 관측일지',
                               style: TextStyle(
                                 color: Color(0xFF315C46),
                                 fontWeight: FontWeight.w900,
@@ -2110,7 +2110,7 @@ class _StageSelectScreen extends StatelessWidget {
                             ),
                             SizedBox(height: 3),
                             Text(
-                              '속성을 이용해도, 다른 충돌 경로를 찾아도 괜찮아요.',
+                              '각 섬의 세 가지 반응을 발견해 물리 규칙을 완성하세요.',
                               style: TextStyle(
                                 color: Color(0xFF52706A),
                                 fontSize: 12,

@@ -121,6 +121,36 @@ void main() {
     expect(shotResultFingerprint(after), shotResultFingerprint(before));
     expect(after.state.score, before.state.score);
   });
+
+  test('하나의 판정 결과를 공유한 첫 도착점이 독립 계산과 같다', () {
+    final state = _state([
+      _ball(),
+      const EntityState(
+        id: 'slider',
+        type: EntityType.powerSlider,
+        position: Vec2(110, 280),
+        size: Vec2(36, 64),
+        solid: false,
+        referenceSpeed: 30,
+        allowedTargets: {EntityType.ball},
+      ),
+      const EntityState(
+        id: 'wall',
+        type: EntityType.wall,
+        position: Vec2(220, 280),
+        size: Vec2(24, 120),
+      ),
+    ]);
+
+    final result = resolver.resolve(state, _shot());
+    final shared = resolver.firstArrivalFromResult(result);
+    final independent = resolver.firstArrival(state, _shot());
+
+    expect(shared.kind, independent.kind);
+    expect(shared.entityId, independent.entityId);
+    expect(shared.position, independent.position);
+    expect(shared.pathIndex, independent.pathIndex);
+  });
 }
 
 ShotInput _shot() => const ShotInput(direction: Vec2(1, 0), power: 0.5);
