@@ -43,6 +43,60 @@ enum RunRewardEffectKind {
   }
 }
 
+/// 보상이 실제 플레이에 개입하는 시점을 플레이어와 계측에 동일하게 설명한다.
+enum RunRewardActivationKind { manual, automatic, passive, immediate }
+
+extension RunRewardEffectGuidance on RunRewardEffectKind {
+  RunRewardActivationKind get activationKind => switch (this) {
+    RunRewardEffectKind.cloneCore || RunRewardEffectKind.nextStageHintAccess =>
+      RunRewardActivationKind.immediate,
+    RunRewardEffectKind.shotCancelAssist ||
+    RunRewardEffectKind.spentBallRecovery => RunRewardActivationKind.manual,
+    RunRewardEffectKind.firstImpactGuide ||
+    RunRewardEffectKind.optionalChallengeGuard ||
+    RunRewardEffectKind.stageRecordGuard => RunRewardActivationKind.automatic,
+    RunRewardEffectKind.failureCauseBoost ||
+    RunRewardEffectKind.ballAppearance ||
+    RunRewardEffectKind.precisionCharge => RunRewardActivationKind.passive,
+  };
+
+  String get activationLabel => switch (activationKind) {
+    RunRewardActivationKind.manual => '직접 사용',
+    RunRewardActivationKind.automatic => '조건 만족 시 자동',
+    RunRewardActivationKind.passive => '런 동안 지속',
+    RunRewardActivationKind.immediate => '선택 즉시 적용',
+  };
+
+  String get usageHint => switch (this) {
+    RunRewardEffectKind.cloneCore => '속성 팝업에서 ‘복사’를 눌러 원본을 남기고 공에 옮기세요.',
+    RunRewardEffectKind.shotCancelAssist => '충전 중 취소 버튼을 눌러 한 발을 아끼세요.',
+    RunRewardEffectKind.spentBallRecovery => '실패 후 과거 공이 남으면 회수 버튼을 누르세요.',
+    RunRewardEffectKind.firstImpactGuide => '조준하면 첫 충돌 대상이 표시되고 다음 발사에서 소모됩니다.',
+    RunRewardEffectKind.optionalChallengeGuard =>
+      '선택 도전을 놓친 채 클리어하면 1회 자동 보호합니다.',
+    RunRewardEffectKind.failureCauseBoost => '실패 결과에서 충돌 순서와 원인을 더 선명하게 보세요.',
+    RunRewardEffectKind.ballAppearance => '선택 즉시 현재와 이후 공의 본체·테두리·반짝임이 바뀌어요.',
+    RunRewardEffectKind.stageRecordGuard => '스테이지 클리어 시 기록 발사 횟수를 1회 자동 줄입니다.',
+    RunRewardEffectKind.nextStageHintAccess =>
+      '다음 스테이지에서 팁 버튼을 열어 L1·L2 단서를 보세요.',
+    RunRewardEffectKind.precisionCharge =>
+      '충전이 25% 느려져 원하는 힘 구간에서 손을 떼기 쉬워집니다.',
+  };
+
+  String get stageGuide => switch (this) {
+    RunRewardEffectKind.shotCancelAssist => '충전 중 발사 취소 1회',
+    RunRewardEffectKind.spentBallRecovery => '실패 후 과거 공 회수',
+    RunRewardEffectKind.firstImpactGuide => '조준 중 첫 충돌 대상 표시',
+    RunRewardEffectKind.optionalChallengeGuard => '선택 도전 실패 1회 자동 보호',
+    RunRewardEffectKind.failureCauseBoost => '실패 원인·충돌 순서 강화',
+    RunRewardEffectKind.ballAppearance => '청록·금색 공 꾸미기 활성',
+    RunRewardEffectKind.stageRecordGuard => '클리어 기록 1회 자동 단축',
+    RunRewardEffectKind.precisionCharge => '충전 속도 25% 완화',
+    RunRewardEffectKind.cloneCore => '속성 복사 코어 사용 가능',
+    RunRewardEffectKind.nextStageHintAccess => '현재 패턴 L1·L2 팁 사용 가능',
+  };
+}
+
 /// 핵심 물리값과 분리해 저장하는 런 보상 메타데이터다.
 class RunReward {
   RunReward({
@@ -60,6 +114,11 @@ class RunReward {
   final String name;
   final String description;
   final RunRewardEffectKind effectKind;
+
+  RunRewardActivationKind get activationKind => effectKind.activationKind;
+  String get activationLabel => effectKind.activationLabel;
+  String get usageHint => effectKind.usageHint;
+  String get stageGuide => effectKind.stageGuide;
 
   factory RunReward.fromJson(Map<String, dynamic> json) {
     final id = _requiredString(json, 'id');
@@ -400,6 +459,23 @@ class RunRewardInventory {
               ),
         ),
   );
+
+  RunRewardSelectionRecord? availableSelectionForStage(
+    String rewardId,
+    String stageId,
+  ) {
+    for (final record in selections.where(
+      (record) => record.rewardId == rewardId,
+    )) {
+      final stageRecord = runRewardStageUseRecordId(record.recordId, stageId);
+      if (!acquiredRewards.any(
+        (value) => value == stageRecord || value.startsWith('$stageRecord|'),
+      )) {
+        return record;
+      }
+    }
+    return null;
+  }
 
   bool wasUsedForStageAttempt(String rewardId, String stageId, int attempt) =>
       selections.any(

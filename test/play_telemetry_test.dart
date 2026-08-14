@@ -112,7 +112,7 @@ void main() {
     expect(telemetry.events.map((event) => event['event_code']), types.values);
   });
 
-  test('총괄 계약의 타입 이벤트 31개를 빠짐없이 안정 코드와 한글 표시명으로 정의한다', () {
+  test('총괄 계약의 타입 이벤트 32개를 빠짐없이 안정 코드와 한글 표시명으로 정의한다', () {
     const expectedCodes = {
       'run_started',
       'stage_pattern_drawn',
@@ -127,6 +127,7 @@ void main() {
       'collision_chain_completed',
       'reward_offered',
       'reward_selected',
+      'reward_used',
       'optional_challenge_completed',
       'stage_cleared',
       'stage_retried',
@@ -147,7 +148,7 @@ void main() {
       'power_gauge_cancelled',
     };
 
-    expect(PlayTelemetryEventType.values, hasLength(31));
+    expect(PlayTelemetryEventType.values, hasLength(32));
     expect(
       PlayTelemetryEventType.values.map((type) => type.code).toSet(),
       expectedCodes,
@@ -159,6 +160,40 @@ void main() {
             !RegExp(r'[A-Za-z]').hasMatch(type.displayName),
       ),
       isTrue,
+    );
+  });
+
+  test('보상 사용은 선택·사용 거리와 발동 방식을 기록한다', () {
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    telemetry.recordTyped(
+      TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.rewardUsed,
+        context: context(),
+        result: PlayTelemetryResult.continued,
+        rewardUse: PlayTelemetryRewardUsePayload(
+          rewardId: 'first_impact_guide_once',
+          useKey: 'stage_bouncy:1:첫충돌',
+          trigger: PlayTelemetryRewardTrigger.automatic,
+          stageScoped: false,
+          selectionRecordId:
+              'run_reward:stage_heavy:42:first_impact_guide_once',
+          stageDistance: 1,
+        ),
+      ),
+    );
+
+    final event = telemetry.events.single;
+    expect(event['event_code'], 'reward_used');
+    expect(event['reward_used_id'], 'first_impact_guide_once');
+    expect(event['reward_use_trigger'], 'automatic');
+    expect(event['reward_use_stage_distance'], 1);
+    expect(telemetry.exportCsv(), contains('reward_selection_record_id'));
+    expect(
+      () => TypedPlayTelemetryEvent(
+        type: PlayTelemetryEventType.rewardUsed,
+        context: context(),
+      ),
+      throwsArgumentError,
     );
   });
 

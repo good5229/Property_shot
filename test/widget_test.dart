@@ -134,6 +134,10 @@ void main() {
     expect(find.text('정밀 충전 조절'), findsOneWidget);
     expect(find.text('런 동안 계속 활성'), findsOneWidget);
     expect(find.textContaining('충전 속도를 25% 늦춰'), findsOneWidget);
+    expect(
+      find.byKey(const Key('reward_inventory_usage_precision_charge_control')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('reward_inventory_back_button')));
     await tester.pump();

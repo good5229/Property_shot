@@ -396,6 +396,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bestShotsLoadFuture = _loadBestShots();
     _telemetry.record('단계 시작', stage: _state.levelIndex);
     _recordTyped(PlayTelemetryEventType.stageEntered);
+    _recordPassiveRewardActivations();
     _recordKeySpawnIfNeeded();
     _recordHintAvailableIfNeeded();
     _recordHintExposureIfNeeded();
@@ -437,6 +438,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     PlayTelemetryKeyPayload? key,
     PlayTelemetryStageOutcomePayload? stageOutcome,
     PlayTelemetryPowerGaugePayload? powerGauge,
+    PlayTelemetryRewardUsePayload? rewardUse,
   }) {
     _telemetry.recordTyped(
       TypedPlayTelemetryEvent(
@@ -448,8 +450,95 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         key: key,
         stageOutcome: stageOutcome,
         powerGauge: powerGauge,
+        rewardUse: rewardUse,
       ),
     );
+  }
+
+  RunRewardSelectionRecord? _rewardUseSelection(
+    String rewardId, {
+    required String useKey,
+    required bool stageScoped,
+  }) => stageScoped
+      ? _rewardInventory.availableSelectionForStage(rewardId, useKey)
+      : _rewardInventory.availableSelections(rewardId).firstOrNull;
+
+  int? _rewardStageDistance(RunRewardSelectionRecord? selection) {
+    if (selection == null) return null;
+    final selectedAt = levels.indexWhere(
+      (level) => level.id == selection.stageId,
+    );
+    if (selectedAt < 0) return null;
+    return math.max(0, _state.levelIndex - selectedAt).toInt();
+  }
+
+  void _recordRewardUse({
+    required String rewardId,
+    required String useKey,
+    required bool stageScoped,
+    required PlayTelemetryRewardTrigger trigger,
+    RunRewardSelectionRecord? selection,
+  }) {
+    _recordTyped(
+      PlayTelemetryEventType.rewardUsed,
+      result: PlayTelemetryResult.continued,
+      rewardUse: PlayTelemetryRewardUsePayload(
+        rewardId: rewardId,
+        useKey: useKey,
+        trigger: trigger,
+        stageScoped: stageScoped,
+        selectionRecordId: selection?.recordId,
+        stageDistance: _rewardStageDistance(selection),
+      ),
+    );
+  }
+
+  void _recordPassiveRewardActivations() {
+    final seen = <String>{};
+    for (final selection in _rewardInventory.selections) {
+      if (!seen.add(selection.rewardId)) continue;
+      final reward = initialRunRewards
+          .where((item) => item.id == selection.rewardId)
+          .firstOrNull;
+      if (reward?.activationKind != RunRewardActivationKind.passive) continue;
+      _recordRewardUse(
+        rewardId: selection.rewardId,
+        useKey:
+            '${_currentLevel.id}:${_currentLevel.patternId ?? 'default'}:passive',
+        stageScoped: true,
+        trigger: PlayTelemetryRewardTrigger.passive,
+        selection: selection,
+      );
+    }
+  }
+
+  String? get _stageRewardGuide {
+    const priority = [
+      runRewardFirstImpactGuideId,
+      runRewardShotCancelAssistId,
+      runRewardSpentBallRecoveryId,
+      runRewardPrecisionChargeId,
+      runRewardFailureCauseBoostId,
+      runRewardOptionalChallengeGuardId,
+      runRewardStageRecordGuardId,
+      runRewardBallAppearanceId,
+    ];
+    for (final rewardId in priority) {
+      final reward = initialRunRewards
+          .where((item) => item.id == rewardId)
+          .firstOrNull;
+      if (reward == null || !_rewardInventory.has(rewardId)) continue;
+      final available = switch (reward.activationKind) {
+        RunRewardActivationKind.manual || RunRewardActivationKind.automatic =>
+          rewardId == runRewardStageRecordGuardId
+              ? _rewardInventory.canUseForStage(rewardId, _currentLevel.id)
+              : _rewardInventory.availableUseCount(rewardId) > 0,
+        RunRewardActivationKind.passive => true,
+        RunRewardActivationKind.immediate => false,
+      };
+      if (available) return '${reward.name} · ${reward.stageGuide}';
+    }
+    return null;
   }
 
   HintKeyDefinition? get _currentHintKey => _patternHintEntry?.key;
@@ -1246,11 +1335,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     String rewardId,
     String useKey, {
     bool stageScoped = false,
+    PlayTelemetryRewardTrigger trigger = PlayTelemetryRewardTrigger.manual,
   }) async {
     final callback = widget.onRunRewardUsed;
     if (callback == null) return false;
+    final selection = _rewardUseSelection(
+      rewardId,
+      useKey: useKey,
+      stageScoped: stageScoped,
+    );
     try {
-      return await callback(rewardId, useKey, stageScoped);
+      final used = await callback(rewardId, useKey, stageScoped);
+      if (used) {
+        _recordRewardUse(
+          rewardId: rewardId,
+          useKey: useKey,
+          stageScoped: stageScoped,
+          trigger: trigger,
+          selection: selection,
+        );
+      }
+      return used;
     } on Object {
       if (mounted) {
         _setState(_state.copyWith(message: '런 보상 사용을 저장하지 못했습니다. 다시 시도해 주세요.'));
@@ -1611,12 +1716,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _rewardInventory.availableUseCount(runRewardFirstImpactGuideId) > 0;
     if (!isReplay && widget.onShotCommitted != null) {
       try {
+        final impactGuideSelection = shouldConsumeImpactGuide
+            ? _rewardUseSelection(
+                runRewardFirstImpactGuideId,
+                useKey: '${_state.levelIndex}:${_state.shotCount}:첫충돌',
+                stageScoped: false,
+              )
+            : null;
         final consumed = await widget.onShotCommitted!(
           normalizedInput,
           shouldConsumeImpactGuide,
         );
         if (shouldConsumeImpactGuide && !consumed) {
           throw StateError('첫 충돌 안내 사용을 저장하지 못했습니다.');
+        }
+        if (shouldConsumeImpactGuide && consumed) {
+          _recordRewardUse(
+            rewardId: runRewardFirstImpactGuideId,
+            useKey: '${_state.levelIndex}:${_state.shotCount}:첫충돌',
+            stageScoped: false,
+            trigger: PlayTelemetryRewardTrigger.automatic,
+            selection: impactGuideSelection,
+          );
         }
       } on Object {
         _isCommittingShot = false;
@@ -1634,6 +1755,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final consumed = await _consumeRunReward(
         runRewardFirstImpactGuideId,
         '${_state.levelIndex}:${_state.shotCount}:첫충돌',
+        trigger: PlayTelemetryRewardTrigger.automatic,
       );
       if (!consumed) {
         _isCommittingShot = false;
@@ -1828,6 +1950,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     try {
       final runClearCallback = widget.onRunLevelCleared;
       if (runClearCallback != null) {
+        final challengeUseKey =
+            '${_currentLevel.id}:${result.state.shotCount}:선택도전';
+        final challengeSelection = requestChallengeGuard
+            ? _rewardUseSelection(
+                runRewardOptionalChallengeGuardId,
+                useKey: challengeUseKey,
+                stageScoped: false,
+              )
+            : null;
+        final recordSelection = requestRecordGuard
+            ? _rewardUseSelection(
+                runRewardStageRecordGuardId,
+                useKey: _currentLevel.id,
+                stageScoped: true,
+              )
+            : null;
         final completion = await runClearCallback(
           levelIndex,
           analysis,
@@ -1842,11 +1980,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             effectiveBonusAchieved && !bonusAchieved;
         _recordGuardAppliedForClear =
             effectiveShotCount < result.state.shotCount;
+        if (_challengeGuardAppliedForClear) {
+          _recordRewardUse(
+            rewardId: runRewardOptionalChallengeGuardId,
+            useKey: challengeUseKey,
+            stageScoped: false,
+            trigger: PlayTelemetryRewardTrigger.automatic,
+            selection: challengeSelection,
+          );
+        }
+        if (_recordGuardAppliedForClear) {
+          _recordRewardUse(
+            rewardId: runRewardStageRecordGuardId,
+            useKey: _currentLevel.id,
+            stageScoped: true,
+            trigger: PlayTelemetryRewardTrigger.automatic,
+            selection: recordSelection,
+          );
+        }
       } else {
         if (requestChallengeGuard) {
           final used = await _consumeRunReward(
             runRewardOptionalChallengeGuardId,
             '${_currentLevel.id}:${result.state.shotCount}:선택도전',
+            trigger: PlayTelemetryRewardTrigger.automatic,
           );
           if (used) {
             _challengeGuardAppliedForClear = true;
@@ -1858,6 +2015,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             runRewardStageRecordGuardId,
             _currentLevel.id,
             stageScoped: true,
+            trigger: PlayTelemetryRewardTrigger.automatic,
           );
         }
         if (_recordGuardAppliedForClear) {
@@ -3636,6 +3794,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                   tutorialActive: tutorialTarget != null,
                                   state: _state,
                                   discoveryMilestones: _discoveryMilestones,
+                                  rewardGuide: _stageRewardGuide,
                                   unlockedLevel: _unlockedLevel,
                                   onSelectLevel: _selectLevel,
                                   showStageSelector: widget.showStageSelector,
@@ -3663,6 +3822,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     tutorialActive: tutorialTarget != null,
                                     state: _state,
                                     discoveryMilestones: _discoveryMilestones,
+                                    rewardGuide: _stageRewardGuide,
                                     unlockedLevel: _unlockedLevel,
                                     onSelectLevel: _selectLevel,
                                     showStageSelector: widget.showStageSelector,
@@ -4955,8 +5115,8 @@ class ClearResultPopup extends StatelessWidget {
                                                               selectedRewardId ==
                                                               reward.id,
                                                           label: reward.name,
-                                                          hint: reward
-                                                              .description,
+                                                          hint:
+                                                              '${reward.description} ${reward.activationLabel}. ${reward.usageHint}',
                                                           child: OutlinedButton(
                                                             key: Key(
                                                               'run_reward_${reward.id}',
@@ -5033,6 +5193,25 @@ class ClearResultPopup extends StatelessWidget {
                                                                         style: Theme.of(
                                                                           context,
                                                                         ).textTheme.bodySmall,
+                                                                      ),
+                                                                      const SizedBox(
+                                                                        height:
+                                                                            3,
+                                                                      ),
+                                                                      Text(
+                                                                        '${reward.activationLabel} · ${reward.usageHint}',
+                                                                        key: Key(
+                                                                          'run_reward_usage_${reward.id}',
+                                                                        ),
+                                                                        style:
+                                                                            Theme.of(
+                                                                              context,
+                                                                            ).textTheme.labelSmall?.copyWith(
+                                                                              color: const Color(
+                                                                                0xFF315E60,
+                                                                              ),
+                                                                              fontWeight: FontWeight.w700,
+                                                                            ),
                                                                       ),
                                                                     ],
                                                                   ),
@@ -6571,6 +6750,7 @@ class _Hud extends StatelessWidget {
     this.tutorialActive = false,
     required this.state,
     required this.discoveryMilestones,
+    this.rewardGuide,
     required this.unlockedLevel,
     required this.onSelectLevel,
     this.showStageSelector = true,
@@ -6586,6 +6766,7 @@ class _Hud extends StatelessWidget {
   final bool tutorialActive;
   final GameState state;
   final List<StageDiscoveryMilestone> discoveryMilestones;
+  final String? rewardGuide;
   final int unlockedLevel;
   final ValueChanged<int> onSelectLevel;
   final bool showStageSelector;
@@ -6761,6 +6942,17 @@ class _Hud extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+            if (rewardGuide != null)
+              Text(
+                '보상 · $rewardGuide',
+                key: const Key('active_reward_guide'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFF7A5420),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             if (tutorialActive)
               Opacity(
                 opacity: 0,
@@ -6849,6 +7041,20 @@ class _Hud extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           _DiscoveryProgressRow(milestones: discoveryMilestones),
+          if (rewardGuide != null) ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '이번 단계 보상 · $rewardGuide',
+                key: const Key('active_reward_guide'),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: const Color(0xFF7A5420),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
           const _AimInstruction(),
           if (progressHint != null)
             Align(

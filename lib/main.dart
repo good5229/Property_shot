@@ -1680,7 +1680,9 @@ class _RewardInventoryCard extends StatelessWidget {
     final icon = _rewardInventoryIcon(reward.effectKind);
     return Semantics(
       container: true,
-      label: '${reward.name}, $status, ${reward.description}',
+      label:
+          '${reward.name}, ${reward.activationLabel}, $status, ${reward.description}, '
+          '사용법 ${reward.usageHint}',
       child: Container(
         key: Key('reward_inventory_${reward.id}'),
         padding: const EdgeInsets.all(14),
@@ -1727,6 +1729,15 @@ class _RewardInventoryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(reward.description),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${reward.activationLabel} · ${reward.usageHint}',
+                    key: Key('reward_inventory_usage_${reward.id}'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF315E60),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   DecoratedBox(
                     decoration: BoxDecoration(
