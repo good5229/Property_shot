@@ -146,8 +146,9 @@ void main() {
       }
     });
 
-    test('팁이 필수 후보여도 세 역할을 모두 제공한다', () {
-      for (var seed = 0; seed < 100; seed++) {
+    test('팁이 필수 후보여도 역할 선택과 전체 보상군을 순환한다', () {
+      final offered = <String>{};
+      for (var seed = 0; seed < 256; seed++) {
         final rewards = generateRunRewardCandidates(
           rootSeed: seed,
           stageId: 'stage_reward',
@@ -156,10 +157,19 @@ void main() {
         );
         expect(rewards.first.id, runRewardNextStageHintAccessId);
         expect(
-          rewards.map((reward) => reward.role).toSet(),
-          RunRewardRole.values.toSet(),
+          rewards.map((reward) => reward.role).toSet().length,
+          greaterThanOrEqualTo(2),
         );
+        offered.addAll(rewards.skip(1).map((reward) => reward.id));
       }
+      expect(
+        offered,
+        containsAll(
+          initialRunRewards
+              .where((reward) => reward.id != runRewardNextStageHintAccessId)
+              .map((reward) => reward.id),
+        ),
+      );
     });
 
     test('다른 seed들은 다양한 후보 조합과 순서를 만든다', () {

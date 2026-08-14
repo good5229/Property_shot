@@ -312,9 +312,21 @@ class RunRewardCandidateGenerator {
 
     // 매 선택지에 실험 확장·안전망·숙련을 하나씩 넣어 선택 결과가
     // 실제 다음 플레이의 방향 차이로 이어지게 한다.
-    if (!includeNextStageHint) chooseRole(RunRewardRole.experiment);
-    chooseRole(RunRewardRole.safety);
-    chooseRole(RunRewardRole.mastery);
+    if (!includeNextStageHint) {
+      for (final role in RunRewardRole.values) {
+        chooseRole(role);
+      }
+    } else {
+      // 팁이 항상 첫 칸을 차지하더라도 나머지 보상군이 영구히 사라지지
+      // 않도록 seed별로 서로 다른 두 역할을 순환한다.
+      final roleOffset = seed % RunRewardRole.values.length;
+      for (var index = 0; index < 2; index++) {
+        chooseRole(
+          RunRewardRole.values[(roleOffset + index) %
+              RunRewardRole.values.length],
+        );
+      }
+    }
     for (final reward in shuffled) {
       if (chosen.length >= (includeNextStageHint ? 2 : candidateCount)) break;
       chosen.add(reward);
