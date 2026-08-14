@@ -14,12 +14,6 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
-- [ ] 건강한 몰입 루프 1~6 고도화
-  - branch: codex/engagement-loop
-  - issue: 없음
-  - summary: 발견 영구 저장, 실패 재도전 비교, 2단계 성공 폭, 개별 도움 설정, 보상 활용 안내, 3스테이지 탐사 계약을 순차 구현한다.
-  - notes: 각 항목은 집중 회귀 검수 뒤 독립 커밋하고, 전체 통합 검증 후 한 번에 push한다. 후반 기믹 미리보기는 사용자 요청으로 제외한다.
-
 - [ ] 상용 수직 슬라이스 고도화
   - branch: commercial/wall-physics-qa
   - issue: 없음
@@ -28,7 +22,11 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Recently Closed
 
-- _(empty)_
+- [x] 건강한 몰입 루프 1~6 고도화
+  - branch: codex/engagement-loop
+  - issue: 없음
+  - summary: 발견 영구 저장, 실패 재도전 비교, 2단계 성공 폭, 개별 도움 설정, 보상 활용 안내, 3스테이지 탐사 계약을 순차 구현했다.
+  - notes: 각 항목을 집중 회귀 검수 뒤 독립 커밋했고, 통합 증거 갱신과 Web 빌드를 검증한 뒤 원격 브랜치에 push했다. 사용자 요청에 따라 후반 기믹 미리보기는 제외했다.
 
 ## Cross-Issue Themes
 
