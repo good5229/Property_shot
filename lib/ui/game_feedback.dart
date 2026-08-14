@@ -46,6 +46,8 @@ class GameFeedback {
       'property_shot_collision_path_icons_enabled';
   static const chainScoreDetailsPreferenceKey =
       'property_shot_chain_score_details_enabled';
+  static const previousAimComparisonPreferenceKey =
+      'property_shot_previous_aim_comparison_enabled';
   static const strongFlashPreferenceKey = 'property_shot_strong_flash_enabled';
   static const chargeGaugeSidePreferenceKey = 'property_shot_charge_gauge_side';
   static const playerDifficultyPreferenceKey =
@@ -55,7 +57,7 @@ class GameFeedback {
       'property_shot_help_acknowledged_revision';
   static const settingsSchemaVersionKey =
       'property_shot_settings_schema_version';
-  static const settingsSchemaVersion = 4;
+  static const settingsSchemaVersion = 5;
   static bool soundEnabled = true;
   static bool backgroundMusicEnabled = true;
   static bool hapticsEnabled = true;
@@ -69,6 +71,7 @@ class GameFeedback {
   static bool gimmickCausalityEnabled = true;
   static bool collisionPathIconsEnabled = true;
   static bool chainScoreDetailsEnabled = true;
+  static bool previousAimComparisonEnabled = true;
   static bool strongFlashEnabled = true;
   static ChargeGaugeSide chargeGaugeSide = ChargeGaugeSide.right;
   static PlayerDifficulty playerDifficulty = PlayerDifficulty.normal;
@@ -91,6 +94,7 @@ class GameFeedback {
     gimmickCausalityEnabled = true;
     collisionPathIconsEnabled = true;
     chainScoreDetailsEnabled = true;
+    previousAimComparisonEnabled = true;
     strongFlashEnabled = true;
     chargeGaugeSide = ChargeGaugeSide.right;
     playerDifficulty = PlayerDifficulty.normal;
@@ -146,6 +150,8 @@ class GameFeedback {
           preferences.getBool(collisionPathIconsPreferenceKey) ?? true;
       chainScoreDetailsEnabled =
           preferences.getBool(chainScoreDetailsPreferenceKey) ?? true;
+      previousAimComparisonEnabled =
+          preferences.getBool(previousAimComparisonPreferenceKey) ?? true;
       strongFlashEnabled =
           preferences.getBool(strongFlashPreferenceKey) ?? true;
       final storedChargeGaugeSide = preferences.getString(
@@ -254,6 +260,11 @@ class GameFeedback {
         chainScoreDetailsEnabled = value;
       });
 
+  static Future<void> setPreviousAimComparisonEnabled(bool enabled) =>
+      _setBoolean(previousAimComparisonPreferenceKey, enabled, (value) {
+        previousAimComparisonEnabled = value;
+      });
+
   static Future<void> setStrongFlashEnabled(bool enabled) =>
       _setBoolean(strongFlashPreferenceKey, enabled, (value) {
         strongFlashEnabled = value;
@@ -359,6 +370,7 @@ class GameFeedback {
       gimmickCausalityPreferenceKey: gimmickCausalityEnabled,
       collisionPathIconsPreferenceKey: collisionPathIconsEnabled,
       chainScoreDetailsPreferenceKey: chainScoreDetailsEnabled,
+      previousAimComparisonPreferenceKey: previousAimComparisonEnabled,
       strongFlashPreferenceKey: strongFlashEnabled,
     };
     for (final entry in values.entries) {

@@ -2140,6 +2140,53 @@ class _FeedbackSettingsDialog extends StatefulWidget {
 }
 
 class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
+  Widget _sectionHeader({
+    required Key key,
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      key: key,
+      header: true,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 8, bottom: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: colors.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _settingSwitch({
     required Key key,
     required String title,
@@ -2174,6 +2221,12 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _sectionHeader(
+                key: const Key('aim_help_settings_section'),
+                title: '조준 도움',
+                description: '정답을 바꾸지 않고 조준을 읽기 쉽게 만듭니다.',
+                icon: Icons.adjust,
+              ),
               DropdownButtonFormField<ChargeGaugeSide>(
                 key: const Key('charge_gauge_side_dropdown'),
                 decoration: const InputDecoration(labelText: '충전 게이지 위치'),
@@ -2215,7 +2268,19 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                   unawaited(GameFeedback.setPlayerDifficulty(difficulty));
                 },
               ),
-              const Divider(height: 28),
+              _settingSwitch(
+                key: const Key('previous_aim_comparison_toggle'),
+                title: '직전 조준 비교',
+                subtitle: '실패 후 직전 각도와 힘을 회색선으로 남깁니다.',
+                value: GameFeedback.previousAimComparisonEnabled,
+                onChanged: GameFeedback.setPreviousAimComparisonEnabled,
+              ),
+              _sectionHeader(
+                key: const Key('route_memory_settings_section'),
+                title: '경로 기억',
+                description: '방금 무엇에 부딪혀 어디까지 갔는지 복기합니다.',
+                icon: Icons.route_outlined,
+              ),
               _settingSwitch(
                 key: const Key('last_shot_slow_motion_toggle'),
                 title: '마지막 샷 슬로모션',
@@ -2241,6 +2306,12 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 value: GameFeedback.nearestHoleEnabled,
                 onChanged: GameFeedback.setNearestHoleEnabled,
               ),
+              _sectionHeader(
+                key: const Key('causality_settings_section'),
+                title: '인과 이해',
+                description: '속성과 기믹이 어떤 결과를 만들었는지 보여 줍니다.',
+                icon: Icons.hub_outlined,
+              ),
               _settingSwitch(
                 key: const Key('trait_activation_toggle'),
                 title: '속성 발동 표시',
@@ -2265,6 +2336,12 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 subtitle: '끄더라도 획득한 총점은 그대로 유지됩니다.',
                 value: GameFeedback.chainScoreDetailsEnabled,
                 onChanged: GameFeedback.setChainScoreDetailsEnabled,
+              ),
+              _sectionHeader(
+                key: const Key('sensory_settings_section'),
+                title: '화면과 소리',
+                description: '움직임·점멸·진동·소리 강도를 내게 맞춥니다.',
+                icon: Icons.tune,
               ),
               _settingSwitch(
                 key: const Key('haptics_toggle'),

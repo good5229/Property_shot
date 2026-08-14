@@ -32,8 +32,11 @@ void main() {
 
     expect(find.text('효과음'), findsOneWidget);
     for (final label in const [
+      '조준 도움',
       '충전 게이지 위치',
       '게임 난이도',
+      '직전 조준 비교',
+      '경로 기억',
       '마지막 샷 슬로모션',
       '충돌 순서 표시',
       '마지막 접촉 대상 강조',
@@ -42,6 +45,8 @@ void main() {
       '기믹 인과 표시',
       '충돌 경로 아이콘',
       '연쇄 점수 상세 표시',
+      '인과 이해',
+      '화면과 소리',
       '진동',
       '저모션',
       '화면 흔들림',
@@ -56,6 +61,35 @@ void main() {
     );
     expect(find.byKey(const Key('help_reset_button')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('직전 조준 비교를 독립적으로 끄고 저장한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pump();
+    await _pumpForAsyncWork(tester);
+    tester
+        .widget<IconButton>(find.byKey(const Key('feedback_settings_button')))
+        .onPressed!();
+    await tester.pump();
+
+    final toggle = find.byKey(const Key('previous_aim_comparison_toggle'));
+    await tester.ensureVisible(toggle);
+    await tester.pump();
+    await tester.tap(toggle);
+    await _pumpForAsyncWork(tester);
+
+    expect(GameFeedback.previousAimComparisonEnabled, isFalse);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getBool(GameFeedback.previousAimComparisonPreferenceKey),
+      isFalse,
+    );
+    final section = tester.widget<Semantics>(
+      find.byKey(const Key('aim_help_settings_section')),
+    );
+    expect(section.properties.header, isTrue);
   });
 
   testWidgets('게이지 위치와 난이도 설정을 변경하고 저장한다', (tester) async {

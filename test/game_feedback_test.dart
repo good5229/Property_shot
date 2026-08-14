@@ -218,9 +218,9 @@ void main() {
     GameFeedback.helpRevision = 0;
   });
 
-  test('스키마 3을 4로 올리며 기존 설정과 새 기본값을 함께 보존한다', () async {
+  test('스키마 4를 5로 올리며 기존 설정과 새 기본값을 함께 보존한다', () async {
     SharedPreferences.setMockInitialValues({
-      GameFeedback.settingsSchemaVersionKey: 3,
+      GameFeedback.settingsSchemaVersionKey: 4,
       GameFeedback.lastShotSlowMotionPreferenceKey: false,
       GameFeedback.collisionOrderPreferenceKey: false,
       GameFeedback.lastContactHighlightPreferenceKey: false,
@@ -246,6 +246,7 @@ void main() {
     expect(GameFeedback.chainScoreDetailsEnabled, isFalse);
     expect(GameFeedback.strongFlashEnabled, isFalse);
     expect(GameFeedback.backgroundMusicEnabled, isFalse);
+    expect(GameFeedback.previousAimComparisonEnabled, isTrue);
     expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.right);
     expect(GameFeedback.playerDifficulty, PlayerDifficulty.normal);
     expect(
@@ -260,6 +261,10 @@ void main() {
       preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
       'normal',
     );
+    expect(
+      preferences.getBool(GameFeedback.previousAimComparisonPreferenceKey),
+      isTrue,
+    );
   });
 
   test('새 개별 설정 변경은 각각의 안정 키에 저장된다', () async {
@@ -273,6 +278,7 @@ void main() {
     await GameFeedback.setGimmickCausalityEnabled(true);
     await GameFeedback.setCollisionPathIconsEnabled(true);
     await GameFeedback.setChainScoreDetailsEnabled(true);
+    await GameFeedback.setPreviousAimComparisonEnabled(false);
     await GameFeedback.setStrongFlashEnabled(true);
     await GameFeedback.setBackgroundMusicEnabled(false);
     await GameFeedback.setChargeGaugeSide(ChargeGaugeSide.left);
@@ -304,6 +310,10 @@ void main() {
       preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
       'easy',
     );
+    expect(
+      preferences.getBool(GameFeedback.previousAimComparisonPreferenceKey),
+      isFalse,
+    );
   });
 
   test('알 수 없는 새 설정 값은 안전한 기본값으로 복원한다', () async {
@@ -328,7 +338,7 @@ void main() {
     );
   });
 
-  test('14개 설정을 30회 반복 변경해도 마지막 상태를 정확히 복원한다', () async {
+  test('15개 설정을 30회 반복 변경해도 마지막 상태를 정확히 복원한다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 
     for (var round = 0; round < 30; round++) {
@@ -346,6 +356,7 @@ void main() {
       await GameFeedback.setGimmickCausalityEnabled(enabled);
       await GameFeedback.setCollisionPathIconsEnabled(enabled);
       await GameFeedback.setChainScoreDetailsEnabled(enabled);
+      await GameFeedback.setPreviousAimComparisonEnabled(enabled);
       await GameFeedback.setStrongFlashEnabled(enabled);
     }
 
@@ -366,6 +377,7 @@ void main() {
     expect(GameFeedback.gimmickCausalityEnabled, isFalse);
     expect(GameFeedback.collisionPathIconsEnabled, isFalse);
     expect(GameFeedback.chainScoreDetailsEnabled, isFalse);
+    expect(GameFeedback.previousAimComparisonEnabled, isFalse);
     expect(GameFeedback.strongFlashEnabled, isFalse);
   });
 }

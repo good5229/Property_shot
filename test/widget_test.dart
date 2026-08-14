@@ -1417,6 +1417,37 @@ void main() {
     expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
   });
 
+  testWidgets('직전 조준 비교를 끄면 재시도 후 비교선을 남기지 않는다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      GameFeedback.settingsSchemaVersionKey: GameFeedback.settingsSchemaVersion,
+      GameFeedback.previousAimComparisonPreferenceKey: false,
+    });
+    GameFeedback.previousAimComparisonEnabled = false;
+    addTearDown(GameFeedback.resetForTesting);
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
+    await tester.pump(const Duration(milliseconds: 6500));
+
+    await tester.tap(find.byKey(const Key('failure_retry_button')));
+    await tester.pump();
+
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(game.previousAimInput, isNull);
+    expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
+    expect(find.textContaining('각도나 힘 한 가지만'), findsOneWidget);
+  });
+
   testWidgets('일시정지 중에는 힘 조준으로 발사되지 않는다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();

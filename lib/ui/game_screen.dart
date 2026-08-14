@@ -4177,23 +4177,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void _resumeAfterFailure() {
     final replay = _failureReplay;
     if (replay == null || !mounted || _isAnimatingShot) return;
+    final showPreviousAim = GameFeedback.previousAimComparisonEnabled;
     setState(() {
       _showFailurePopup = false;
-      _setPreviousAimInput(replay.input);
+      _setPreviousAimInput(showPreviousAim ? replay.input : null);
       _state = _state.copyWith(
-        message: '직전 조준이 회색으로 남아 있습니다. 한 가지만 바꿔 다시 시도해 보세요.',
+        message: showPreviousAim
+            ? '직전 조준이 회색으로 남아 있습니다. 한 가지만 바꿔 다시 시도해 보세요.'
+            : '각도나 힘 한 가지만 바꿔 다시 시도해 보세요.',
       );
     });
     _telemetry.record(
       '재시도',
       stage: _state.levelIndex,
       attempt: _state.shotCount + 1,
-      result: '직전 조준 비교',
+      result: showPreviousAim ? '직전 조준 비교' : '비교선 없음',
       eventCode: 'retry_pressed',
     );
     SemanticsService.sendAnnouncement(
       View.of(context),
-      '직전 조준이 회색으로 표시됩니다. 각도나 힘 한 가지만 바꿔 다시 시도해 보세요.',
+      showPreviousAim
+          ? '직전 조준이 회색으로 표시됩니다. 각도나 힘 한 가지만 바꿔 다시 시도해 보세요.'
+          : '각도나 힘 한 가지만 바꿔 다시 시도해 보세요.',
       TextDirection.ltr,
     );
   }
