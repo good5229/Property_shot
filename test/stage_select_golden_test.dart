@@ -74,6 +74,26 @@ void main() {
       expect(find.text('반사판을 돌려 다음 공이 만날 면과 방향을 바꿔 보세요.'), findsOneWidget);
       expect(find.text('배운 속성과 기물을 엮어 나만의 경로를 완성해 보세요.'), findsOneWidget);
       expect(find.byKey(const Key('map_hint_card')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('discovery_atlas_button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('discovery_atlas_sheet')), findsOneWidget);
+      expect(find.byKey(const Key('discovery_atlas_stage_0')), findsOneWidget);
+      expect(
+        find.text('무거움 장착'),
+        fixture.name == '390x844' ? findsOneWidget : findsNothing,
+      );
+      await tester.tap(find.byKey(const Key('discovery_atlas_close')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('island_restoration_card')), findsOneWidget);
+      expect(
+        find.byKey(const Key('island_landmark_observatory')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('island_landmark_lighthouse')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('island_landmark_bridge')), findsOneWidget);
       await expectLater(
         find.byKey(const Key('stage_select_golden')),
         matchesGoldenFile('goldens/stage_select_${fixture.name}.png'),

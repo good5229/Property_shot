@@ -62,6 +62,33 @@ Set<String> stageDiscoveryMilestoneIds(int levelIndex) => Set.unmodifiable({
   'hole_reached',
 });
 
+Map<String, String> stageDiscoveryMilestoneLabels(int levelIndex) =>
+    Map.unmodifiable({
+      for (final entry in switch (levelIndex) {
+        0 => const [('heavy_equipped', '무거움 장착'), ('crate_moved', '상자 움직임')],
+        1 => const [('bouncy_equipped', '탄성 장착'), ('wall_bounce', '벽 반사 발견')],
+        2 => const [('switch_pressed', '스위치 작동'), ('gate_opened', '문 열림')],
+        3 => const [('sharp_equipped', '뾰족함 장착'), ('balloon_popped', '풍선 파열')],
+        4 => const [
+          ('source_drained', '원본 비우기'),
+          ('drained_source_moved', '비워진 원본 이동'),
+        ],
+        5 => const [('speed_restored', '발판 가속'), ('speed_bank', '가속 뒤 반사')],
+        6 => const [
+          ('past_ball_left', '과거 공 남기기'),
+          ('past_ball_used', '과거 공 재활용'),
+        ],
+        7 => const [('chain_started', '연쇄 시작'), ('chain_deepened', '연쇄 4단계')],
+        8 => const [
+          ('reflector_rotated', '반사판 회전'),
+          ('rotated_route_used', '바뀐 면 활용'),
+        ],
+        _ => const [('trait_combined', '속성 활용'), ('systems_combined', '기믹 연계')],
+      })
+        entry.$1: entry.$2,
+      'hole_reached': '홀 도착',
+    });
+
 List<StageDiscoveryMilestone> stageDiscoveryMilestones({
   required GameState state,
   required Iterable<ShotInput> shotInputs,

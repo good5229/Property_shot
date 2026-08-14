@@ -58,5 +58,11 @@ void main() {
       'crate_moved',
       'hole_reached',
     });
+    for (var index = 0; index < 10; index++) {
+      expect(
+        stageDiscoveryMilestoneLabels(index).keys.toSet(),
+        stageDiscoveryMilestoneIds(index),
+      );
+    }
   });
 }

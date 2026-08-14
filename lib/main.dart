@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/analysis/creative_chain_score.dart';
+import 'game/analysis/island_restoration.dart';
 import 'game/analysis/stage_chain_challenge.dart';
 import 'game/analysis/stage_discovery.dart';
 import 'game/domain/entity_state.dart';
@@ -2870,47 +2871,62 @@ class _StageSelectScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Container(
+                Material(
                   key: const Key('map_hint_card'),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xD9E8F4D9),
+                  color: const Color(0xD9E8F4D9),
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    key: const Key('discovery_atlas_button'),
+                    onTap: () => _showDiscoveryAtlas(context),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0x6695B98C)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.explore_rounded,
+                            size: 28,
+                            color: Color(0xFF4F8460),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '섬 물리 관측일지',
+                                  style: TextStyle(
+                                    color: Color(0xFF315C46),
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
+                                  '${levels.length * 3} · 눌러서 발견 도감을 확인하세요.',
+                                  style: const TextStyle(
+                                    color: Color(0xFF52706A),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFF4F8460),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.explore_rounded,
-                        size: 28,
-                        color: Color(0xFF4F8460),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '섬 물리 관측일지',
-                              style: TextStyle(
-                                color: Color(0xFF315C46),
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
-                              '${levels.length * 3} · 섬의 물리 규칙을 완성하세요.',
-                              style: const TextStyle(
-                                color: Color(0xFF52706A),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 12),
+                _IslandRestorationCard(
+                  progress: IslandRestorationProgress.fromDiscoveries(
+                    discoveriesByStageId: discoveriesByStageId,
+                    stageIds: levels.map((level) => level.id).toList(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -3027,6 +3043,275 @@ class _StageSelectScreen extends StatelessWidget {
           0;
     }
     return total;
+  }
+
+  Future<void> _showDiscoveryAtlas(BuildContext context) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: const Color(0xFFFFF9E8),
+        builder: (_) =>
+            _DiscoveryAtlasSheet(discoveriesByStageId: discoveriesByStageId),
+      );
+}
+
+class _DiscoveryAtlasSheet extends StatelessWidget {
+  const _DiscoveryAtlasSheet({required this.discoveriesByStageId});
+
+  final Map<String, Set<String>> discoveriesByStageId;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      heightFactor: 0.88,
+      child: Column(
+        key: const Key('discovery_atlas_sheet'),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 8, 8),
+            child: Row(
+              children: [
+                const Icon(Icons.menu_book_rounded, color: Color(0xFF315C46)),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    '속성 발견 도감',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                ),
+                IconButton(
+                  key: const Key('discovery_atlas_close'),
+                  tooltip: '발견 도감 닫기',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: Text(
+              '실제로 확인한 물리 사건만 기록됩니다. 실패한 발사에서 찾은 규칙도 남아요.',
+              style: TextStyle(color: Color(0xFF52706A), height: 1.35),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+              itemCount: levels.length,
+              itemBuilder: (context, index) {
+                final stageId = levels[index].id;
+                final discovered = discoveriesByStageId[stageId] ?? const {};
+                final labels = stageDiscoveryMilestoneLabels(index);
+                final count = discovered
+                    .intersection(labels.keys.toSet())
+                    .length;
+                return Card(
+                  key: Key('discovery_atlas_stage_$index'),
+                  color: count == labels.length
+                      ? const Color(0xFFE3F2E7)
+                      : const Color(0xFFFFFDF3),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${index + 1}. ${levels[index].name}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$count/${labels.length}',
+                              style: const TextStyle(
+                                color: Color(0xFF315C46),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final entry in labels.entries)
+                              Chip(
+                                avatar: Icon(
+                                  discovered.contains(entry.key)
+                                      ? Icons.check_circle_rounded
+                                      : Icons.help_outline_rounded,
+                                  size: 17,
+                                ),
+                                label: Text(
+                                  discovered.contains(entry.key)
+                                      ? entry.value
+                                      : '아직 발견하지 않음',
+                                ),
+                                backgroundColor: discovered.contains(entry.key)
+                                    ? const Color(0xFFD7F0D2)
+                                    : const Color(0xFFE7E4D9),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IslandRestorationCard extends StatelessWidget {
+  const _IslandRestorationCard({required this.progress});
+
+  final IslandRestorationProgress progress;
+
+  IconData _icon(IslandLandmark landmark) => switch (landmark) {
+    IslandLandmark.observatory => Icons.science_rounded,
+    IslandLandmark.lighthouse => Icons.light_rounded,
+    IslandLandmark.bridge => Icons.alt_route_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = GameFeedback.reducedMotionEnabled;
+    return Semantics(
+      container: true,
+      label:
+          '섬 복구 ${progress.restoredCount}/3. ${progress.statusText}. '
+          '발견 ${progress.discoveryCount}/${progress.total}',
+      child: Container(
+        key: const Key('island_restoration_card'),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFF4CF), Color(0xFFE7F4DE)],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFF92B18B)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.home_work_rounded, color: Color(0xFF396A50)),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    '섬 복구 현황',
+                    style: TextStyle(
+                      color: Color(0xFF315C46),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${progress.restoredCount}/3',
+                  style: const TextStyle(
+                    color: Color(0xFF315C46),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                for (final landmark in IslandLandmark.values)
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: landmark == IslandLandmark.bridge ? 0 : 6,
+                      ),
+                      child: TweenAnimationBuilder<double>(
+                        key: Key('island_landmark_${landmark.name}'),
+                        duration: reduceMotion
+                            ? Duration.zero
+                            : const Duration(milliseconds: 450),
+                        tween: Tween(
+                          begin: 0,
+                          end: progress.repairProgress(landmark),
+                        ),
+                        builder: (context, value, _) {
+                          final restored = progress.isRestored(landmark);
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 9,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Color.lerp(
+                                const Color(0xFFE1DFD3),
+                                const Color(0xFFD7F0D2),
+                                value,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: restored
+                                    ? const Color(0xFF4F8A5D)
+                                    : const Color(0xFF9A9480),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  restored ? _icon(landmark) : Icons.build,
+                                  color: restored
+                                      ? const Color(0xFF2E7D4F)
+                                      : const Color(0xFF807B6E),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  landmark.label,
+                                  maxLines: 1,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                Text(
+                                  restored
+                                      ? '복구 완료'
+                                      : '${landmark.requiredDiscoveries}개',
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 9),
+            Text(
+              progress.statusText,
+              key: const Key('island_restoration_status'),
+              style: const TextStyle(
+                color: Color(0xFF52706A),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
