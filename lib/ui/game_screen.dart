@@ -19,6 +19,7 @@ import '../game/domain/geometry.dart';
 import '../game/domain/level_definition.dart';
 import '../game/domain/shot_input.dart';
 import '../game/domain/trait.dart';
+import '../game/expedition/expedition_contract.dart';
 import '../game/hint/deterministic_key_collection_resolver.dart';
 import '../game/hint/pattern_hint.dart';
 import '../game/input/aim_direction_quantizer.dart';
@@ -105,6 +106,7 @@ class GameScreen extends StatefulWidget {
     this.onHintOpened,
     this.initialDiscoveredMilestoneIds = const {},
     this.onDiscoveriesRecorded,
+    this.onExpeditionStageCompleted,
     this.debugHintKeyVfxId,
     this.demoLaunchInput,
   });
@@ -163,6 +165,8 @@ class GameScreen extends StatefulWidget {
   onHintOpened;
   final Set<String> initialDiscoveredMilestoneIds;
   final Future<bool> Function(Set<String> milestoneIds)? onDiscoveriesRecorded;
+  final Future<void> Function(ExpeditionStageOutcome outcome)?
+  onExpeditionStageCompleted;
 
   /// Golden test에서만 수집 직후의 짧은 열쇠 반짝임을 결정론적으로 고정한다.
   /// 실제 플레이의 저장·물리·타이머 흐름에는 관여하지 않는다.
@@ -2082,6 +2086,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         });
       }
       return false;
+    }
+    final expeditionCallback = widget.onExpeditionStageCompleted;
+    if (expeditionCallback != null) {
+      try {
+        await expeditionCallback(
+          ExpeditionStageOutcome(
+            stageId: _currentLevel.stageId ?? _currentLevel.id,
+            shotCount: result.state.shotCount,
+            parShots: _currentLevel.parShots,
+            discoveryCount: _discoveryMilestones
+                .where((milestone) => milestone.achieved)
+                .length,
+            gimmickCount: _stageGimmickTypes.length,
+            chainScore: analysis?.totalScore ?? 0,
+          ),
+        );
+      } on Object {
+        // 탐사 목표는 캠페인 클리어와 보상 저장을 되돌리지 않는다.
+      }
     }
     return true;
   }

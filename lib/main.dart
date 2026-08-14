@@ -13,6 +13,7 @@ import 'game/domain/game_state.dart';
 import 'game/domain/geometry.dart';
 import 'game/domain/level_definition.dart';
 import 'game/domain/shot_input.dart';
+import 'game/expedition/expedition_contract.dart';
 import 'game/hint/generated_hint_catalog.dart';
 import 'game/hint/demo_playback_plan.dart';
 import 'game/hint/pattern_hint.dart';
@@ -303,6 +304,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showDailyChallenge = false;
   bool _showReplayLibrary = false;
   bool _showRewardInventory = false;
+  bool _showExpedition = false;
   Future<Set<String>>? _rewardInventoryFuture;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
@@ -324,6 +326,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   late final Future<ReplayLibraryStore> _replayLibraryFuture;
   late final Future<RunDifficultyAttributionStore>
   _difficultyAttributionStoreFuture;
+  late final Future<ExpeditionContractStore> _expeditionStoreFuture;
+  ExpeditionContractProgress? _expeditionProgress;
   late final Future<void> _progressLoadFuture;
   late final LocalPlayTelemetry _telemetry;
   bool _runStartedRecorded = false;
@@ -335,7 +339,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _patternSessionFuture = _createPatternSession();
     _replayLibraryFuture = _createReplayLibrary();
     _difficultyAttributionStoreFuture = _createDifficultyAttributionStore();
+    _expeditionStoreFuture = _createExpeditionStore();
     _progressLoadFuture = _loadCopyCore();
+    unawaited(_loadExpedition());
   }
 
   Future<StagePatternSession> _createPatternSession() async {
@@ -362,6 +368,44 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   _createDifficultyAttributionStore() async {
     final preferences = await SharedPreferences.getInstance();
     return RunDifficultyAttributionStore(preferences);
+  }
+
+  Future<ExpeditionContractStore> _createExpeditionStore() async {
+    final preferences = await SharedPreferences.getInstance();
+    return ExpeditionContractStore(preferences);
+  }
+
+  Future<void> _loadExpedition() async {
+    final progress = await (await _expeditionStoreFuture).load();
+    if (mounted) setState(() => _expeditionProgress = progress);
+  }
+
+  Future<void> _startExpedition(ExpeditionContractType type) async {
+    final progress = await (await _expeditionStoreFuture).start(
+      type: type,
+      startIndex: math.min(_unlockedLevel, levels.length - 3),
+      allStageIds: levels.map((level) => level.id).toList(growable: false),
+    );
+    if (mounted) setState(() => _expeditionProgress = progress);
+  }
+
+  Future<void> _clearExpedition() async {
+    await (await _expeditionStoreFuture).clear();
+    if (mounted) setState(() => _expeditionProgress = null);
+  }
+
+  Future<void> _recordExpeditionOutcome(ExpeditionStageOutcome outcome) async {
+    final progress = await (await _expeditionStoreFuture).record(outcome);
+    if (mounted && progress != null) {
+      setState(() => _expeditionProgress = progress);
+    }
+  }
+
+  Future<void> _playExpeditionStage(String stageId) async {
+    final index = levels.indexWhere((level) => level.id == stageId);
+    if (index < 0 || index > _unlockedLevel) return;
+    setState(() => _showExpedition = false);
+    await _startStage(index);
   }
 
   Future<void> _loadCopyCore() async {
@@ -1315,6 +1359,16 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         },
       );
     }
+    if (_showExpedition) {
+      return _ExpeditionContractScreen(
+        progress: _expeditionProgress,
+        unlockedLevel: _unlockedLevel,
+        onStart: (type) => unawaited(_startExpedition(type)),
+        onPlayStage: (stageId) => unawaited(_playExpeditionStage(stageId)),
+        onClear: () => unawaited(_clearExpedition()),
+        onBack: () => setState(() => _showExpedition = false),
+      );
+    }
     if (_showReplayLibrary) {
       return FutureBuilder<ReplayLibraryStore>(
         future: _replayLibraryFuture,
@@ -1396,6 +1450,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onHintFailure: _recordCurrentHintFailure,
         onHintOpened: _openCurrentHint,
         onDiscoveriesRecorded: _recordDiscoveries,
+        onExpeditionStageCompleted: _recordExpeditionOutcome,
         onTraitActionCommitted: _recordTraitAction,
         onStageRestarted: _restartStageRun,
         onShotRewound: _rewindStageRun,
@@ -1429,6 +1484,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => setState(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
+      onExpedition: () => setState(() => _showExpedition = true),
       onDailyChallenge: () => setState(() => _showDailyChallenge = true),
       onReplayLibrary: () => setState(() => _showReplayLibrary = true),
       showDebugControls: widget.showDebugControls,
@@ -1436,6 +1492,252 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       onTutorialVariantChanged: (variant) {
         setState(() => _tutorialVariant = variant);
       },
+    );
+  }
+}
+
+class _ExpeditionContractScreen extends StatelessWidget {
+  const _ExpeditionContractScreen({
+    required this.progress,
+    required this.unlockedLevel,
+    required this.onStart,
+    required this.onPlayStage,
+    required this.onClear,
+    required this.onBack,
+  });
+
+  final ExpeditionContractProgress? progress;
+  final int unlockedLevel;
+  final ValueChanged<ExpeditionContractType> onStart;
+  final ValueChanged<String> onPlayStage;
+  final VoidCallback onClear;
+  final VoidCallback onBack;
+
+  IconData _icon(ExpeditionContractType type) => switch (type) {
+    ExpeditionContractType.discovery => Icons.travel_explore_rounded,
+    ExpeditionContractType.precision => Icons.center_focus_strong_rounded,
+    ExpeditionContractType.chain => Icons.hub_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final active = progress;
+    return Scaffold(
+      key: const Key('expedition_contract_screen'),
+      backgroundColor: const Color(0xFFBFE8E3),
+      appBar: AppBar(
+        leading: IconButton(
+          key: const Key('expedition_back_button'),
+          onPressed: onBack,
+          tooltip: '메인 메뉴로 돌아가기',
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('3단계 탐사'),
+        backgroundColor: const Color(0xFFFFF4CF),
+        foregroundColor: const Color(0xFF173F43),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+          children: [
+            Text(
+              active == null ? '이번 탐사의 목적을 고르세요' : active.type.title,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: const Color(0xFF173F43),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              active == null
+                  ? '같은 캠페인 스테이지를 다른 목표로 즐깁니다. 목표를 놓쳐도 진행은 막히지 않아요.'
+                  : '${active.type.summary} · 진행 ${active.completedCount}/3 · 달성 ${active.achievedCount}/3',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF315E60),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (active == null)
+              for (final type in ExpeditionContractType.values) ...[
+                Semantics(
+                  button: true,
+                  label: '${type.title}. ${type.summary}',
+                  child: Card(
+                    key: Key('expedition_contract_${type.name}'),
+                    color: const Color(0xFFFFF9E8),
+                    child: InkWell(
+                      onTap: () => onStart(type),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: const Color(0xFFFFE0A8),
+                              foregroundColor: const Color(0xFF7A4B1F),
+                              child: Icon(_icon(type)),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    type.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(type.summary),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ]
+            else ...[
+              LinearProgressIndicator(
+                key: const Key('expedition_progress_bar'),
+                value: active.completedCount / 3,
+                minHeight: 10,
+                borderRadius: BorderRadius.circular(99),
+                color: const Color(0xFF2E8B67),
+                backgroundColor: const Color(0xFFD4E9DE),
+              ),
+              const SizedBox(height: 16),
+              for (var index = 0; index < active.stageIds.length; index++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _ExpeditionStageTile(
+                    index: index,
+                    stageId: active.stageIds[index],
+                    completed: active.completedStageIds.contains(
+                      active.stageIds[index],
+                    ),
+                    achieved: active.achievedStageIds.contains(
+                      active.stageIds[index],
+                    ),
+                    unlockedLevel: unlockedLevel,
+                    onPlay: onPlayStage,
+                  ),
+                ),
+              const SizedBox(height: 6),
+              if (active.isComplete)
+                Container(
+                  key: const Key('expedition_complete_card'),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDDF3D5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF4C8A5A)),
+                  ),
+                  child: Text(
+                    '탐사 완료 · 목표 ${active.achievedCount}/3 달성\n'
+                    '다른 관점의 탐사를 골라 같은 물리를 새로 시험해 보세요.',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                key: const Key('expedition_change_contract_button'),
+                onPressed: onClear,
+                icon: const Icon(Icons.swap_horiz_rounded),
+                label: Text(active.isComplete ? '다른 탐사 고르기' : '탐사 목표 바꾸기'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpeditionStageTile extends StatelessWidget {
+  const _ExpeditionStageTile({
+    required this.index,
+    required this.stageId,
+    required this.completed,
+    required this.achieved,
+    required this.unlockedLevel,
+    required this.onPlay,
+  });
+
+  final int index;
+  final String stageId;
+  final bool completed;
+  final bool achieved;
+  final int unlockedLevel;
+  final ValueChanged<String> onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final stageIndex = levels.indexWhere((level) => level.id == stageId);
+    final unlocked = stageIndex >= 0 && stageIndex <= unlockedLevel;
+    return Container(
+      key: Key('expedition_stage_$index'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: completed ? const Color(0xFFE3F2E7) : const Color(0xFFFFF9E8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: completed ? const Color(0xFF5B9870) : const Color(0xFF9D8258),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            completed
+                ? achieved
+                      ? Icons.verified_rounded
+                      : Icons.check_circle_outline_rounded
+                : unlocked
+                ? Icons.flag_outlined
+                : Icons.lock_outline_rounded,
+            color: completed
+                ? const Color(0xFF2E7D4F)
+                : const Color(0xFF7A5A32),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stageIndex < 0 ? stageId : levels[stageIndex].name,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  completed
+                      ? achieved
+                            ? '탐사 목표까지 달성'
+                            : '클리어 완료 · 목표는 다음에 재도전 가능'
+                      : unlocked
+                      ? '지금 플레이할 수 있어요'
+                      : '앞 단계를 클리어하면 열려요',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          if (!completed && unlocked)
+            FilledButton(
+              key: Key('expedition_play_$index'),
+              onPressed: () => onPlay(stageId),
+              child: const Text('플레이'),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1846,6 +2148,7 @@ class _HomeScreen extends StatelessWidget {
     required this.onStart,
     required this.onStageSelect,
     required this.onRewardInventory,
+    required this.onExpedition,
     required this.onDailyChallenge,
     required this.onReplayLibrary,
     required this.showDebugControls,
@@ -1856,6 +2159,7 @@ class _HomeScreen extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onRewardInventory;
+  final VoidCallback onExpedition;
   final VoidCallback onDailyChallenge;
   final VoidCallback onReplayLibrary;
   final bool showDebugControls;
@@ -1945,6 +2249,18 @@ class _HomeScreen extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ).copyWith(fontFamily: appFontFamily),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('expedition_entry_button'),
+                        onPressed: onExpedition,
+                        icon: const Icon(Icons.explore_outlined),
+                        label: const Text('3단계 탐사'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          foregroundColor: const Color(0xFF7A4B1F),
+                          side: const BorderSide(color: Color(0xFFB5783A)),
                         ),
                       ),
                       const SizedBox(height: 10),
