@@ -54,6 +54,11 @@ class Stage10PropertyShotSolution {
   ShotInput get firstInput => _input(firstDegree, firstPower, transferTrait);
   ShotInput get secondInput => _input(secondDegree, secondPower);
   ShotInput get directInput => _input(directDegree, directPower);
+  ShotInput? get openedGateBankInput =>
+      switch ((openedGateBankDegree, openedGateBankPower)) {
+        (final degree?, final power?) => _input(degree, power),
+        _ => null,
+      };
 }
 
 const stage10PropertyShotSolutions = <Stage10PropertyShotSolution>[

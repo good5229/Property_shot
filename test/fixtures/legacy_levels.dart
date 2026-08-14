@@ -73,8 +73,8 @@ final legacyLevels = <LevelDefinition>[
       EntityState(
         id: 'hole',
         type: EntityType.hole,
-        position: Vec2(300, 110),
-        size: Vec2(52, 52),
+        position: Vec2(300, 130),
+        size: Vec2(68, 68),
         solid: false,
       ),
       EntityState(
@@ -105,15 +105,15 @@ final legacyLevels = <LevelDefinition>[
       EntityState(
         id: 'approach_guard',
         type: EntityType.wall,
-        position: Vec2(95, 230),
-        size: Vec2(70, 24),
+        position: Vec2(95, 210),
+        size: Vec2(46, 24),
         restitution: 0.08,
       ),
       EntityState(
         id: 'route_guard_lower',
         type: EntityType.wall,
         position: Vec2(165, 350),
-        size: Vec2(86, 24),
+        size: Vec2(70, 24),
         movable: false,
         hitboxScale: 0.88,
         restitution: 0.08,
