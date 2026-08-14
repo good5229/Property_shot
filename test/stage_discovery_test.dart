@@ -46,4 +46,17 @@ void main() {
     expect(questions.toSet(), hasLength(10));
     expect(questions.every((question) => question.endsWith('?')), isTrue);
   });
+
+  test('10개 스테이지는 지도 저장에 사용할 안정 발견 ID를 각 3개 제공한다', () {
+    for (var index = 0; index < 10; index++) {
+      final ids = stageDiscoveryMilestoneIds(index);
+      expect(ids, hasLength(3), reason: '${index + 1}단계');
+      expect(ids, contains('hole_reached'));
+    }
+    expect(stageDiscoveryMilestoneIds(0), {
+      'heavy_equipped',
+      'crate_moved',
+      'hole_reached',
+    });
+  });
 }

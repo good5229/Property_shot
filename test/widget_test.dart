@@ -351,6 +351,26 @@ void main() {
     );
   });
 
+  testWidgets('영구 발견 기록은 재시작 뒤 섬 지도 진행도로 복원된다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.discoveryRecordsKey: [
+        '${levels[0].id}::heavy_equipped',
+        '${levels[0].id}::crate_moved',
+        '${levels[1].id}::bouncy_equipped',
+        '${levels[0].id}::폐기된_발견',
+      ],
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.text('전체 발견 3 / 30 · 섬의 물리 규칙을 완성하세요.'), findsOneWidget);
+    expect(find.text('발견 2/3 · 추천 파 ${levels[0].parShots}회'), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
+  });
+
   testWidgets('클리어 진행 상태가 섬 지도에서 4단계를 연다', (tester) async {
     SharedPreferences.setMockInitialValues({'property_shot_unlocked_level': 3});
     await tester.pumpWidget(const PropertyShotApp(showHome: true));

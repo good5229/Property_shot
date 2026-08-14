@@ -15,6 +15,7 @@ class ProgressSnapshot {
     required this.copyCoreCount,
     required this.copyCoreRewarded,
     required this.copyCoreRewardedStageIds,
+    required this.discoveriesByStageId,
   });
 
   final Set<int> clearedLevels;
@@ -24,6 +25,7 @@ class ProgressSnapshot {
   final int copyCoreCount;
   final bool copyCoreRewarded;
   final Set<String> copyCoreRewardedStageIds;
+  final Map<String, Set<String>> discoveriesByStageId;
 }
 
 class ProgressStore {
@@ -34,7 +36,7 @@ class ProgressStore {
             : stageIds,
       );
 
-  static const saveVersion = 3;
+  static const saveVersion = 4;
   static const clearedLevelsKey = 'property_shot_cleared_levels';
   static const clearedStageIdsKey = 'property_shot_cleared_stage_ids';
   static const unlockedLevelKey = 'property_shot_unlocked_level';
@@ -44,6 +46,8 @@ class ProgressStore {
   static const copyCoreRewardedKey = 'property_shot_copy_core_rewarded';
   static const copyCoreRewardedStageIdsKey =
       'property_shot_copy_core_rewarded_stage_ids';
+  static const discoveryRecordsKey = 'property_shot_discovery_records';
+  static const _discoverySeparator = '::';
 
   final int stageCount;
   final List<String> stageIds;
@@ -109,6 +113,9 @@ class ProgressStore {
     final copyCoreRewardedStageIds = _readStringSet(
       _safeStringList(preferences, copyCoreRewardedStageIdsKey),
     );
+    final discoveriesByStageId = _readDiscoveryRecords(
+      _safeStringList(preferences, discoveryRecordsKey),
+    );
 
     return ProgressSnapshot(
       clearedLevels: clearedLevels,
@@ -123,7 +130,38 @@ class ProgressStore {
           _safeBool(preferences, copyCoreRewardedKey) == true ||
           copyCoreRewardedStageIds.isNotEmpty,
       copyCoreRewardedStageIds: copyCoreRewardedStageIds,
+      discoveriesByStageId: discoveriesByStageId,
     );
+  }
+
+  Future<void> recordDiscoveries(
+    int levelIndex,
+    Iterable<String> milestoneIds,
+  ) {
+    if (levelIndex < 0 || levelIndex >= stageCount) {
+      return Future<void>.value();
+    }
+    final normalized = milestoneIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty && !id.contains(_discoverySeparator))
+        .toSet();
+    if (normalized.isEmpty) return Future<void>.value();
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      final current = read(preferences);
+      final stageId = stageIds[levelIndex];
+      final merged = <String, Set<String>>{
+        for (final entry in current.discoveriesByStageId.entries)
+          entry.key: {...entry.value},
+      };
+      merged.putIfAbsent(stageId, () => <String>{}).addAll(normalized);
+      await _writeVersion(preferences);
+      await _setStringList(
+        preferences,
+        discoveryRecordsKey,
+        _encodeDiscoveryRecords(merged),
+      );
+    });
   }
 
   Future<void> recordStageClear(int levelIndex) {
@@ -232,6 +270,7 @@ class ProgressStore {
       await _remove(preferences, copyCoreCountKey);
       await _remove(preferences, copyCoreRewardedKey);
       await _remove(preferences, copyCoreRewardedStageIdsKey);
+      await _remove(preferences, discoveryRecordsKey);
       for (var index = 0; index < stageCount; index++) {
         await _remove(preferences, bestShotKey(index));
         await _remove(preferences, bestShotStageKey(stageIds[index]));
@@ -309,6 +348,11 @@ class ProgressStore {
       copyCoreRewardedStageIdsKey,
       snapshot.copyCoreRewardedStageIds.toList()..sort(),
     );
+    await _setStringList(
+      preferences,
+      discoveryRecordsKey,
+      _encodeDiscoveryRecords(snapshot.discoveriesByStageId),
+    );
     for (var index = 0; index < stageCount; index++) {
       final best = snapshot.bestShots[index];
       if (best == null) {
@@ -355,6 +399,43 @@ class ProgressStore {
 
   Future<void> _remove(SharedPreferences preferences, String key) async {
     requireSuccessfulProgressWrite(await preferences.remove(key), key);
+  }
+
+  Map<String, Set<String>> _readDiscoveryRecords(List<String>? values) {
+    final records = <String, Set<String>>{};
+    for (final value in values ?? const <String>[]) {
+      final separator = value.indexOf(_discoverySeparator);
+      if (separator <= 0 || separator >= value.length - 2) continue;
+      final stageId = value.substring(0, separator);
+      final milestoneId = value.substring(
+        separator + _discoverySeparator.length,
+      );
+      if (!stageIds.contains(stageId) || milestoneId.trim().isEmpty) continue;
+      records.putIfAbsent(stageId, () => <String>{}).add(milestoneId);
+    }
+    return Map.unmodifiable({
+      for (final entry in records.entries)
+        entry.key: Set<String>.unmodifiable(entry.value),
+    });
+  }
+
+  List<String> _encodeDiscoveryRecords(
+    Map<String, Set<String>> discoveriesByStageId,
+  ) {
+    final records = <String>[];
+    for (final stageId in stageIds) {
+      final milestoneIds =
+          discoveriesByStageId[stageId]?.toList() ?? <String>[];
+      milestoneIds.sort();
+      for (final milestoneId in milestoneIds) {
+        final normalized = milestoneId.trim();
+        if (normalized.isEmpty || normalized.contains(_discoverySeparator)) {
+          continue;
+        }
+        records.add('$stageId$_discoverySeparator$normalized');
+      }
+    }
+    return records;
   }
 
   Set<int> _readIntSet(List<String>? values) {

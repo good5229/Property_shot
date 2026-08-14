@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/analysis/creative_chain_score.dart';
 import 'game/analysis/stage_chain_challenge.dart';
+import 'game/analysis/stage_discovery.dart';
 import 'game/domain/entity_state.dart';
 import 'game/domain/game_state.dart';
 import 'game/domain/geometry.dart';
@@ -310,6 +311,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Set<String> _copyCoreRewardedStageIds = <String>{};
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
+  Map<String, Set<String>> _discoveriesByStageId = <String, Set<String>>{};
   PlayerDifficulty _activeDifficulty = PlayerDifficulty.normal;
   late TutorialExperimentVariant _tutorialVariant = widget.tutorialVariant;
   late final ProgressStore _progressStore =
@@ -376,6 +378,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _copyCoreRewardedStageIds = progress.copyCoreRewardedStageIds;
         _clearedLevels = progress.clearedLevels;
         _unlockedLevel = progress.unlockedLevel;
+        _discoveriesByStageId = {
+          for (final entry in progress.discoveriesByStageId.entries)
+            entry.key: {...entry.value},
+        };
       });
     } on Object {
       // 저장소를 사용할 수 없어도 기본 진행 상태로 홈을 표시한다.
@@ -1163,6 +1169,26 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return stored;
   }
 
+  Future<bool> _recordDiscoveries(Set<String> milestoneIds) async {
+    final activeStage = _activeStage;
+    if (activeStage == null || milestoneIds.isEmpty) return false;
+    try {
+      await _progressStore.recordDiscoveries(activeStage, milestoneIds);
+      if (mounted) {
+        final stageId = levels[activeStage].id;
+        setState(() {
+          _discoveriesByStageId = {
+            ..._discoveriesByStageId,
+            stageId: {...?_discoveriesByStageId[stageId], ...milestoneIds},
+          };
+        });
+      }
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
   Future<RunHintEntitlement?> _recordCurrentHintFailure() async {
     final session = await _patternSessionFuture;
     final entitlement = await session.recordHintFailure();
@@ -1350,6 +1376,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         patternHintEntry: _activePatternHintEntry,
         initialHintEntitlement: _activeHintEntitlement,
         initialCollectedHintKeyIds: _activeCollectedHintKeyIds,
+        initialDiscoveredMilestoneIds:
+            _discoveriesByStageId[levels[activeStage].id] ?? const {},
         levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
@@ -1367,6 +1395,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onHintEntitlementRead: _readCurrentHintEntitlement,
         onHintFailure: _recordCurrentHintFailure,
         onHintOpened: _openCurrentHint,
+        onDiscoveriesRecorded: _recordDiscoveries,
         onTraitActionCommitted: _recordTraitAction,
         onStageRestarted: _restartStageRun,
         onShotRewound: _rewindStageRun,
@@ -1393,6 +1422,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onBack: () => setState(() => _showStageSelect = false),
         onSelectStage: (index) => unawaited(_startStage(index)),
         unlockedLevel: _unlockedLevel,
+        discoveriesByStageId: _discoveriesByStageId,
       );
     }
     return _HomeScreen(
@@ -2384,11 +2414,13 @@ class _StageSelectScreen extends StatelessWidget {
     required this.onBack,
     required this.onSelectStage,
     required this.unlockedLevel,
+    required this.discoveriesByStageId,
   });
 
   final VoidCallback onBack;
   final ValueChanged<int> onSelectStage;
   final int unlockedLevel;
+  final Map<String, Set<String>> discoveriesByStageId;
 
   @override
   Widget build(BuildContext context) {
@@ -2442,29 +2474,30 @@ class _StageSelectScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0x6695B98C)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.explore_rounded,
                         size: 28,
                         color: Color(0xFF4F8460),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               '섬 물리 관측일지',
                               style: TextStyle(
                                 color: Color(0xFF315C46),
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            SizedBox(height: 3),
+                            const SizedBox(height: 3),
                             Text(
-                              '각 섬의 세 가지 반응을 발견해 물리 규칙을 완성하세요.',
-                              style: TextStyle(
+                              '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
+                              '${levels.length * 3} · 섬의 물리 규칙을 완성하세요.',
+                              style: const TextStyle(
                                 color: Color(0xFF52706A),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -2557,6 +2590,10 @@ class _StageSelectScreen extends StatelessWidget {
                                     child: _StageTile(
                                       index: index,
                                       locked: index > unlockedLevel,
+                                      discoveredMilestoneIds:
+                                          discoveriesByStageId[levels[index]
+                                              .id] ??
+                                          const {},
                                       onTap: () => onSelectStage(index),
                                     ),
                                   ),
@@ -2574,6 +2611,18 @@ class _StageSelectScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  int _totalDiscoveryCount(Map<String, Set<String>> discoveries) {
+    var total = 0;
+    for (var index = 0; index < levels.length; index++) {
+      total +=
+          discoveries[levels[index].id]
+              ?.intersection(stageDiscoveryMilestoneIds(index))
+              .length ??
+          0;
+    }
+    return total;
   }
 }
 
@@ -2727,15 +2776,21 @@ class _StageTile extends StatelessWidget {
   const _StageTile({
     required this.index,
     required this.onTap,
+    this.discoveredMilestoneIds = const {},
     this.locked = false,
   });
 
   final int index;
   final VoidCallback onTap;
   final bool locked;
+  final Set<String> discoveredMilestoneIds;
 
   @override
   Widget build(BuildContext context) {
+    final knownMilestones = stageDiscoveryMilestoneIds(index);
+    final discoveryCount = discoveredMilestoneIds
+        .intersection(knownMilestones)
+        .length;
     final descriptions = [
       '무거운 성질로 상자를 움직여 보세요.',
       '탄성 있는 반사로 방향을 바꿔 보세요.',
@@ -2890,7 +2945,8 @@ class _StageTile extends StatelessWidget {
                             child: Text(
                               locked
                                   ? '앞 섬을 먼저 클리어하세요'
-                                  : '추천 파 ${levels[index].parShots}회',
+                                  : '발견 $discoveryCount/${knownMilestones.length} · '
+                                        '추천 파 ${levels[index].parShots}회',
                               style: TextStyle(
                                 color: locked
                                     ? const Color(0xFF718078)

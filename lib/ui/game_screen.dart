@@ -103,6 +103,8 @@ class GameScreen extends StatefulWidget {
     this.onHintEntitlementRead,
     this.onHintFailure,
     this.onHintOpened,
+    this.initialDiscoveredMilestoneIds = const {},
+    this.onDiscoveriesRecorded,
     this.debugHintKeyVfxId,
     this.demoLaunchInput,
   });
@@ -159,6 +161,8 @@ class GameScreen extends StatefulWidget {
   final Future<RunHintEntitlement?> Function()? onHintFailure;
   final Future<RunHintEntitlement?> Function({int? requestedLevel})?
   onHintOpened;
+  final Set<String> initialDiscoveredMilestoneIds;
+  final Future<bool> Function(Set<String> milestoneIds)? onDiscoveriesRecorded;
 
   /// Golden test에서만 수집 직후의 짧은 열쇠 반짝임을 결정론적으로 고정한다.
   /// 실제 플레이의 저장·물리·타이머 흐름에는 관여하지 않는다.
@@ -263,6 +267,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _keySpawnRecorded = false;
   bool _hintAvailableRecorded = false;
   final Set<String> _discoveredMilestoneIds = <String>{};
+  late final Set<String> _persistedMilestoneIds;
+  Future<void> _discoveryWriteTail = Future<void>.value();
 
   RunRewardInventory get _rewardInventory =>
       RunRewardInventory(_acquiredRewards);
@@ -348,6 +354,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _patternHintEntry = widget.patternHintEntry;
     _hintEntitlement = widget.initialHintEntitlement;
     _collectedHintKeyIds = Set.of(widget.initialCollectedHintKeyIds);
+    _persistedMilestoneIds = Set.of(widget.initialDiscoveredMilestoneIds);
+    _discoveredMilestoneIds.addAll(_persistedMilestoneIds);
     _captureDiscoveries(_state);
     _restoreStageOutcomeHistory();
     _chainScoreAnalysis = _analyzeSuccessfulStage(
@@ -612,9 +620,44 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       shotInputs: _stageShotInputs,
       shotResults: _stageShotResults,
     );
-    _discoveredMilestoneIds.addAll(
-      milestones.where((item) => item.achieved).map((item) => item.id),
-    );
+    final achievedIds = milestones
+        .where((item) => item.achieved)
+        .map((item) => item.id)
+        .toSet();
+    final changed = achievedIds.difference(_discoveredMilestoneIds).isNotEmpty;
+    _discoveredMilestoneIds.addAll(achievedIds);
+    if (changed ||
+        _discoveredMilestoneIds.difference(_persistedMilestoneIds).isNotEmpty) {
+      _queueDiscoveryPersistence();
+    }
+  }
+
+  void _queueDiscoveryPersistence() {
+    if (widget.progressPersistencePolicy ==
+        GameProgressPersistencePolicy.disabled) {
+      return;
+    }
+    _discoveryWriteTail = _discoveryWriteTail.then((_) async {
+      final pending = _discoveredMilestoneIds.difference(
+        _persistedMilestoneIds,
+      );
+      if (pending.isEmpty) return;
+      try {
+        final writer = widget.onDiscoveriesRecorded;
+        final stored = writer == null
+            ? await (() async {
+                await _progressStore.recordDiscoveries(
+                  _state.levelIndex,
+                  pending,
+                );
+                return true;
+              })()
+            : await writer(Set<String>.unmodifiable(pending));
+        if (stored) _persistedMilestoneIds.addAll(pending);
+      } on Object {
+        // 발견은 현재 플레이에 즉시 남기고 다음 상태 갱신 때 저장을 재시도한다.
+      }
+    });
   }
 
   PlayTelemetryStageOutcomePayload _stageOutcomePayload() {
@@ -1036,7 +1079,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusDrainedSourceHistory.clear();
     _stageShotResults.clear();
     _stageShotInputs.clear();
-    if (!sameStage) _discoveredMilestoneIds.clear();
+    if (!sameStage) {
+      _discoveredMilestoneIds.clear();
+      _persistedMilestoneIds.clear();
+    }
     _chainScoreAnalysis = null;
     _clearPersistenceFuture = null;
     _clearPersistenceRetry = null;
