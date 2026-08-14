@@ -108,6 +108,18 @@ class StagePatternSession {
     return _state;
   });
 
+  /// 이 세션이 소유한 저장 영역만 비우고 완전히 새 런으로 되돌린다.
+  ///
+  /// 캠페인과 별도 namespace를 쓰는 탐사 계약을 새로 시작할 때 사용한다.
+  /// 다른 [StagePatternSession]의 저장 영역에는 영향을 주지 않는다.
+  Future<void> reset() => _enqueueOperation(() async {
+    await _store.reset();
+    _state = null;
+    _loaded = true;
+    _legacyCurrentShotHistoryAmbiguous = false;
+    _ambiguousLegacyCopyActionCount = 0;
+  });
+
   List<RunShotInput> get currentShotInputs {
     final current = _state;
     if (current == null || current.currentStageId == null) return const [];

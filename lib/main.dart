@@ -325,11 +325,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         stageIds: levels.map((level) => level.id),
       );
   late final Future<StagePatternSession> _patternSessionFuture;
+  late final Future<StagePatternSession> _expeditionPatternSessionFuture;
   late final Future<ReplayLibraryStore> _replayLibraryFuture;
   late final Future<RunDifficultyAttributionStore>
   _difficultyAttributionStoreFuture;
   late final Future<ExpeditionContractStore> _expeditionStoreFuture;
   ExpeditionContractProgress? _expeditionProgress;
+  bool _activeIsExpedition = false;
   late final Future<void> _progressLoadFuture;
   late final LocalPlayTelemetry _telemetry;
   bool _runStartedRecorded = false;
@@ -339,6 +341,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     super.initState();
     _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     _patternSessionFuture = _createPatternSession();
+    _expeditionPatternSessionFuture = _createPatternSession(
+      namespace: 'property_shot_expedition:',
+    );
     _replayLibraryFuture = _createReplayLibrary();
     _difficultyAttributionStoreFuture = _createDifficultyAttributionStore();
     _expeditionStoreFuture = _createExpeditionStore();
@@ -346,12 +351,18 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     unawaited(_loadExpedition());
   }
 
-  Future<StagePatternSession> _createPatternSession() async {
+  Future<StagePatternSession> _createPatternSession({String? namespace}) async {
     final preferences = await SharedPreferences.getInstance();
+    final sharedBackend = SharedPreferencesRunStateBackend(preferences);
     return StagePatternSession(
       catalog: generatedStageCatalog,
       store: RunStateStore(
-        backend: SharedPreferencesRunStateBackend(preferences),
+        backend: namespace == null
+            ? sharedBackend
+            : NamespacedRunStateBackend(
+                delegate: sharedBackend,
+                namespace: namespace,
+              ),
       ),
       hintVersionResolver: (stageId, patternId) => generatedHintCatalog
           .entryFor(stageId: stageId, patternId: patternId)
@@ -383,6 +394,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<void> _startExpedition(ExpeditionContractType type) async {
+    await (await _expeditionPatternSessionFuture).reset();
     final progress = await (await _expeditionStoreFuture).start(
       type: type,
       startIndex: math.min(_unlockedLevel, levels.length - 3),
@@ -392,6 +404,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<void> _clearExpedition() async {
+    await (await _expeditionPatternSessionFuture).reset();
     await (await _expeditionStoreFuture).clear();
     if (mounted) setState(() => _expeditionProgress = null);
   }
@@ -409,6 +422,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<void> _importExpedition(String code) async {
+    await (await _expeditionPatternSessionFuture).reset();
     final progress = await (await _expeditionStoreFuture).importCode(
       code,
       knownStageIds: levels.map((level) => level.id).toSet(),
@@ -427,8 +441,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     final index = levels.indexWhere((level) => level.id == stageId);
     if (index < 0 || index > _unlockedLevel) return;
     setState(() => _showExpedition = false);
-    await _startStage(index);
+    await _startStage(index, expedition: true);
   }
+
+  Future<StagePatternSession> get _activePatternSessionFuture =>
+      _activeIsExpedition
+      ? _expeditionPatternSessionFuture
+      : _patternSessionFuture;
 
   Future<void> _loadCopyCore() async {
     await GameFeedback.loadPreferences();
@@ -472,6 +491,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Future<void> _startStage(
     int index, {
     bool allowStoredRunResume = false,
+    bool expedition = false,
   }) async {
     if ((index > _unlockedLevel && !allowStoredRunResume) || _selectingStage) {
       return;
@@ -480,14 +500,19 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     try {
       await _progressLoadFuture;
       _activeDifficulty = GameFeedback.playerDifficulty;
-      final session = await _patternSessionFuture;
+      final session = await (expedition
+          ? _expeditionPatternSessionFuture
+          : _patternSessionFuture);
       await session.loadState();
-      await session.migrateLegacyCloneCoreReward(
-        rewarded: _legacyCopyCoreRewarded && _copyCoreRewardedStageIds.isEmpty,
-      );
-      await _adoptCloneCoreState(session);
-      await _recoverCompletedProgress(session);
-      await _recoverPendingCopyCoreReward(session);
+      if (!expedition) {
+        await session.migrateLegacyCloneCoreReward(
+          rewarded:
+              _legacyCopyCoreRewarded && _copyCoreRewardedStageIds.isEmpty,
+        );
+        await _adoptCloneCoreState(session);
+        await _recoverCompletedProgress(session);
+        await _recoverPendingCopyCoreReward(session);
+      }
       final restoringCompletedStage =
           session.state?.currentStageId == levels[index].id &&
           switch (session.state?.phase) {
@@ -508,10 +533,14 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       final stateBeforeSelection = session.state;
       final draw = await session.selectStage(
         levels[index].id,
-        initialCloneCoreCount: _copyCoreCount,
+        initialCloneCoreCount: expedition ? 0 : _copyCoreCount,
         initialCloneCoreRewarded:
-            _legacyCopyCoreRewarded && _copyCoreRewardedStageIds.isEmpty,
-        initialCloneCoreRewardedStageIds: _copyCoreRewardedStageIds,
+            !expedition &&
+            _legacyCopyCoreRewarded &&
+            _copyCoreRewardedStageIds.isEmpty,
+        initialCloneCoreRewardedStageIds: expedition
+            ? const []
+            : _copyCoreRewardedStageIds,
         drawPolicy: preferBaseline
             ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
             : null,
@@ -540,7 +569,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           _activeDifficulty = restoredAttribution.difficulty;
         }
       }
-      await _mirrorCloneCore(session);
+      if (!expedition) await _mirrorCloneCore(session);
       _copyCoreRewarded = _isCloneCoreRewardedForStage(
         session.state,
         draw.stageId,
@@ -603,6 +632,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           level: level,
           results: restoredResults,
           shotCount: restoredState.shotCount,
+          expedition: expedition,
         );
         restoredState = restoredState.copyWith(shotCount: completion.shotCount);
       } else if (restoringCompletedStage &&
@@ -618,7 +648,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         );
       }
       if (session.state?.phase == RunPhase.stageCompleted) {
-        await _recoverPendingCopyCoreReward(session);
+        if (!expedition) await _recoverPendingCopyCoreReward(session);
         await session.prepareRewardSelection(stageId: draw.stageId);
       }
       final rewardCandidates =
@@ -665,6 +695,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       );
       if (!mounted) return;
       setState(() {
+        _activeIsExpedition = expedition;
         _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
         _activeStage = index;
         _activePatternSeed = draw.patternSeed;
@@ -792,6 +823,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   void _returnHome() {
     setState(() {
+      _activeIsExpedition = false;
       _activeStage = null;
       _activeLevel = null;
       _activeState = null;
@@ -805,7 +837,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<bool> _earnCopyCore(int levelIndex, int amount) async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final awarded = await session.awardStageCloneCores(
       stageId: levels[levelIndex].id,
       amount: amount,
@@ -816,14 +848,16 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       levels[levelIndex].id,
     );
     _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
-    try {
-      await _progressStore.recordCopyCore(
-        _copyCoreCount,
-        _copyCoreRewardedStageIds.isNotEmpty,
-        rewardedStageIds: _copyCoreRewardedStageIds,
-      );
-    } on Object {
-      // RunState가 복제 코어의 기준이며 진행 기록은 다음 저장 때 다시 동기화한다.
+    if (!_activeIsExpedition) {
+      try {
+        await _progressStore.recordCopyCore(
+          _copyCoreCount,
+          _copyCoreRewardedStageIds.isNotEmpty,
+          rewardedStageIds: _copyCoreRewardedStageIds,
+        );
+      } on Object {
+        // RunState가 복제 코어의 기준이며 진행 기록은 다음 저장 때 다시 동기화한다.
+      }
     }
     if (mounted) {
       setState(() {});
@@ -845,7 +879,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         shotCount: shotCount,
       );
     }
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final attributionState = session.state;
     final completionDifficulty = attributionState == null
         ? null
@@ -853,7 +887,20 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
               .loadFor(attributionState)
               ?.difficulty;
     final nextIndex = levelIndex + 1;
+    final expeditionStageIds = _expeditionProgress?.stageIds;
+    final expeditionPosition = expeditionStageIds?.indexOf(
+      levels[levelIndex].id,
+    );
+    final expeditionNextStageId =
+        _activeIsExpedition &&
+            expeditionStageIds != null &&
+            expeditionPosition != null &&
+            expeditionPosition >= 0 &&
+            expeditionPosition + 1 < expeditionStageIds.length
+        ? expeditionStageIds[expeditionPosition + 1]
+        : null;
     final preferNextBaseline =
+        !_activeIsExpedition &&
         nextIndex < levels.length &&
         CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
           stageIndex: nextIndex,
@@ -862,7 +909,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
-      nextStageId: levelIndex < levels.length - 1
+      nextStageId: _activeIsExpedition
+          ? expeditionNextStageId
+          : levelIndex < levels.length - 1
           ? levels[levelIndex + 1].id
           : null,
       chainScore: chainScore?.totalScore,
@@ -874,14 +923,16 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           : null,
     );
     await _saveCurrentReplay(session, totalScore: chainScore?.totalScore ?? 0);
-    await _progressStore.recordStageClear(levelIndex);
-    if (completionDifficulty == PlayerDifficulty.normal) {
-      await _progressStore.recordBestShot(levelIndex, completion.shotCount);
-      if (completion.optionalChallengeAchieved) {
-        await _progressStore.recordBonusGoal(levelIndex);
+    if (!_activeIsExpedition) {
+      await _progressStore.recordStageClear(levelIndex);
+      if (completionDifficulty == PlayerDifficulty.normal) {
+        await _progressStore.recordBestShot(levelIndex, completion.shotCount);
+        if (completion.optionalChallengeAchieved) {
+          await _progressStore.recordBonusGoal(levelIndex);
+        }
       }
+      _applyClearedLevelInMemory(levelIndex);
     }
-    _applyClearedLevelInMemory(levelIndex);
     if (attributionState != null) {
       await (await _difficultyAttributionStoreFuture).clearFor(
         attributionState,
@@ -922,7 +973,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   Future<List<RunReward>> _prepareRunRewards(int levelIndex) async {
     if (levelIndex < 0 || levelIndex >= levels.length) return const [];
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final rewards = await session.prepareRewardSelection(
       stageId: levels[levelIndex].id,
     );
@@ -936,7 +987,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<RunReward> _selectRunReward(String rewardId) async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final reward = await session.selectReward(rewardId);
     await _mirrorCloneCore(session);
     if (mounted) {
@@ -954,7 +1005,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     String useKey,
     bool stageScoped,
   ) async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final used = stageScoped
         ? await session.consumeStageRewardUse(
             rewardId: rewardId,
@@ -970,7 +1021,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<void> _completeRun() async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     await session.completeRun();
     _showCompletedRunState(session.state!);
   }
@@ -1088,6 +1139,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     required LevelDefinition level,
     required List<ShotResult> results,
     required int shotCount,
+    bool expedition = false,
   }) async {
     final attributionState = session.state;
     final completionDifficulty = attributionState == null
@@ -1128,7 +1180,20 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
     final inventory = session.rewardInventory;
     final nextIndex = levelIndex + 1;
+    final expeditionStageIds = _expeditionProgress?.stageIds;
+    final expeditionPosition = expeditionStageIds?.indexOf(
+      levels[levelIndex].id,
+    );
+    final expeditionNextStageId =
+        expedition &&
+            expeditionStageIds != null &&
+            expeditionPosition != null &&
+            expeditionPosition >= 0 &&
+            expeditionPosition + 1 < expeditionStageIds.length
+        ? expeditionStageIds[expeditionPosition + 1]
+        : null;
     final preferNextBaseline =
+        !expedition &&
         nextIndex < levels.length &&
         CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
           stageIndex: nextIndex,
@@ -1137,7 +1202,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
-      nextStageId: levelIndex < levels.length - 1
+      nextStageId: expedition
+          ? expeditionNextStageId
+          : levelIndex < levels.length - 1
           ? levels[levelIndex + 1].id
           : null,
       chainScore: analysis?.totalScore,
@@ -1153,15 +1220,17 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
           : null,
     );
-    await _progressStore.recordStageClear(levelIndex);
-    if (completionDifficulty == PlayerDifficulty.normal) {
-      await _progressStore.recordBestShot(levelIndex, completion.shotCount);
-      if (completion.optionalChallengeAchieved) {
-        await _progressStore.recordBonusGoal(levelIndex);
+    if (!expedition) {
+      await _progressStore.recordStageClear(levelIndex);
+      if (completionDifficulty == PlayerDifficulty.normal) {
+        await _progressStore.recordBestShot(levelIndex, completion.shotCount);
+        if (completion.optionalChallengeAchieved) {
+          await _progressStore.recordBonusGoal(levelIndex);
+        }
       }
+      await _recoverPendingCopyCoreReward(session);
+      _applyClearedLevelInMemory(levelIndex);
     }
-    await _recoverPendingCopyCoreReward(session);
-    _applyClearedLevelInMemory(levelIndex);
     if (attributionState != null) {
       await (await _difficultyAttributionStoreFuture).clearFor(
         attributionState,
@@ -1202,7 +1271,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     ShotInput input,
     bool consumeFirstImpactGuide,
   ) async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final consumed = await session.recordShot(
       input: input,
       consumeFirstImpactGuide: consumeFirstImpactGuide,
@@ -1220,7 +1289,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     String sourceBallId,
     int shotIndex,
   ) async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final stored = await session.recordKeyCollection(
       keyId: keyId,
       sourceBallId: sourceBallId,
@@ -1256,7 +1325,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<RunHintEntitlement?> _recordCurrentHintFailure() async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final entitlement = await session.recordHintFailure();
     if (entitlement != null && mounted) {
       setState(() => _activeHintEntitlement = entitlement);
@@ -1265,7 +1334,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<RunHintEntitlement?> _openCurrentHint({int? requestedLevel}) async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     final entitlement = await session.openHint(requestedLevel: requestedLevel);
     if (entitlement != null && mounted) {
       setState(() => _activeHintEntitlement = entitlement);
@@ -1274,7 +1343,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<RunHintEntitlement?> _readCurrentHintEntitlement() async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     return session.currentHintEntitlement;
   }
 
@@ -1282,23 +1351,25 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     String sourceId,
     RunTraitAction action,
   ) async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     await session.recordTraitAction(sourceId: sourceId, action: action);
     _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
     _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
-    try {
-      await _progressStore.recordCopyCore(
-        _copyCoreCount,
-        _copyCoreRewardedStageIds.isNotEmpty,
-        rewardedStageIds: _copyCoreRewardedStageIds,
-      );
-    } on Object {
-      // 기준 RunState 저장이 성공했으므로 화면의 속성 행동은 계속 적용한다.
+    if (!_activeIsExpedition) {
+      try {
+        await _progressStore.recordCopyCore(
+          _copyCoreCount,
+          _copyCoreRewardedStageIds.isNotEmpty,
+          rewardedStageIds: _copyCoreRewardedStageIds,
+        );
+      } on Object {
+        // 기준 RunState 저장이 성공했으므로 화면의 속성 행동은 계속 적용한다.
+      }
     }
   }
 
   Future<void> _restartStageRun() async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     await session.restartCurrentStage();
     await _mirrorCloneCore(session);
     if (mounted) {
@@ -1311,7 +1382,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   }
 
   Future<Set<String>> _rewindStageRun() async {
-    final session = await _patternSessionFuture;
+    final session = await _activePatternSessionFuture;
     await session.rewindCurrentShot();
     await _mirrorCloneCore(session);
     final acquiredRewards = session.state?.acquiredRewards ?? const <String>{};
@@ -1326,6 +1397,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Future<void> _mirrorCloneCore(StagePatternSession session) async {
     _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
     _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
+    if (_activeIsExpedition) return;
     try {
       await _progressStore.recordCopyCore(
         _copyCoreCount,
@@ -1454,8 +1526,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         patternHintEntry: _activePatternHintEntry,
         initialHintEntitlement: _activeHintEntitlement,
         initialCollectedHintKeyIds: _activeCollectedHintKeyIds,
-        initialDiscoveredMilestoneIds:
-            _discoveriesByStageId[levels[activeStage].id] ?? const {},
+        initialDiscoveredMilestoneIds: _activeIsExpedition
+            ? const {}
+            : _discoveriesByStageId[levels[activeStage].id] ?? const {},
         levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
@@ -1467,18 +1540,24 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onRewardSelected: _selectRunReward,
         onRunRewardUsed: _consumeRunReward,
         onRunCompleted: _completeRun,
-        onStageRequested: _startStage,
+        onStageRequested: (index) =>
+            _startStage(index, expedition: _activeIsExpedition),
         onShotCommitted: _recordShot,
         onHintKeyCollected: _recordHintKeyCollection,
         onHintEntitlementRead: _readCurrentHintEntitlement,
         onHintFailure: _recordCurrentHintFailure,
         onHintOpened: _openCurrentHint,
-        onDiscoveriesRecorded: _recordDiscoveries,
-        onExpeditionStageCompleted: _recordExpeditionOutcome,
+        onDiscoveriesRecorded: _activeIsExpedition ? null : _recordDiscoveries,
+        onExpeditionStageCompleted: _activeIsExpedition
+            ? _recordExpeditionOutcome
+            : null,
         onTraitActionCommitted: _recordTraitAction,
         onStageRestarted: _restartStageRun,
         onShotRewound: _rewindStageRun,
         progressStore: _progressStore,
+        progressPersistencePolicy: _activeIsExpedition
+            ? GameProgressPersistencePolicy.disabled
+            : GameProgressPersistencePolicy.enabled,
         difficulty: _activeDifficulty,
         tutorialVariant: _tutorialVariant,
         showDebugControls: widget.showDebugControls,

@@ -1,9 +1,22 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/domain/entity_state.dart';
+import 'package:property_shot/game/domain/game_state.dart';
+import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/expedition/expedition_contract.dart';
+import 'package:property_shot/game/hint/generated_hint_catalog.dart';
+import 'package:property_shot/game/levels/generated_stage_catalog.dart';
+import 'package:property_shot/game/persistence/run_state_store.dart';
+import 'package:property_shot/game/run/campaign_stage_selection.dart';
+import 'package:property_shot/game/run/stage_pattern_session.dart';
+import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
+import 'package:property_shot/ui/game_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -23,6 +36,41 @@ void main() {
     GameFeedback.resetForTesting();
   });
   tearDown(GameFeedback.resetForTesting);
+
+  test('탐사 RunState reset은 캠페인 저장을 지우거나 덮어쓰지 않는다', () async {
+    final preferences = await SharedPreferences.getInstance();
+    final shared = SharedPreferencesRunStateBackend(preferences);
+    final campaign = _session(shared);
+    final expedition = _session(
+      NamespacedRunStateBackend(
+        delegate: shared,
+        namespace: 'property_shot_expedition:',
+      ),
+    );
+    await campaign.selectStage('stage_heavy');
+    await expedition.selectStage('stage_heavy');
+    await campaign.recordShot(
+      input: const ShotInput(direction: Vec2(1, 0), power: 0.4),
+    );
+    await expedition.recordShot(
+      input: const ShotInput(direction: Vec2(0, 1), power: 0.6),
+    );
+
+    await expedition.reset();
+
+    final restoredCampaign = _session(shared);
+    final restoredExpedition = _session(
+      NamespacedRunStateBackend(
+        delegate: shared,
+        namespace: 'property_shot_expedition:',
+      ),
+    );
+    await restoredCampaign.loadState();
+    await restoredExpedition.loadState();
+    expect(restoredCampaign.currentShotInputs, hasLength(1));
+    expect(restoredCampaign.currentShotInputs.single.power, 0.4);
+    expect(restoredExpedition.state, isNull);
+  });
 
   testWidgets('홈에서 세 가지 탐사 목표를 고르고 첫 단계를 시작할 수 있다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -86,6 +134,79 @@ void main() {
 
     expect(find.textContaining('진행 1/3 · 달성 0/3'), findsOneWidget);
     expect(find.text('클리어 완료 · 목표는 다음에 재도전 가능'), findsOneWidget);
+  });
+
+  testWidgets('캠페인 성공 샷이 있어도 새 탐사는 spawn의 0발 planning 상태로 시작한다', (
+    tester,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final campaignSession = _session(
+      SharedPreferencesRunStateBackend(preferences),
+    );
+    final campaignDraw = await campaignSession.selectStage(
+      'stage_heavy',
+      drawPolicy: CampaignStageSelectionPolicy.drawTutorialBaselineFirst,
+    );
+    final radians = 62 * math.pi / 180;
+    final successfulInput = ShotInput(
+      direction: Vec2(math.cos(radians), math.sin(radians)),
+      power: 0.70,
+    );
+    final campaignLevel = campaignDraw.pattern.toLevelDefinition(
+      stageId: campaignDraw.stageId,
+      stageTitle: generatedStageCatalog.stageById(campaignDraw.stageId).title,
+    );
+    expect(
+      const ShotResolver()
+          .resolve(
+            campaignLevel.createState(0, productRules: true),
+            successfulInput,
+          )
+          .state
+          .phase,
+      GamePhase.success,
+    );
+    await campaignSession.recordShot(input: successfulInput);
+    expect(campaignSession.currentShotInputs, hasLength(1));
+
+    await tester.pumpWidget(
+      const PropertyShotApp(
+        showHome: true,
+        loadGameAssets: false,
+        fontFamilyOverride: 'GoldenNanumGothic',
+      ),
+    );
+    await _pumpForAsyncWork(tester);
+    await tester.ensureVisible(
+      find.byKey(const Key('expedition_entry_button')),
+    );
+    await tester.tap(find.byKey(const Key('expedition_entry_button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('expedition_contract_discovery')));
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('expedition_play_0')));
+    await _pumpForAsyncWork(tester);
+
+    final screen = tester.widget<GameScreen>(find.byType(GameScreen));
+    final initial = screen.initialState!;
+    final hole = initial.entities.singleWhere(
+      (entity) => entity.type == EntityType.hole,
+    );
+    expect(screen.initialShotInputs, isEmpty);
+    expect(screen.initialShotResults, isEmpty);
+    expect(initial.phase, GamePhase.planning);
+    expect(initial.shotCount, 0);
+    expect(initial.activeBall.position, initial.ballSpawn);
+    expect(
+      initial.activeBall.position.distanceTo(hole.position),
+      greaterThan(initial.activeBall.hitRadius + hole.hitRadius),
+    );
+
+    final restoredCampaign = _session(
+      SharedPreferencesRunStateBackend(preferences),
+    );
+    await restoredCampaign.loadState();
+    expect(restoredCampaign.currentShotInputs, hasLength(1));
   });
 
   testWidgets('탐사 코드를 입력하면 같은 목표와 세 단계를 새로 시작한다', (tester) async {
@@ -186,6 +307,18 @@ void main() {
     );
   });
 }
+
+StagePatternSession _session(RunStateKeyValueBackend backend) =>
+    StagePatternSession(
+      catalog: generatedStageCatalog,
+      store: RunStateStore(backend: backend),
+      fixedRootSeed: 0x12345678,
+      fixedRunId: 'expedition-isolation-fixture',
+      fixedResolverVersion: 'shot-resolver-v1',
+      hintVersionResolver: (stageId, patternId) => generatedHintCatalog
+          .entryFor(stageId: stageId, patternId: patternId)
+          .hintVersion,
+    );
 
 Future<void> _pumpForAsyncWork(WidgetTester tester) async {
   await tester.runAsync(
