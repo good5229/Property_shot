@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,7 @@ import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
+import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/run/run_reward.dart';
 import 'package:property_shot/game/run/run_state.dart';
 import 'package:property_shot/game/run/stage_pattern_session.dart';
@@ -132,6 +134,10 @@ void main() {
     expect(find.text('정밀 충전 조절'), findsOneWidget);
     expect(find.text('런 동안 계속 활성'), findsOneWidget);
     expect(find.textContaining('충전 속도를 25% 늦춰'), findsOneWidget);
+    expect(
+      find.byKey(const Key('reward_inventory_usage_precision_charge_control')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('reward_inventory_back_button')));
     await tester.pump();
@@ -349,6 +355,26 @@ void main() {
       tester.widget<GameScreen>(find.byType(GameScreen)).levelOverride?.id,
       levels[1].id,
     );
+  });
+
+  testWidgets('영구 발견 기록은 재시작 뒤 섬 지도 진행도로 복원된다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.discoveryRecordsKey: [
+        '${levels[0].id}::heavy_equipped',
+        '${levels[0].id}::crate_moved',
+        '${levels[1].id}::bouncy_equipped',
+        '${levels[0].id}::폐기된_발견',
+      ],
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.text('전체 발견 3 / 30 · 섬의 물리 규칙을 완성하세요.'), findsOneWidget);
+    expect(find.text('발견 2/3 · 추천 파 ${levels[0].parShots}회'), findsOneWidget);
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
   });
 
   testWidgets('클리어 진행 상태가 섬 지도에서 4단계를 연다', (tester) async {
@@ -1364,7 +1390,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 6500));
 
     expect(find.byKey(const Key('failure_popup')), findsOneWidget);
-    expect(find.text('다시 조준'), findsOneWidget);
+    expect(find.text('바로 다시 조준'), findsOneWidget);
     expect(find.byKey(const Key('failure_replay_button')), findsOneWidget);
     expect(find.text('되감기'), findsOneWidget);
     expect(find.text('단계 처음부터'), findsOneWidget);
@@ -1379,6 +1405,51 @@ void main() {
     await tester.tap(find.byKey(const Key('failure_retry_button')));
     await tester.pump();
     expect(find.byKey(const Key('failure_popup')), findsNothing);
+    expect(find.byKey(const Key('previous_aim_semantics')), findsOneWidget);
+    expect(find.textContaining('직전 조준이 회색으로 남아 있습니다'), findsOneWidget);
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(game.previousAimInput, isNotNull);
+    expect(game.previousAimInput!.direction, const Vec2(1, 0));
+
+    await tester.tap(find.byKey(const Key('rewind_button')).first);
+    await tester.pump();
+    expect(game.previousAimInput, isNull);
+    expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
+  });
+
+  testWidgets('직전 조준 비교를 끄면 재시도 후 비교선을 남기지 않는다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      GameFeedback.settingsSchemaVersionKey: GameFeedback.settingsSchemaVersion,
+      GameFeedback.previousAimComparisonPreferenceKey: false,
+    });
+    GameFeedback.previousAimComparisonEnabled = false;
+    addTearDown(GameFeedback.resetForTesting);
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
+    await tester.pump(const Duration(milliseconds: 6500));
+
+    await tester.tap(find.byKey(const Key('failure_retry_button')));
+    await tester.pump();
+
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(game.previousAimInput, isNull);
+    expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
+    expect(find.textContaining('각도나 힘 한 가지만'), findsOneWidget);
   });
 
   testWidgets('일시정지 중에는 힘 조준으로 발사되지 않는다', (tester) async {

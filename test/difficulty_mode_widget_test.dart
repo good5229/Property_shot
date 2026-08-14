@@ -563,6 +563,7 @@ class _ProgressSpy extends ProgressStore {
     copyCoreCount: 0,
     copyCoreRewarded: false,
     copyCoreRewardedStageIds: {},
+    discoveriesByStageId: {},
   );
 
   @override

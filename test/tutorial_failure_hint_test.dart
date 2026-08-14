@@ -56,7 +56,7 @@ void main() {
     await _fireDefaultShot(tester, levels.first.ballSpawn);
 
     expect(find.byKey(const Key('failure_popup')), findsOneWidget);
-    expect(find.textContaining('무거움 → 상자'), findsNothing);
+    expect(find.text(tutorialCausalHintForStage(0)!), findsNothing);
   });
 
   testWidgets('작은 화면에서 3단계 두 실패 지속 카드는 의미 정보와 함께 들어온다', (tester) async {

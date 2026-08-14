@@ -8,7 +8,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.1,
           "equippedTrait": null
         },
@@ -31,7 +31,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
@@ -54,13 +54,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
         {
           "angleRadians": 2.0943951023931953,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
@@ -77,7 +77,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
@@ -117,19 +117,19 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.8726646259971648,
+          "angleRadians": 0.0,
           "power": 0.1,
           "equippedTrait": null
         },
         {
-          "angleRadians": -0.1745329251994339,
-          "power": 0.6,
+          "angleRadians": -1.2217304763960313,
+          "power": 0.7,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "dca62a08fe843a48",
-        "1622c167812fd145"
+        "be9a81f8db31183d",
+        "577e702b88f46f54"
       ],
       "expectedPhase": "success"
     },
@@ -140,19 +140,19 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
         {
           "angleRadians": 2.443460952792061,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "bouncy"
         }
       ],
       "expectedFingerprints": [
-        "101a1eb14353c970",
-        "e2fafc2422e13f01"
+        "6a4100067812142e",
+        "1c58b62e14d94223"
       ],
       "expectedPhase": "success"
     },
@@ -163,19 +163,19 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
-          "power": 0.6,
+          "angleRadians": 0.0,
+          "power": 0.2,
           "equippedTrait": null
         },
         {
-          "angleRadians": 2.443460952792061,
-          "power": 1,
+          "angleRadians": -2.094395102393196,
+          "power": 0.8,
           "equippedTrait": "bouncy"
         }
       ],
       "expectedFingerprints": [
-        "cd5488118dcd22c3",
-        "d71c4a8fd8d119ab"
+        "6a4100067812142e",
+        "ad1f0044177b1701"
       ],
       "expectedPhase": "success"
     },
@@ -186,19 +186,19 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.3490658503988659,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
         {
-          "angleRadians": 2.443460952792061,
-          "power": 1,
+          "angleRadians": -2.094395102393196,
+          "power": 1.0,
           "equippedTrait": "bouncy"
         }
       ],
       "expectedFingerprints": [
-        "44138c77782c56ec",
-        "7c47825310bf8de5"
+        "6a4100067812142e",
+        "f544e420e03d4cc8"
       ],
       "expectedPhase": "success"
     },
@@ -209,19 +209,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
-          "power": 0.2,
-          "equippedTrait": "bouncy"
-        },
-        {
           "angleRadians": 2.443460952792061,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "bouncy"
         }
       ],
       "expectedFingerprints": [
-        "0252cc0c0f1a17ac",
-        "cfe4264f23f2d2d9"
+        "e88f71c605dc0006"
       ],
       "expectedPhase": "success"
     },
@@ -255,7 +249,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
@@ -278,13 +272,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
         {
           "angleRadians": 2.0943951023931953,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
@@ -301,7 +295,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
@@ -324,7 +318,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": "sticky"
         },
@@ -347,7 +341,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.1,
           "equippedTrait": null
         },
@@ -370,7 +364,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
@@ -411,7 +405,7 @@
       "shots": [
         {
           "angleRadians": -2.094395102393196,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
@@ -444,7 +438,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.1,
           "equippedTrait": null
         },
@@ -502,7 +496,7 @@
       "shots": [
         {
           "angleRadians": 1.3962634015954636,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
@@ -535,7 +529,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.1,
           "equippedTrait": null
         },
@@ -645,68 +639,80 @@
     {
       "id": "stage_7_multi_2",
       "stageIndex": 6,
-      "routeTag": "direct_bypass",
+      "routeTag": "direct",
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.41887902047863906,
-          "power": 0.56,
+          "angleRadians": 0.0,
+          "power": 0.6,
+          "equippedTrait": null
+        },
+        {
+          "angleRadians": 0.3490658503988659,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "e2f890e6aa5e810f"
+        "556533fbe4e9e638",
+        "e772f289c36bf495"
       ],
       "expectedPhase": "success"
     },
     {
       "id": "stage_7_multi_3",
       "stageIndex": 6,
-      "routeTag": "direct_bypass",
+      "routeTag": "direct",
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.41887902047863906,
-          "power": 0.58,
+          "angleRadians": 0.0,
+          "power": 0.8,
+          "equippedTrait": null
+        },
+        {
+          "angleRadians": 0.3490658503988659,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "35fce68b50567869"
+        "6de2d0789d2d18bf",
+        "8fe7986da8398aaa"
       ],
       "expectedPhase": "success"
     },
     {
       "id": "stage_7_multi_4",
       "stageIndex": 6,
-      "routeTag": "direct_bypass",
+      "routeTag": "direct",
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.41887902047863906,
-          "power": 0.62,
+          "angleRadians": 0.3490658503988659,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "3d9d330421f7ed5b"
+        "a1e7254b724a8cfd"
       ],
       "expectedPhase": "success"
     },
     {
       "id": "stage_7_multi_5",
       "stageIndex": 6,
-      "routeTag": "direct_bypass",
+      "routeTag": "direct",
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.41887902047863906,
-          "power": 0.64,
+          "angleRadians": -0.1745329251994339,
+          "power": 0.2,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "1a89842d5a2479fd"
+        "7362e2b35a35aaa3"
       ],
       "expectedPhase": "success"
     },
@@ -808,7 +814,7 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.8,
           "equippedTrait": null
         },
@@ -831,13 +837,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
         {
           "angleRadians": -1.0471975511965976,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
@@ -854,13 +860,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.4,
           "equippedTrait": null
         },
         {
           "angleRadians": -1.0471975511965976,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
@@ -877,13 +883,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": "heavy"
         },
         {
           "angleRadians": -1.0471975511965976,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
@@ -900,13 +906,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.6,
           "equippedTrait": "heavy"
         },
         {
           "angleRadians": 0.6981317007977318,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
@@ -923,13 +929,13 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0,
+          "angleRadians": 0.0,
           "power": 0.2,
           "equippedTrait": null
         },
         {
           "angleRadians": 1.3962634015954636,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
@@ -942,23 +948,23 @@
     {
       "id": "stage_10_multi_2",
       "stageIndex": 9,
-      "routeTag": "property_chain",
+      "routeTag": "alternate",
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.4886921905584123,
-          "power": 0.84,
+          "angleRadians": 0.0,
+          "power": 0.2,
           "equippedTrait": "heavy"
         },
         {
-          "angleRadians": 0.7504915783575618,
-          "power": 0.88,
-          "equippedTrait": null
+          "angleRadians": -0.6981317007977322,
+          "power": 0.8,
+          "equippedTrait": "heavy"
         }
       ],
       "expectedFingerprints": [
-        "09a7a19828c6948f",
-        "0b5cdf33cc9ed637"
+        "ddf47e9a1664085e",
+        "80edfc143bb34288"
       ],
       "expectedPhase": "success"
     },
@@ -970,7 +976,7 @@
       "shots": [
         {
           "angleRadians": 1.3962634015954636,
-          "power": 1,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
@@ -982,46 +988,34 @@
     {
       "id": "stage_10_multi_4",
       "stageIndex": 9,
-      "routeTag": "property_chain",
+      "routeTag": "direct",
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.4886921905584123,
-          "power": 0.84,
-          "equippedTrait": "heavy"
-        },
-        {
-          "angleRadians": 0.7504915783575618,
-          "power": 0.9,
+          "angleRadians": -2.094395102393196,
+          "power": 0.6,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "09a7a19828c6948f",
-        "312d057d8c09cb7b"
+        "ff801ff2b6e33bac"
       ],
       "expectedPhase": "success"
     },
     {
       "id": "stage_10_multi_5",
       "stageIndex": 9,
-      "routeTag": "opened_gate_bank",
+      "routeTag": "direct",
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.4886921905584123,
-          "power": 0.84,
-          "equippedTrait": "heavy"
-        },
-        {
-          "angleRadians": 1.53588974175501,
-          "power": 0.6,
+          "angleRadians": -2.094395102393196,
+          "power": 0.8,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "09a7a19828c6948f",
-        "87b70278b8062857"
+        "44c2d0bc298b38d6"
       ],
       "expectedPhase": "success"
     }

@@ -46,6 +46,22 @@ String stageDiscoveryCompactPath(int levelIndex) => switch (levelIndex) {
   _ => '기믹 반응 → 새로운 경로',
 };
 
+Set<String> stageDiscoveryMilestoneIds(int levelIndex) => Set.unmodifiable({
+  ...switch (levelIndex) {
+    0 => const ['heavy_equipped', 'crate_moved'],
+    1 => const ['bouncy_equipped', 'wall_bounce'],
+    2 => const ['switch_pressed', 'gate_opened'],
+    3 => const ['sharp_equipped', 'balloon_popped'],
+    4 => const ['source_drained', 'drained_source_moved'],
+    5 => const ['speed_restored', 'speed_bank'],
+    6 => const ['past_ball_left', 'past_ball_used'],
+    7 => const ['chain_started', 'chain_deepened'],
+    8 => const ['reflector_rotated', 'rotated_route_used'],
+    _ => const ['trait_combined', 'systems_combined'],
+  },
+  'hole_reached',
+});
+
 List<StageDiscoveryMilestone> stageDiscoveryMilestones({
   required GameState state,
   required Iterable<ShotInput> shotInputs,

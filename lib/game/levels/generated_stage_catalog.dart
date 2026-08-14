@@ -872,11 +872,11 @@ const generatedStageCatalogJson = r'''
               "type": "hole",
               "position": {
                 "x": 300.0,
-                "y": 110.0
+                "y": 130.0
               },
               "size": {
-                "x": 52.0,
-                "y": 52.0
+                "x": 68.0,
+                "y": 68.0
               },
               "traits": [],
               "movable": false,
@@ -987,10 +987,10 @@ const generatedStageCatalogJson = r'''
               "type": "wall",
               "position": {
                 "x": 95.0,
-                "y": 230.0
+                "y": 210.0
               },
               "size": {
-                "x": 70.0,
+                "x": 46.0,
                 "y": 24.0
               },
               "traits": [],
@@ -1013,7 +1013,7 @@ const generatedStageCatalogJson = r'''
                 "y": 350.0
               },
               "size": {
-                "x": 86.0,
+                "x": 70.0,
                 "y": 24.0
               },
               "traits": [],

@@ -335,9 +335,16 @@ void main() {
             'stage_bouncy_01',
             'stage_bouncy_03',
           }.contains(fixture.patternId);
+      final minimumSuccessCount =
+          fixture.patternId == 'stage_bouncy_01' &&
+              fixture.strategyId == 'jelly'
+          ? 8
+          : deliberatelyRareNoneRoute
+          ? 1
+          : 3;
       expect(
         successCount,
-        greaterThanOrEqualTo(deliberatelyRareNoneRoute ? 1 : 3),
+        greaterThanOrEqualTo(minimumSuccessCount),
         reason:
             '${fixture.patternId}/${fixture.strategyId} 대표 근방 성공점=$successCount/15',
       );
@@ -378,6 +385,18 @@ void main() {
         }
       }
       counts[pattern.patternId] = (none: none, jelly: jelly);
+      if (pattern.patternId == 'stage_bouncy_01') {
+        expect(
+          jelly,
+          greaterThanOrEqualTo(30),
+          reason: '첫 진입 탄성 학습 패턴의 절대 성공 영역이 다시 좁아졌습니다.',
+        );
+        expect(
+          none,
+          lessThanOrEqualTo(10),
+          reason: '첫 진입 패턴의 무속성 우회가 탄성 학습을 흐립니다.',
+        );
+      }
       expect(
         jelly,
         greaterThan(none),

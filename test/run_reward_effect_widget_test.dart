@@ -170,6 +170,7 @@ void main() {
 
   testWidgets('첫 충돌 안내는 궤적 없이 대상만 알리고 발사 때 한 번 사용한다', (tester) async {
     final usedRewards = <String>[];
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
     await tester.pumpWidget(
       _gameApp(
         state: _directClearState(),
@@ -178,6 +179,7 @@ void main() {
           usedRewards.add(rewardId);
           return true;
         },
+        telemetry: telemetry,
       ),
     );
     await tester.pump();
@@ -196,6 +198,11 @@ void main() {
     await launch.up(timeStamp: const Duration(milliseconds: 1920));
     await tester.pump();
     expect(usedRewards, contains(runRewardFirstImpactGuideId));
+    final rewardUse = telemetry.events.singleWhere(
+      (event) => event['event_code'] == 'reward_used',
+    );
+    expect(rewardUse['reward_used_id'], runRewardFirstImpactGuideId);
+    expect(rewardUse['reward_use_trigger'], 'automatic');
   });
 
   testWidgets('정밀 충전 보상은 실제 발사의 힘 상승을 25% 늦춘다', (tester) async {
@@ -209,6 +216,13 @@ void main() {
       ),
     );
     await tester.pump();
+
+    expect(find.byKey(const Key('active_reward_guide')), findsOneWidget);
+    expect(find.textContaining('충전 속도 25% 완화'), findsOneWidget);
+    expect(
+      telemetry.events.where((event) => event['event_code'] == 'reward_used'),
+      hasLength(1),
+    );
 
     final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
     await tester.pump(const Duration(milliseconds: 920));

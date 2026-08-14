@@ -82,6 +82,73 @@ void main() {
     expect(snapshot.copyCoreRewardedStageIds, {'stage_2'});
   });
 
+  test('발견 기록은 안정 스테이지 ID별로 합쳐 앱 재실행 뒤 복원한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final firstRun = ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_a', 'stage_b'],
+    );
+
+    await firstRun.recordDiscoveries(0, const [
+      'heavy_equipped',
+      'heavy_equipped',
+    ]);
+    await firstRun.recordDiscoveries(0, const ['crate_moved']);
+    await firstRun.recordDiscoveries(1, const ['wall_bounce']);
+
+    final restored = await ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_b', 'stage_a'],
+    ).load();
+    expect(restored.discoveriesByStageId['stage_a'], {
+      'heavy_equipped',
+      'crate_moved',
+    });
+    expect(restored.discoveriesByStageId['stage_b'], {'wall_bounce'});
+  });
+
+  test('손상된 발견과 폐기된 단계는 정제하고 초기화에서 제거한다', () async {
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.discoveryRecordsKey: [
+        'stage_a::heavy_equipped',
+        'stage_a::',
+        '삭제된_단계::unknown',
+        'separator_missing',
+      ],
+    });
+    final stableStore = ProgressStore(
+      stageCount: 1,
+      stageIds: const ['stage_a'],
+    );
+
+    final restored = await stableStore.load();
+    expect(restored.discoveriesByStageId, {
+      'stage_a': {'heavy_equipped'},
+    });
+    await stableStore.reset();
+    expect((await stableStore.load()).discoveriesByStageId, isEmpty);
+  });
+
+  test('발견과 클리어 동시 저장은 직렬화되어 둘 다 보존된다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final concurrentStore = ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_a', 'stage_b'],
+    );
+
+    await Future.wait([
+      concurrentStore.recordDiscoveries(0, const ['heavy_equipped']),
+      concurrentStore.recordStageClear(0),
+      concurrentStore.recordDiscoveries(0, const ['crate_moved']),
+    ]);
+    final snapshot = await concurrentStore.load();
+    expect(snapshot.clearedLevels, contains(0));
+    expect(snapshot.discoveriesByStageId['stage_a'], {
+      'heavy_equipped',
+      'crate_moved',
+    });
+  });
+
   test('앱 재실행 뒤 클리어·기록·보너스·복제 코어를 복원한다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final firstRun = ProgressStore(stageCount: 4);
@@ -155,6 +222,7 @@ void main() {
     expect(snapshot.bonusGoals, isEmpty);
     expect(snapshot.copyCoreCount, 0);
     expect(snapshot.copyCoreRewardedStageIds, isEmpty);
+    expect(snapshot.discoveriesByStageId, isEmpty);
   });
 
   test('복제 코어 보상 단계는 유효한 안정 ID만 중복 없이 저장한다', () async {

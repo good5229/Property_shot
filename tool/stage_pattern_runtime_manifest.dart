@@ -127,12 +127,17 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     );
   }
   for (final fixture in stage10PropertyShotSolutions) {
+    final directFamilyId = fixture.directFamilyId;
+    final openedGateBankInput = fixture.openedGateBankInput;
+    final familyId = directFamilyId ?? 'opened_gate_bank';
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_direct_bypass',
-        familyId: 'direct_bypass',
-        inputs: [fixture.directInput],
+        id: '${fixture.patternId}_$familyId',
+        familyId: familyId,
+        inputs: directFamilyId != null
+            ? [fixture.directInput]
+            : [fixture.firstInput, openedGateBankInput!],
       ),
     );
   }

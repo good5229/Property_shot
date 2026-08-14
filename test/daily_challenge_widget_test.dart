@@ -28,6 +28,9 @@ void main() {
       find.byKey(const Key('daily_challenge_entry_button')),
       findsOneWidget,
     );
+    await tester.ensureVisible(
+      find.byKey(const Key('daily_challenge_entry_button')),
+    );
     await tester.tap(find.byKey(const Key('daily_challenge_entry_button')));
     await tester.pumpAndSettle();
 
@@ -418,6 +421,7 @@ class _SpyProgressStore extends ProgressStore {
         copyCoreCount: 0,
         copyCoreRewarded: false,
         copyCoreRewardedStageIds: {},
+        discoveriesByStageId: {},
       ),
     );
   }

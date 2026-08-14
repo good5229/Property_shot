@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'domain/entity_state.dart';
 import 'domain/game_state.dart';
 import 'domain/geometry.dart';
+import 'domain/shot_input.dart';
 import 'domain/trait.dart';
 import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
@@ -70,6 +71,7 @@ class PropertyShotGame extends FlameGame {
   double lastFrameTimeMs = 0;
   double playbackSpeed = 1;
   FirstArrivalPreview? firstArrivalPreview;
+  ShotInput? previousAimInput;
 
   void setDebugOptions({
     bool? hitboxes,
@@ -89,6 +91,10 @@ class PropertyShotGame extends FlameGame {
 
   void setFirstArrivalPreview(FirstArrivalPreview? preview) {
     firstArrivalPreview = preview;
+  }
+
+  void setPreviousAimInput(ShotInput? input) {
+    previousAimInput = input;
   }
 
   /// Golden·렌더 계약에서 물리 사건 시점을 재현하기 위한 결정론 cursor다.
@@ -358,7 +364,10 @@ class PropertyShotGame extends FlameGame {
             return firstIsHole ? -1 : 1;
           });
     _drawStage4Relations(canvas, renderEntities);
-    if (state.phase == GamePhase.planning) _drawAimArrow(canvas);
+    if (state.phase == GamePhase.planning) {
+      _drawPreviousAim(canvas);
+      _drawAimArrow(canvas);
+    }
     for (final entity in renderEntities) {
       if (animated && entity.id == 'active_ball') {
         continue;
@@ -1293,6 +1302,72 @@ class PropertyShotGame extends FlameGame {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2,
     );
+  }
+
+  void _drawPreviousAim(Canvas canvas) {
+    final input = previousAimInput;
+    if (input == null || _animationPath.isNotEmpty) return;
+    final ball = state.activeBall;
+    final direction = input.direction.normalized();
+    if (!direction.x.isFinite ||
+        !direction.y.isFinite ||
+        direction.length == 0) {
+      return;
+    }
+    final start = ball.position + direction * (ball.radius + 8);
+    final length = 38.0 + input.power.clamp(0.0, 1.0) * 52.0;
+    final end = start + direction * length;
+    final path = Path()
+      ..moveTo(_project(start).dx, _project(start).dy)
+      ..lineTo(_project(end).dx, _project(end).dy);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xB86B7472)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round,
+    );
+    for (var index = 0; index < 5; index++) {
+      if (index.isOdd) continue;
+      final progress = (index + 1) / 6;
+      canvas.drawCircle(
+        _project(start + direction * length * progress),
+        3.2,
+        Paint()..color = const Color(0xFFF7FAF3),
+      );
+      canvas.drawCircle(
+        _project(start + direction * length * progress),
+        2.1,
+        Paint()..color = const Color(0xFF6B7472),
+      );
+    }
+    final label = TextPainter(
+      text: const TextSpan(
+        text: '직전',
+        style: TextStyle(
+          color: Color(0xFF4E5856),
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          fontFamily: 'NanumGothic',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final labelOffset = _project(end) + const Offset(5, -8);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          labelOffset.dx - 3,
+          labelOffset.dy - 2,
+          label.width + 6,
+          label.height + 4,
+        ),
+        const Radius.circular(5),
+      ),
+      Paint()..color = const Color(0xDDF7FAF3),
+    );
+    label.paint(canvas, labelOffset);
   }
 
   void _drawFirstArrivalPreview(Canvas canvas) {

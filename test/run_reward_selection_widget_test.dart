@@ -24,6 +24,9 @@ void main() {
 
     expect(find.text('런 보상 하나 선택'), findsOneWidget);
     expect(find.byKey(const Key('run_reward_selection')), findsOneWidget);
+    for (final reward in initialRunRewards.take(3)) {
+      expect(find.byKey(Key('run_reward_usage_${reward.id}')), findsOneWidget);
+    }
     expect(
       tester
           .widget<FilledButton>(find.byKey(const Key('next_stage_button')))

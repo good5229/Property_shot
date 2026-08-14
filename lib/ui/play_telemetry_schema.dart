@@ -12,6 +12,7 @@ enum PlayTelemetryEventType {
   collisionChainCompleted,
   rewardOffered,
   rewardSelected,
+  rewardUsed,
   optionalChallengeCompleted,
   stageCleared,
   stageRetried,
@@ -48,6 +49,7 @@ extension PlayTelemetryEventTypeMetadata on PlayTelemetryEventType {
       'collision_chain_completed',
     PlayTelemetryEventType.rewardOffered => 'reward_offered',
     PlayTelemetryEventType.rewardSelected => 'reward_selected',
+    PlayTelemetryEventType.rewardUsed => 'reward_used',
     PlayTelemetryEventType.optionalChallengeCompleted =>
       'optional_challenge_completed',
     PlayTelemetryEventType.stageCleared => 'stage_cleared',
@@ -85,6 +87,7 @@ extension PlayTelemetryEventTypeMetadata on PlayTelemetryEventType {
     PlayTelemetryEventType.collisionChainCompleted => '충돌 연쇄 완료',
     PlayTelemetryEventType.rewardOffered => '보상 제시',
     PlayTelemetryEventType.rewardSelected => '보상 선택',
+    PlayTelemetryEventType.rewardUsed => '보상 사용',
     PlayTelemetryEventType.optionalChallengeCompleted => '선택 도전 완료',
     PlayTelemetryEventType.stageCleared => '단계 클리어',
     PlayTelemetryEventType.stageRetried => '단계 재시도',
@@ -109,6 +112,15 @@ extension PlayTelemetryEventTypeMetadata on PlayTelemetryEventType {
 enum PlayTelemetryResult { continued, cleared, failed, cancelled, abandoned }
 
 enum PlayTelemetryDifficulty { normal, easy }
+
+enum PlayTelemetryRewardTrigger {
+  manual('manual'),
+  automatic('automatic'),
+  passive('passive');
+
+  const PlayTelemetryRewardTrigger(this.code);
+  final String code;
+}
 
 /// 힌트 접근권을 부여한 경로다. 저장 모델의 schemaName과 동일하게 유지한다.
 enum PlayTelemetryHintSource {
@@ -173,6 +185,43 @@ class PlayTelemetryRewardState {
     if (selectedId != null) 'reward_selected_id': selectedId,
     'reward_acquired_ids': acquiredIds,
     'clone_core_count': cloneCoreCount,
+  };
+}
+
+class PlayTelemetryRewardUsePayload {
+  PlayTelemetryRewardUsePayload({
+    required this.rewardId,
+    required this.useKey,
+    required this.trigger,
+    required this.stageScoped,
+    this.selectionRecordId,
+    this.stageDistance,
+  }) {
+    _requireId(rewardId, '사용 보상');
+    _requireId(useKey, '보상 사용 키');
+    if (selectionRecordId != null) {
+      _requireId(selectionRecordId!, '보상 선택 기록');
+    }
+    if (stageDistance != null) {
+      _requireNonNegative(stageDistance!, '보상 사용 단계 거리');
+    }
+  }
+
+  final String rewardId;
+  final String useKey;
+  final PlayTelemetryRewardTrigger trigger;
+  final bool stageScoped;
+  final String? selectionRecordId;
+  final int? stageDistance;
+
+  Map<String, Object?> toJson() => {
+    'reward_used_id': rewardId,
+    'reward_use_key': useKey,
+    'reward_use_trigger': trigger.code,
+    'reward_use_stage_scoped': stageScoped,
+    if (selectionRecordId != null)
+      'reward_selection_record_id': selectionRecordId,
+    if (stageDistance != null) 'reward_use_stage_distance': stageDistance,
   };
 }
 
@@ -451,6 +500,7 @@ class TypedPlayTelemetryEvent {
     this.key,
     this.stageOutcome,
     this.powerGauge,
+    this.rewardUse,
   }) {
     switch (type) {
       case PlayTelemetryEventType.hintRewardOffered:
@@ -502,6 +552,11 @@ class TypedPlayTelemetryEvent {
           throw ArgumentError('파워 게이지 취소에는 cancelled gauge payload가 필요합니다.');
         }
         break;
+      case PlayTelemetryEventType.rewardUsed:
+        if (rewardUse == null) {
+          throw ArgumentError('보상 사용 이벤트에는 rewardUse payload가 필요합니다.');
+        }
+        break;
       default:
         break;
     }
@@ -515,6 +570,7 @@ class TypedPlayTelemetryEvent {
   final PlayTelemetryKeyPayload? key;
   final PlayTelemetryStageOutcomePayload? stageOutcome;
   final PlayTelemetryPowerGaugePayload? powerGauge;
+  final PlayTelemetryRewardUsePayload? rewardUse;
 }
 
 void _requireId(String value, String label) {

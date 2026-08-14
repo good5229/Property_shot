@@ -29,7 +29,14 @@ void main() {
         expect(reward.description, isNotEmpty);
         expect(reward.name, isNot(matches(RegExp('[A-Za-z]'))));
         expect(reward.description, isNot(matches(RegExp('[A-Za-z]'))));
+        expect(reward.usageHint, isNotEmpty);
+        expect(reward.stageGuide, isNotEmpty);
+        expect(reward.activationLabel, isNotEmpty);
       }
+      expect(
+        initialRunRewards.map((reward) => reward.activationKind).toSet(),
+        RunRewardActivationKind.values.toSet(),
+      );
     });
 
     test('보상 JSON은 안정 ID와 효과 종류를 보존한다', () {

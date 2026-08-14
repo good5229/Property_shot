@@ -298,6 +298,7 @@ class LocalPlayTelemetry {
       if (typedEvent.key != null) ...typedEvent.key!.toJson(),
       if (typedEvent.stageOutcome != null) ...typedEvent.stageOutcome!.toJson(),
       if (typedEvent.powerGauge != null) ...typedEvent.powerGauge!.toJson(),
+      if (typedEvent.rewardUse != null) ...typedEvent.rewardUse!.toJson(),
     };
     _appendEvent(event);
   }
@@ -419,6 +420,12 @@ class LocalPlayTelemetry {
       'reward_selected_id',
       'reward_acquired_ids',
       'clone_core_count',
+      'reward_used_id',
+      'reward_use_key',
+      'reward_use_trigger',
+      'reward_use_stage_scoped',
+      'reward_selection_record_id',
+      'reward_use_stage_distance',
       'ball_traits',
       'causal_chain',
       'causal_depth',

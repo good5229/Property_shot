@@ -7,11 +7,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/analysis/creative_chain_score.dart';
 import 'game/analysis/stage_chain_challenge.dart';
+import 'game/analysis/stage_discovery.dart';
 import 'game/domain/entity_state.dart';
 import 'game/domain/game_state.dart';
 import 'game/domain/geometry.dart';
 import 'game/domain/level_definition.dart';
 import 'game/domain/shot_input.dart';
+import 'game/expedition/expedition_contract.dart';
 import 'game/hint/generated_hint_catalog.dart';
 import 'game/hint/demo_playback_plan.dart';
 import 'game/hint/pattern_hint.dart';
@@ -302,6 +304,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showDailyChallenge = false;
   bool _showReplayLibrary = false;
   bool _showRewardInventory = false;
+  bool _showExpedition = false;
   Future<Set<String>>? _rewardInventoryFuture;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
@@ -310,6 +313,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Set<String> _copyCoreRewardedStageIds = <String>{};
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
+  Map<String, Set<String>> _discoveriesByStageId = <String, Set<String>>{};
   PlayerDifficulty _activeDifficulty = PlayerDifficulty.normal;
   late TutorialExperimentVariant _tutorialVariant = widget.tutorialVariant;
   late final ProgressStore _progressStore =
@@ -322,6 +326,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   late final Future<ReplayLibraryStore> _replayLibraryFuture;
   late final Future<RunDifficultyAttributionStore>
   _difficultyAttributionStoreFuture;
+  late final Future<ExpeditionContractStore> _expeditionStoreFuture;
+  ExpeditionContractProgress? _expeditionProgress;
   late final Future<void> _progressLoadFuture;
   late final LocalPlayTelemetry _telemetry;
   bool _runStartedRecorded = false;
@@ -333,7 +339,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _patternSessionFuture = _createPatternSession();
     _replayLibraryFuture = _createReplayLibrary();
     _difficultyAttributionStoreFuture = _createDifficultyAttributionStore();
+    _expeditionStoreFuture = _createExpeditionStore();
     _progressLoadFuture = _loadCopyCore();
+    unawaited(_loadExpedition());
   }
 
   Future<StagePatternSession> _createPatternSession() async {
@@ -362,6 +370,44 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return RunDifficultyAttributionStore(preferences);
   }
 
+  Future<ExpeditionContractStore> _createExpeditionStore() async {
+    final preferences = await SharedPreferences.getInstance();
+    return ExpeditionContractStore(preferences);
+  }
+
+  Future<void> _loadExpedition() async {
+    final progress = await (await _expeditionStoreFuture).load();
+    if (mounted) setState(() => _expeditionProgress = progress);
+  }
+
+  Future<void> _startExpedition(ExpeditionContractType type) async {
+    final progress = await (await _expeditionStoreFuture).start(
+      type: type,
+      startIndex: math.min(_unlockedLevel, levels.length - 3),
+      allStageIds: levels.map((level) => level.id).toList(growable: false),
+    );
+    if (mounted) setState(() => _expeditionProgress = progress);
+  }
+
+  Future<void> _clearExpedition() async {
+    await (await _expeditionStoreFuture).clear();
+    if (mounted) setState(() => _expeditionProgress = null);
+  }
+
+  Future<void> _recordExpeditionOutcome(ExpeditionStageOutcome outcome) async {
+    final progress = await (await _expeditionStoreFuture).record(outcome);
+    if (mounted && progress != null) {
+      setState(() => _expeditionProgress = progress);
+    }
+  }
+
+  Future<void> _playExpeditionStage(String stageId) async {
+    final index = levels.indexWhere((level) => level.id == stageId);
+    if (index < 0 || index > _unlockedLevel) return;
+    setState(() => _showExpedition = false);
+    await _startStage(index);
+  }
+
   Future<void> _loadCopyCore() async {
     await GameFeedback.loadPreferences();
     unawaited(GameFeedback.activateBackgroundMusic());
@@ -376,6 +422,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _copyCoreRewardedStageIds = progress.copyCoreRewardedStageIds;
         _clearedLevels = progress.clearedLevels;
         _unlockedLevel = progress.unlockedLevel;
+        _discoveriesByStageId = {
+          for (final entry in progress.discoveriesByStageId.entries)
+            entry.key: {...entry.value},
+        };
       });
     } on Object {
       // 저장소를 사용할 수 없어도 기본 진행 상태로 홈을 표시한다.
@@ -1163,6 +1213,26 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return stored;
   }
 
+  Future<bool> _recordDiscoveries(Set<String> milestoneIds) async {
+    final activeStage = _activeStage;
+    if (activeStage == null || milestoneIds.isEmpty) return false;
+    try {
+      await _progressStore.recordDiscoveries(activeStage, milestoneIds);
+      if (mounted) {
+        final stageId = levels[activeStage].id;
+        setState(() {
+          _discoveriesByStageId = {
+            ..._discoveriesByStageId,
+            stageId: {...?_discoveriesByStageId[stageId], ...milestoneIds},
+          };
+        });
+      }
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
   Future<RunHintEntitlement?> _recordCurrentHintFailure() async {
     final session = await _patternSessionFuture;
     final entitlement = await session.recordHintFailure();
@@ -1289,6 +1359,16 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         },
       );
     }
+    if (_showExpedition) {
+      return _ExpeditionContractScreen(
+        progress: _expeditionProgress,
+        unlockedLevel: _unlockedLevel,
+        onStart: (type) => unawaited(_startExpedition(type)),
+        onPlayStage: (stageId) => unawaited(_playExpeditionStage(stageId)),
+        onClear: () => unawaited(_clearExpedition()),
+        onBack: () => setState(() => _showExpedition = false),
+      );
+    }
     if (_showReplayLibrary) {
       return FutureBuilder<ReplayLibraryStore>(
         future: _replayLibraryFuture,
@@ -1350,6 +1430,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         patternHintEntry: _activePatternHintEntry,
         initialHintEntitlement: _activeHintEntitlement,
         initialCollectedHintKeyIds: _activeCollectedHintKeyIds,
+        initialDiscoveredMilestoneIds:
+            _discoveriesByStageId[levels[activeStage].id] ?? const {},
         levelOverride: activeLevel,
         showStageSelector: false,
         onExit: _returnHome,
@@ -1367,6 +1449,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onHintEntitlementRead: _readCurrentHintEntitlement,
         onHintFailure: _recordCurrentHintFailure,
         onHintOpened: _openCurrentHint,
+        onDiscoveriesRecorded: _recordDiscoveries,
+        onExpeditionStageCompleted: _recordExpeditionOutcome,
         onTraitActionCommitted: _recordTraitAction,
         onStageRestarted: _restartStageRun,
         onShotRewound: _rewindStageRun,
@@ -1393,12 +1477,14 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onBack: () => setState(() => _showStageSelect = false),
         onSelectStage: (index) => unawaited(_startStage(index)),
         unlockedLevel: _unlockedLevel,
+        discoveriesByStageId: _discoveriesByStageId,
       );
     }
     return _HomeScreen(
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => setState(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
+      onExpedition: () => setState(() => _showExpedition = true),
       onDailyChallenge: () => setState(() => _showDailyChallenge = true),
       onReplayLibrary: () => setState(() => _showReplayLibrary = true),
       showDebugControls: widget.showDebugControls,
@@ -1406,6 +1492,252 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       onTutorialVariantChanged: (variant) {
         setState(() => _tutorialVariant = variant);
       },
+    );
+  }
+}
+
+class _ExpeditionContractScreen extends StatelessWidget {
+  const _ExpeditionContractScreen({
+    required this.progress,
+    required this.unlockedLevel,
+    required this.onStart,
+    required this.onPlayStage,
+    required this.onClear,
+    required this.onBack,
+  });
+
+  final ExpeditionContractProgress? progress;
+  final int unlockedLevel;
+  final ValueChanged<ExpeditionContractType> onStart;
+  final ValueChanged<String> onPlayStage;
+  final VoidCallback onClear;
+  final VoidCallback onBack;
+
+  IconData _icon(ExpeditionContractType type) => switch (type) {
+    ExpeditionContractType.discovery => Icons.travel_explore_rounded,
+    ExpeditionContractType.precision => Icons.center_focus_strong_rounded,
+    ExpeditionContractType.chain => Icons.hub_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final active = progress;
+    return Scaffold(
+      key: const Key('expedition_contract_screen'),
+      backgroundColor: const Color(0xFFBFE8E3),
+      appBar: AppBar(
+        leading: IconButton(
+          key: const Key('expedition_back_button'),
+          onPressed: onBack,
+          tooltip: '메인 메뉴로 돌아가기',
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('3단계 탐사'),
+        backgroundColor: const Color(0xFFFFF4CF),
+        foregroundColor: const Color(0xFF173F43),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+          children: [
+            Text(
+              active == null ? '이번 탐사의 목적을 고르세요' : active.type.title,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: const Color(0xFF173F43),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              active == null
+                  ? '같은 캠페인 스테이지를 다른 목표로 즐깁니다. 목표를 놓쳐도 진행은 막히지 않아요.'
+                  : '${active.type.summary} · 진행 ${active.completedCount}/3 · 달성 ${active.achievedCount}/3',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF315E60),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (active == null)
+              for (final type in ExpeditionContractType.values) ...[
+                Semantics(
+                  button: true,
+                  label: '${type.title}. ${type.summary}',
+                  child: Card(
+                    key: Key('expedition_contract_${type.name}'),
+                    color: const Color(0xFFFFF9E8),
+                    child: InkWell(
+                      onTap: () => onStart(type),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: const Color(0xFFFFE0A8),
+                              foregroundColor: const Color(0xFF7A4B1F),
+                              child: Icon(_icon(type)),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    type.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(type.summary),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ]
+            else ...[
+              LinearProgressIndicator(
+                key: const Key('expedition_progress_bar'),
+                value: active.completedCount / 3,
+                minHeight: 10,
+                borderRadius: BorderRadius.circular(99),
+                color: const Color(0xFF2E8B67),
+                backgroundColor: const Color(0xFFD4E9DE),
+              ),
+              const SizedBox(height: 16),
+              for (var index = 0; index < active.stageIds.length; index++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _ExpeditionStageTile(
+                    index: index,
+                    stageId: active.stageIds[index],
+                    completed: active.completedStageIds.contains(
+                      active.stageIds[index],
+                    ),
+                    achieved: active.achievedStageIds.contains(
+                      active.stageIds[index],
+                    ),
+                    unlockedLevel: unlockedLevel,
+                    onPlay: onPlayStage,
+                  ),
+                ),
+              const SizedBox(height: 6),
+              if (active.isComplete)
+                Container(
+                  key: const Key('expedition_complete_card'),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDDF3D5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF4C8A5A)),
+                  ),
+                  child: Text(
+                    '탐사 완료 · 목표 ${active.achievedCount}/3 달성\n'
+                    '다른 관점의 탐사를 골라 같은 물리를 새로 시험해 보세요.',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                key: const Key('expedition_change_contract_button'),
+                onPressed: onClear,
+                icon: const Icon(Icons.swap_horiz_rounded),
+                label: Text(active.isComplete ? '다른 탐사 고르기' : '탐사 목표 바꾸기'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpeditionStageTile extends StatelessWidget {
+  const _ExpeditionStageTile({
+    required this.index,
+    required this.stageId,
+    required this.completed,
+    required this.achieved,
+    required this.unlockedLevel,
+    required this.onPlay,
+  });
+
+  final int index;
+  final String stageId;
+  final bool completed;
+  final bool achieved;
+  final int unlockedLevel;
+  final ValueChanged<String> onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final stageIndex = levels.indexWhere((level) => level.id == stageId);
+    final unlocked = stageIndex >= 0 && stageIndex <= unlockedLevel;
+    return Container(
+      key: Key('expedition_stage_$index'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: completed ? const Color(0xFFE3F2E7) : const Color(0xFFFFF9E8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: completed ? const Color(0xFF5B9870) : const Color(0xFF9D8258),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            completed
+                ? achieved
+                      ? Icons.verified_rounded
+                      : Icons.check_circle_outline_rounded
+                : unlocked
+                ? Icons.flag_outlined
+                : Icons.lock_outline_rounded,
+            color: completed
+                ? const Color(0xFF2E7D4F)
+                : const Color(0xFF7A5A32),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stageIndex < 0 ? stageId : levels[stageIndex].name,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  completed
+                      ? achieved
+                            ? '탐사 목표까지 달성'
+                            : '클리어 완료 · 목표는 다음에 재도전 가능'
+                      : unlocked
+                      ? '지금 플레이할 수 있어요'
+                      : '앞 단계를 클리어하면 열려요',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          if (!completed && unlocked)
+            FilledButton(
+              key: Key('expedition_play_$index'),
+              onPressed: () => onPlay(stageId),
+              child: const Text('플레이'),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1650,7 +1982,9 @@ class _RewardInventoryCard extends StatelessWidget {
     final icon = _rewardInventoryIcon(reward.effectKind);
     return Semantics(
       container: true,
-      label: '${reward.name}, $status, ${reward.description}',
+      label:
+          '${reward.name}, ${reward.activationLabel}, $status, ${reward.description}, '
+          '사용법 ${reward.usageHint}',
       child: Container(
         key: Key('reward_inventory_${reward.id}'),
         padding: const EdgeInsets.all(14),
@@ -1697,6 +2031,15 @@ class _RewardInventoryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(reward.description),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${reward.activationLabel} · ${reward.usageHint}',
+                    key: Key('reward_inventory_usage_${reward.id}'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF315E60),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   DecoratedBox(
                     decoration: BoxDecoration(
@@ -1805,6 +2148,7 @@ class _HomeScreen extends StatelessWidget {
     required this.onStart,
     required this.onStageSelect,
     required this.onRewardInventory,
+    required this.onExpedition,
     required this.onDailyChallenge,
     required this.onReplayLibrary,
     required this.showDebugControls,
@@ -1815,6 +2159,7 @@ class _HomeScreen extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onRewardInventory;
+  final VoidCallback onExpedition;
   final VoidCallback onDailyChallenge;
   final VoidCallback onReplayLibrary;
   final bool showDebugControls;
@@ -1904,6 +2249,18 @@ class _HomeScreen extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ).copyWith(fontFamily: appFontFamily),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('expedition_entry_button'),
+                        onPressed: onExpedition,
+                        icon: const Icon(Icons.explore_outlined),
+                        label: const Text('3단계 탐사'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          foregroundColor: const Color(0xFF7A4B1F),
+                          side: const BorderSide(color: Color(0xFFB5783A)),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -2110,6 +2467,53 @@ class _FeedbackSettingsDialog extends StatefulWidget {
 }
 
 class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
+  Widget _sectionHeader({
+    required Key key,
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      key: key,
+      header: true,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 8, bottom: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: colors.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _settingSwitch({
     required Key key,
     required String title,
@@ -2144,6 +2548,12 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _sectionHeader(
+                key: const Key('aim_help_settings_section'),
+                title: '조준 도움',
+                description: '정답을 바꾸지 않고 조준을 읽기 쉽게 만듭니다.',
+                icon: Icons.adjust,
+              ),
               DropdownButtonFormField<ChargeGaugeSide>(
                 key: const Key('charge_gauge_side_dropdown'),
                 decoration: const InputDecoration(labelText: '충전 게이지 위치'),
@@ -2185,7 +2595,19 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                   unawaited(GameFeedback.setPlayerDifficulty(difficulty));
                 },
               ),
-              const Divider(height: 28),
+              _settingSwitch(
+                key: const Key('previous_aim_comparison_toggle'),
+                title: '직전 조준 비교',
+                subtitle: '실패 후 직전 각도와 힘을 회색선으로 남깁니다.',
+                value: GameFeedback.previousAimComparisonEnabled,
+                onChanged: GameFeedback.setPreviousAimComparisonEnabled,
+              ),
+              _sectionHeader(
+                key: const Key('route_memory_settings_section'),
+                title: '경로 기억',
+                description: '방금 무엇에 부딪혀 어디까지 갔는지 복기합니다.',
+                icon: Icons.route_outlined,
+              ),
               _settingSwitch(
                 key: const Key('last_shot_slow_motion_toggle'),
                 title: '마지막 샷 슬로모션',
@@ -2211,6 +2633,12 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 value: GameFeedback.nearestHoleEnabled,
                 onChanged: GameFeedback.setNearestHoleEnabled,
               ),
+              _sectionHeader(
+                key: const Key('causality_settings_section'),
+                title: '인과 이해',
+                description: '속성과 기믹이 어떤 결과를 만들었는지 보여 줍니다.',
+                icon: Icons.hub_outlined,
+              ),
               _settingSwitch(
                 key: const Key('trait_activation_toggle'),
                 title: '속성 발동 표시',
@@ -2235,6 +2663,12 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 subtitle: '끄더라도 획득한 총점은 그대로 유지됩니다.',
                 value: GameFeedback.chainScoreDetailsEnabled,
                 onChanged: GameFeedback.setChainScoreDetailsEnabled,
+              ),
+              _sectionHeader(
+                key: const Key('sensory_settings_section'),
+                title: '화면과 소리',
+                description: '움직임·점멸·진동·소리 강도를 내게 맞춥니다.',
+                icon: Icons.tune,
               ),
               _settingSwitch(
                 key: const Key('haptics_toggle'),
@@ -2384,11 +2818,13 @@ class _StageSelectScreen extends StatelessWidget {
     required this.onBack,
     required this.onSelectStage,
     required this.unlockedLevel,
+    required this.discoveriesByStageId,
   });
 
   final VoidCallback onBack;
   final ValueChanged<int> onSelectStage;
   final int unlockedLevel;
+  final Map<String, Set<String>> discoveriesByStageId;
 
   @override
   Widget build(BuildContext context) {
@@ -2442,29 +2878,30 @@ class _StageSelectScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0x6695B98C)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.explore_rounded,
                         size: 28,
                         color: Color(0xFF4F8460),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               '섬 물리 관측일지',
                               style: TextStyle(
                                 color: Color(0xFF315C46),
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            SizedBox(height: 3),
+                            const SizedBox(height: 3),
                             Text(
-                              '각 섬의 세 가지 반응을 발견해 물리 규칙을 완성하세요.',
-                              style: TextStyle(
+                              '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
+                              '${levels.length * 3} · 섬의 물리 규칙을 완성하세요.',
+                              style: const TextStyle(
                                 color: Color(0xFF52706A),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -2557,6 +2994,10 @@ class _StageSelectScreen extends StatelessWidget {
                                     child: _StageTile(
                                       index: index,
                                       locked: index > unlockedLevel,
+                                      discoveredMilestoneIds:
+                                          discoveriesByStageId[levels[index]
+                                              .id] ??
+                                          const {},
                                       onTap: () => onSelectStage(index),
                                     ),
                                   ),
@@ -2574,6 +3015,18 @@ class _StageSelectScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  int _totalDiscoveryCount(Map<String, Set<String>> discoveries) {
+    var total = 0;
+    for (var index = 0; index < levels.length; index++) {
+      total +=
+          discoveries[levels[index].id]
+              ?.intersection(stageDiscoveryMilestoneIds(index))
+              .length ??
+          0;
+    }
+    return total;
   }
 }
 
@@ -2727,15 +3180,21 @@ class _StageTile extends StatelessWidget {
   const _StageTile({
     required this.index,
     required this.onTap,
+    this.discoveredMilestoneIds = const {},
     this.locked = false,
   });
 
   final int index;
   final VoidCallback onTap;
   final bool locked;
+  final Set<String> discoveredMilestoneIds;
 
   @override
   Widget build(BuildContext context) {
+    final knownMilestones = stageDiscoveryMilestoneIds(index);
+    final discoveryCount = discoveredMilestoneIds
+        .intersection(knownMilestones)
+        .length;
     final descriptions = [
       '무거운 성질로 상자를 움직여 보세요.',
       '탄성 있는 반사로 방향을 바꿔 보세요.',
@@ -2890,7 +3349,8 @@ class _StageTile extends StatelessWidget {
                             child: Text(
                               locked
                                   ? '앞 섬을 먼저 클리어하세요'
-                                  : '추천 파 ${levels[index].parShots}회',
+                                  : '발견 $discoveryCount/${knownMilestones.length} · '
+                                        '추천 파 ${levels[index].parShots}회',
                               style: TextStyle(
                                 color: locked
                                     ? const Color(0xFF718078)

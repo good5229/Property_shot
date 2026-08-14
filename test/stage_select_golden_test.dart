@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,7 +23,17 @@ void main() {
     (name: '768x1024', width: 768.0, height: 1024.0),
   ]) {
     testWidgets('섬 지도 Golden ${fixture.name}', (tester) async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
+      SharedPreferences.setMockInitialValues(
+        fixture.name == '390x844'
+            ? <String, Object>{
+                ProgressStore.discoveryRecordsKey: [
+                  '${levels[0].id}::heavy_equipped',
+                  '${levels[0].id}::crate_moved',
+                  '${levels[1].id}::bouncy_equipped',
+                ],
+              }
+            : <String, Object>{},
+      );
       await tester.binding.setSurfaceSize(Size(fixture.width, fixture.height));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
