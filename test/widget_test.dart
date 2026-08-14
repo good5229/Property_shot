@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,7 @@ import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
+import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/run/run_reward.dart';
 import 'package:property_shot/game/run/run_state.dart';
 import 'package:property_shot/game/run/stage_pattern_session.dart';
@@ -1384,7 +1386,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 6500));
 
     expect(find.byKey(const Key('failure_popup')), findsOneWidget);
-    expect(find.text('다시 조준'), findsOneWidget);
+    expect(find.text('바로 다시 조준'), findsOneWidget);
     expect(find.byKey(const Key('failure_replay_button')), findsOneWidget);
     expect(find.text('되감기'), findsOneWidget);
     expect(find.text('단계 처음부터'), findsOneWidget);
@@ -1399,6 +1401,20 @@ void main() {
     await tester.tap(find.byKey(const Key('failure_retry_button')));
     await tester.pump();
     expect(find.byKey(const Key('failure_popup')), findsNothing);
+    expect(find.byKey(const Key('previous_aim_semantics')), findsOneWidget);
+    expect(find.textContaining('직전 조준이 회색으로 남아 있습니다'), findsOneWidget);
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(game.previousAimInput, isNotNull);
+    expect(game.previousAimInput!.direction, const Vec2(1, 0));
+
+    await tester.tap(find.byKey(const Key('rewind_button')).first);
+    await tester.pump();
+    expect(game.previousAimInput, isNull);
+    expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
   });
 
   testWidgets('일시정지 중에는 힘 조준으로 발사되지 않는다', (tester) async {

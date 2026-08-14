@@ -267,6 +267,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _keySpawnRecorded = false;
   bool _hintAvailableRecorded = false;
   final Set<String> _discoveredMilestoneIds = <String>{};
+  ShotInput? _previousAimInput;
   late final Set<String> _persistedMilestoneIds;
   Future<void> _discoveryWriteTail = Future<void>.value();
 
@@ -1055,6 +1056,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _recordHintExposureIfNeeded();
   }
 
+  void _setPreviousAimInput(ShotInput? input) {
+    _previousAimInput = input;
+    _game.setPreviousAimInput(input);
+  }
+
   void _selectLevel(int index) {
     if (_isAnimatingShot || index > _unlockedLevel) {
       return;
@@ -1065,6 +1071,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showClearPopup = false;
     _showFailurePopup = false;
     _failureReplay = null;
+    _setPreviousAimInput(null);
     _aimStartedForShot = false;
     _pendingLaunchDirection = null;
     _showClearPersistenceError = false;
@@ -1669,6 +1676,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
     } else {
       _failureReplay = null;
+      _setPreviousAimInput(null);
     }
     _stageShotResults.add(result);
     _stageShotInputs.add(normalizedInput);
@@ -2708,6 +2716,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       _showFailurePopup = false;
       _traitEffectFeedback = null;
+      _setPreviousAimInput(null);
       _telemetry.record(
         '재시도',
         stage: _state.levelIndex,
@@ -3977,6 +3986,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                       ),
                                                     ),
                                                   ),
+                                                if (_previousAimInput != null)
+                                                  Positioned(
+                                                    left: 0,
+                                                    top: 0,
+                                                    child: Semantics(
+                                                      key: const Key(
+                                                        'previous_aim_semantics',
+                                                      ),
+                                                      label:
+                                                          '직전 조준 비교선이 회색으로 표시됨',
+                                                      child: const SizedBox(
+                                                        width: 1,
+                                                        height: 1,
+                                                      ),
+                                                    ),
+                                                  ),
                                                 if (_chargeGaugeActive)
                                                   _FloatingChargeGauge(
                                                     boardSize: boardSize,
@@ -4087,7 +4112,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       discoveries: _discoveryMilestones,
                       failureReplay: _failureReplay,
                       onReplay: _openFailureReplay,
-                      onRetry: () => setState(() => _showFailurePopup = false),
+                      onRetry: _resumeAfterFailure,
                       onRewind: _rewind,
                       onRecoverPastBall:
                           _state.entities.any(
@@ -4146,6 +4171,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       context: context,
       barrierDismissible: false,
       builder: (_) => FailureReplayDialog(data: replay),
+    );
+  }
+
+  void _resumeAfterFailure() {
+    final replay = _failureReplay;
+    if (replay == null || !mounted || _isAnimatingShot) return;
+    setState(() {
+      _showFailurePopup = false;
+      _setPreviousAimInput(replay.input);
+      _state = _state.copyWith(
+        message: '직전 조준이 회색으로 남아 있습니다. 한 가지만 바꿔 다시 시도해 보세요.',
+      );
+    });
+    _telemetry.record(
+      '재시도',
+      stage: _state.levelIndex,
+      attempt: _state.shotCount + 1,
+      result: '직전 조준 비교',
+      eventCode: 'retry_pressed',
+    );
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      '직전 조준이 회색으로 표시됩니다. 각도나 힘 한 가지만 바꿔 다시 시도해 보세요.',
+      TextDirection.ltr,
     );
   }
 
@@ -5622,7 +5671,7 @@ class _FailurePopup extends StatelessWidget {
                             autofocus: true,
                             onPressed: onRetry,
                             icon: const Icon(Icons.ads_click, size: 16),
-                            label: const Text('다시 조준'),
+                            label: const Text('바로 다시 조준'),
                           ),
                           if (failureReplay != null)
                             OutlinedButton.icon(
