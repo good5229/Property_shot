@@ -206,8 +206,7 @@ void main() {
               expect(
                 withoutPreparation.state.phase,
                 isNot(GamePhase.success),
-                reason:
-                    '${pattern.patternId} 준비 전 같은 최종 입력이 홀에 바로 도달합니다.',
+                reason: '${pattern.patternId} 준비 전 같은 최종 입력이 홀에 바로 도달합니다.',
               );
               expect(second.state.phase, GamePhase.success);
               final achievedEvents = {...first.events, ...second.events};
@@ -255,6 +254,20 @@ void main() {
       for (final item in typedEvidence) {
         debugPrint('$item');
         expect(item.gimmick, greaterThan(0), reason: item.patternId);
+        final minimumAbsoluteSuccesses = switch (item.kind) {
+          '한 발 성공 영역' => 3,
+          '준비 후 조건부 성공 영역' => 10,
+          _ => 0,
+        };
+        if (minimumAbsoluteSuccesses > 0) {
+          expect(
+            item.gimmick,
+            greaterThanOrEqualTo(minimumAbsoluteSuccesses),
+            reason:
+                '${item.patternId} ${item.kind}의 절대 성공 영역이 '
+                '$minimumAbsoluteSuccesses/${item.gimmickSamples}보다 좁습니다.',
+          );
+        }
         expect(
           item.ratio,
           greaterThanOrEqualTo(item.minimumRatio),
@@ -414,19 +427,23 @@ _TypedAdvantage _persistentSequenceAdvantage(
     'success=$conditional bypass=$bypass '
     'ratio=${(conditional / math.max(1, bypass)).toStringAsFixed(2)}',
   );
-  final chainScore = const CreativeChainScoreAnalyzer().analyze(
-    [canonicalFirst, canonicalSecond],
-    parShots: pattern.parShots,
-    optionalChallengeIds: const <String>{},
-  ).totalScore;
+  final chainScore = const CreativeChainScoreAnalyzer()
+      .analyze(
+        [canonicalFirst, canonicalSecond],
+        parShots: pattern.parShots,
+        optionalChallengeIds: const <String>{},
+      )
+      .totalScore;
   final directResults = direct == null
       ? const <ShotResult>[]
       : <ShotResult>[direct];
-  final directScore = const CreativeChainScoreAnalyzer().analyze(
-    directResults,
-    parShots: pattern.parShots,
-    optionalChallengeIds: const <String>{},
-  ).totalScore;
+  final directScore = const CreativeChainScoreAnalyzer()
+      .analyze(
+        directResults,
+        parShots: pattern.parShots,
+        optionalChallengeIds: const <String>{},
+      )
+      .totalScore;
   debugPrint(
     '${pattern.patternId} sequence score=$chainScore/$directScore '
     'ratio=${(chainScore / math.max(1, directScore)).toStringAsFixed(2)}',
@@ -499,7 +516,10 @@ _TypedAdvantage _propertySequenceAdvantage(
     canonicalFirst.state,
     solution.secondInput,
   );
-  expect(_matchesPropertyContract(solution, canonicalFirst, canonicalSecond), isTrue);
+  expect(
+    _matchesPropertyContract(solution, canonicalFirst, canonicalSecond),
+    isTrue,
+  );
   if (solution.conditionalGateId case final gateId?) {
     final initialGate = initial.entityById(gateId)!;
     final openedGate = canonicalFirst.state.entityById(gateId)!;
@@ -517,7 +537,8 @@ _TypedAdvantage _propertySequenceAdvantage(
         !_usesPropertyGimmick(solution, result),
   );
   final directIsBypass =
-      direct.state.phase == GamePhase.success && !_usesPropertyGimmick(solution, direct);
+      direct.state.phase == GamePhase.success &&
+      !_usesPropertyGimmick(solution, direct);
   final bypass = math.max(gridBypass, directIsBypass ? 1 : 0);
   var localSetupClears = 0;
   for (final firstInput in _localInputs(solution.firstInput)) {
@@ -543,16 +564,20 @@ _TypedAdvantage _propertySequenceAdvantage(
     'success=$conditional bypass=$bypass '
     'ratio=${(conditional / math.max(1, bypass)).toStringAsFixed(2)}',
   );
-  final chainScore = const CreativeChainScoreAnalyzer().analyze(
-    [canonicalFirst, canonicalSecond],
-    parShots: pattern.parShots,
-    optionalChallengeIds: const <String>{},
-  ).totalScore;
-  final directScore = const CreativeChainScoreAnalyzer().analyze(
-    [direct],
-    parShots: pattern.parShots,
-    optionalChallengeIds: const <String>{},
-  ).totalScore;
+  final chainScore = const CreativeChainScoreAnalyzer()
+      .analyze(
+        [canonicalFirst, canonicalSecond],
+        parShots: pattern.parShots,
+        optionalChallengeIds: const <String>{},
+      )
+      .totalScore;
+  final directScore = const CreativeChainScoreAnalyzer()
+      .analyze(
+        [direct],
+        parShots: pattern.parShots,
+        optionalChallengeIds: const <String>{},
+      )
+      .totalScore;
   debugPrint(
     '${pattern.patternId} sequence score=$chainScore/$directScore '
     'ratio=${(chainScore / math.max(1, directScore)).toStringAsFixed(2)}',
@@ -654,10 +679,7 @@ bool _usesPropertyGimmick(
   final impacts = result.impacts;
   final events = result.events;
   final touched = <String>{
-    for (final impact in impacts) ...[
-      impact.entityId,
-      impact.sourceEntityId,
-    ],
+    for (final impact in impacts) ...[impact.entityId, impact.sourceEntityId],
   };
   return switch (solution.contract) {
     'A' =>
@@ -775,7 +797,8 @@ class _TypedAdvantage {
 
   double get bypassRate => bypass / math.max(1, bypassSamples);
 
-  double get ratio => bypassRate == 0 ? double.infinity : gimmickRate / bypassRate;
+  double get ratio =>
+      bypassRate == 0 ? double.infinity : gimmickRate / bypassRate;
 
   @override
   String toString() =>

@@ -1092,8 +1092,8 @@ const generatedStageCatalogJson = r'''
                 "y": 110.0
               },
               "size": {
-                "x": 52.0,
-                "y": 52.0
+                "x": 60.0,
+                "y": 60.0
               },
               "traits": [],
               "movable": false,
