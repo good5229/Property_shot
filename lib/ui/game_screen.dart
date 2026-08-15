@@ -4362,6 +4362,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                             ),
                                                       ),
                                                     ),
+                                                  if (widget.showDiscoveryHud &&
+                                                      tutorialTarget == null &&
+                                                      !popupOpen &&
+                                                      _discoveryMilestones.any(
+                                                        (item) => item.achieved,
+                                                      ))
+                                                    Positioned(
+                                                      left: 8,
+                                                      right: 8,
+                                                      top: 8,
+                                                      child: IgnorePointer(
+                                                        child: Align(
+                                                          alignment: Alignment
+                                                              .topCenter,
+                                                          child: _CausalRibbon(
+                                                            milestones:
+                                                                _discoveryMilestones,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   for (final entity
                                                       in _state.entities)
                                                     if (entity.active)
@@ -7390,6 +7411,120 @@ class _DiscoveryProgressRow extends StatelessWidget {
     ),
   );
 }
+
+class _CausalRibbon extends StatelessWidget {
+  const _CausalRibbon({required this.milestones});
+
+  final List<StageDiscoveryMilestone> milestones;
+
+  @override
+  Widget build(BuildContext context) {
+    if (milestones.isEmpty) return const SizedBox.shrink();
+    final achievedCount = milestones.where((item) => item.achieved).length;
+    final nextIndex = achievedCount.clamp(0, milestones.length - 1);
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label:
+          '기믹 흐름 ${milestones.map((item) => '${item.label} ${item.achieved ? '완료' : '대기'}').join(', ')}',
+      child: ExcludeSemantics(
+        child: Container(
+          key: const Key('causal_ribbon'),
+          constraints: const BoxConstraints(maxWidth: 330),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xEAF8F2D9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xAA765B31)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var index = 0; index < milestones.length; index++) ...[
+                if (index > 0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 3),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 13,
+                      color: Color(0xFF806D4A),
+                    ),
+                  ),
+                Flexible(
+                  child: DecoratedBox(
+                    key: Key('causal_step_$index'),
+                    decoration: BoxDecoration(
+                      color: milestones[index].achieved
+                          ? const Color(0xFFD5F1DC)
+                          : index == nextIndex
+                          ? const Color(0xFFFFE5A8)
+                          : const Color(0xFFE8E5D9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: milestones[index].achieved
+                            ? const Color(0xFF3B9463)
+                            : index == nextIndex
+                            ? const Color(0xFFD58C22)
+                            : const Color(0xFFAAA492),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 3,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            milestones[index].achieved
+                                ? Icons.check_rounded
+                                : index == nextIndex
+                                ? Icons.play_arrow_rounded
+                                : Icons.circle_outlined,
+                            size: 12,
+                            color: const Color(0xFF365549),
+                          ),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              milestones[index].label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    fontSize: 10,
+                                    fontWeight: index == nextIndex
+                                        ? FontWeight.w900
+                                        : FontWeight.w700,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+@visibleForTesting
+Widget buildCausalRibbonForTesting({
+  required List<StageDiscoveryMilestone> milestones,
+}) => _CausalRibbon(milestones: milestones);
 
 class _CompactHudDetails extends StatefulWidget {
   const _CompactHudDetails({
