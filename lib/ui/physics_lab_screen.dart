@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../game/domain/game_state.dart';
 import '../game/lab/physics_lab.dart';
+import '../game/lab/physics_lab_creator.dart';
 import 'game_feedback.dart';
 import 'game_screen.dart';
 import 'play_telemetry.dart';
@@ -22,6 +24,81 @@ class PhysicsLabScreen extends StatefulWidget {
 
 class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
   PhysicsLabScenario? _active;
+  bool _creating = false;
+  String _draftScenarioId = physicsLabScenarios.first.id;
+  LabGoalPosition _draftGoal = LabGoalPosition.north;
+  String? _creatorMessage;
+
+  PhysicsLabDraft get _draft => PhysicsLabDraft(
+    baseScenarioId: _draftScenarioId,
+    goalPosition: _draftGoal,
+  );
+
+  Future<void> _copyDraft() async {
+    try {
+      final code = PhysicsLabShareCode.encode(_draft);
+      await Clipboard.setData(ClipboardData(text: code));
+      if (mounted) setState(() => _creatorMessage = '공유 코드를 복사했습니다.');
+    } on FormatException catch (error) {
+      if (mounted) setState(() => _creatorMessage = error.message.toString());
+    }
+  }
+
+  Future<void> _importDraft() async {
+    final controller = TextEditingController();
+    final raw = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('실험 코드 가져오기'),
+        content: TextField(
+          key: const Key('lab_share_code_input'),
+          controller: controller,
+          maxLines: 5,
+          maxLength: physicsLabShareMaxCharacters,
+          decoration: const InputDecoration(
+            hintText: '속실1:로 시작하는 코드를 붙여 넣으세요.',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const Key('lab_import_confirm_button'),
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('검증하고 열기'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (raw == null || raw.trim().isEmpty || !mounted) return;
+    try {
+      final draft = PhysicsLabShareCode.decode(raw);
+      setState(() {
+        _draftScenarioId = draft.baseScenarioId;
+        _draftGoal = draft.goalPosition;
+        _creatorMessage = '검증된 실험 코드를 불러왔습니다.';
+      });
+    } on FormatException catch (error) {
+      setState(() => _creatorMessage = error.message.toString());
+    }
+  }
+
+  void _playDraft() {
+    final error = const PhysicsLabDraftValidator().validate(_draft);
+    if (error != null) {
+      setState(() => _creatorMessage = error);
+      return;
+    }
+    setState(() {
+      _active = const PhysicsLabDraftValidator().build(_draft);
+      _creating = false;
+      _creatorMessage = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +142,7 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
         ),
       );
     }
+    if (_creating) return _buildCreator(context);
     return Scaffold(
       key: const Key('physics_lab_screen'),
       backgroundColor: const Color(0xFFE8F4ED),
@@ -87,6 +165,20 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
             const SizedBox(height: 6),
             const Text('실험 결과는 캠페인 진행·최고 기록·도감 발견에 반영되지 않습니다.'),
             const SizedBox(height: 14),
+            FilledButton.icon(
+              key: const Key('physics_lab_create_button'),
+              onPressed: () => setState(() => _creating = true),
+              icon: const Icon(Icons.tune_rounded),
+              label: const Text('나만의 실험 만들기'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('physics_lab_import_button'),
+              onPressed: _importDraft,
+              icon: const Icon(Icons.input_rounded),
+              label: const Text('실험 코드 가져오기'),
+            ),
+            const SizedBox(height: 14),
             for (final scenario in physicsLabScenarios)
               Card(
                 child: ListTile(
@@ -103,6 +195,130 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
                   onTap: () => setState(() => _active = scenario),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreator(BuildContext context) {
+    final selected = physicsLabScenarios.firstWhere(
+      (item) => item.id == _draftScenarioId,
+    );
+    final validation = const PhysicsLabDraftValidator().validate(_draft);
+    return Scaffold(
+      key: const Key('physics_lab_creator'),
+      backgroundColor: const Color(0xFFE8F4ED),
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: '실험 목록',
+          onPressed: () => setState(() => _creating = false),
+          icon: const Icon(Icons.arrow_back),
+        ),
+        title: const Text('나만의 실험'),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              '검증된 규칙 안에서 목표 위치를 바꿔 새 경로를 만들어 보세요.',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            const Text('임의 기물·정답 데이터는 넣을 수 없으며, 실험 기록은 캠페인과 분리됩니다.'),
+            const SizedBox(height: 18),
+            DropdownButtonFormField<String>(
+              key: const Key('lab_template_dropdown'),
+              initialValue: _draftScenarioId,
+              decoration: const InputDecoration(
+                labelText: '실험 규칙',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final scenario in physicsLabScenarios)
+                  DropdownMenuItem(
+                    value: scenario.id,
+                    child: Text(scenario.title),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _draftScenarioId = value;
+                    _creatorMessage = null;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            Text('홀 위치', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SegmentedButton<LabGoalPosition>(
+              key: const Key('lab_goal_position'),
+              segments: [
+                for (final position in LabGoalPosition.values)
+                  ButtonSegment(
+                    value: position,
+                    label: Text(position.label),
+                    icon: const Icon(Icons.flag_outlined),
+                  ),
+              ],
+              selected: {_draftGoal},
+              onSelectionChanged: (selection) => setState(() {
+                _draftGoal = selection.single;
+                _creatorMessage = null;
+              }),
+            ),
+            const SizedBox(height: 18),
+            Card(
+              color: validation == null
+                  ? const Color(0xFFDDF3E5)
+                  : const Color(0xFFFFE1D7),
+              child: ListTile(
+                leading: Icon(
+                  validation == null
+                      ? Icons.verified_rounded
+                      : Icons.error_outline_rounded,
+                ),
+                title: Text(validation ?? '안전 검사 통과'),
+                subtitle: Text(
+                  '${selected.title} · ${_draftGoal.label} 목표 · ${selected.level.parShots}발 안에 관찰',
+                ),
+              ),
+            ),
+            if (_creatorMessage != null) ...[
+              const SizedBox(height: 8),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _creatorMessage!,
+                  key: const Key('lab_creator_message'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              key: const Key('lab_play_draft_button'),
+              onPressed: validation == null ? _playDraft : null,
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('이 배치로 실험'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('lab_copy_draft_button'),
+              onPressed: validation == null ? _copyDraft : null,
+              icon: const Icon(Icons.copy_rounded),
+              label: const Text('공유 코드 복사'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('lab_creator_import_button'),
+              onPressed: _importDraft,
+              icon: const Icon(Icons.input_rounded),
+              label: const Text('다른 코드 가져오기'),
+            ),
           ],
         ),
       ),
