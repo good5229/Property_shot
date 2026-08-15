@@ -19,10 +19,11 @@
     },
     "agent": {
       "type": "object", "additionalProperties": false,
-      "required": ["profile", "prompt_version", "model"],
+      "required": ["profile", "input_mode", "prompt_version", "model"],
       "properties": {
-        "profile": {"enum": ["novice_impatient", "observant_novice", "semantics_only", "abnormal_input"]},
-        "prompt_version": {"const": "1"},
+        "profile": {"enum": ["mobile_touch", "keyboard_only", "semantics_only", "abnormal_input"]},
+        "input_mode": {"enum": ["pointer", "keyboard", "semantics", "mixed_invalid"]},
+        "prompt_version": {"const": "2"},
         "model": {"type": "string", "minLength": 1, "maxLength": 80}
       }
     },
@@ -31,5 +32,11 @@
     "objective": {"type": "object", "additionalProperties": false, "required": ["status", "shots", "retries", "first_meaningful_action_ms", "no_op_actions"], "properties": {"status": {"enum": ["completed", "failed", "timeout", "blocked"]}, "shots": {"type": "integer", "minimum": 0, "maximum": 5}, "retries": {"type": "integer", "minimum": 0, "maximum": 5}, "first_meaningful_action_ms": {"type": "integer", "minimum": 0, "maximum": 120000}, "no_op_actions": {"type": "integer", "minimum": 0, "maximum": 50}}},
     "judgment": {"type": "object", "additionalProperties": false, "required": ["goal_clarity", "control_discoverability", "causal_readability", "frustration", "retry_desire", "causal_explanation"], "properties": {"goal_clarity": {"type": "integer", "minimum": 1, "maximum": 5}, "control_discoverability": {"type": "integer", "minimum": 1, "maximum": 5}, "causal_readability": {"type": "integer", "minimum": 1, "maximum": 5}, "frustration": {"type": "integer", "minimum": 1, "maximum": 5}, "retry_desire": {"type": "integer", "minimum": 1, "maximum": 5}, "causal_explanation": {"type": "string", "minLength": 1, "maxLength": 1000}}},
     "limitations": {"type": "array", "contains": {"const": "agent_proxy_not_human"}, "items": {"type": "string", "maxLength": 120}, "maxItems": 12}
-  }
+  },
+  "allOf": [
+    {"if": {"properties": {"agent": {"properties": {"profile": {"const": "mobile_touch"}}}}}, "then": {"properties": {"agent": {"properties": {"input_mode": {"const": "pointer"}}}}}},
+    {"if": {"properties": {"agent": {"properties": {"profile": {"const": "keyboard_only"}}}}}, "then": {"properties": {"agent": {"properties": {"input_mode": {"const": "keyboard"}}}}}},
+    {"if": {"properties": {"agent": {"properties": {"profile": {"const": "semantics_only"}}}}}, "then": {"properties": {"agent": {"properties": {"input_mode": {"const": "semantics"}}}}}},
+    {"if": {"properties": {"agent": {"properties": {"profile": {"const": "abnormal_input"}}}}}, "then": {"properties": {"agent": {"properties": {"input_mode": {"const": "mixed_invalid"}}}}}}
+  ]
 }
