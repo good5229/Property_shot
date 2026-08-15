@@ -18,7 +18,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('홈에서 오늘의 도전 개요로 들어간다', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'unlocked_level': 1,
+    });
     await tester.pumpWidget(
       const PropertyShotApp(showHome: true, showDebugControls: false),
     );

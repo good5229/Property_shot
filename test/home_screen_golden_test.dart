@@ -56,30 +56,42 @@ void main() {
     });
   }
 
-  testWidgets('320 홈은 핵심 행동과 기록 메뉴를 첫 화면에 배치한다', (tester) async {
+  testWidgets('320 초행 홈은 첫 임무와 시작 행동만 우선한다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const Key('start_game_button')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('first_mission_card')), findsOneWidget);
+    expect(find.text('첫 스테이지 시작'), findsOneWidget);
+    expect(find.byKey(const Key('stage_select_button')), findsOneWidget);
+    expect(find.byKey(const Key('daily_challenge_entry_button')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('첫 클리어 뒤 전체 활동 메뉴를 공개한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'property_shot_cleared_levels': <String>['0'],
+      'property_shot_cleared_stage_ids': <String>['stage_heavy'],
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pumpAndSettle();
+
     for (final key in const [
-      'start_game_button',
       'expedition_entry_button',
       'stage_select_button',
       'reward_inventory_entry_button',
       'replay_library_entry_button',
       'daily_challenge_entry_button',
     ]) {
-      expect(find.byKey(Key(key)).hitTestable(), findsOneWidget, reason: key);
+      expect(find.byKey(Key(key)), findsOneWidget, reason: key);
     }
-    expect(
-      tester
-          .getRect(find.byKey(const Key('daily_challenge_entry_button')))
-          .bottom,
-      lessThanOrEqualTo(568),
-    );
-    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('first_mission_card')), findsNothing);
   });
 
   testWidgets('태블릿 홈은 미리보기와 행동 메뉴를 2열로 사용한다', (tester) async {

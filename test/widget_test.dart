@@ -38,6 +38,10 @@ void main() {
   });
 
   testWidgets('실제 시작 흐름은 홈·섬 지도·플레이를 연결한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      ProgressStore.clearedLevelsKey: <String>['0'],
+      ProgressStore.clearedStageIdsKey: <String>['stage_heavy'],
+    });
     final telemetry = LocalPlayTelemetry(persistLocally: false);
     await tester.pumpWidget(
       PropertyShotApp(showHome: true, telemetry: telemetry),
@@ -61,7 +65,7 @@ void main() {
     expect(find.text('짧게 넣거나 벽과 기물을 이어 더 높은 연쇄 점수에 도전해 보세요.'), findsOneWidget);
     expect(find.text('반사판을 돌려 다음 공이 만날 면과 방향을 바꿔 보세요.'), findsOneWidget);
     expect(find.text('배운 속성과 기물을 엮어 나만의 경로를 완성해 보세요.'), findsOneWidget);
-    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
+    expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 2));
 
     await tester.tap(find.byKey(const Key('stage_tile_0')));
     await _pumpUntilFound(tester, find.byKey(const Key('aim_area')));
@@ -90,6 +94,9 @@ void main() {
   });
 
   testWidgets('홈의 내 런 보상은 선택 이력과 실제 도움 상태를 보여준다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'unlocked_level': 1,
+    });
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final preferences = await SharedPreferences.getInstance();

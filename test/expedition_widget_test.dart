@@ -32,7 +32,9 @@ void main() {
   });
 
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'unlocked_level': 1,
+    });
     GameFeedback.resetForTesting();
   });
   tearDown(GameFeedback.resetForTesting);

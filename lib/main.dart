@@ -1691,6 +1691,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       );
     }
     return _HomeScreen(
+      hasCompletedFirstStage: _clearedLevels.isNotEmpty,
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => _changeSurface(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
@@ -2434,6 +2435,7 @@ String _rewardInventoryStatus(
 
 class _HomeScreen extends StatelessWidget {
   const _HomeScreen({
+    required this.hasCompletedFirstStage,
     required this.onStart,
     required this.onStageSelect,
     required this.onRewardInventory,
@@ -2445,6 +2447,7 @@ class _HomeScreen extends StatelessWidget {
     required this.onTutorialVariantChanged,
   });
 
+  final bool hasCompletedFirstStage;
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onRewardInventory;
@@ -2473,6 +2476,7 @@ class _HomeScreen extends StatelessWidget {
                   final hero = _HomeHero(compact: compact);
                   final actions = _HomeActions(
                     appFontFamily: appFontFamily,
+                    hasCompletedFirstStage: hasCompletedFirstStage,
                     onStart: onStart,
                     onExpedition: onExpedition,
                     onStageSelect: onStageSelect,
@@ -2597,6 +2601,7 @@ class _HomeHero extends StatelessWidget {
 class _HomeActions extends StatelessWidget {
   const _HomeActions({
     required this.appFontFamily,
+    required this.hasCompletedFirstStage,
     required this.onStart,
     required this.onExpedition,
     required this.onStageSelect,
@@ -2606,6 +2611,7 @@ class _HomeActions extends StatelessWidget {
   });
 
   final String? appFontFamily;
+  final bool hasCompletedFirstStage;
   final VoidCallback onStart;
   final VoidCallback onExpedition;
   final VoidCallback onStageSelect;
@@ -2644,7 +2650,7 @@ class _HomeActions extends StatelessWidget {
           key: const Key('start_game_button'),
           onPressed: onStart,
           icon: const Icon(Icons.play_arrow_rounded),
-          label: const Text('항해 시작·이어가기'),
+          label: Text(hasCompletedFirstStage ? '항해 시작·이어가기' : '첫 스테이지 시작'),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(56),
             backgroundColor: const Color(0xFFEF765E),
@@ -2655,69 +2661,125 @@ class _HomeActions extends StatelessWidget {
             ).copyWith(fontFamily: appFontFamily),
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _secondary(
-                key: const Key('expedition_entry_button'),
-                onPressed: onExpedition,
-                icon: Icons.explore_outlined,
-                label: '3단계 탐사',
-                foreground: const Color(0xFF704315),
-                border: const Color(0xFF9F6529),
+        if (!hasCompletedFirstStage) ...[
+          const SizedBox(height: 10),
+          Semantics(
+            container: true,
+            label: '첫 임무. 주변의 무거움을 공에 옮겨 상자를 밀어 보세요.',
+            child: Container(
+              key: const Key('first_mission_card'),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3D2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFC78B45)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.science_outlined, color: Color(0xFF7A481A)),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '첫 임무 · 무거움 관찰',
+                          style: TextStyle(
+                            color: Color(0xFF603B1B),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          '무거움을 공에 옮겨 상자를 밀어 보세요.',
+                          style: TextStyle(
+                            color: Color(0xFF74542F),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _secondary(
-                key: const Key('stage_select_button'),
-                onPressed: onStageSelect,
-                icon: Icons.map_outlined,
-                label: '스테이지',
-                foreground: const Color(0xFF245B60),
-                border: const Color(0xFF3E7773),
+          ),
+          const SizedBox(height: 10),
+          _secondary(
+            key: const Key('stage_select_button'),
+            onPressed: onStageSelect,
+            icon: Icons.map_outlined,
+            label: '섬 지도 둘러보기',
+            foreground: const Color(0xFF245B60),
+            border: const Color(0xFF3E7773),
+          ),
+        ],
+        if (hasCompletedFirstStage) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _secondary(
+                  key: const Key('expedition_entry_button'),
+                  onPressed: onExpedition,
+                  icon: Icons.explore_outlined,
+                  label: '3단계 탐사',
+                  foreground: const Color(0xFF704315),
+                  border: const Color(0xFF9F6529),
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _secondary(
-                key: const Key('reward_inventory_entry_button'),
-                onPressed: onRewardInventory,
-                icon: Icons.backpack_outlined,
-                label: '보상',
-                foreground: const Color(0xFF6B4B20),
-                border: const Color(0xFF946B35),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _secondary(
+                  key: const Key('stage_select_button'),
+                  onPressed: onStageSelect,
+                  icon: Icons.map_outlined,
+                  label: '스테이지',
+                  foreground: const Color(0xFF245B60),
+                  border: const Color(0xFF3E7773),
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _secondary(
-                key: const Key('replay_library_entry_button'),
-                onPressed: onReplayLibrary,
-                icon: Icons.movie_filter_outlined,
-                label: '리플레이',
-                foreground: const Color(0xFF514B66),
-                border: const Color(0xFF70678A),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _secondary(
+                  key: const Key('reward_inventory_entry_button'),
+                  onPressed: onRewardInventory,
+                  icon: Icons.backpack_outlined,
+                  label: '보상',
+                  foreground: const Color(0xFF6B4B20),
+                  border: const Color(0xFF946B35),
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _secondary(
-                key: const Key('daily_challenge_entry_button'),
-                onPressed: onDailyChallenge,
-                icon: Icons.today_rounded,
-                label: '오늘',
-                foreground: const Color(0xFF874D2B),
-                border: const Color(0xFFB06E45),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _secondary(
+                  key: const Key('replay_library_entry_button'),
+                  onPressed: onReplayLibrary,
+                  icon: Icons.movie_filter_outlined,
+                  label: '리플레이',
+                  foreground: const Color(0xFF514B66),
+                  border: const Color(0xFF70678A),
+                ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _secondary(
+                  key: const Key('daily_challenge_entry_button'),
+                  onPressed: onDailyChallenge,
+                  icon: Icons.today_rounded,
+                  label: '오늘',
+                  foreground: const Color(0xFF874D2B),
+                  border: const Color(0xFFB06E45),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
