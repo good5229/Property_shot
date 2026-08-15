@@ -1522,6 +1522,70 @@ void main() {
     expect(find.textContaining('각도나 힘 한 가지만'), findsOneWidget);
   });
 
+  testWidgets('인과를 만든 다중 샷 실패는 준비 상태 연습과 기록 분리를 제공한다', (tester) async {
+    final initial = _practiceCheckpointBaseState();
+    final prepared = initial.copyWith(
+      shotCount: 1,
+      equippedTrait: TraitType.heavy,
+      history: [initial],
+      message: '첫 샷에서 무거움 인과를 확인했습니다.',
+    );
+    var assistedMarked = false;
+    var rewound = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: prepared,
+          initialShotInputs: const [
+            ShotInput(
+              direction: Vec2(1, 0),
+              power: 0.5,
+              equippedTrait: TraitType.heavy,
+            ),
+          ],
+          initialShotResults: [
+            ShotResult(
+              state: prepared,
+              path: const [Vec2(56, 456), Vec2(110, 456)],
+              events: const ['heavy_equipped'],
+            ),
+          ],
+          onPracticeAssistUsed: () async {
+            assistedMarked = true;
+            return true;
+          },
+          onShotRewound: () async {
+            rewound = true;
+            return const <String>{};
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
+    await tester.pump(const Duration(milliseconds: 6500));
+
+    expect(
+      find.byKey(const Key('failure_prepared_retry_button')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('failure_rewind_button')), findsNothing);
+    await tester.tap(find.byKey(const Key('failure_prepared_retry_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(assistedMarked, isTrue);
+    expect(rewound, isTrue);
+    expect(find.byKey(const Key('failure_popup')), findsNothing);
+    expect(find.textContaining('최고 기록은 연습 기록으로 분리'), findsOneWidget);
+    expect(find.textContaining('시도 1'), findsOneWidget);
+  });
+
   testWidgets('일시정지 중에는 힘 조준으로 발사되지 않는다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
@@ -2667,6 +2731,35 @@ Future<void> _pumpForAsyncWork(
     await tester.pump(step);
   }
 }
+
+GameState _practiceCheckpointBaseState() => const GameState(
+  levelIndex: 0,
+  levelName: '준비 상태 연습 테스트',
+  ballSpawn: Vec2(56, 456),
+  entities: [
+    EntityState(
+      id: 'active_ball',
+      type: EntityType.ball,
+      position: Vec2(56, 456),
+      size: Vec2(24, 24),
+      movable: true,
+      traits: {TraitType.heavy},
+    ),
+    EntityState(
+      id: 'test_wall',
+      type: EntityType.wall,
+      position: Vec2(180, 456),
+      size: Vec2(24, 150),
+    ),
+    EntityState(
+      id: 'hole',
+      type: EntityType.hole,
+      position: Vec2(300, 100),
+      size: Vec2(34, 34),
+      solid: false,
+    ),
+  ],
+);
 
 Future<void> _pumpUntilFound(
   WidgetTester tester,

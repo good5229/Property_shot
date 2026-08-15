@@ -94,6 +94,21 @@ void main() {
     expect(store.loadFor(state)?.difficulty, PlayerDifficulty.normal);
   });
 
+  test('준비 상태 연습은 보통 귀속을 assisted로 단조 전환한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final session = _session(preferences);
+    await session.selectStage(generatedStageCatalog.stages.first.stageId);
+    final state = session.state!;
+    final store = RunDifficultyAttributionStore(preferences);
+    expect(await store.save(state, PlayerDifficulty.normal), isTrue);
+
+    expect(await store.markAssisted(state), isTrue);
+    expect(store.loadFor(state)?.difficulty, PlayerDifficulty.easy);
+    expect(await store.save(state, PlayerDifficulty.normal), isTrue);
+    expect(store.loadFor(state)?.difficulty, PlayerDifficulty.easy);
+  });
+
   test('성공한 완료 트랜잭션 뒤 귀속 sidecar를 제거한다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final preferences = await SharedPreferences.getInstance();

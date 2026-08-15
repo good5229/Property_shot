@@ -89,6 +89,21 @@ class RunDifficultyAttributionStore {
         return restored != null && restored.difficulty == difficulty;
       });
 
+  /// 결과에 영향을 주는 연습 도움을 사용한 단계는 이후 설정을 다시 꺼도
+  /// 경쟁 기록으로 되돌아가지 않도록 assisted(easy) 귀속으로 단조 전환한다.
+  Future<bool> markAssisted(RunState state) => _coordinator.enqueue(() async {
+    final existing = _loadForUncoordinated(state);
+    if (existing?.difficulty == PlayerDifficulty.easy) return true;
+    final attribution = _fromState(state, PlayerDifficulty.easy);
+    if (attribution == null) return false;
+    final written = await preferences.setString(
+      storageKey,
+      jsonEncode(attribution.toJson()),
+    );
+    if (!written) return false;
+    return _loadForUncoordinated(state)?.difficulty == PlayerDifficulty.easy;
+  });
+
   RunDifficultyAttribution? loadFor(RunState state) =>
       _loadForUncoordinated(state);
 

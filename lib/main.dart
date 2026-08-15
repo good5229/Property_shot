@@ -1489,6 +1489,17 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     return acquiredRewards;
   }
 
+  Future<bool> _markCurrentStageAssisted() async {
+    final session = await _activePatternSessionFuture;
+    final state = session.state;
+    if (state == null || state.phase != RunPhase.playing) return false;
+    final marked = await (await _difficultyAttributionStoreFuture).markAssisted(
+      state,
+    );
+    if (marked) _activeDifficulty = PlayerDifficulty.easy;
+    return marked;
+  }
+
   Future<void> _mirrorCloneCore(StagePatternSession session) async {
     _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
     _copyCoreRewardedStageIds = _cloneCoreRewardStageIds(session);
@@ -1656,6 +1667,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onTraitActionCommitted: _recordTraitAction,
         onStageRestarted: _restartStageRun,
         onShotRewound: _rewindStageRun,
+        onPracticeAssistUsed: _markCurrentStageAssisted,
         progressStore: _progressStore,
         progressPersistencePolicy: _activeIsExpedition
             ? GameProgressPersistencePolicy.disabled

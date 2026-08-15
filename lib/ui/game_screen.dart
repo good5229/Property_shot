@@ -83,6 +83,7 @@ class GameScreen extends StatefulWidget {
     this.onTraitActionCommitted,
     this.onStageRestarted,
     this.onShotRewound,
+    this.onPracticeAssistUsed,
     this.levelOverride,
     this.initialShotResults = const [],
     this.initialShotInputs = const [],
@@ -143,6 +144,7 @@ class GameScreen extends StatefulWidget {
   final Future<void> Function(String, RunTraitAction)? onTraitActionCommitted;
   final Future<void> Function()? onStageRestarted;
   final Future<Set<String>> Function()? onShotRewound;
+  final Future<bool> Function()? onPracticeAssistUsed;
   final LevelDefinition? levelOverride;
   final List<ShotResult> initialShotResults;
   final List<ShotInput> initialShotInputs;
@@ -3066,7 +3068,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     unawaited(_rewindAfterPersist());
   }
 
-  Future<void> _rewindAfterPersist() async {
+  Future<void> _rewindAfterPersist({
+    String? resultMessage,
+    String telemetryResult = '되감기',
+  }) async {
     if (_isAnimatingShot ||
         _isCommittingShot ||
         _isCommittingTraitAction ||
@@ -3091,7 +3096,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         '재시도',
         stage: _state.levelIndex,
         attempt: _state.shotCount + 1,
-        result: '되감기',
+        result: telemetryResult,
         eventCode: 'retry_pressed',
       );
       if (_state.history.isNotEmpty) {
@@ -3112,7 +3117,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         }
         _chainScoreAnalysis = null;
       }
-      _setState(_withoutRecoveredPastBalls(_shotResolver.rewind(_state)));
+      final rewound = _withoutRecoveredPastBalls(_shotResolver.rewind(_state));
+      _setState(
+        resultMessage == null
+            ? rewound
+            : rewound.copyWith(message: resultMessage),
+      );
     } on Object {
       if (mounted) {
         _setState(_state.copyWith(message: '되감기 기록을 저장하지 못했습니다. 다시 시도해 주세요.'));
@@ -4626,6 +4636,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       onDismissAssist: _dismissAssistRecommendation,
                       onReplay: _openFailureReplay,
                       onRetry: _resumeAfterFailure,
+                      onRetryFromPreparedState: _canRetryFromPreparedState
+                          ? () => unawaited(_retryFromPreparedState())
+                          : null,
                       onRewind: _rewind,
                       onRecoverPastBall:
                           _state.entities.any(
@@ -4725,6 +4738,31 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ? '직전 조준이 회색으로 표시됩니다. 각도나 힘 한 가지만 바꿔 다시 시도해 보세요.'
           : '각도나 힘 한 가지만 바꿔 다시 시도해 보세요.',
       TextDirection.ltr,
+    );
+  }
+
+  bool get _canRetryFromPreparedState {
+    final replay = _failureReplay;
+    return replay != null &&
+        replay.beforeState.shotCount > 0 &&
+        widget.onPracticeAssistUsed != null &&
+        _discoveryMilestones.any((milestone) => milestone.achieved);
+  }
+
+  Future<void> _retryFromPreparedState() async {
+    if (!_canRetryFromPreparedState || _isCommittingRewind) return;
+    final marked = await widget.onPracticeAssistUsed?.call() ?? false;
+    if (!marked || !mounted) {
+      if (mounted) {
+        setState(() {
+          _assistRecommendationFeedback = '연습 기록 분리를 저장하지 못했습니다. 다시 시도해 주세요.';
+        });
+      }
+      return;
+    }
+    await _rewindAfterPersist(
+      resultMessage: '아이디어를 만든 준비 상태로 돌아왔습니다. 이 단계의 최고 기록은 연습 기록으로 분리됩니다.',
+      telemetryResult: '인과 준비 상태 연습',
     );
   }
 
@@ -6240,6 +6278,7 @@ class _FailurePopup extends StatelessWidget {
     required this.onDismissAssist,
     required this.onReplay,
     required this.onRetry,
+    required this.onRetryFromPreparedState,
     required this.onRewind,
     required this.onReset,
     this.onRecoverPastBall,
@@ -6255,6 +6294,7 @@ class _FailurePopup extends StatelessWidget {
   final VoidCallback onDismissAssist;
   final VoidCallback onReplay;
   final VoidCallback onRetry;
+  final VoidCallback? onRetryFromPreparedState;
   final VoidCallback onRewind;
   final VoidCallback onReset;
   final VoidCallback? onRecoverPastBall;
@@ -6378,6 +6418,13 @@ class _FailurePopup extends StatelessWidget {
                             icon: const Icon(Icons.ads_click, size: 16),
                             label: const Text('바로 다시 조준'),
                           ),
+                          if (onRetryFromPreparedState != null)
+                            OutlinedButton.icon(
+                              key: const Key('failure_prepared_retry_button'),
+                              onPressed: onRetryFromPreparedState,
+                              icon: const Icon(Icons.restore_rounded, size: 16),
+                              label: const Text('준비 상태에서 연습'),
+                            ),
                           if (failureReplay != null)
                             OutlinedButton.icon(
                               key: const Key('failure_replay_button'),
@@ -6385,12 +6432,13 @@ class _FailurePopup extends StatelessWidget {
                               icon: const Icon(Icons.replay, size: 16),
                               label: const Text('인과 재생'),
                             ),
-                          OutlinedButton.icon(
-                            key: const Key('failure_rewind_button'),
-                            onPressed: onRewind,
-                            icon: const Icon(Icons.undo, size: 16),
-                            label: const Text('되감기'),
-                          ),
+                          if (onRetryFromPreparedState == null)
+                            OutlinedButton.icon(
+                              key: const Key('failure_rewind_button'),
+                              onPressed: onRewind,
+                              icon: const Icon(Icons.undo, size: 16),
+                              label: const Text('되감기'),
+                            ),
                           if (onRecoverPastBall != null)
                             OutlinedButton.icon(
                               key: const Key('recover_past_ball_button'),
