@@ -6,6 +6,13 @@ import 'package:property_shot/ui/game_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('모든 소리·진동 신호는 같은 의미의 시각·스크린리더 문구를 가진다', () {
+    for (final cue in FeedbackCue.values) {
+      expect(cue.visualLabel, isNotEmpty);
+      expect(cue.semanticsLabel, contains(cue.visualLabel));
+      expect(cue.requiresVisualAlternative, isTrue);
+    }
+  });
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(GameFeedback.resetForTesting);
   tearDown(GameFeedback.resetForTesting);

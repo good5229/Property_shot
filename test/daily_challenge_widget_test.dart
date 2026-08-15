@@ -19,7 +19,13 @@ void main() {
 
   testWidgets('홈에서 오늘의 도전 개요로 들어간다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'unlocked_level': 1,
+      'unlocked_level': 3,
+      'property_shot_cleared_levels': <String>['0', '1', '2'],
+      'property_shot_cleared_stage_ids': <String>[
+        'stage_heavy',
+        'stage_bouncy',
+        'stage_chain_gate',
+      ],
     });
     await tester.pumpWidget(
       const PropertyShotApp(showHome: true, showDebugControls: false),

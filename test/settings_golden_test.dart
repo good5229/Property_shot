@@ -41,6 +41,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('게임 설정'), findsOneWidget);
+      expect(find.byKey(const Key('local_session_export_button')), findsOneWidget);
+      expect(find.textContaining('링크 생성이나 서버 전송'), findsOneWidget);
       expect(find.text('마지막 샷 슬로모션'), findsOneWidget);
       await expectLater(
         find.byType(AlertDialog),

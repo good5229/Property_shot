@@ -44,4 +44,19 @@ void main() {
     );
     expect(progress.repairProgress(IslandLandmark.bridge), 0);
   });
+
+  test('복구 뒤 시설 성장은 9·18·30개 발견에서 실용 기능을 연다', () {
+    final nine = IslandRestorationProgress(discoveryCount: 9);
+    expect(nine.isUpgraded(IslandLandmark.observatory), isTrue);
+    expect(nine.isUpgraded(IslandLandmark.lighthouse), isFalse);
+    expect(IslandLandmark.observatory.upgradeLabel, '4주 실험 기록');
+
+    final eighteen = IslandRestorationProgress(discoveryCount: 18);
+    expect(eighteen.isUpgraded(IslandLandmark.lighthouse), isTrue);
+    expect(eighteen.upgradeProgress(IslandLandmark.bridge), 0);
+
+    final complete = IslandRestorationProgress(discoveryCount: 30);
+    expect(IslandLandmark.values.every(complete.isUpgraded), isTrue);
+    expect(IslandLandmark.bridge.upgradeDescription, contains('리플레이'));
+  });
 }

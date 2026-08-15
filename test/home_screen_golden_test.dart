@@ -74,7 +74,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('첫 클리어 뒤 전체 활동 메뉴를 공개한다', (tester) async {
+  testWidgets('첫 클리어 뒤 핵심 활동을 열고 고급 활동은 3회까지 예고한다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'property_shot_cleared_levels': <String>['0'],
       'property_shot_cleared_stage_ids': <String>['stage_heavy'],
@@ -86,12 +86,30 @@ void main() {
       'expedition_entry_button',
       'stage_select_button',
       'reward_inventory_entry_button',
-      'replay_library_entry_button',
-      'daily_challenge_entry_button',
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget, reason: key);
     }
+    expect(find.byKey(const Key('advanced_activities_preview')), findsOneWidget);
+    expect(find.byKey(const Key('replay_library_entry_button')), findsNothing);
+    expect(find.byKey(const Key('daily_challenge_entry_button')), findsNothing);
     expect(find.byKey(const Key('first_mission_card')), findsNothing);
+  });
+
+  testWidgets('세 스테이지를 익히면 리플레이와 오늘의 도전을 연다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'property_shot_cleared_levels': <String>['0', '1', '2'],
+      'property_shot_cleared_stage_ids': <String>[
+        'stage_heavy',
+        'stage_bouncy',
+        'stage_chain_gate',
+      ],
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('advanced_activities_preview')), findsNothing);
+    expect(find.byKey(const Key('replay_library_entry_button')), findsOneWidget);
+    expect(find.byKey(const Key('daily_challenge_entry_button')), findsOneWidget);
   });
 
   testWidgets('태블릿 홈은 미리보기와 행동 메뉴를 2열로 사용한다', (tester) async {

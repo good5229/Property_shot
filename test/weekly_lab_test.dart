@@ -23,6 +23,16 @@ void main() {
     expect(decoded.goalPosition, monday.draft.goalPosition);
   });
 
+  test('최근 네 주는 월요일 순으로 구성되고 네 가지 주제가 순환한다', () {
+    final cycle = WeeklyLabChallenge.recentCycle(DateTime.utc(2026, 8, 15));
+    expect(cycle, hasLength(4));
+    expect(cycle.map((item) => DateTime.parse(item.weekKey).weekday),
+        everyElement(DateTime.monday));
+    expect(cycle.map((item) => item.weekKey).toSet(), hasLength(4));
+    expect(cycle.map((item) => item.cycleWeek).toSet(), {1, 2, 3, 4});
+    expect(cycle.every((item) => item.cycleTheme.isNotEmpty), isTrue);
+  });
+
   test('완료 기록은 손상값을 무시하고 최근 26주만 보존한다', () async {
     SharedPreferences.setMockInitialValues({
       WeeklyLabStore.storageKey: ['broken', '2026-01-05', '2026-01-05'],
@@ -59,5 +69,23 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(find.textContaining('실험실 ·'), findsWidgets);
     expect(find.byKey(const Key('aim_area')), findsOneWidget);
+  });
+
+  testWidgets('관측소 성장 전에는 4주 기록 대신 정확한 해금 조건을 알린다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PhysicsLabScreen(
+          onBack: () {},
+          loadGameAssets: false,
+          showWeeklyHistory: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('weekly_lab_four_week_cycle')), findsNothing);
+    expect(find.byKey(const Key('weekly_history_locked_message')), findsOneWidget);
+    expect(find.textContaining('관측소를 성장시키면'), findsOneWidget);
   });
 }

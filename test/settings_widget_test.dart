@@ -130,11 +130,17 @@ void main() {
         .onPressed!();
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('charge_gauge_side_dropdown')));
+    final gaugeSide = find.byKey(const Key('charge_gauge_side_dropdown'));
+    await tester.ensureVisible(gaugeSide);
+    await tester.pump();
+    await tester.tap(gaugeSide);
     await tester.pumpAndSettle();
     await tester.tap(find.text('왼쪽').last);
     await tester.pump();
-    await tester.tap(find.byKey(const Key('player_difficulty_dropdown')));
+    final difficulty = find.byKey(const Key('player_difficulty_dropdown'));
+    await tester.ensureVisible(difficulty);
+    await tester.pump();
+    await tester.tap(difficulty);
     await tester.pumpAndSettle();
     await tester.tap(find.text('켜기 · 예상 위치 표시').last);
     await _pumpForAsyncWork(tester);

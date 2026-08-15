@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +50,25 @@ void main() {
       contains('단계,stage_id,시도,행동,속성,각도,힘,대상,결과,result_code,route_tag'),
     );
     expect(telemetry.exportCsv(), contains('발사'));
+  });
+
+  test('현재 세션 내보내기는 절대 시각과 세션 식별자를 제거하고 링크를 만들지 않는다', () async {
+    SharedPreferences.setMockInitialValues({});
+    final telemetry = LocalPlayTelemetry(sessionId: 'private-session');
+    telemetry.record('단계 시작', stage: 0);
+    telemetry.record('발사', stage: 0, angle: 1.2, power: 0.6);
+
+    final exported = await telemetry.exportPrivacySafeSessionJson();
+
+    expect(exported, contains('property-shot-local-session/v1'));
+    expect(exported, contains('"event_count": 2'));
+    expect(exported, contains('"external_link_created": false'));
+    expect(exported, isNot(contains('private-session')));
+    final decoded = jsonDecode(exported) as Map<String, Object?>;
+    final events = (decoded['events'] as List).cast<Map<String, Object?>>();
+    expect(events.every((event) => !event.containsKey('시간')), isTrue);
+    expect(exported, isNot(contains('http')));
+    expect(exported, contains('"순서": 1'));
   });
 
   test('세션과 물리 필드를 내부 코드로 내보낸다', () {
