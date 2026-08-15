@@ -288,6 +288,7 @@ class _PropertyShotRouter extends StatefulWidget {
 }
 
 class _PropertyShotRouterState extends State<_PropertyShotRouter> {
+  final GameFeedback _feedback = GameFeedback();
   int? _activeStage;
   int? _activePatternSeed;
   LevelDefinition? _activeLevel;
@@ -1376,15 +1377,29 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     final activeStage = _activeStage;
     if (activeStage == null || milestoneIds.isEmpty) return false;
     try {
+      final before = IslandRestorationProgress.fromDiscoveries(
+        discoveriesByStageId: _discoveriesByStageId,
+        stageIds: levels.map((level) => level.id).toList(growable: false),
+      );
       await _progressStore.recordDiscoveries(activeStage, milestoneIds);
       if (mounted) {
         final stageId = levels[activeStage].id;
+        final updated = {
+          ..._discoveriesByStageId,
+          stageId: {...?_discoveriesByStageId[stageId], ...milestoneIds},
+        };
+        final after = IslandRestorationProgress.fromDiscoveries(
+          discoveriesByStageId: updated,
+          stageIds: levels.map((level) => level.id).toList(growable: false),
+        );
+        final restoredNow = IslandLandmark.values.any(
+          (landmark) =>
+              !before.isRestored(landmark) && after.isRestored(landmark),
+        );
         setState(() {
-          _discoveriesByStageId = {
-            ..._discoveriesByStageId,
-            stageId: {...?_discoveriesByStageId[stageId], ...milestoneIds},
-          };
+          _discoveriesByStageId = updated;
         });
+        if (restoredNow) _feedback.restorationCompleted();
       }
       return true;
     } on Object {

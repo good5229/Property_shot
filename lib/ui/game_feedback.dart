@@ -586,6 +586,43 @@ class GameFeedback {
     );
   }
 
+  void discoveryMilestone() {
+    _emit(
+      'discovery_milestone',
+      minimumInterval: const Duration(milliseconds: 220),
+      haptic: HapticFeedback.lightImpact,
+      cue: FeedbackCue.discovery,
+    );
+  }
+
+  void rewardActivated() {
+    _emit(
+      'reward_activated',
+      minimumInterval: const Duration(milliseconds: 180),
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.rewardActivated,
+    );
+  }
+
+  void restorationCompleted() {
+    _emit(
+      'restoration_completed',
+      minimumInterval: const Duration(milliseconds: 400),
+      haptic: HapticFeedback.heavyImpact,
+      cue: FeedbackCue.restoration,
+      alert: true,
+    );
+  }
+
+  void labCompleted() {
+    _emit(
+      'lab_completed',
+      minimumInterval: const Duration(milliseconds: 300),
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.labComplete,
+    );
+  }
+
   void shotFailed() {
     _emit(
       'shot_failed',

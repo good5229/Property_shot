@@ -850,6 +850,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         .map((item) => item.id)
         .toSet();
     final changed = achievedIds.difference(_discoveredMilestoneIds).isNotEmpty;
+    if (changed) _feedback.discoveryMilestone();
     _discoveredMilestoneIds.addAll(achievedIds);
     if (changed ||
         _discoveredMilestoneIds.difference(_persistedMilestoneIds).isNotEmpty) {
@@ -1484,6 +1485,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     try {
       final used = await callback(rewardId, useKey, stageScoped);
       if (used) {
+        _feedback.rewardActivated();
         _recordRewardUse(
           rewardId: rewardId,
           useKey: useKey,

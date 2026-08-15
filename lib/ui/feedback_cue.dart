@@ -15,5 +15,9 @@ enum FeedbackCue {
   holeEntered,
   clear,
   medal,
+  discovery,
+  rewardActivated,
+  restoration,
+  labComplete,
   fail,
 }

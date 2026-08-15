@@ -85,6 +85,27 @@ void main() {
     expect(cues, [FeedbackCue.medal]);
   });
 
+  test('발견·보상·복구·실험 완료는 서로 다른 소리와 진동 사건을 낸다', () async {
+    final cues = <FeedbackCue>[];
+    final feedback = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+
+    feedback.discoveryMilestone();
+    feedback.rewardActivated();
+    feedback.restorationCompleted();
+    feedback.labCompleted();
+    await _flushFeedback();
+
+    expect(cues, [
+      FeedbackCue.discovery,
+      FeedbackCue.rewardActivated,
+      FeedbackCue.restoration,
+      FeedbackCue.labComplete,
+    ]);
+  });
+
   test('충돌 재질은 합성 피드백 큐도 구분한다', () async {
     final cues = <FeedbackCue>[];
     final feedback = GameFeedback(

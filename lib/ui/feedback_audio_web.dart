@@ -119,6 +119,30 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
         volume: 0.055,
         wave: 'triangle',
       ),
+      FeedbackCue.discovery => (
+        frequency: 920.0,
+        duration: 0.18,
+        volume: 0.055,
+        wave: 'triangle',
+      ),
+      FeedbackCue.rewardActivated => (
+        frequency: 820.0,
+        duration: 0.16,
+        volume: 0.06,
+        wave: 'sine',
+      ),
+      FeedbackCue.restoration => (
+        frequency: 560.0,
+        duration: 0.34,
+        volume: 0.07,
+        wave: 'triangle',
+      ),
+      FeedbackCue.labComplete => (
+        frequency: 700.0,
+        duration: 0.24,
+        volume: 0.06,
+        wave: 'sine',
+      ),
       FeedbackCue.fail => (
         frequency: 180.0,
         duration: 0.16,
