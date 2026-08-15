@@ -89,7 +89,10 @@ void main() {
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget, reason: key);
     }
-    expect(find.byKey(const Key('advanced_activities_preview')), findsOneWidget);
+    expect(
+      find.byKey(const Key('advanced_activities_preview')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('replay_library_entry_button')), findsNothing);
     expect(find.byKey(const Key('daily_challenge_entry_button')), findsNothing);
     expect(find.byKey(const Key('first_mission_card')), findsNothing);
@@ -108,8 +111,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('advanced_activities_preview')), findsNothing);
-    expect(find.byKey(const Key('replay_library_entry_button')), findsOneWidget);
-    expect(find.byKey(const Key('daily_challenge_entry_button')), findsOneWidget);
+    expect(find.byKey(const Key('advanced_activities_menu')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('advanced_activities_menu')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('replay_library_entry_button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('daily_challenge_entry_button')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('숙련 홈은 부가 활동을 접어 핵심 진행을 우선한다 Golden', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'property_shot_cleared_levels': <String>['0', '1', '2'],
+      'property_shot_cleared_stage_ids': <String>[
+        'stage_heavy',
+        'stage_bouncy',
+        'stage_chain_gate',
+      ],
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      const PropertyShotApp(
+        showHome: true,
+        fontFamilyOverride: 'GoldenNanumGothic',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byKey(const Key('home_screen_golden')));
+    await tester.runAsync(() async {
+      for (final asset in const [
+        'assets/generated/stone-v2.png',
+        'assets/generated/crate-v2.png',
+      ]) {
+        await precacheImage(AssetImage(asset), context);
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('advanced_activities_menu')), findsOneWidget);
+    expect(find.text('다른 활동'), findsOneWidget);
+    expect(find.byKey(const Key('daily_challenge_entry_button')), findsNothing);
+    await expectLater(
+      find.byKey(const Key('home_screen_golden')),
+      matchesGoldenFile('goldens/home_screen_experienced_390x844.png'),
+    );
   });
 
   testWidgets('태블릿 홈은 미리보기와 행동 메뉴를 2열로 사용한다', (tester) async {

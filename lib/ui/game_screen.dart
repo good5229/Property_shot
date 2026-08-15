@@ -4608,6 +4608,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     child: _ControlPanel(
                                       compact: true,
                                       dense: denseCompact,
+                                      showPrecisionControls:
+                                          _difficulty == PlayerDifficulty.easy,
                                       tutorialActive:
                                           tutorialTarget != null &&
                                           _state.equippedTrait == null,
@@ -4615,6 +4617,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       effectFeedback: _traitEffectFeedback,
                                       onRewind: _rewind,
                                       onReset: _restartCurrentStage,
+                                      onAimCounterClockwise: () =>
+                                          _nudgeAim(-math.pi / 36),
+                                      onAimClockwise: () =>
+                                          _nudgeAim(math.pi / 36),
+                                      onPowerDecrease: () =>
+                                          _adjustPower(-0.055),
+                                      onPowerIncrease: () =>
+                                          _adjustPower(0.055),
                                       canCancelReward:
                                           _isCharging &&
                                           _rewardInventory.availableUseCount(
@@ -4628,9 +4638,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 if (!compactLayout)
                                   _ControlPanel(
                                     state: _state,
+                                    showPrecisionControls:
+                                        _difficulty == PlayerDifficulty.easy,
                                     effectFeedback: _traitEffectFeedback,
                                     onRewind: _rewind,
                                     onReset: _restartCurrentStage,
+                                    onAimCounterClockwise: () =>
+                                        _nudgeAim(-math.pi / 36),
+                                    onAimClockwise: () =>
+                                        _nudgeAim(math.pi / 36),
+                                    onPowerDecrease: () => _adjustPower(-0.055),
+                                    onPowerIncrease: () => _adjustPower(0.055),
                                     canCancelReward:
                                         _isCharging &&
                                         _rewardInventory.availableUseCount(
@@ -8124,10 +8142,15 @@ class _ControlPanel extends StatelessWidget {
     this.compact = false,
     this.dense = false,
     this.tutorialActive = false,
+    this.showPrecisionControls = false,
     required this.state,
     this.effectFeedback,
     required this.onRewind,
     required this.onReset,
+    this.onAimCounterClockwise,
+    this.onAimClockwise,
+    this.onPowerDecrease,
+    this.onPowerIncrease,
     this.canCancelReward = false,
     this.onCancelReward,
   });
@@ -8135,106 +8158,125 @@ class _ControlPanel extends StatelessWidget {
   final bool compact;
   final bool dense;
   final bool tutorialActive;
+  final bool showPrecisionControls;
   final GameState state;
   final String? effectFeedback;
   final VoidCallback onRewind;
   final VoidCallback onReset;
+  final VoidCallback? onAimCounterClockwise;
+  final VoidCallback? onAimClockwise;
+  final VoidCallback? onPowerDecrease;
+  final VoidCallback? onPowerIncrease;
   final bool canCancelReward;
   final VoidCallback? onCancelReward;
 
   @override
   Widget build(BuildContext context) {
     if (compact) {
-      return Container(
-        key: const Key('compact_control_panel'),
-        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
-        decoration: BoxDecoration(
-          color: const Color(0xE6F7FAF3),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xAA708278)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 5,
-              offset: Offset(0, 2),
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showPrecisionControls)
+            _PrecisionAimControls(
+              compact: true,
+              power: state.aimPower,
+              onAimCounterClockwise: onAimCounterClockwise!,
+              onAimClockwise: onAimClockwise!,
+              onPowerDecrease: onPowerDecrease!,
+              onPowerIncrease: onPowerIncrease!,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            if (effectFeedback != null || (!tutorialActive && !dense))
-              Expanded(
-                child: Semantics(
-                  key: const Key('trait_effect_feedback_semantics'),
-                  container: true,
-                  liveRegion: effectFeedback != null,
-                  label: effectFeedback,
-                  excludeSemantics: effectFeedback != null,
+          Container(
+            key: const Key('compact_control_panel'),
+            padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+            decoration: BoxDecoration(
+              color: const Color(0xE6F7FAF3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xAA708278)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 5,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                if (effectFeedback != null || (!tutorialActive && !dense))
+                  Expanded(
+                    child: Semantics(
+                      key: const Key('trait_effect_feedback_semantics'),
+                      container: true,
+                      liveRegion: effectFeedback != null,
+                      label: effectFeedback,
+                      excludeSemantics: effectFeedback != null,
+                      child: Text(
+                        effectFeedback ??
+                            (state.equippedTrait != null
+                                ? '공을 길게 눌러 힘 모으기'
+                                : state.selectedTrait == null
+                                ? state.traitSources.isEmpty
+                                      ? '공을 길게 눌러 힘 모으기'
+                                      : '물체를 눌러 속성 고르기'
+                                : '선택: ${state.selectedTrait!.label}'),
+                        key: const Key('trait_effect_feedback'),
+                        maxLines: 2,
+                        softWrap: true,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  )
+                else if (state.equippedTrait != null)
+                  Expanded(
+                    child: Text(
+                      '공을 길게 눌러 힘을 모으세요',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  )
+                else
+                  const Spacer(),
+                Flexible(
                   child: Text(
-                    effectFeedback ??
-                        (state.equippedTrait != null
-                            ? '공을 길게 눌러 힘 모으기'
-                            : state.selectedTrait == null
-                            ? state.traitSources.isEmpty
-                                  ? '공을 길게 눌러 힘 모으기'
-                                  : '물체를 눌러 속성 고르기'
-                            : '선택: ${state.selectedTrait!.label}'),
-                    key: const Key('trait_effect_feedback'),
-                    maxLines: 2,
-                    softWrap: true,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    state.equippedTrait == null
+                        ? '공 속성: 없음'
+                        : '공 속성: ${state.equippedTrait!.label} · '
+                              '${state.equippedTrait!.compactEffect}',
+                    maxLines: dense ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: !dense,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              )
-            else if (state.equippedTrait != null)
-              Expanded(
-                child: Text(
-                  '공을 길게 눌러 힘을 모으세요',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
+                IconButton(
+                  key: const Key('rewind_button'),
+                  tooltip: '되감기',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onRewind,
+                  icon: const Icon(Icons.undo, size: 20),
                 ),
-              )
-            else
-              const Spacer(),
-            Flexible(
-              child: Text(
-                state.equippedTrait == null
-                    ? '공 속성: 없음'
-                    : '공 속성: ${state.equippedTrait!.label} · '
-                          '${state.equippedTrait!.compactEffect}',
-                maxLines: dense ? 1 : 2,
-                overflow: TextOverflow.ellipsis,
-                softWrap: !dense,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-              ),
+                if (canCancelReward)
+                  IconButton(
+                    key: const Key('cancel_launch_reward_button'),
+                    tooltip: '발사 취소 보조 사용',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onCancelReward,
+                    icon: const Icon(Icons.cancel_outlined, size: 20),
+                  ),
+                IconButton(
+                  key: const Key('reset_button'),
+                  tooltip: '단계 다시 시작',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onReset,
+                  icon: const Icon(Icons.refresh, size: 20),
+                ),
+              ],
             ),
-            IconButton(
-              key: const Key('rewind_button'),
-              tooltip: '되감기',
-              visualDensity: VisualDensity.compact,
-              onPressed: onRewind,
-              icon: const Icon(Icons.undo, size: 20),
-            ),
-            if (canCancelReward)
-              IconButton(
-                key: const Key('cancel_launch_reward_button'),
-                tooltip: '발사 취소 보조 사용',
-                visualDensity: VisualDensity.compact,
-                onPressed: onCancelReward,
-                icon: const Icon(Icons.cancel_outlined, size: 20),
-              ),
-            IconButton(
-              key: const Key('reset_button'),
-              tooltip: '단계 다시 시작',
-              visualDensity: VisualDensity.compact,
-              onPressed: onReset,
-              icon: const Icon(Icons.refresh, size: 20),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
     return Padding(
@@ -8242,6 +8284,16 @@ class _ControlPanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (showPrecisionControls) ...[
+            _PrecisionAimControls(
+              power: state.aimPower,
+              onAimCounterClockwise: onAimCounterClockwise!,
+              onAimClockwise: onAimClockwise!,
+              onPowerDecrease: onPowerDecrease!,
+              onPowerIncrease: onPowerIncrease!,
+            ),
+            const SizedBox(height: 8),
+          ],
           Row(
             children: [
               Expanded(
@@ -8297,6 +8349,109 @@ class _ControlPanel extends StatelessWidget {
                 icon: const Icon(Icons.refresh),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrecisionAimControls extends StatelessWidget {
+  const _PrecisionAimControls({
+    this.compact = false,
+    required this.power,
+    required this.onAimCounterClockwise,
+    required this.onAimClockwise,
+    required this.onPowerDecrease,
+    required this.onPowerIncrease,
+  });
+
+  final bool compact;
+  final double power;
+  final VoidCallback onAimCounterClockwise;
+  final VoidCallback onAimClockwise;
+  final VoidCallback onPowerDecrease;
+  final VoidCallback onPowerIncrease;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget control({
+      required Key key,
+      required String tooltip,
+      required IconData icon,
+      required VoidCallback onPressed,
+    }) => IconButton(
+      key: key,
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      constraints: BoxConstraints.tightFor(
+        width: compact ? 40 : 44,
+        height: compact ? 36 : 44,
+      ),
+      onPressed: onPressed,
+      icon: Icon(icon, size: compact ? 19 : 21),
+    );
+
+    return Semantics(
+      key: const Key('precision_aim_controls'),
+      container: true,
+      label: '정밀 조작 도움. 현재 힘 ${(power * 100).round()}퍼센트',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (!compact)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Text(
+                '정밀 조작',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          if (compact)
+            const Text(
+              '각도',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            ),
+          control(
+            key: const Key('precision_aim_counter_clockwise'),
+            tooltip: '조준을 반시계 방향으로 조금 이동',
+            icon: Icons.rotate_left,
+            onPressed: onAimCounterClockwise,
+          ),
+          control(
+            key: const Key('precision_aim_clockwise'),
+            tooltip: '조준을 시계 방향으로 조금 이동',
+            icon: Icons.rotate_right,
+            onPressed: onAimClockwise,
+          ),
+          const SizedBox(width: 4),
+          if (compact)
+            const Text(
+              '힘',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            ),
+          control(
+            key: const Key('precision_power_decrease'),
+            tooltip: '힘을 한 칸 줄이기',
+            icon: Icons.remove_circle_outline,
+            onPressed: onPowerDecrease,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: Text(
+              '${(power * 100).round()}%',
+              key: const Key('precision_power_value'),
+              style: TextStyle(
+                fontSize: compact ? 11 : 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          control(
+            key: const Key('precision_power_increase'),
+            tooltip: '힘을 한 칸 늘리기',
+            icon: Icons.add_circle_outline,
+            onPressed: onPowerIncrease,
           ),
         ],
       ),

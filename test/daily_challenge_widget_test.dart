@@ -32,6 +32,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('advanced_activities_menu')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('advanced_activities_menu')));
+    await tester.pumpAndSettle();
     expect(
       find.byKey(const Key('daily_challenge_entry_button')),
       findsOneWidget,

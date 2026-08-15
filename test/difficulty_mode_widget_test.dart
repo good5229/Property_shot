@@ -32,6 +32,7 @@ void main() {
     await _aim(tester);
 
     expect(_game(tester).firstArrivalPreview, isNull);
+    expect(find.byKey(const Key('precision_aim_controls')), findsNothing);
   });
 
   testWidgets('쉬움 모드는 조준 뒤 실제 판정 기반 예상 도착 마커를 만든다', (tester) async {
@@ -50,6 +51,23 @@ void main() {
     expect(
       tester.getSemantics(find.bySemanticsLabel('공을 조준하는 게임 화면')).value,
       contains('예상 첫 도착'),
+    );
+  });
+
+  testWidgets('정밀 조작 도움은 쉬움에서만 보이고 힘을 한 칸씩 조절한다', (tester) async {
+    await _pumpGame(tester, difficulty: PlayerDifficulty.easy);
+    await tester.pump();
+    expect(find.byKey(const Key('precision_aim_controls')), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('precision_power_increase')));
+    await tester.pump();
+    expect(find.text('56%'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('precision_aim_controls')))
+          .label,
+      contains('정밀 조작 도움'),
     );
   });
 

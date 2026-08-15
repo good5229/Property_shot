@@ -34,7 +34,7 @@ void main() {
     for (final label in const [
       '조준 도움',
       '충전 게이지 위치',
-      '예상 첫 도착 표시',
+      '정밀 조작 도움',
       '직전 조준 비교',
       '경로 기억',
       '마지막 샷 슬로모션',
@@ -142,7 +142,7 @@ void main() {
     await tester.pump();
     await tester.tap(difficulty);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('켜기 · 예상 위치 표시').last);
+    await tester.tap(find.text('켜기 · 미세 조정 포함').last);
     await _pumpForAsyncWork(tester);
 
     expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.left);

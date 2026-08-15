@@ -2631,9 +2631,7 @@ class _HomeScreen extends StatelessWidget {
                 tooltip: '소리와 진동 설정',
                 onPressed: () => showDialog<void>(
                   context: context,
-                  builder: (_) => _FeedbackSettingsDialog(
-                    telemetry: telemetry,
-                  ),
+                  builder: (_) => _FeedbackSettingsDialog(telemetry: telemetry),
                 ),
                 icon: const Icon(Icons.tune_rounded),
               ),
@@ -2870,39 +2868,62 @@ class _HomeActions extends StatelessWidget {
               ],
             )
           else
-            Row(
+            ExpansionTile(
+              key: const Key('advanced_activities_menu'),
+              tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+              childrenPadding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: Color(0xFF8CA8A1)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              collapsedShape: RoundedRectangleBorder(
+                side: const BorderSide(color: Color(0xFF8CA8A1)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              backgroundColor: const Color(0xCCF7FAF3),
+              collapsedBackgroundColor: const Color(0xCCF7FAF3),
+              leading: const Icon(Icons.apps_rounded),
+              title: const Text(
+                '다른 활동',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              subtitle: const Text('보상 · 리플레이 · 오늘의 도전'),
               children: [
-                Expanded(
-                  child: _secondary(
-                    key: const Key('reward_inventory_entry_button'),
-                    onPressed: onRewardInventory,
-                    icon: Icons.backpack_outlined,
-                    label: '보상',
-                    foreground: const Color(0xFF6B4B20),
-                    border: const Color(0xFF946B35),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _secondary(
-                    key: const Key('replay_library_entry_button'),
-                    onPressed: onReplayLibrary,
-                    icon: Icons.movie_filter_outlined,
-                    label: '리플레이',
-                    foreground: const Color(0xFF514B66),
-                    border: const Color(0xFF70678A),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _secondary(
-                    key: const Key('daily_challenge_entry_button'),
-                    onPressed: onDailyChallenge,
-                    icon: Icons.today_rounded,
-                    label: '오늘',
-                    foreground: const Color(0xFF874D2B),
-                    border: const Color(0xFFB06E45),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _secondary(
+                        key: const Key('reward_inventory_entry_button'),
+                        onPressed: onRewardInventory,
+                        icon: Icons.backpack_outlined,
+                        label: '보상',
+                        foreground: const Color(0xFF6B4B20),
+                        border: const Color(0xFF946B35),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _secondary(
+                        key: const Key('replay_library_entry_button'),
+                        onPressed: onReplayLibrary,
+                        icon: Icons.movie_filter_outlined,
+                        label: '리플레이',
+                        foreground: const Color(0xFF514B66),
+                        border: const Color(0xFF70678A),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _secondary(
+                        key: const Key('daily_challenge_entry_button'),
+                        onPressed: onDailyChallenge,
+                        icon: Icons.today_rounded,
+                        label: '오늘',
+                        foreground: const Color(0xFF874D2B),
+                        border: const Color(0xFFB06E45),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -3076,9 +3097,7 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('현재 세션을 개인정보 없는 JSON으로 복사했습니다.'),
-          ),
+          const SnackBar(content: Text('현재 세션을 개인정보 없는 JSON으로 복사했습니다.')),
         );
     } on Object {
       if (!mounted) return;
@@ -3314,19 +3333,20 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 DropdownButtonFormField<PlayerDifficulty>(
                   key: const Key('player_difficulty_dropdown'),
                   decoration: const InputDecoration(
-                    labelText: '예상 첫 도착 표시',
-                    helperText: '켜고 시작한 단계는 최고 기록과 선택 도전 기록에서 분리됩니다.',
+                    labelText: '정밀 조작 도움',
+                    helperText:
+                        '예상 첫 도착과 각도·힘 미세 조정 버튼을 제공합니다. 사용한 단계는 경쟁 기록과 분리됩니다.',
                     helperMaxLines: 3,
                   ),
                   initialValue: GameFeedback.playerDifficulty,
                   items: const [
                     DropdownMenuItem(
                       value: PlayerDifficulty.normal,
-                      child: Text('끄기 · 직접 탐색'),
+                      child: Text('끄기 · 직접 조작'),
                     ),
                     DropdownMenuItem(
                       value: PlayerDifficulty.easy,
-                      child: Text('켜기 · 예상 위치 표시'),
+                      child: Text('켜기 · 미세 조정 포함'),
                     ),
                   ],
                   onChanged: (difficulty) {
