@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/game_state.dart';
 import '../game/lab/physics_lab.dart';
 import '../game/lab/physics_lab_creator.dart';
+import '../game/lab/weekly_lab.dart';
 import 'game_feedback.dart';
 import 'game_screen.dart';
 import 'play_telemetry.dart';
@@ -24,10 +26,56 @@ class PhysicsLabScreen extends StatefulWidget {
 
 class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
   PhysicsLabScenario? _active;
+  bool _activeIsWeekly = false;
   bool _creating = false;
   String _draftScenarioId = physicsLabScenarios.first.id;
   LabGoalPosition _draftGoal = LabGoalPosition.north;
   String? _creatorMessage;
+  late final WeeklyLabChallenge _weekly = WeeklyLabChallenge.forDate(
+    DateTime.now(),
+  );
+  Set<String> _completedWeeks = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWeeklyProgress();
+  }
+
+  Future<void> _loadWeeklyProgress() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final completed = WeeklyLabStore(preferences).loadCompletedWeeks();
+      if (mounted) setState(() => _completedWeeks = completed);
+    } on Object {
+      // 주간 진행을 불러오지 못해도 고정 실험은 계속 이용할 수 있다.
+    }
+  }
+
+  Future<void> _completeWeekly() async {
+    if (!_activeIsWeekly || _completedWeeks.contains(_weekly.weekKey)) return;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await WeeklyLabStore(preferences).complete(_weekly.weekKey);
+      if (!mounted) return;
+      setState(() => _completedWeeks = {..._completedWeeks, _weekly.weekKey});
+      GameFeedback().labCompleted();
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('주간 실험 완료를 저장하지 못했습니다. 다시 시도해 주세요.')),
+      );
+    }
+  }
+
+  Future<void> _copyWeeklyCode() async {
+    await Clipboard.setData(ClipboardData(text: _weekly.shareCode));
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이번 주 실험 코드를 복사했습니다.')));
+    }
+  }
 
   PhysicsLabDraft get _draft => PhysicsLabDraft(
     baseScenarioId: _draftScenarioId,
@@ -131,8 +179,15 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
           exitTooltipOverride: '실험 목록',
           objectiveOverride: scenario.question,
           showDiscoveryHud: false,
-          onExit: () => setState(() => _active = null),
-          onStageRequested: (_) async => setState(() => _active = null),
+          onExit: () => setState(() {
+            _active = null;
+            _activeIsWeekly = false;
+          }),
+          onStageRequested: (_) async => setState(() {
+            _active = null;
+            _activeIsWeekly = false;
+          }),
+          onLevelCleared: (_, _, _, _) async => _completeWeekly(),
           showTutorialFailureHints: false,
           tutorialVariant: TutorialExperimentVariant.silent,
           difficulty: PlayerDifficulty.normal,
@@ -165,6 +220,62 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
             const SizedBox(height: 6),
             const Text('실험 결과는 캠페인 진행·최고 기록·도감 발견에 반영되지 않습니다.'),
             const SizedBox(height: 14),
+            Card(
+              key: const Key('weekly_lab_card'),
+              color: const Color(0xFFFFF3C7),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_month_rounded),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '이번 주 실험 · ${_weekly.weekKey}',
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        if (_completedWeeks.contains(_weekly.weekKey))
+                          const Chip(label: Text('완료')),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(_weekly.scenario.title),
+                    Text(_weekly.scenario.question),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.icon(
+                          key: const Key('weekly_lab_play_button'),
+                          onPressed: () => setState(() {
+                            _active = _weekly.scenario;
+                            _activeIsWeekly = true;
+                          }),
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: Text(
+                            _completedWeeks.contains(_weekly.weekKey)
+                                ? '다시 실험'
+                                : '이번 주 실험 시작',
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          key: const Key('weekly_lab_copy_button'),
+                          onPressed: _copyWeeklyCode,
+                          icon: const Icon(Icons.ios_share_rounded),
+                          label: const Text('주간 코드 복사'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             FilledButton.icon(
               key: const Key('physics_lab_create_button'),
               onPressed: () => setState(() => _creating = true),

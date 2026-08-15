@@ -112,6 +112,11 @@ void main() {
     expect(find.byKey(const Key('physics_lab_screen')), findsOneWidget);
     expect(find.textContaining('캠페인 진행'), findsOneWidget);
     for (final scenario in physicsLabScenarios) {
+      await tester.scrollUntilVisible(
+        find.byKey(Key('physics_lab_${scenario.id}')),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.byKey(Key('physics_lab_${scenario.id}')), findsOneWidget);
     }
     await tester.binding.setSurfaceSize(const Size(320, 568));
