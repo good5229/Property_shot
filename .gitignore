@@ -12,6 +12,71 @@
 .swiftpm/
 migrate_working_dir/
 
+# Microsoft Office documents, templates, data files, and local artifacts
+~$*
+.~lock.*#
+*.asd
+*.wbk
+*.xlk
+*.xar
+*.doc
+*.docx
+*.docm
+*.dot
+*.dotx
+*.dotm
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.xlt
+*.xltx
+*.xltm
+*.xla
+*.xlam
+*.ppt
+*.pptx
+*.pptm
+*.pps
+*.ppsx
+*.ppsm
+*.pot
+*.potx
+*.potm
+*.ppa
+*.ppam
+*.sldx
+*.sldm
+*.mdb
+*.accdb
+*.accde
+*.accdr
+*.accdt
+*.pub
+*.vsd
+*.vsdx
+*.vsdm
+*.vss
+*.vssx
+*.vssm
+*.vst
+*.vstx
+*.vstm
+*.one
+*.onepkg
+*.onetoc2
+*.pst
+*.ost
+*.oft
+*.msg
+*.mpp
+*.mpt
+*.rtf
+OfficeFileCache/
+**/OfficeFileCache/
+Microsoft Office Cache/
+**/Microsoft Office Cache/
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -91,10 +156,7 @@ harness_docs/dev-wiki/*
 /report/dist/*
 !/report/dist/property_shot_game_guide.pdf
 !/report/dist/property_shot_ai_technical_report.pdf
-!/report/dist/property_shot_game_guide.pptx
-!/report/dist/property_shot_ai_technical_report.pptx
 !/report/dist/property_shot_portfolio.pdf
-!/report/dist/property_shot_portfolio.pptx
 
 # 로컬 플레이 영상(공모전 보고서용, 원격 저장소 미업로드)
 /recordings/*.mp4
