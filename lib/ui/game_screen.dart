@@ -1280,9 +1280,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _recordHintExposureIfNeeded();
   }
 
-  void _setPreviousAimInput(ShotInput? input) {
+  void _setPreviousAimInput(ShotInput? input, {Iterable<Vec2>? path}) {
     _previousAimInput = input;
     _game.setPreviousAimInput(input);
+    _game.setPreviousShotPath(input == null ? const [] : path ?? const []);
   }
 
   void _selectLevel(int index) {
@@ -4531,6 +4532,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                         label:
                                                             _successAimGhostActive
                                                             ? '직전 성공 조준이 회색으로 표시됨'
+                                                            : _game
+                                                                  .previousShotPath
+                                                                  .isNotEmpty
+                                                            ? '직전 발사 궤적과 조준이 회색 점선으로 표시됨'
                                                             : '직전 조준 비교선이 회색으로 표시됨',
                                                         child: const SizedBox(
                                                           width: 1,
@@ -4739,7 +4744,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() {
       _showFailurePopup = false;
       _successAimGhostActive = false;
-      _setPreviousAimInput(showPreviousAim ? replay.input : null);
+      _setPreviousAimInput(
+        showPreviousAim ? replay.input : null,
+        path: showPreviousAim ? replay.result.path : null,
+      );
       _state = _state.copyWith(
         message: showPreviousAim
             ? '직전 조준이 회색으로 남아 있습니다. 한 가지만 바꿔 다시 시도해 보세요.'

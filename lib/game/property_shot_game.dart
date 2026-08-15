@@ -72,6 +72,7 @@ class PropertyShotGame extends FlameGame {
   double playbackSpeed = 1;
   FirstArrivalPreview? firstArrivalPreview;
   ShotInput? previousAimInput;
+  List<Vec2> previousShotPath = const [];
 
   void setDebugOptions({
     bool? hitboxes,
@@ -95,6 +96,10 @@ class PropertyShotGame extends FlameGame {
 
   void setPreviousAimInput(ShotInput? input) {
     previousAimInput = input;
+  }
+
+  void setPreviousShotPath(Iterable<Vec2> path) {
+    previousShotPath = List<Vec2>.unmodifiable(path);
   }
 
   /// Golden·렌더 계약에서 물리 사건 시점을 재현하기 위한 결정론 cursor다.
@@ -376,6 +381,7 @@ class PropertyShotGame extends FlameGame {
           });
     _drawStage4Relations(canvas, renderEntities);
     if (state.phase == GamePhase.planning) {
+      _drawPreviousShotPath(canvas);
       _drawPreviousAim(canvas);
       _drawAimArrow(canvas);
     }
@@ -1410,6 +1416,50 @@ class PropertyShotGame extends FlameGame {
       Paint()..color = const Color(0xDDF7FAF3),
     );
     label.paint(canvas, labelOffset);
+  }
+
+  void _drawPreviousShotPath(Canvas canvas) {
+    final points = previousShotPath;
+    if (points.length < 2 || _animationPath.isNotEmpty) return;
+    final paint = Paint()
+      ..color = const Color(0xA55C6A68)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.1
+      ..strokeCap = StrokeCap.round;
+    for (var index = 0; index < points.length - 1; index++) {
+      final from = points[index];
+      final to = points[index + 1];
+      final delta = to - from;
+      final distance = delta.length;
+      if (!distance.isFinite || distance <= 0.001) continue;
+      final direction = delta * (1 / distance);
+      const dash = 7.0;
+      const gap = 5.0;
+      for (var cursor = 0.0; cursor < distance; cursor += dash + gap) {
+        final end = math.min(cursor + dash, distance);
+        canvas.drawLine(
+          _project(from + direction * cursor),
+          _project(from + direction * end),
+          paint,
+        );
+      }
+    }
+    final firstImpact = points.length > 2 ? points[1] : points.last;
+    canvas.drawCircle(
+      _project(firstImpact),
+      5.5,
+      Paint()
+        ..color = const Color(0xDDF7FAF3)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      _project(firstImpact),
+      5.5,
+      Paint()
+        ..color = const Color(0xFF5C6A68)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
   }
 
   void _drawFirstArrivalPreview(Canvas canvas) {

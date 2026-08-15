@@ -58,4 +58,44 @@ void main() {
       matchesGoldenFile('goldens/previous_aim_retry_390x844.png'),
     );
   });
+
+  testWidgets('직전 실패 궤적 Golden 390x844', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
+        home: RepaintBoundary(
+          key: const Key('previous_path_golden'),
+          child: GameScreen(
+            initialState: levels.first.createState(0, productRules: true),
+            showStageSelector: false,
+            loadGameAssets: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final gameState = tester.state<GameWidgetState<PropertyShotGame>>(
+      find.byType(GameWidget<PropertyShotGame>),
+    );
+    await gameState.currentGame.toBeLoaded();
+    gameState.currentGame.setPreviousAimInput(
+      const ShotInput(direction: Vec2(0.72, -0.69), power: 0.68),
+    );
+    gameState.currentGame.setPreviousShotPath(const [
+      Vec2(58, 470),
+      Vec2(170, 350),
+      Vec2(280, 430),
+      Vec2(325, 330),
+    ]);
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(gameState.currentGame.previousShotPath, hasLength(4));
+    await expectLater(
+      find.byKey(const Key('previous_path_golden')),
+      matchesGoldenFile('goldens/previous_path_retry_390x844.png'),
+    );
+  });
 }

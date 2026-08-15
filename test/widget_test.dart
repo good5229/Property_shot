@@ -1484,10 +1484,12 @@ void main() {
         .game!;
     expect(game.previousAimInput, isNotNull);
     expect(game.previousAimInput!.direction, const Vec2(1, 0));
+    expect(game.previousShotPath.length, greaterThanOrEqualTo(2));
 
     await tester.tap(find.byKey(const Key('rewind_button')).first);
     await tester.pump();
     expect(game.previousAimInput, isNull);
+    expect(game.previousShotPath, isEmpty);
     expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
   });
 
