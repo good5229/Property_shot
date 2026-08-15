@@ -39,8 +39,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Fast quality gate
-        run: ./scripts/test_fast.sh
+      - name: Full release quality gate
+        run: ./scripts/test_extended.sh
 
       - name: Build Flutter web
         run: flutter build web --release --base-href "/Property_shot/"
