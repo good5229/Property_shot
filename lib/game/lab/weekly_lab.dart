@@ -19,20 +19,31 @@ class WeeklyLabChallenge {
 
   String get id => 'weekly_lab_$weekKey';
 
+  static const _kstOffset = Duration(hours: 9);
+
   static WeeklyLabChallenge forDate(DateTime value) {
-    final utc = value.toUtc();
+    // 한국 사용자에게 보이는 주간 콘텐츠이므로 UTC 월요일이 아니라
+    // KST 월요일 00:00을 경계로 삼는다. DateTime.utc는 여기서 KST의
+    // 달력 날짜를 안정적으로 보관하는 용도로만 사용한다.
+    final kstCalendar = value.toUtc().add(_kstOffset);
     final monday = DateTime.utc(
-      utc.year,
-      utc.month,
-      utc.day,
-    ).subtract(Duration(days: utc.weekday - DateTime.monday));
+      kstCalendar.year,
+      kstCalendar.month,
+      kstCalendar.day,
+    ).subtract(Duration(days: kstCalendar.weekday - DateTime.monday));
+    return _forKstMonday(monday);
+  }
+
+  static WeeklyLabChallenge _forKstMonday(DateTime monday) {
     final weekKey = [
       monday.year.toString().padLeft(4, '0'),
       monday.month.toString().padLeft(2, '0'),
       monday.day.toString().padLeft(2, '0'),
     ].join('-');
     final seed = StableSeed.hashString('property-shot-weekly-lab:$weekKey');
-    final scenario = physicsLabScenarios[seed % physicsLabScenarios.length];
+    final cycleWeek = _cycleWeekForMonday(monday);
+    final eligible = _eligibleScenarios(cycleWeek);
+    final scenario = eligible[seed % eligible.length];
     final positions = LabGoalPosition.values;
     final goal =
         positions[(seed ~/ physicsLabScenarios.length) % positions.length];
@@ -54,15 +65,33 @@ class WeeklyLabChallenge {
     final monday = DateTime.parse('${current.weekKey}T00:00:00Z');
     return List<WeeklyLabChallenge>.unmodifiable([
       for (var offset = 3; offset >= 0; offset--)
-        forDate(monday.subtract(Duration(days: offset * 7))),
+        _forKstMonday(monday.subtract(Duration(days: offset * 7))),
     ]);
   }
 
   int get cycleWeek {
     final monday = DateTime.parse('${weekKey}T00:00:00Z');
-    final epochMonday = DateTime.utc(2026, 1, 5);
-    final weeks = monday.difference(epochMonday).inDays ~/ 7;
+    return _cycleWeekForMonday(monday);
+  }
+
+  static int _cycleWeekForMonday(DateTime monday) {
+    final weeks = monday.difference(DateTime.utc(2026, 1, 5)).inDays ~/ 7;
     return (weeks % 4 + 4) % 4 + 1;
+  }
+
+  static List<PhysicsLabScenario> _eligibleScenarios(int cycleWeek) {
+    final ids = switch (cycleWeek) {
+      1 => const {
+        'lab_heavy_crate_v1',
+        'lab_sticky_chain_v1',
+        'lab_sharp_balloon_v1',
+      },
+      2 => const {'lab_bouncy_second_rebound_v1'},
+      3 => const {'lab_switch_gate_v1'},
+      4 => physicsLabScenarios.map((item) => item.id).toSet(),
+      _ => throw ArgumentError.value(cycleWeek, 'cycleWeek'),
+    };
+    return physicsLabScenarios.where((item) => ids.contains(item.id)).toList();
   }
 
   String get cycleTheme => switch (cycleWeek) {

@@ -13,14 +13,14 @@ extension IslandLandmarkCopy on IslandLandmark {
 
   int get requiredDiscoveries => switch (this) {
     IslandLandmark.observatory => 3,
-    IslandLandmark.lighthouse => 12,
-    IslandLandmark.bridge => 24,
+    IslandLandmark.lighthouse => 9,
+    IslandLandmark.bridge => 15,
   };
 
   int get previousThreshold => switch (this) {
     IslandLandmark.observatory => 0,
     IslandLandmark.lighthouse => 3,
-    IslandLandmark.bridge => 12,
+    IslandLandmark.bridge => 9,
   };
 
   String get benefitLabel => switch (this) {
@@ -36,9 +36,9 @@ extension IslandLandmarkCopy on IslandLandmark {
   };
 
   int get upgradeDiscoveries => switch (this) {
-    IslandLandmark.observatory => 9,
-    IslandLandmark.lighthouse => 18,
-    IslandLandmark.bridge => 30,
+    IslandLandmark.observatory => 6,
+    IslandLandmark.lighthouse => 12,
+    IslandLandmark.bridge => 18,
   };
 
   String get upgradeLabel => switch (this) {

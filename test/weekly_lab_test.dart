@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/lab/physics_lab.dart';
 import 'package:property_shot/game/lab/physics_lab_creator.dart';
 import 'package:property_shot/game/lab/weekly_lab.dart';
 import 'package:property_shot/ui/physics_lab_screen.dart';
@@ -10,8 +11,10 @@ void main() {
 
   test('같은 주는 같은 안전한 공유 코드를 만들고 다음 주는 변경된다', () {
     final monday = WeeklyLabChallenge.forDate(DateTime.utc(2026, 8, 10));
-    final sunday = WeeklyLabChallenge.forDate(DateTime.utc(2026, 8, 16));
-    final next = WeeklyLabChallenge.forDate(DateTime.utc(2026, 8, 17));
+    final sunday = WeeklyLabChallenge.forDate(
+      DateTime.utc(2026, 8, 16, 14, 59),
+    );
+    final next = WeeklyLabChallenge.forDate(DateTime.utc(2026, 8, 16, 15));
 
     expect(monday.weekKey, '2026-08-10');
     expect(sunday.weekKey, monday.weekKey);
@@ -23,11 +26,31 @@ void main() {
     expect(decoded.goalPosition, monday.draft.goalPosition);
   });
 
+  test('주제는 표시 문구가 아니라 실제 시나리오 풀을 제한한다', () {
+    final cycle = WeeklyLabChallenge.recentCycle(DateTime.utc(2026, 8, 15));
+    for (final challenge in cycle) {
+      final allowed = switch (challenge.cycleWeek) {
+        1 => const {
+          'lab_heavy_crate_v1',
+          'lab_sticky_chain_v1',
+          'lab_sharp_balloon_v1',
+        },
+        2 => const {'lab_bouncy_second_rebound_v1'},
+        3 => const {'lab_switch_gate_v1'},
+        4 => physicsLabScenarios.map((item) => item.id).toSet(),
+        _ => const <String>{},
+      };
+      expect(allowed, contains(challenge.draft.baseScenarioId));
+    }
+  });
+
   test('최근 네 주는 월요일 순으로 구성되고 네 가지 주제가 순환한다', () {
     final cycle = WeeklyLabChallenge.recentCycle(DateTime.utc(2026, 8, 15));
     expect(cycle, hasLength(4));
-    expect(cycle.map((item) => DateTime.parse(item.weekKey).weekday),
-        everyElement(DateTime.monday));
+    expect(
+      cycle.map((item) => DateTime.parse(item.weekKey).weekday),
+      everyElement(DateTime.monday),
+    );
     expect(cycle.map((item) => item.weekKey).toSet(), hasLength(4));
     expect(cycle.map((item) => item.cycleWeek).toSet(), {1, 2, 3, 4});
     expect(cycle.every((item) => item.cycleTheme.isNotEmpty), isTrue);
@@ -85,7 +108,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('weekly_lab_four_week_cycle')), findsNothing);
-    expect(find.byKey(const Key('weekly_history_locked_message')), findsOneWidget);
+    expect(
+      find.byKey(const Key('weekly_history_locked_message')),
+      findsOneWidget,
+    );
     expect(find.textContaining('관측소를 성장시키면'), findsOneWidget);
   });
 }

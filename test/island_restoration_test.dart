@@ -10,7 +10,7 @@ void main() {
     expect(observatory.nextLandmark, IslandLandmark.lighthouse);
     expect(IslandLandmark.observatory.benefitLabel, '분석 강화');
 
-    final lighthouse = IslandRestorationProgress(discoveryCount: 12);
+    final lighthouse = IslandRestorationProgress(discoveryCount: 9);
     expect(lighthouse.isRestored(IslandLandmark.lighthouse), isTrue);
     expect(lighthouse.nextLandmark, IslandLandmark.bridge);
     expect(IslandLandmark.lighthouse.benefitDescription, contains('실패 전'));
@@ -40,23 +40,23 @@ void main() {
     expect(progress.repairProgress(IslandLandmark.observatory), 1);
     expect(
       progress.repairProgress(IslandLandmark.lighthouse),
-      closeTo(5 / 9, 0.0001),
+      closeTo(5 / 6, 0.0001),
     );
     expect(progress.repairProgress(IslandLandmark.bridge), 0);
   });
 
-  test('복구 뒤 시설 성장은 9·18·30개 발견에서 실용 기능을 연다', () {
-    final nine = IslandRestorationProgress(discoveryCount: 9);
-    expect(nine.isUpgraded(IslandLandmark.observatory), isTrue);
-    expect(nine.isUpgraded(IslandLandmark.lighthouse), isFalse);
+  test('복구 뒤 시설 성장은 6·12·18개 발견에서 실용 기능을 연다', () {
+    final six = IslandRestorationProgress(discoveryCount: 6);
+    expect(six.isUpgraded(IslandLandmark.observatory), isTrue);
+    expect(six.isUpgraded(IslandLandmark.lighthouse), isFalse);
     expect(IslandLandmark.observatory.upgradeLabel, '4주 실험 기록');
 
-    final eighteen = IslandRestorationProgress(discoveryCount: 18);
-    expect(eighteen.isUpgraded(IslandLandmark.lighthouse), isTrue);
-    expect(eighteen.upgradeProgress(IslandLandmark.bridge), 0);
+    final twelve = IslandRestorationProgress(discoveryCount: 12);
+    expect(twelve.isUpgraded(IslandLandmark.lighthouse), isTrue);
+    expect(twelve.upgradeProgress(IslandLandmark.bridge), 0);
 
-    final complete = IslandRestorationProgress(discoveryCount: 30);
-    expect(IslandLandmark.values.every(complete.isUpgraded), isTrue);
+    final eighteen = IslandRestorationProgress(discoveryCount: 18);
+    expect(IslandLandmark.values.every(eighteen.isUpgraded), isTrue);
     expect(IslandLandmark.bridge.upgradeDescription, contains('리플레이'));
   });
 }

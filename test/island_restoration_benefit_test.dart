@@ -195,9 +195,9 @@ void main() {
     expect(IslandSupportStore(preferences).load(), IslandLandmark.lighthouse);
   });
 
-  testWidgets('24개 발견으로 시작한 실제 게임에는 세 시설 지원이 모두 연결된다', (tester) async {
+  testWidgets('15개 발견으로 시작한 실제 게임에는 세 시설 지원이 모두 연결된다', (tester) async {
     final records = <String>[];
-    for (var stageIndex = 0; stageIndex < 8; stageIndex++) {
+    for (var stageIndex = 0; stageIndex < 5; stageIndex++) {
       for (final milestoneId in stageDiscoveryMilestoneIds(stageIndex)) {
         records.add('${levels[stageIndex].id}::$milestoneId');
       }
@@ -271,7 +271,7 @@ void main() {
 
   testWidgets('복구하지 않은 시설은 집중 선택지로 노출되지 않는다', (tester) async {
     final records = <String>[];
-    for (var stageIndex = 0; stageIndex < 3; stageIndex++) {
+    for (var stageIndex = 0; stageIndex < 2; stageIndex++) {
       for (final milestoneId in stageDiscoveryMilestoneIds(stageIndex)) {
         records.add('${levels[stageIndex].id}::$milestoneId');
       }
