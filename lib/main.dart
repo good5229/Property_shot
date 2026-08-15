@@ -1577,6 +1577,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   @override
   Widget build(BuildContext context) {
+    final restorationProgress = IslandRestorationProgress.fromDiscoveries(
+      discoveriesByStageId: _discoveriesByStageId,
+      stageIds: levels.map((level) => level.id).toList(growable: false),
+    );
     if (_showRewardInventory) {
       return FutureBuilder<Set<String>>(
         future: _rewardInventoryFuture,
@@ -1612,6 +1616,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           if (snapshot.hasData) {
             return ReplayLibraryScreen(
               store: snapshot.requireData,
+              comparisonUnlocked: restorationProgress.isUpgraded(
+                IslandLandmark.bridge,
+              ),
               onBack: () => _changeSurface(() => _showReplayLibrary = false),
               onReplayViewed: (document) {
                 _telemetry.recordTyped(
@@ -1653,6 +1660,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
     if (_showPhysicsLab) {
       return PhysicsLabScreen(
+        showWeeklyHistory: restorationProgress.isUpgraded(
+          IslandLandmark.observatory,
+        ),
         onBack: () => _changeSurface(() => _showPhysicsLab = false),
       );
     }
@@ -1741,6 +1751,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
     return _HomeScreen(
       hasCompletedFirstStage: _clearedLevels.isNotEmpty,
+      advancedActivitiesUnlocked: _clearedLevels.length >= 3,
+      telemetry: _telemetry,
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => _changeSurface(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
@@ -2502,6 +2514,8 @@ String _rewardInventoryStatus(
 class _HomeScreen extends StatelessWidget {
   const _HomeScreen({
     required this.hasCompletedFirstStage,
+    required this.advancedActivitiesUnlocked,
+    required this.telemetry,
     required this.onStart,
     required this.onStageSelect,
     required this.onRewardInventory,
@@ -2514,6 +2528,8 @@ class _HomeScreen extends StatelessWidget {
   });
 
   final bool hasCompletedFirstStage;
+  final bool advancedActivitiesUnlocked;
+  final LocalPlayTelemetry telemetry;
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onRewardInventory;
@@ -2543,6 +2559,7 @@ class _HomeScreen extends StatelessWidget {
                   final actions = _HomeActions(
                     appFontFamily: appFontFamily,
                     hasCompletedFirstStage: hasCompletedFirstStage,
+                    advancedActivitiesUnlocked: advancedActivitiesUnlocked,
                     onStart: onStart,
                     onExpedition: onExpedition,
                     onStageSelect: onStageSelect,
@@ -2614,7 +2631,9 @@ class _HomeScreen extends StatelessWidget {
                 tooltip: '소리와 진동 설정',
                 onPressed: () => showDialog<void>(
                   context: context,
-                  builder: (_) => const _FeedbackSettingsDialog(),
+                  builder: (_) => _FeedbackSettingsDialog(
+                    telemetry: telemetry,
+                  ),
                 ),
                 icon: const Icon(Icons.tune_rounded),
               ),
@@ -2668,6 +2687,7 @@ class _HomeActions extends StatelessWidget {
   const _HomeActions({
     required this.appFontFamily,
     required this.hasCompletedFirstStage,
+    required this.advancedActivitiesUnlocked,
     required this.onStart,
     required this.onExpedition,
     required this.onStageSelect,
@@ -2678,6 +2698,7 @@ class _HomeActions extends StatelessWidget {
 
   final String? appFontFamily;
   final bool hasCompletedFirstStage;
+  final bool advancedActivitiesUnlocked;
   final VoidCallback onStart;
   final VoidCallback onExpedition;
   final VoidCallback onStageSelect;
@@ -2809,42 +2830,82 @@ class _HomeActions extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _secondary(
+          if (!advancedActivitiesUnlocked)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _secondary(
                   key: const Key('reward_inventory_entry_button'),
                   onPressed: onRewardInventory,
                   icon: Icons.backpack_outlined,
-                  label: '보상',
+                  label: '내 런 보상',
                   foreground: const Color(0xFF6B4B20),
                   border: const Color(0xFF946B35),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _secondary(
-                  key: const Key('replay_library_entry_button'),
-                  onPressed: onReplayLibrary,
-                  icon: Icons.movie_filter_outlined,
-                  label: '리플레이',
-                  foreground: const Color(0xFF514B66),
-                  border: const Color(0xFF70678A),
+                const SizedBox(height: 8),
+                Container(
+                  key: const Key('advanced_activities_preview'),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xCCFFF8E6),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFC49A55)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lock_clock_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '3개 스테이지를 익히면 리플레이와 오늘의 도전이 열립니다.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _secondary(
-                  key: const Key('daily_challenge_entry_button'),
-                  onPressed: onDailyChallenge,
-                  icon: Icons.today_rounded,
-                  label: '오늘',
-                  foreground: const Color(0xFF874D2B),
-                  border: const Color(0xFFB06E45),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: _secondary(
+                    key: const Key('reward_inventory_entry_button'),
+                    onPressed: onRewardInventory,
+                    icon: Icons.backpack_outlined,
+                    label: '보상',
+                    foreground: const Color(0xFF6B4B20),
+                    border: const Color(0xFF946B35),
+                  ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _secondary(
+                    key: const Key('replay_library_entry_button'),
+                    onPressed: onReplayLibrary,
+                    icon: Icons.movie_filter_outlined,
+                    label: '리플레이',
+                    foreground: const Color(0xFF514B66),
+                    border: const Color(0xFF70678A),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _secondary(
+                    key: const Key('daily_challenge_entry_button'),
+                    onPressed: onDailyChallenge,
+                    icon: Icons.today_rounded,
+                    label: '오늘',
+                    foreground: const Color(0xFF874D2B),
+                    border: const Color(0xFFB06E45),
+                  ),
+                ),
+              ],
+            ),
         ],
       ],
     );
@@ -2991,7 +3052,9 @@ class _PreviewBoardPainter extends CustomPainter {
 enum _SettingsPreset { recommended, comfortable, direct }
 
 class _FeedbackSettingsDialog extends StatefulWidget {
-  const _FeedbackSettingsDialog();
+  const _FeedbackSettingsDialog({required this.telemetry});
+
+  final LocalPlayTelemetry telemetry;
 
   @override
   State<_FeedbackSettingsDialog> createState() =>
@@ -3001,6 +3064,31 @@ class _FeedbackSettingsDialog extends StatefulWidget {
 class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
   final ScrollController _scrollController = ScrollController();
   bool _applyingPreset = false;
+  bool _exportingSession = false;
+
+  Future<void> _exportSession() async {
+    if (_exportingSession) return;
+    setState(() => _exportingSession = true);
+    try {
+      final json = await widget.telemetry.exportPrivacySafeSessionJson();
+      await Clipboard.setData(ClipboardData(text: json));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('현재 세션을 개인정보 없는 JSON으로 복사했습니다.'),
+          ),
+        );
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('세션을 내보내지 못했습니다. 다시 시도해 주세요.')),
+      );
+    } finally {
+      if (mounted) setState(() => _exportingSession = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -3144,6 +3232,25 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _sectionHeader(
+                  key: const Key('local_session_export_section'),
+                  title: '내 플레이 기록',
+                  description: '현재 세션만 기기 안에서 정리합니다. 링크 생성이나 서버 전송은 하지 않습니다.',
+                  icon: Icons.file_download_outlined,
+                ),
+                ListTile(
+                  key: const Key('local_session_export_button'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: _exportingSession
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.data_object_rounded),
+                  title: const Text('세션 JSON 복사'),
+                  subtitle: const Text('시간·내부 ID를 제거한 분석용 기록'),
+                  onTap: _exportingSession ? null : _exportSession,
+                ),
                 _sectionHeader(
                   key: const Key('settings_preset_section'),
                   title: '빠른 설정',
@@ -3545,6 +3652,9 @@ class _StageSelectScreen extends StatelessWidget {
                       height: 48,
                       child: _NextGoalCard(
                         recommendation: recommendation,
+                        detailed:
+                            _totalDiscoveryCount(discoveriesByStageId) >=
+                            IslandLandmark.lighthouse.upgradeDiscoveries,
                         onTap: () => onSelectStage(recommendation.stageIndex),
                       ),
                     ),
@@ -3800,16 +3910,23 @@ class _StageSelectScreen extends StatelessWidget {
 }
 
 class _NextGoalCard extends StatelessWidget {
-  const _NextGoalCard({required this.recommendation, required this.onTap});
+  const _NextGoalCard({
+    required this.recommendation,
+    required this.onTap,
+    this.detailed = false,
+  });
 
   final NextGoalRecommendation recommendation;
   final VoidCallback onTap;
+  final bool detailed;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
-      label: '다음 목표. ${recommendation.title}. 추천 이유: ${recommendation.reason}',
+      label: detailed
+          ? '다음 목표. ${recommendation.title}. 추천 이유: ${recommendation.reason}'
+          : '다음 목표. ${recommendation.title}',
       child: Card(
         key: const Key('next_goal_card'),
         margin: EdgeInsets.zero,
@@ -3832,7 +3949,9 @@ class _NextGoalCard extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.w900),
                       ),
                       Text(
-                        '${recommendation.title} · 추천 이유: ${recommendation.reason}',
+                        detailed
+                            ? '${recommendation.title} · 추천 이유: ${recommendation.reason}'
+                            : '${recommendation.title} · 등대를 성장시키면 추천 이유도 볼 수 있어요.',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 11.5),
@@ -4344,9 +4463,13 @@ class _IslandRestorationCard extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  restored
-                                      ? landmark.benefitLabel
+                                  progress.isUpgraded(landmark)
+                                      ? landmark.upgradeLabel
+                                      : restored
+                                      ? '${landmark.benefitLabel} · 성장 ${landmark.upgradeDiscoveries}개'
                                       : '${landmark.requiredDiscoveries}개',
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
                                   style: const TextStyle(fontSize: 10),
                                 ),
                               ],
@@ -4379,6 +4502,24 @@ class _IslandRestorationCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+              if (progress.isUpgraded(landmark))
+                Text(
+                  '  ↳ 성장 완료 · ${landmark.upgradeDescription}',
+                  key: Key('island_upgrade_${landmark.name}'),
+                  style: const TextStyle(
+                    color: Color(0xFF315C46),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              else
+                Text(
+                  '  ↳ 다음 성장 ${landmark.upgradeDiscoveries}개 · ${landmark.upgradeLabel}',
+                  style: const TextStyle(
+                    color: Color(0xFF66766F),
+                    fontSize: 10,
+                  ),
+                ),
             ],
             if (progress.restoredCount > 0) ...[
               const SizedBox(height: 10),

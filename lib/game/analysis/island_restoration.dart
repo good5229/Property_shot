@@ -34,6 +34,24 @@ extension IslandLandmarkCopy on IslandLandmark {
     IslandLandmark.lighthouse => '각 스테이지의 첫 번째 팁을 실패 전부터 열 수 있습니다.',
     IslandLandmark.bridge => '각 런에 속성 복사 코어 1개를 보급합니다.',
   };
+
+  int get upgradeDiscoveries => switch (this) {
+    IslandLandmark.observatory => 9,
+    IslandLandmark.lighthouse => 18,
+    IslandLandmark.bridge => 30,
+  };
+
+  String get upgradeLabel => switch (this) {
+    IslandLandmark.observatory => '4주 실험 기록',
+    IslandLandmark.lighthouse => '다음 목표 미리보기',
+    IslandLandmark.bridge => '로컬 기록 비교',
+  };
+
+  String get upgradeDescription => switch (this) {
+    IslandLandmark.observatory => '최근 네 번의 주간 실험 완료 기록을 한눈에 볼 수 있습니다.',
+    IslandLandmark.lighthouse => '다음 스테이지에서 배울 기믹을 출발 전에 보여 줍니다.',
+    IslandLandmark.bridge => '내 기기에 저장된 두 리플레이를 나란히 비교할 수 있습니다.',
+  };
 }
 
 class IslandSupportStore {
@@ -88,6 +106,15 @@ class IslandRestorationProgress {
 
   bool isRestored(IslandLandmark landmark) =>
       discoveryCount >= landmark.requiredDiscoveries;
+
+  bool isUpgraded(IslandLandmark landmark) =>
+      discoveryCount >= landmark.upgradeDiscoveries;
+
+  double upgradeProgress(IslandLandmark landmark) {
+    final start = landmark.requiredDiscoveries;
+    final span = landmark.upgradeDiscoveries - start;
+    return ((discoveryCount - start) / span).clamp(0, 1);
+  }
 
   double repairProgress(IslandLandmark landmark) {
     final start = landmark.previousThreshold;

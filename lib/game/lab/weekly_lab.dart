@@ -48,6 +48,30 @@ class WeeklyLabChallenge {
       shareCode: PhysicsLabShareCode.encode(draft),
     );
   }
+
+  static List<WeeklyLabChallenge> recentCycle(DateTime value) {
+    final current = forDate(value);
+    final monday = DateTime.parse('${current.weekKey}T00:00:00Z');
+    return List<WeeklyLabChallenge>.unmodifiable([
+      for (var offset = 3; offset >= 0; offset--)
+        forDate(monday.subtract(Duration(days: offset * 7))),
+    ]);
+  }
+
+  int get cycleWeek {
+    final monday = DateTime.parse('${weekKey}T00:00:00Z');
+    final epochMonday = DateTime.utc(2026, 1, 5);
+    final weeks = monday.difference(epochMonday).inDays ~/ 7;
+    return (weeks % 4 + 4) % 4 + 1;
+  }
+
+  String get cycleTheme => switch (cycleWeek) {
+    1 => '속성 관찰',
+    2 => '반사 경로',
+    3 => '인과 연결',
+    4 => '자유 응용',
+    _ => throw StateError('도달할 수 없는 주차입니다.'),
+  };
 }
 
 class WeeklyLabStore {

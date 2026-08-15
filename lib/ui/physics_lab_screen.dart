@@ -16,9 +16,11 @@ class PhysicsLabScreen extends StatefulWidget {
     super.key,
     required this.onBack,
     this.loadGameAssets = true,
+    this.showWeeklyHistory = true,
   });
   final VoidCallback onBack;
   final bool loadGameAssets;
+  final bool showWeeklyHistory;
 
   @override
   State<PhysicsLabScreen> createState() => _PhysicsLabScreenState();
@@ -34,6 +36,8 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
   late final WeeklyLabChallenge _weekly = WeeklyLabChallenge.forDate(
     DateTime.now(),
   );
+  late final List<WeeklyLabChallenge> _weeklyCycle =
+      WeeklyLabChallenge.recentCycle(DateTime.now());
   Set<String> _completedWeeks = const {};
 
   @override
@@ -234,7 +238,7 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '이번 주 실험 · ${_weekly.weekKey}',
+                            '이번 주 실험 · ${_weekly.cycleWeek}/4주 · ${_weekly.cycleTheme}',
                             style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                         ),
@@ -245,6 +249,40 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
                     const SizedBox(height: 6),
                     Text(_weekly.scenario.title),
                     Text(_weekly.scenario.question),
+                    const SizedBox(height: 8),
+                    if (widget.showWeeklyHistory)
+                      Semantics(
+                      label:
+                          '최근 4주 완료 ${_weeklyCycle.where((item) => _completedWeeks.contains(item.weekKey)).length}개',
+                      child: Row(
+                        key: const Key('weekly_lab_four_week_cycle'),
+                        children: [
+                          for (final item in _weeklyCycle)
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: _completedWeeks.contains(item.weekKey)
+                                        ? const Color(0xFF3F7C58)
+                                        : item.weekKey == _weekly.weekKey
+                                        ? const Color(0xFFE59B38)
+                                        : const Color(0xFFD6CDAF),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      )
+                    else
+                      const Text(
+                        '관측소를 성장시키면 최근 4주 완료 기록을 볼 수 있습니다.',
+                        key: Key('weekly_history_locked_message'),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,

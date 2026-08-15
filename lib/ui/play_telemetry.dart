@@ -371,6 +371,51 @@ class LocalPlayTelemetry {
 
   String exportJson() => const JsonEncoder.withIndent('  ').convert(_events);
 
+  /// 현재 플레이 세션만 개인정보가 남지 않는 형태로 내보낸다.
+  ///
+  /// 서버 전송이나 외부 링크 생성은 하지 않는다. 절대 시각과 내부 세션 식별자는
+  /// 제거하고, 사건 순서와 게임 분석에 필요한 값만 남긴다.
+  Future<String> exportPrivacySafeSessionJson() async {
+    final persisted = await loadPersisted();
+    final sessionEvents = persisted
+        .where((event) => event['session_id'] == sessionId)
+        .toList(growable: false);
+    final source = sessionEvents.isEmpty ? _events : sessionEvents;
+    final sanitized = <Map<String, Object?>>[];
+    for (var index = 0; index < source.length; index++) {
+      final event = Map<String, Object?>.from(source[index])
+        ..remove('시간')
+        ..remove('session_id');
+      sanitized.add(<String, Object?>{'순서': index + 1, ...event});
+    }
+    final eventCounts = <String, int>{};
+    final stageCounts = <String, int>{};
+    for (final event in sanitized) {
+      final eventCode = event['event_code']?.toString() ?? 'unknown';
+      final stageId = event['stage_id']?.toString() ?? 'unknown';
+      eventCounts[eventCode] = (eventCounts[eventCode] ?? 0) + 1;
+      stageCounts[stageId] = (stageCounts[stageId] ?? 0) + 1;
+    }
+    return const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+      'schema': 'property-shot-local-session/v1',
+      'privacy': <String, Object?>{
+        'local_only': true,
+        'external_link_created': false,
+        'removed_fields': const ['시간', 'session_id'],
+      },
+      'summary': <String, Object?>{
+        'event_count': sanitized.length,
+        'events_by_code': Map<String, int>.fromEntries(
+          eventCounts.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
+        ),
+        'events_by_stage': Map<String, int>.fromEntries(
+          stageCounts.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
+        ),
+      },
+      'events': sanitized,
+    });
+  }
+
   InputLatencyReport get inputLatencyReport =>
       InputLatencyReport.fromEvents(_events);
 

@@ -15,11 +15,13 @@ class ReplayLibraryScreen extends StatefulWidget {
     required this.store,
     required this.onBack,
     this.onReplayViewed,
+    this.comparisonUnlocked = true,
   });
 
   final ReplayLibraryStore store;
   final VoidCallback onBack;
   final ValueChanged<ReplayDocument>? onReplayViewed;
+  final bool comparisonUnlocked;
 
   @override
   State<ReplayLibraryScreen> createState() => _ReplayLibraryScreenState();
@@ -29,6 +31,7 @@ class _ReplayLibraryScreenState extends State<ReplayLibraryScreen> {
   ReplayLibrarySnapshot? _snapshot;
   bool _loading = true;
   String? _error;
+  ReplayLibraryEntry? _comparisonAnchor;
 
   @override
   void initState() {
@@ -85,6 +88,51 @@ class _ReplayLibraryScreenState extends State<ReplayLibraryScreen> {
       _showMessage('공유 코드를 클립보드에 담았습니다.');
     } on Object {
       _showMessage('공유 코드를 만들지 못했습니다.');
+    }
+  }
+
+  Future<void> _compare(ReplayLibraryEntry entry) async {
+    if (!widget.comparisonUnlocked) {
+      _showMessage('다리를 성장시키면 이 기기의 두 기록을 비교할 수 있습니다.');
+      return;
+    }
+    final anchor = _comparisonAnchor;
+    if (anchor == null || anchor.replayId == entry.replayId) {
+      setState(() => _comparisonAnchor = entry);
+      _showMessage('기준 기록을 골랐습니다. 같은 패턴의 다른 기록에서 비교를 누르세요.');
+      return;
+    }
+    try {
+      final left = await widget.store.readDocument(anchor.replayId);
+      final right = await widget.store.readDocument(entry.replayId);
+      if (left == null || right == null) throw StateError('리플레이가 없습니다.');
+      final comparison = ReplayComparison.compare(left, right);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('내 기록 나란히 보기'),
+          content: Semantics(
+            liveRegion: true,
+            child: Text(
+              '${comparison.summary}\n\n'
+              '기준 ${comparison.leftShots}발 · 비교 ${comparison.rightShots}발\n'
+              '서로 다른 속성 사용 ${comparison.leftTraitCount}개 · ${comparison.rightTraitCount}개',
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) setState(() => _comparisonAnchor = null);
+    } on FormatException catch (error) {
+      _showMessage(error.message);
+    } on Object {
+      _showMessage('두 기록을 비교하지 못했습니다.');
     }
   }
 
@@ -224,6 +272,20 @@ class _ReplayLibraryScreenState extends State<ReplayLibraryScreen> {
                     trailing: Wrap(
                       spacing: 2,
                       children: [
+                        IconButton(
+                          key: ValueKey('replay_compare_${entry.replayId}'),
+                          tooltip: _comparisonAnchor?.replayId == entry.replayId
+                              ? '비교 기준으로 선택됨'
+                              : widget.comparisonUnlocked
+                              ? '이 기기의 다른 기록과 비교'
+                              : '다리 성장 후 기록 비교 가능',
+                          onPressed: () => _compare(entry),
+                          icon: Icon(
+                            _comparisonAnchor?.replayId == entry.replayId
+                                ? Icons.compare_arrows_rounded
+                                : Icons.compare_outlined,
+                          ),
+                        ),
                         IconButton(
                           tooltip: '공유 코드 복사',
                           onPressed: () => _share(entry),
