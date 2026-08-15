@@ -532,6 +532,33 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         stageDistance: _rewardStageDistance(selection),
       ),
     );
+    if (trigger != PlayTelemetryRewardTrigger.passive) {
+      _showRewardUseRecap(rewardId);
+    }
+  }
+
+  void _showRewardUseRecap(String rewardId) {
+    if (!mounted) return;
+    final reward = initialRunRewards
+        .where((item) => item.id == rewardId)
+        .firstOrNull;
+    if (reward == null) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 3),
+          content: Semantics(
+            liveRegion: true,
+            label: '보상 사용 결과. ${reward.effectRecap}',
+            child: Text(
+              '보상 적용 · ${reward.effectRecap}',
+              key: const Key('reward_use_recap'),
+            ),
+          ),
+        ),
+      );
   }
 
   void _recordPassiveRewardActivations() {

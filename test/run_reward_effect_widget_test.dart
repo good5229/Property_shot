@@ -80,6 +80,35 @@ void main() {
     );
   });
 
+  testWidgets('보상 저장이 실패하면 사용 효과 회고를 보여 주지 않는다', (tester) async {
+    await tester.pumpWidget(
+      _gameApp(
+        state: levels.first.createState(0, productRules: true),
+        acquiredRewards: _acquired(runRewardShotCancelAssistId),
+        onRewardUsed: (_, _, _) async => false,
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    tester
+        .widget<IconButton>(
+          find.byKey(const Key('cancel_launch_reward_button')),
+        )
+        .onPressed!();
+    await _pumpAsync(tester);
+    await gesture.up(timeStamp: const Duration(milliseconds: 1800));
+    await tester.pump();
+
+    expect(find.byKey(const Key('reward_use_recap')), findsNothing);
+    expect(find.textContaining('보상 적용'), findsNothing);
+    expect(find.textContaining('시도 0'), findsOneWidget);
+  });
+
   testWidgets('공 꾸미기 보상은 게임판의 공 렌더 설정에 연결된다', (tester) async {
     await tester.pumpWidget(
       _gameApp(
@@ -209,6 +238,8 @@ void main() {
     );
     expect(rewardUse['reward_used_id'], runRewardFirstImpactGuideId);
     expect(rewardUse['reward_use_trigger'], 'automatic');
+    expect(find.byKey(const Key('reward_use_recap')), findsOneWidget);
+    expect(find.textContaining('첫 충돌 대상을 확인한'), findsOneWidget);
   });
 
   testWidgets('정밀 충전 보상은 실제 발사의 힘 상승을 25% 늦춘다', (tester) async {

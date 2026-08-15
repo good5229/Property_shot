@@ -2314,7 +2314,7 @@ class _RewardInventoryCard extends StatelessWidget {
       container: true,
       label:
           '${reward.name}, ${reward.role.label}, ${reward.activationLabel}, $status, ${reward.description}, '
-          '사용법 ${reward.usageHint}',
+          '다음 사용 계획 ${reward.planningPrompt}, 사용 후 효과 ${reward.effectRecap}',
       child: Container(
         key: Key('reward_inventory_${reward.id}'),
         padding: const EdgeInsets.all(14),
@@ -2377,6 +2377,23 @@ class _RewardInventoryCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: const Color(0xFF315E60),
                       fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '다음 사용 계획 · ${reward.planningPrompt}',
+                    key: Key('reward_inventory_plan_${reward.id}'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF6D5720),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '사용하면 · ${reward.effectRecap}',
+                    key: Key('reward_inventory_recap_${reward.id}'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF315E60),
                     ),
                   ),
                   const SizedBox(height: 8),

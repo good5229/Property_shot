@@ -31,6 +31,9 @@ void main() {
         expect(reward.description, isNot(matches(RegExp('[A-Za-z]'))));
         expect(reward.usageHint, isNotEmpty);
         expect(reward.stageGuide, isNotEmpty);
+        expect(reward.planningPrompt, isNotEmpty);
+        expect(reward.effectRecap, isNotEmpty);
+        expect(reward.planningPrompt, isNot(reward.effectRecap));
         expect(reward.activationLabel, isNotEmpty);
         expect(reward.role.label, isNotEmpty);
         expect(reward.role.description, isNotEmpty);

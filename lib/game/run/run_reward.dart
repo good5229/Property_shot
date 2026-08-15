@@ -120,6 +120,36 @@ extension RunRewardEffectGuidance on RunRewardEffectKind {
     RunRewardEffectKind.cloneCore => '속성 복사 코어 사용 가능',
     RunRewardEffectKind.nextStageHintAccess => '현재 패턴 L1·L2 팁 사용 가능',
   };
+
+  /// 보상을 얻은 뒤 다음 플레이에서 무엇을 관찰할지 알려 준다.
+  String get planningPrompt => switch (this) {
+    RunRewardEffectKind.cloneCore => '새 속성 원본을 남겨야 할 때 ‘복사’를 선택하세요.',
+    RunRewardEffectKind.shotCancelAssist => '힘 구간을 놓쳤다면 손을 떼기 전 발사를 취소하세요.',
+    RunRewardEffectKind.spentBallRecovery => '과거 공이 다음 경로를 막을 때 한 개를 회수하세요.',
+    RunRewardEffectKind.firstImpactGuide => '발사 전 첫 충돌 대상이 의도한 기물인지 확인하세요.',
+    RunRewardEffectKind.optionalChallengeGuard =>
+      '선택 도전을 노리는 스테이지에서 안전망으로 보유하세요.',
+    RunRewardEffectKind.failureCauseBoost => '여러 기물을 거친 실패에서 충돌 순서를 비교하세요.',
+    RunRewardEffectKind.ballAppearance => '원하는 공 스타일로 이번 런의 식별성을 바꾸세요.',
+    RunRewardEffectKind.stageRecordGuard => '파 기록에 근접한 스테이지의 마지막 한 발을 보호하세요.',
+    RunRewardEffectKind.nextStageHintAccess =>
+      '다음 스테이지에서 막히면 팁 버튼으로 L1부터 열어 보세요.',
+    RunRewardEffectKind.precisionCharge => '좁은 힘 구간이 필요한 발사에서 천천히 충전하세요.',
+  };
+
+  /// 실제 사용을 저장한 뒤 보여 줄 결과 요약이다.
+  String get effectRecap => switch (this) {
+    RunRewardEffectKind.cloneCore => '원본 속성을 남기고 공에 복사했어요.',
+    RunRewardEffectKind.shotCancelAssist => '공과 시도 횟수를 쓰지 않고 발사를 취소했어요.',
+    RunRewardEffectKind.spentBallRecovery => '과거 공 한 개를 회수해 다음 경로를 정리했어요.',
+    RunRewardEffectKind.firstImpactGuide => '첫 충돌 대상을 확인한 발사에 안내 1회를 사용했어요.',
+    RunRewardEffectKind.optionalChallengeGuard => '선택 도전 실패 1회를 보호했어요.',
+    RunRewardEffectKind.failureCauseBoost => '이번 실패의 충돌 순서와 원인을 강화해 보여 줘요.',
+    RunRewardEffectKind.ballAppearance => '현재와 이후 공에 선택한 꾸미기를 적용했어요.',
+    RunRewardEffectKind.stageRecordGuard => '클리어 기록에서 발사 1회를 자동으로 줄였어요.',
+    RunRewardEffectKind.nextStageHintAccess => '다음 패턴의 L1·L2 팁 접근권을 열었어요.',
+    RunRewardEffectKind.precisionCharge => '충전 속도를 25% 느리게 적용했어요.',
+  };
 }
 
 /// 핵심 물리값과 분리해 저장하는 런 보상 메타데이터다.
@@ -145,6 +175,8 @@ class RunReward {
   String get activationLabel => effectKind.activationLabel;
   String get usageHint => effectKind.usageHint;
   String get stageGuide => effectKind.stageGuide;
+  String get planningPrompt => effectKind.planningPrompt;
+  String get effectRecap => effectKind.effectRecap;
 
   factory RunReward.fromJson(Map<String, dynamic> json) {
     final id = _requiredString(json, 'id');

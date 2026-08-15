@@ -141,6 +141,8 @@ void main() {
     await _pumpForAsyncWork(tester);
 
     expect(find.byKey(const Key('reward_inventory_screen')), findsOneWidget);
+    expect(find.textContaining('다음 사용 계획'), findsWidgets);
+    expect(find.textContaining('사용하면'), findsWidgets);
     expect(find.text('정밀 충전 조절'), findsOneWidget);
     expect(find.text('런 동안 계속 활성'), findsOneWidget);
     expect(find.textContaining('충전 속도를 25% 늦춰'), findsOneWidget);
