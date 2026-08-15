@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/analysis/creative_chain_score.dart';
 import 'game/analysis/island_restoration.dart';
+import 'game/analysis/next_goal_recommendation.dart';
 import 'game/analysis/solution_mastery.dart';
 import 'game/analysis/stage_chain_challenge.dart';
 import 'game/analysis/stage_discovery.dart';
@@ -320,6 +321,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Set<String> _copyCoreRewardedStageIds = <String>{};
   int _unlockedLevel = 0;
   Set<int> _clearedLevels = <int>{};
+  Map<int, int> _bestShots = <int, int>{};
+  Set<int> _bonusGoals = <int>{};
   Map<String, Set<String>> _discoveriesByStageId = <String, Set<String>>{};
   Map<String, int> _solutionCountsByStageId = const {};
   IslandLandmark? _islandSupportFocus;
@@ -480,6 +483,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _legacyCopyCoreRewarded = progress.copyCoreRewarded;
         _copyCoreRewardedStageIds = progress.copyCoreRewardedStageIds;
         _clearedLevels = progress.clearedLevels;
+        _bestShots = progress.bestShots;
+        _bonusGoals = progress.bonusGoals;
         _unlockedLevel = progress.unlockedLevel;
         _discoveriesByStageId = {
           for (final entry in progress.discoveriesByStageId.entries)
@@ -1001,6 +1006,20 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         }
       }
       _applyClearedLevelInMemory(levelIndex);
+      if (completionDifficulty == PlayerDifficulty.normal && mounted) {
+        setState(() {
+          final previous = _bestShots[levelIndex];
+          _bestShots = {
+            ..._bestShots,
+            levelIndex: previous == null
+                ? completion.shotCount
+                : math.min(previous, completion.shotCount),
+          };
+          if (completion.optionalChallengeAchieved) {
+            _bonusGoals = {..._bonusGoals, levelIndex};
+          }
+        });
+      }
     }
     if (attributionState != null) {
       await (await _difficultyAttributionStoreFuture).clearFor(
@@ -1709,8 +1728,11 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onBack: () => _changeSurface(() => _showStageSelect = false),
         onSelectStage: (index) => unawaited(_startStage(index)),
         unlockedLevel: _unlockedLevel,
+        clearedLevels: _clearedLevels,
         discoveriesByStageId: _discoveriesByStageId,
         solutionCountsByStageId: _solutionCountsByStageId,
+        bestShots: _bestShots,
+        bonusGoals: _bonusGoals,
         islandSupportFocus: _islandSupportFocus,
         onIslandSupportSelected: (landmark) =>
             unawaited(_selectIslandSupport(landmark)),
@@ -3415,8 +3437,11 @@ class _StageSelectScreen extends StatelessWidget {
     required this.onBack,
     required this.onSelectStage,
     required this.unlockedLevel,
+    required this.clearedLevels,
     required this.discoveriesByStageId,
     required this.solutionCountsByStageId,
+    required this.bestShots,
+    required this.bonusGoals,
     required this.islandSupportFocus,
     required this.onIslandSupportSelected,
     this.onPhysicsLab,
@@ -3425,8 +3450,11 @@ class _StageSelectScreen extends StatelessWidget {
   final VoidCallback onBack;
   final ValueChanged<int> onSelectStage;
   final int unlockedLevel;
+  final Set<int> clearedLevels;
   final Map<String, Set<String>> discoveriesByStageId;
   final Map<String, int> solutionCountsByStageId;
+  final Map<int, int> bestShots;
+  final Set<int> bonusGoals;
   final IslandLandmark? islandSupportFocus;
   final ValueChanged<IslandLandmark> onIslandSupportSelected;
   final VoidCallback? onPhysicsLab;
@@ -3436,6 +3464,33 @@ class _StageSelectScreen extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth <= 360;
+        final recommendation = const NextGoalRecommendationEngine().recommend(
+          stageCount: levels.length,
+          unlockedLevel: unlockedLevel,
+          clearedLevels: clearedLevels,
+          discoveryCounts: {
+            for (var index = 0; index < levels.length; index++)
+              index:
+                  discoveriesByStageId[levels[index].id]
+                      ?.intersection(stageDiscoveryMilestoneIds(index))
+                      .length ??
+                  0,
+          },
+          discoveryTotals: {
+            for (var index = 0; index < levels.length; index++)
+              index: stageDiscoveryMilestoneIds(index).length,
+          },
+          bestShots: bestShots,
+          parShots: {
+            for (var index = 0; index < levels.length; index++)
+              index: levels[index].parShots,
+          },
+          bonusGoals: bonusGoals,
+          solutionCounts: {
+            for (var index = 0; index < levels.length; index++)
+              index: solutionCountsByStageId[levels[index].id] ?? 0,
+          },
+        );
         return Scaffold(
           key: const Key('stage_select_screen'),
           backgroundColor: const Color(0xFFBFE8E3),
@@ -3469,17 +3524,13 @@ class _StageSelectScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      compact
-                          ? '섬을 골라 물리 반응을 실험하세요.'
-                          : '실험 섬을 골라 속성의 반응을 직접 확인해 보세요.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF285C5D),
-                        fontWeight: FontWeight.w800,
+                    SizedBox(
+                      height: 48,
+                      child: _NextGoalCard(
+                        recommendation: recommendation,
+                        onTap: () => onSelectStage(recommendation.stageIndex),
                       ),
                     ),
-                    const SizedBox(height: 18),
                     Material(
                       key: const Key('map_hint_card'),
                       color: const Color(0xD9E8F4D9),
@@ -3729,6 +3780,58 @@ class _StageSelectScreen extends StatelessWidget {
         builder: (_) =>
             _DiscoveryAtlasSheet(discoveriesByStageId: discoveriesByStageId),
       );
+}
+
+class _NextGoalCard extends StatelessWidget {
+  const _NextGoalCard({required this.recommendation, required this.onTap});
+
+  final NextGoalRecommendation recommendation;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: '다음 목표. ${recommendation.title}. 추천 이유: ${recommendation.reason}',
+      child: Card(
+        key: const Key('next_goal_card'),
+        margin: EdgeInsets.zero,
+        color: const Color(0xFFFFF1D5),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.near_me_rounded, color: Color(0xFF8A5725)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '지금 해볼 만한 목표',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        '${recommendation.title} · 추천 이유: ${recommendation.reason}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11.5),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _DiscoveryAtlasSheet extends StatelessWidget {

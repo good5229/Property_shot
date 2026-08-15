@@ -56,6 +56,9 @@ void main() {
     await tester.tap(find.byKey(const Key('stage_select_button')));
     await tester.pump();
     expect(find.text('섬 지도'), findsOneWidget);
+    expect(find.byKey(const Key('next_goal_card')), findsOneWidget);
+    expect(find.text('지금 해볼 만한 목표'), findsOneWidget);
+    expect(find.textContaining('추천 이유'), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_0')), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
     expect(find.byKey(const Key('stage_tile_7')), findsOneWidget);
