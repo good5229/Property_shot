@@ -3834,6 +3834,182 @@ class _DiscoveryAtlasSheet extends StatelessWidget {
   }
 }
 
+class _IslandLandmarkIllustration extends StatelessWidget {
+  const _IslandLandmarkIllustration({
+    super.key,
+    required this.landmark,
+    required this.progress,
+    required this.size,
+  });
+
+  final IslandLandmark landmark;
+  final double progress;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = progress.clamp(0.0, 1.0);
+    final stateLabel = normalized >= 1
+        ? '복구 완료'
+        : normalized > 0
+        ? '수리 중'
+        : '폐허';
+    return Semantics(
+      image: true,
+      label: '${landmark.label} $stateLabel',
+      child: SizedBox.square(
+        dimension: size,
+        child: CustomPaint(
+          painter: _IslandLandmarkPainter(
+            landmark: landmark,
+            progress: normalized,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+@visibleForTesting
+Widget buildIslandLandmarkIllustrationForTesting({
+  required IslandLandmark landmark,
+  required double progress,
+  double size = 48,
+}) => _IslandLandmarkIllustration(
+  landmark: landmark,
+  progress: progress,
+  size: size,
+);
+
+class _IslandLandmarkPainter extends CustomPainter {
+  const _IslandLandmarkPainter({
+    required this.landmark,
+    required this.progress,
+  });
+
+  final IslandLandmark landmark;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final active = progress >= 1;
+    final building = progress > 0 && !active;
+    final line = Paint()
+      ..color = active ? const Color(0xFF236B4A) : const Color(0xFF746F62)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.4, size.width * 0.07)
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fill = Paint()
+      ..color = active
+          ? const Color(0xFFBCE5B8)
+          : building
+          ? const Color(0xFFE8D7A7)
+          : const Color(0xFFD2CEC0);
+    final accent = Paint()
+      ..color = active ? const Color(0xFFF5BE45) : const Color(0xFF9B9075)
+      ..style = PaintingStyle.fill;
+    final w = size.width;
+    final h = size.height;
+    switch (landmark) {
+      case IslandLandmark.observatory:
+        canvas.drawPath(
+          Path()
+            ..moveTo(w * .18, h * .78)
+            ..lineTo(w * .28, h * .46)
+            ..quadraticBezierTo(w * .5, h * .25, w * .72, h * .46)
+            ..lineTo(w * .82, h * .78)
+            ..close(),
+          fill,
+        );
+        canvas.drawPath(
+          Path()
+            ..moveTo(w * .18, h * .78)
+            ..lineTo(w * .28, h * .46)
+            ..quadraticBezierTo(w * .5, h * .25, w * .72, h * .46)
+            ..lineTo(w * .82, h * .78),
+          line,
+        );
+        canvas.drawLine(Offset(w * .5, h * .3), Offset(w * .72, h * .13), line);
+        canvas.drawCircle(Offset(w * .74, h * .12), w * .08, accent);
+      case IslandLandmark.lighthouse:
+        final tower = Path()
+          ..moveTo(w * .3, h * .82)
+          ..lineTo(w * .38, h * .28)
+          ..lineTo(w * .62, h * .28)
+          ..lineTo(w * .7, h * .82)
+          ..close();
+        canvas.drawPath(tower, fill);
+        canvas.drawPath(tower, line);
+        canvas.drawRect(
+          Rect.fromLTWH(w * .34, h * .16, w * .32, h * .14),
+          accent,
+        );
+        canvas.drawLine(
+          Offset(w * .27, h * .82),
+          Offset(w * .73, h * .82),
+          line,
+        );
+        if (active) {
+          final beam = Paint()
+            ..color = const Color(0x66FFD45A)
+            ..style = PaintingStyle.fill;
+          canvas.drawPath(
+            Path()
+              ..moveTo(w * .66, h * .2)
+              ..lineTo(w, h * .04)
+              ..lineTo(w, h * .36)
+              ..close(),
+            beam,
+          );
+        }
+      case IslandLandmark.bridge:
+        canvas.drawRect(
+          Rect.fromLTWH(w * .12, h * .35, w * .16, h * .48),
+          fill,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(w * .72, h * .35, w * .16, h * .48),
+          fill,
+        );
+        canvas.drawLine(Offset(w * .1, h * .42), Offset(w * .9, h * .42), line);
+        canvas.drawPath(
+          Path()
+            ..moveTo(w * .18, h * .38)
+            ..quadraticBezierTo(w * .5, h * .82, w * .82, h * .38),
+          line,
+        );
+        if (active) {
+          canvas.drawLine(
+            Offset(w * .22, h * .58),
+            Offset(w * .78, h * .58),
+            line,
+          );
+        }
+    }
+    if (building) {
+      final scaffold = Paint()
+        ..color = const Color(0xFFB36B35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1, w * .045);
+      canvas.drawLine(
+        Offset(w * .08, h * .9),
+        Offset(w * .9, h * .12),
+        scaffold,
+      );
+      canvas.drawLine(
+        Offset(w * .2, h * .94),
+        Offset(w * .98, h * .25),
+        scaffold,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _IslandLandmarkPainter oldDelegate) =>
+      oldDelegate.landmark != landmark || oldDelegate.progress != progress;
+}
+
 class _IslandRestorationCard extends StatelessWidget {
   const _IslandRestorationCard({
     required this.progress,
@@ -3879,7 +4055,22 @@ class _IslandRestorationCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.home_work_rounded, color: Color(0xFF396A50)),
+                  SizedBox(
+                    width: 72,
+                    height: 30,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        for (final landmark in IslandLandmark.values)
+                          _IslandLandmarkIllustration(
+                            key: Key('island_landmark_art_${landmark.name}'),
+                            landmark: landmark,
+                            progress: progress.repairProgress(landmark),
+                            size: 22,
+                          ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(width: 9),
                   Expanded(
                     child: Column(
@@ -4000,11 +4191,13 @@ class _IslandRestorationCard extends StatelessWidget {
                             ),
                             child: Column(
                               children: [
-                                Icon(
-                                  restored ? _icon(landmark) : Icons.build,
-                                  color: restored
-                                      ? const Color(0xFF2E7D4F)
-                                      : const Color(0xFF807B6E),
+                                _IslandLandmarkIllustration(
+                                  key: Key(
+                                    'island_landmark_art_${landmark.name}',
+                                  ),
+                                  landmark: landmark,
+                                  progress: value,
+                                  size: 38,
                                 ),
                                 const SizedBox(height: 3),
                                 Text(

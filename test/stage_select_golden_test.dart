@@ -86,6 +86,22 @@ void main() {
       await tester.tap(find.byKey(const Key('discovery_atlas_close')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('island_restoration_card')), findsOneWidget);
+      for (final landmark in const ['observatory', 'lighthouse', 'bridge']) {
+        expect(
+          find.byKey(Key('island_landmark_art_$landmark')),
+          findsOneWidget,
+        );
+      }
+      final observatorySemantics = tester
+          .getSemantics(
+            find.byKey(const Key('island_landmark_art_observatory')),
+          )
+          .getSemanticsData()
+          .label;
+      expect(
+        observatorySemantics,
+        contains(fixture.name == '390x844' ? '복구 완료' : '폐허'),
+      );
       if (fixture.name == '320x568') {
         expect(
           find.byKey(const Key('island_restoration_expand')),
