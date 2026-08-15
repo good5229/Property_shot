@@ -41,6 +41,11 @@ jobs:
 
       - name: Full release quality gate
         run: ./scripts/test_extended.sh
+        env:
+          # Golden baselines are authored and pixel-audited on macOS. Linux
+          # still renders every Golden and verifies baseline presence/canvas
+          # dimensions; exact pixels remain the local/default test contract.
+          PROPERTY_SHOT_GOLDEN_MODE: structure
 
       - name: Build Flutter web
         run: flutter build web --release --base-href "/Property_shot/"
