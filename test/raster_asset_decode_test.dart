@@ -17,6 +17,16 @@ void main() {
       'assets/generated/nav-physics-lab-v1.png',
       'assets/generated/nav-expedition-v1.png',
       'assets/generated/nav-reward-satchel-v1.png',
+      'assets/generated/stage-icon-heavy-v1.png',
+      'assets/generated/stage-icon-bouncy-v1.png',
+      'assets/generated/stage-icon-chain-gate-v1.png',
+      'assets/generated/stage-icon-sharp-balloon-v1.png',
+      'assets/generated/stage-icon-property-transfer-v1.png',
+      'assets/generated/stage-icon-speed-slider-v1.png',
+      'assets/generated/stage-icon-persistent-ball-v1.png',
+      'assets/generated/stage-icon-chain-score-v1.png',
+      'assets/generated/stage-icon-rotating-reflector-v1.png',
+      'assets/generated/stage-icon-finale-v1.png',
     ]) {
       final bytes = await rootBundle.load(asset);
       final codec = await ui

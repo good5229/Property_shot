@@ -435,7 +435,7 @@ void main() {
     await tester.tap(find.byKey(const Key('stage_select_button')));
     await _pumpForAsyncWork(tester);
 
-    expect(find.text('전체 발견 3 / 30 · 눌러서 발견 도감을 확인하세요.'), findsOneWidget);
+    expect(find.textContaining('발견 3 / 30'), findsOneWidget);
     expect(find.text('발견 2/3 · 추천 파 ${levels[0].parShots}회'), findsOneWidget);
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
   });
@@ -496,8 +496,10 @@ void main() {
     await _pumpForAsyncWork(tester);
     await tester.tap(find.byKey(const Key('stage_select_button')));
     await _pumpForAsyncWork(tester);
-    await tester.drag(find.byType(ListView), const Offset(0, -800));
-    await tester.pump();
+    for (var scroll = 0; scroll < 2; scroll++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+    }
     await tester.tap(find.byKey(const Key('stage_tile_7')));
     await _pumpForAsyncWork(tester);
 
@@ -513,8 +515,10 @@ void main() {
     await _pumpForAsyncWork(tester);
     await tester.tap(find.byKey(const Key('stage_select_button')));
     await _pumpForAsyncWork(tester);
-    await tester.drag(find.byType(ListView), const Offset(0, -800));
-    await tester.pump();
+    for (var scroll = 0; scroll < 2; scroll++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+    }
     await tester.tap(find.byKey(const Key('stage_tile_7')));
     await _pumpForAsyncWork(tester);
 

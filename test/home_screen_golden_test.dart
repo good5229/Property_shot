@@ -20,6 +20,7 @@ void main() {
     (name: '320x568', width: 320.0, height: 568.0),
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
+    (name: '1024x768', width: 1024.0, height: 768.0),
   ]) {
     testWidgets('홈 화면 Golden ${fixture.name}', (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -41,6 +42,7 @@ void main() {
         for (final asset in const [
           'assets/generated/stone-v2.png',
           'assets/generated/crate-v2.png',
+          'assets/generated/stage-icon-heavy-v1.png',
         ]) {
           await precacheImage(AssetImage(asset), context);
         }
@@ -49,6 +51,10 @@ void main() {
 
       expect(find.text('속성 한방'), findsOneWidget);
       expect(find.byKey(const Key('start_game_button')), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('first_mission_stage_art'))),
+        const Size.square(74),
+      );
       await expectLater(
         find.byKey(const Key('home_screen_golden')),
         matchesGoldenFile('goldens/home_screen_${fixture.name}.png'),

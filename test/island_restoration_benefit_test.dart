@@ -279,12 +279,16 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{
       ProgressStore.discoveryRecordsKey: records,
     });
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       const PropertyShotApp(showHome: true, loadGameAssets: false),
     );
     await _pumpForAsyncWork(tester);
     await tester.tap(find.byKey(const Key('stage_select_button')));
     await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('island_restoration_expand')));
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('island_focus_observatory')), findsOneWidget);
     expect(find.byKey(const Key('island_focus_lighthouse')), findsNothing);

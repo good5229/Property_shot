@@ -2741,7 +2741,7 @@ class _HomeActions extends StatelessWidget {
     onPressed: onPressed,
     icon: imageAsset == null
         ? Icon(icon, size: 19)
-        : _MenuAssetImage(path: imageAsset, size: 30),
+        : _MenuAssetImage(path: imageAsset, size: 38),
     label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     style: OutlinedButton.styleFrom(
       minimumSize: const Size.fromHeight(50),
@@ -2789,8 +2789,9 @@ class _HomeActions extends StatelessWidget {
               child: Row(
                 children: [
                   const _MenuAssetImage(
-                    path: 'assets/generated/island-observatory-v1.png',
-                    size: 38,
+                    key: Key('first_mission_stage_art'),
+                    path: 'assets/generated/stage-icon-heavy-v1.png',
+                    size: 74,
                   ),
                   const SizedBox(width: 10),
                   const Expanded(
@@ -2968,7 +2969,7 @@ class _HomeActions extends StatelessWidget {
 }
 
 class _MenuAssetImage extends StatelessWidget {
-  const _MenuAssetImage({required this.path, required this.size});
+  const _MenuAssetImage({super.key, required this.path, required this.size});
 
   final String path;
   final double size;
@@ -3659,7 +3660,10 @@ class _StageSelectScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth <= 360;
+        final compact =
+            constraints.maxWidth <= 360 || constraints.maxHeight < 700;
+        final wide = constraints.maxWidth >= 600;
+        final navigationArtSize = wide ? 52.0 : 44.0;
         final recommendation = const NextGoalRecommendationEngine().recommend(
           stageCount: levels.length,
           unlockedLevel: unlockedLevel,
@@ -3742,9 +3746,10 @@ class _StageSelectScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(14),
                           child: Row(
                             children: [
-                              const _MenuAssetImage(
+                              _MenuAssetImage(
+                                key: const Key('discovery_navigation_art'),
                                 path: 'assets/generated/nav-expedition-v1.png',
-                                size: 28,
+                                size: navigationArtSize,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -3795,9 +3800,10 @@ class _StageSelectScreen extends StatelessWidget {
                           padding: EdgeInsets.all(14),
                           child: Row(
                             children: [
-                              const _MenuAssetImage(
+                              _MenuAssetImage(
+                                key: const Key('physics_lab_navigation_art'),
                                 path: 'assets/generated/nav-physics-lab-v1.png',
-                                size: 28,
+                                size: navigationArtSize,
                               ),
                               const SizedBox(width: 10),
                               const Expanded(
@@ -3841,6 +3847,7 @@ class _StageSelectScreen extends StatelessWidget {
                       selectedFocus: islandSupportFocus,
                       onFocusSelected: onIslandSupportSelected,
                       compact: compact,
+                      wide: wide,
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -3858,8 +3865,13 @@ class _StageSelectScreen extends StatelessWidget {
                         builder: (context, constraints) {
                           final narrow = constraints.maxWidth < 500;
                           final cardWidth =
-                              constraints.maxWidth * (narrow ? 0.92 : 0.82);
-                          final cardStep = narrow ? 136.0 : 120.0;
+                              constraints.maxWidth * (narrow ? 0.94 : 0.84);
+                          final cardStep = narrow ? 148.0 : 142.0;
+                          final thumbnailSize = constraints.maxWidth >= 600
+                              ? 104.0
+                              : constraints.maxWidth >= 330
+                              ? 86.0
+                              : 80.0;
                           final mapHeight = math.max(
                             350.0,
                             8 + levels.length * cardStep,
@@ -3935,6 +3947,7 @@ class _StageSelectScreen extends StatelessWidget {
                                               solutionCountsByStageId[levels[index]
                                                   .id] ??
                                               0,
+                                          thumbnailSize: thumbnailSize,
                                           onTap: () => onSelectStage(index),
                                         ),
                                       ),
@@ -4396,12 +4409,14 @@ class _IslandRestorationCard extends StatelessWidget {
     required this.selectedFocus,
     required this.onFocusSelected,
     this.compact = false,
+    this.wide = false,
   });
 
   final IslandRestorationProgress progress;
   final IslandLandmark? selectedFocus;
   final ValueChanged<IslandLandmark> onFocusSelected;
   final bool compact;
+  final bool wide;
 
   @override
   Widget build(BuildContext context) {
@@ -4427,54 +4442,73 @@ class _IslandRestorationCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFF92B18B)),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 72,
-                    height: 30,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        for (final landmark in IslandLandmark.values)
-                          _IslandLandmarkIllustration(
-                            key: Key('island_landmark_art_${landmark.name}'),
-                            landmark: landmark,
-                            progress: progress.repairProgress(landmark),
-                            size: 22,
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '섬 복구 ${progress.restoredCount}/3',
-                          style: const TextStyle(
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          '섬 복구 현황',
+                          style: TextStyle(
                             color: Color(0xFF315C46),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          progress.statusText,
-                          key: const Key('island_restoration_status'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF52706A),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                      ),
+                      Text(
+                        '${progress.restoredCount}/3',
+                        style: const TextStyle(
+                          color: Color(0xFF315C46),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.expand_more_rounded,
+                        color: Color(0xFF396A50),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  Row(
+                    children: [
+                      for (final landmark in IslandLandmark.values)
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _IslandLandmarkIllustration(
+                                key: Key(
+                                  'island_landmark_art_${landmark.name}',
+                                ),
+                                landmark: landmark,
+                                progress: progress.repairProgress(landmark),
+                                size: 44,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                landmark.label,
+                                style: const TextStyle(
+                                  color: Color(0xFF315C46),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                  const Icon(
-                    Icons.expand_more_rounded,
-                    color: Color(0xFF396A50),
+                  const SizedBox(height: 5),
+                  Text(
+                    progress.statusText,
+                    key: const Key('island_restoration_status'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF52706A),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -4484,6 +4518,7 @@ class _IslandRestorationCard extends StatelessWidget {
       );
     }
     final reduceMotion = GameFeedback.reducedMotionEnabled;
+    final landmarkArtSize = wide ? 78.0 : 58.0;
     return Semantics(
       container: true,
       label:
@@ -4507,7 +4542,7 @@ class _IslandRestorationCard extends StatelessWidget {
               children: [
                 const _MenuAssetImage(
                   path: 'assets/generated/island-observatory-v1.png',
-                  size: 24,
+                  size: 34,
                 ),
                 const SizedBox(width: 8),
                 const Expanded(
@@ -4574,7 +4609,7 @@ class _IslandRestorationCard extends StatelessWidget {
                                   ),
                                   landmark: landmark,
                                   progress: value,
-                                  size: 38,
+                                  size: landmarkArtSize,
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
@@ -4718,158 +4753,13 @@ class _IslandRestorationCard extends StatelessWidget {
               progress: progress,
               selectedFocus: selectedFocus,
               onFocusSelected: onFocusSelected,
+              wide: wide,
             ),
           ],
         ),
       ),
     ),
   );
-}
-
-class _StageBalloonPainter extends CustomPainter {
-  const _StageBalloonPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.42);
-    final body = Paint()..color = const Color(0xFFF28A78);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center,
-        width: size.width * 0.5,
-        height: size.height * 0.58,
-      ),
-      body,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center,
-        width: size.width * 0.5,
-        height: size.height * 0.58,
-      ),
-      Paint()
-        ..color = const Color(0xFF24352D)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    canvas.drawCircle(
-      center.translate(-size.width * 0.1, -size.height * 0.12),
-      size.width * 0.06,
-      Paint()..color = const Color(0xCCFFF7DD),
-    );
-    canvas.drawLine(
-      center.translate(0, size.height * 0.28),
-      center.translate(size.width * 0.04, size.height * 0.48),
-      Paint()
-        ..color = const Color(0xFF6B4B35)
-        ..strokeWidth = 1.5,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _StageBalloonPainter oldDelegate) => false;
-}
-
-class _StageReflectorIcon extends StatelessWidget {
-  const _StageReflectorIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Transform.rotate(
-          angle: -0.35,
-          child: Container(
-            width: 52,
-            height: 14,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2B66D),
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: const Color(0xFF5E4431), width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x443A2A20),
-                  offset: Offset(2, 3),
-                  blurRadius: 2,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const Positioned(
-          right: 5,
-          bottom: 4,
-          child: Icon(
-            Icons.rotate_right_rounded,
-            color: Color(0xFF397372),
-            size: 24,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StageFinaleIcon extends StatelessWidget {
-  const _StageFinaleIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        const Positioned.fill(
-          child: CustomPaint(painter: GameBallIconPainter(null)),
-        ),
-        for (final marker in const [
-          (alignment: Alignment(-0.58, -0.55), color: Color(0xFF58636B)),
-          (alignment: Alignment(0.58, -0.55), color: Color(0xFF78BFE8)),
-          (alignment: Alignment(-0.58, 0.55), color: Color(0xFF8F72B6)),
-          (alignment: Alignment(0.58, 0.55), color: Color(0xFFE99A78)),
-        ])
-          Align(
-            alignment: marker.alignment,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: marker.color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: const SizedBox.square(dimension: 13),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _StageScoreIcon extends StatelessWidget {
-  const _StageScoreIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        const Positioned.fill(
-          child: Padding(
-            padding: EdgeInsets.all(3),
-            child: CustomPaint(painter: GameBallIconPainter(null)),
-          ),
-        ),
-        const Align(
-          alignment: Alignment(0.78, -0.78),
-          child: Icon(
-            Icons.auto_awesome_rounded,
-            size: 22,
-            color: Color(0xFFFFB629),
-            shadows: [Shadow(color: Colors.white, blurRadius: 3)],
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _StageTile extends StatelessWidget {
@@ -4879,6 +4769,7 @@ class _StageTile extends StatelessWidget {
     this.discoveredMilestoneIds = const {},
     this.solutionStampCount = 0,
     this.locked = false,
+    this.thumbnailSize = 80,
   });
 
   final int index;
@@ -4886,6 +4777,7 @@ class _StageTile extends StatelessWidget {
   final bool locked;
   final Set<String> discoveredMilestoneIds;
   final int solutionStampCount;
+  final double thumbnailSize;
 
   @override
   Widget build(BuildContext context) {
@@ -4906,16 +4798,16 @@ class _StageTile extends StatelessWidget {
       '배운 속성과 기물을 엮어 나만의 경로를 완성해 보세요.',
     ];
     final assets = [
-      'assets/generated/stone-v2.png',
-      'assets/generated/jelly-bumper-v1.png',
-      'assets/generated/crate-v2.png',
-      'assets/generated/jelly-bumper-v1.png',
-      'assets/generated/stone-v2.png',
-      'assets/generated/jelly-bumper-v1.png',
-      'assets/generated/crate-v2.png',
-      'assets/generated/stone-v2.png',
-      'assets/generated/crate-v2.png',
-      'assets/generated/stone-v2.png',
+      'assets/generated/stage-icon-heavy-v1.png',
+      'assets/generated/stage-icon-bouncy-v1.png',
+      'assets/generated/stage-icon-chain-gate-v1.png',
+      'assets/generated/stage-icon-sharp-balloon-v1.png',
+      'assets/generated/stage-icon-property-transfer-v1.png',
+      'assets/generated/stage-icon-speed-slider-v1.png',
+      'assets/generated/stage-icon-persistent-ball-v1.png',
+      'assets/generated/stage-icon-chain-score-v1.png',
+      'assets/generated/stage-icon-rotating-reflector-v1.png',
+      'assets/generated/stage-icon-finale-v1.png',
     ];
     final stageAsset = assets[index];
     return Padding(
@@ -4924,20 +4816,21 @@ class _StageTile extends StatelessWidget {
         color: const Color(0xF7FFFDF3),
         borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
+        child: Semantics(
           key: Key('stage_tile_$index'),
-          onTap: locked ? null : onTap,
-          child: Semantics(
-            button: !locked,
-            label: '${index + 1}번 ${levels[index].name} 섬',
-            hint: locked ? '앞 섬을 클리어하면 열립니다' : '한 번 누르면 스테이지를 시작합니다',
+          container: true,
+          button: !locked,
+          label: '${index + 1}번 ${levels[index].name} 섬',
+          hint: locked ? '앞 섬을 클리어하면 열립니다' : '한 번 누르면 스테이지를 시작합니다',
+          child: InkWell(
+            onTap: locked ? null : onTap,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 70,
-                    height: 70,
+                  SizedBox.square(
+                    key: Key('stage_icon_$index'),
+                    dimension: thumbnailSize,
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -4962,24 +4855,12 @@ class _StageTile extends StatelessWidget {
                                         Colors.transparent,
                                         BlendMode.dst,
                                       ),
-                                child: index == 3
-                                    ? const CustomPaint(
-                                        painter: _StageBalloonPainter(),
-                                      )
-                                    : index == 6
-                                    ? const CustomPaint(
-                                        painter: GameBallIconPainter(null),
-                                      )
-                                    : index == 7
-                                    ? const _StageScoreIcon()
-                                    : index == 8
-                                    ? const _StageReflectorIcon()
-                                    : index == 9
-                                    ? const _StageFinaleIcon()
-                                    : Image.asset(
-                                        stageAsset,
-                                        fit: BoxFit.contain,
-                                      ),
+                                child: Image.asset(
+                                  stageAsset,
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.medium,
+                                  excludeFromSemantics: true,
+                                ),
                               ),
                             ),
                           ),

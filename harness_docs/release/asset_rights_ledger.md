@@ -43,6 +43,7 @@
 - `assets/generated/island-restoration-world-v1.webp`: Codex 기본 이미지 생성 도구로 만든 프로젝트 전용 섬 세계 배경을 WebP로 최적화한 번들 자산. 외부 이미지를 입력하거나 특정 작품의 화풍을 요구하지 않았으며, 관측소·등대·다리의 복구 목표를 홈과 섬 지도에서 한 장면으로 연결한다. 생성 프롬프트와 사용 목적은 `harness_docs/release/store_assets.md`에 기록한다.
 - `assets/generated/island-observatory-v1.png`, `island-lighthouse-v1.png`, `island-bridge-v1.png`: 위 프로젝트 전용 섬 세계 배경만을 시각 참조로 사용해 같은 팔레트·재질·시점으로 생성한 RGBA 시설 컷아웃이다. 복구 상태는 UI에서 동일 이미지의 회색 바탕을 컬러로 채워 표현하며, 제3자 이미지나 특정 작품명은 입력하지 않았다.
 - `assets/generated/nav-physics-lab-v1.png`, `nav-expedition-v1.png`, `nav-reward-satchel-v1.png`: Material 기호만으로 구분하기 어려운 핵심 메뉴를 위해 섬 세계 배경의 팔레트·재질만 참조해 생성한 RGBA 메뉴 컷아웃이다. 실험 장치·나침반/관측일지·보상 가방을 각각 나타내며 글자·로고·워터마크를 포함하지 않는다.
+- `assets/generated/stage-icon-*-v1.png` 10종: 첫 항해의 각 단계가 가르치는 무거움·탄성·스위치/문·뾰족함/풍선·속성 이전·가속 발판·잔류 공·연쇄 점수·회전 반사판·속성 종합을 각각 한 장면으로 표현한 프로젝트 전용 RGBA 삽화다. 기존 프로젝트 돌·젤리 자산만 팔레트와 재질 참고로 입력했고, 생성 뒤 흰색·격자 배경을 별도 이미지 편집으로 실제 알파 처리했다. 글자·로고·워터마크·제3자 작품명은 입력하지 않았다.
 - 생성 자산과 NanumGothic 글꼴의 현재 SHA-256은 `assets/licenses/asset_hashes.txt`에 함께 고정한다. 자산 교체 시 생성 원본·변환 이력·최종 번들 목록과 해시를 같은 작업에서 갱신한다.
 - 공 얼굴·광택·속성 색상은 `lib/ui/game_ball_painter.dart`의 `GameBallIconPainter`로 그리며, 홈·게임·섬 지도·팝업·Golden에서 동일한 표현을 공유한다. `assets/icons/ball.png`는 저장소에 권리 증거로 남지만 `pubspec.yaml`과 제품 번들에서는 제외한다.
 - `power-slider-canvas`: `lib/game/property_shot_game.dart`에서 직접 그린 독자적인 Canvas 발판·화살표·작동 링이다. 외부 이미지·폰트·패키지 에셋을 사용하지 않으므로 외부 라이선스가 없고, 기존 퍼즐 게임의 영역 발동 기능은 기능 참고만 했다. 생성 프롬프트나 제3자 원본은 없다. `test/goldens/power_slider_*.png`에서 390x844·768x1024의 기본·작동·팝업·저모션 결과를 기록한다.
