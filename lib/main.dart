@@ -2553,7 +2553,10 @@ class _HomeScreen extends StatelessWidget {
                 builder: (context, constraints) {
                   final compact = constraints.maxWidth <= 360;
                   final tablet = constraints.maxWidth >= 700;
-                  final hero = _HomeHero(compact: compact);
+                  final hero = _HomeHero(
+                    compact: compact,
+                    emphasizeCopy: tablet,
+                  );
                   final actions = _HomeActions(
                     appFontFamily: appFontFamily,
                     hasCompletedFirstStage: hasCompletedFirstStage,
@@ -2642,9 +2645,10 @@ class _HomeScreen extends StatelessWidget {
 }
 
 class _HomeHero extends StatelessWidget {
-  const _HomeHero({required this.compact});
+  const _HomeHero({required this.compact, required this.emphasizeCopy});
 
   final bool compact;
+  final bool emphasizeCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -2654,24 +2658,48 @@ class _HomeHero extends StatelessWidget {
       children: [
         _HomePlayPreview(compact: compact),
         SizedBox(height: compact ? 8 : 12),
-        Text(
-          '속성 한방',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            color: const Color(0xFF173F43),
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          compact
-              ? '섬의 물리 규칙을 발견해\n멈춘 시설을 다시 깨우세요.'
-              : '주변 물체의 성질을 공에 담아 길을 만들고\n섬의 관측소·등대·다리를 다시 깨우세요.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: const Color(0xFF285C5D),
-            height: 1.35,
-            fontWeight: FontWeight.w600,
+        Container(
+          padding: emphasizeCopy
+              ? const EdgeInsets.symmetric(horizontal: 18, vertical: 12)
+              : EdgeInsets.zero,
+          decoration: emphasizeCopy
+              ? BoxDecoration(
+                  color: const Color(0xDCF6F3D8),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0x8A3E7773)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x22000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                )
+              : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '속성 한방',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  color: const Color(0xFF173F43),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                compact
+                    ? '섬의 물리 규칙을 발견해\n멈춘 시설을 다시 깨우세요.'
+                    : '주변 물체의 성질을 공에 담아 길을 만들고\n섬의 관측소·등대·다리를 다시 깨우세요.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: const Color(0xFF285C5D),
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ],

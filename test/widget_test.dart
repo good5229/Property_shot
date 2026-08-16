@@ -368,6 +368,16 @@ void main() {
     expect(find.byKey(const Key('hud_objective_button')), findsOneWidget);
     expect(find.byKey(const Key('hud_controls_button')), findsOneWidget);
     expect(find.byKey(const Key('hud_status_button')), findsOneWidget);
+    final titleRect = tester.getRect(find.text(levels[1].name));
+    final objectiveRect = tester.getRect(
+      find.byKey(const Key('hud_objective_button')),
+    );
+    final aimRect = tester.getRect(find.byKey(const Key('aim_area')));
+    expect(titleRect.width, greaterThan(160));
+    expect(titleRect.height, lessThanOrEqualTo(56));
+    expect(objectiveRect.width, greaterThanOrEqualTo(70));
+    expect(objectiveRect.height, greaterThanOrEqualTo(70));
+    expect(objectiveRect.bottom, lessThanOrEqualTo(aimRect.top));
     await tester.tap(find.byKey(const Key('hud_objective_button')));
     await tester.pump();
     expect(find.text('이번 스테이지 목표'), findsOneWidget);
@@ -1985,10 +1995,30 @@ void main() {
             initialState: clearState,
             showStageSelector: false,
             fontFamilyOverride: 'ClearPopupNanumGothic',
+            loadGameAssets: false,
           ),
         ),
       );
       await tester.pump();
+
+      final goldenContext = tester.element(
+        find.byKey(const Key('clear_popup_golden')),
+      );
+      await tester.runAsync(() async {
+        for (final asset in const [
+          'assets/generated/nav-replay-v1.png',
+          'assets/generated/stage-icon-chain-score-v1.png',
+          'assets/generated/nav-stage-map-v1.png',
+          'assets/generated/nav-activities-v1.png',
+          'assets/generated/nav-reward-satchel-v1.png',
+          'assets/generated/nav-helm-v1.png',
+          'assets/generated/hint-lantern-v2.png',
+          'assets/generated/nav-expedition-v1.png',
+        ]) {
+          await precacheImage(AssetImage(asset), goldenContext);
+        }
+      });
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byKey(const Key('clear_popup')), findsOneWidget);
       expect(find.text('파 2회 · 3/3 별'), findsOneWidget);

@@ -27,7 +27,10 @@ void main() {
       (name: '393x852', width: 393.0, height: 852.0),
       (name: '430x932', width: 430.0, height: 932.0),
       (name: '768x1024', width: 768.0, height: 1024.0),
+      (name: '1024x768', width: 1024.0, height: 768.0),
       (name: '1024x1366', width: 1024.0, height: 1366.0),
+      (name: '1440x900', width: 1440.0, height: 900.0),
+      (name: '1920x1080', width: 1920.0, height: 1080.0),
     ]) {
       testWidgets('전체 플레이 화면 Golden ${stageIndex + 1}단계 ${fixture.name}', (
         tester,

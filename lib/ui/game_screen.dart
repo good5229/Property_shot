@@ -4064,9 +4064,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               // 320x568급은 제어 정보를 한 줄로 줄이되, 기물을 가리지 않도록
               // 보드 밖 Safe bottom interaction band를 계속 사용한다.
               final denseCompact = safeSize.height < 600;
+              // 넓은 화면에서는 HUD가 세로 보드 폭(760px)에 묶이면 제목과
+              // 상태 아이콘이 서로 밀어낸다. 보드는 기존 비율로 가운데 두되
+              // 정보 영역은 일반 PC·대형 모니터에서 충분한 가로 폭을 쓴다.
               final contentWidth = compactLayout
                   ? safeSize.width
-                  : math.min(safeSize.width * 0.78, 760.0);
+                  : math.min(safeSize.width * 0.86, 1120.0);
               return Stack(
                 children: [
                   const Positioned.fill(child: _GameplayBackdrop()),
@@ -7648,6 +7651,7 @@ class _CompactHudDetails extends StatelessWidget {
     required this.tutorialActive,
     required this.milestones,
     this.condensed = false,
+    this.spacious = false,
     this.progressHint,
     this.rewardGuide,
   });
@@ -7657,6 +7661,7 @@ class _CompactHudDetails extends StatelessWidget {
   final bool tutorialActive;
   final List<StageDiscoveryMilestone> milestones;
   final bool condensed;
+  final bool spacious;
   final String? progressHint;
   final String? rewardGuide;
 
@@ -7755,6 +7760,7 @@ class _CompactHudDetails extends StatelessWidget {
           assetPath: 'assets/generated/nav-stage-map-v1.png',
           title: '이번 스테이지 목표',
           message: objective,
+          spacious: spacious,
         ),
         if (milestones.isNotEmpty)
           _HudInfoButton(
@@ -7763,6 +7769,7 @@ class _CompactHudDetails extends StatelessWidget {
             title:
                 '발견 ${milestones.where((item) => item.achieved).length}/${milestones.length}',
             message: discoveryText,
+            spacious: spacious,
           ),
         if (rewardGuide != null)
           _HudInfoButton(
@@ -7770,12 +7777,14 @@ class _CompactHudDetails extends StatelessWidget {
             assetPath: 'assets/generated/nav-reward-satchel-v1.png',
             title: '이번 단계 보상',
             message: rewardGuide!,
+            spacious: spacious,
           ),
-        const _HudInfoButton(
-          key: Key('hud_controls_button'),
+        _HudInfoButton(
+          key: const Key('hud_controls_button'),
           assetPath: 'assets/generated/nav-helm-v1.png',
           title: '조작 방법',
           message: '손가락이나 마우스로 방향을 정하고, 공을 길게 눌러 힘을 모은 뒤 놓으세요.',
+          spacious: spacious,
         ),
         _HudInfoButton(
           key: const Key('hud_status_button'),
@@ -7783,6 +7792,7 @@ class _CompactHudDetails extends StatelessWidget {
           title: tutorialActive ? '현재 안내' : '플레이 상태',
           message: message,
           liveRegion: true,
+          spacious: spacious,
         ),
         if (progressHint != null)
           _HudInfoButton(
@@ -7790,6 +7800,7 @@ class _CompactHudDetails extends StatelessWidget {
             assetPath: 'assets/generated/nav-expedition-v1.png',
             title: '진행 상황',
             message: progressHint!,
+            spacious: spacious,
           ),
       ],
     );
@@ -7803,72 +7814,81 @@ class _HudInfoButton extends StatelessWidget {
     required this.title,
     required this.message,
     this.liveRegion = false,
+    this.spacious = false,
   });
 
   final String assetPath;
   final String title;
   final String message;
   final bool liveRegion;
+  final bool spacious;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    liveRegion: liveRegion,
-    label: '$title. $message',
-    child: Tooltip(
-      message: '$title · $message',
-      child: IconButton(
-        tooltip: title,
-        onPressed: () => showDialog<void>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            key: Key('${key.toString()}_dialog'),
-            titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-            contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-            title: Row(
-              children: [
-                SizedBox.square(
-                  dimension: 42,
-                  child: Image.asset(
-                    assetPath,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    excludeFromSemantics: true,
+  Widget build(BuildContext context) {
+    final buttonExtent = spacious ? 72.0 : 48.0;
+    final imageExtent = spacious ? 58.0 : 36.0;
+    return Semantics(
+      button: true,
+      liveRegion: liveRegion,
+      label: '$title. $message',
+      child: Tooltip(
+        message: '$title · $message',
+        child: IconButton(
+          tooltip: title,
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              key: Key('${key.toString()}_dialog'),
+              titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+              contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              title: Row(
+                children: [
+                  SizedBox.square(
+                    dimension: 42,
+                    child: Image.asset(
+                      assetPath,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      excludeFromSemantics: true,
+                    ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(title)),
+                ],
+              ),
+              content: ConstrainedBox(
+                key: const Key('hud_info_dialog_content'),
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Text(message),
+              ),
+              actions: [
+                TextButton(
+                  autofocus: true,
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('확인'),
                 ),
-                const SizedBox(width: 10),
-                Expanded(child: Text(title)),
               ],
             ),
-            content: ConstrainedBox(
-              key: const Key('hud_info_dialog_content'),
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: Text(message),
+          ),
+          icon: SizedBox.square(
+            dimension: imageExtent,
+            child: Image.asset(
+              assetPath,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              excludeFromSemantics: true,
             ),
-            actions: [
-              TextButton(
-                autofocus: true,
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('확인'),
-              ),
-            ],
           ),
-        ),
-        icon: SizedBox.square(
-          dimension: 32,
-          child: Image.asset(
-            assetPath,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-            excludeFromSemantics: true,
+          constraints: BoxConstraints.tightFor(
+            width: buttonExtent,
+            height: buttonExtent,
           ),
+          padding: const EdgeInsets.all(4),
         ),
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        padding: const EdgeInsets.all(5),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Hud extends StatelessWidget {
@@ -8112,19 +8132,26 @@ class _Hud extends StatelessWidget {
               Expanded(
                 child: Text(
                   state.levelName,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
                 ),
               ),
               _HudMetric(
                 assetPath: 'assets/generated/nav-replay-v1.png',
                 tooltip: '시도 횟수 ${state.shotCount}',
                 value: '시도 ${state.shotCount}',
+                spacious: true,
               ),
               const SizedBox(width: 12),
               _HudMetric(
                 assetPath: 'assets/generated/stage-icon-chain-score-v1.png',
                 tooltip: '현재 점수 ${hudScore ?? state.score}',
                 value: '점수 ${hudScore ?? state.score}',
+                spacious: true,
               ),
               if (!showStageSelector && onExit != null)
                 Semantics(
@@ -8135,13 +8162,20 @@ class _Hud extends StatelessWidget {
                     key: const Key('home_button'),
                     tooltip: exitLabel,
                     onPressed: onExit,
-                    icon: Image.asset(
-                      'assets/generated/nav-stage-map-v1.png',
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                      excludeFromSemantics: true,
+                    icon: SizedBox.square(
+                      dimension: 38,
+                      child: Image.asset(
+                        'assets/generated/nav-stage-map-v1.png',
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        excludeFromSemantics: true,
+                      ),
                     ),
-                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.all(5),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 52,
+                      height: 52,
+                    ),
                   ),
                 ),
               if (!showStageSelector)
@@ -8175,6 +8209,7 @@ class _Hud extends StatelessWidget {
             milestones: showDiscovery ? discoveryMilestones : const [],
             progressHint: progressHint,
             rewardGuide: rewardGuide,
+            spacious: true,
           ),
           const SizedBox(height: 8),
           if (showStageSelector)
@@ -8218,38 +8253,46 @@ class _HudMetric extends StatelessWidget {
     required this.tooltip,
     required this.value,
     this.iconOnly = false,
+    this.spacious = false,
   });
 
   final String assetPath;
   final String tooltip;
   final String value;
   final bool iconOnly;
+  final bool spacious;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Semantics(
-      label: tooltip,
-      child: ExcludeSemantics(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              assetPath,
-              width: 25,
-              height: 25,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-            ),
-            if (!iconOnly) ...[
-              const SizedBox(width: 2),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+  Widget build(BuildContext context) {
+    final imageExtent = spacious ? 36.0 : 28.0;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        label: tooltip,
+        child: ExcludeSemantics(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                assetPath,
+                width: imageExtent,
+                height: imageExtent,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+              if (!iconOnly) ...[
+                const SizedBox(width: 2),
+                Text(
+                  value,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _TutorialCoachMark extends StatelessWidget {
