@@ -16,6 +16,8 @@ import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/physics_lab_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+final _testReferenceDate = DateTime.utc(2026, 8, 10);
+
 void main() {
   setUpAll(() async {
     final loader = FontLoader('GoldenNanumGothic')
@@ -106,7 +108,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
-        home: PhysicsLabScreen(onBack: () {}, loadGameAssets: false),
+        home: PhysicsLabScreen(
+          onBack: () {},
+          loadGameAssets: false,
+          referenceDate: _testReferenceDate,
+        ),
       ),
     );
     expect(find.byKey(const Key('physics_lab_screen')), findsOneWidget);
@@ -131,7 +137,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
-        home: PhysicsLabScreen(onBack: () {}, loadGameAssets: false),
+        home: PhysicsLabScreen(
+          onBack: () {},
+          loadGameAssets: false,
+          referenceDate: _testReferenceDate,
+        ),
       ),
     );
     await tester.pump();
@@ -147,7 +157,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
-        home: PhysicsLabScreen(onBack: () {}, loadGameAssets: false),
+        home: PhysicsLabScreen(
+          onBack: () {},
+          loadGameAssets: false,
+          referenceDate: _testReferenceDate,
+        ),
       ),
     );
     await tester.tap(
@@ -209,7 +223,14 @@ void main() {
     final before = await SharedPreferences.getInstance();
     final beforeKeys = before.getKeys();
     final beforeValues = {for (final key in beforeKeys) key: before.get(key)};
-    await tester.pumpWidget(MaterialApp(home: PhysicsLabScreen(onBack: () {})));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PhysicsLabScreen(
+          onBack: () {},
+          referenceDate: _testReferenceDate,
+        ),
+      ),
+    );
     await tester.tap(find.byKey(const Key('physics_lab_lab_heavy_crate_v1')));
     await tester.pump();
     tester

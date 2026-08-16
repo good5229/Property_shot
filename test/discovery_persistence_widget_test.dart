@@ -7,7 +7,7 @@ import 'package:property_shot/ui/game_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('현재 섬에서 확인한 발견은 진행 저장소에 영구 기록된다', (tester) async {
+  testWidgets('클리어 전 발견은 섬 복구 진행에 먼저 기록되지 않는다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = ProgressStore(
       stageCount: levels.length,
@@ -40,7 +40,8 @@ void main() {
     );
 
     final snapshot = await store.load();
-    expect(snapshot.discoveriesByStageId[levels.first.id], {'heavy_equipped'});
+    expect(snapshot.discoveriesByStageId, isEmpty);
+    expect(find.text('클리어하면 이번 발견이 기록돼요'), findsNothing);
   });
 
   testWidgets('진행 저장 비활성 화면은 캠페인 발견 기록을 오염시키지 않는다', (tester) async {

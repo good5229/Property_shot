@@ -298,7 +298,9 @@ void main() {
       final state = _stateFor(pattern, fixture.strategyId);
       var successCount = 0;
       final inputKeys = <String>{};
-      final powerDeltas = fixture.power >= 0.96
+      final powerDeltas = fixture.power == 1.0
+          ? [-0.04, -0.03, -0.02, -0.01, 0]
+          : fixture.power >= 0.96
           ? [-0.04, -0.02, 0, 0.01, 0.02]
           : [-0.04, -0.02, 0, 0.02, 0.04];
       for (final degreeDelta in [-2, 0, 2]) {

@@ -5255,7 +5255,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -5470,7 +5470,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -5696,8 +5696,8 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 40.0,
-                "y": 522.0
+                "x": 300.0,
+                "y": 104.0
               },
               "size": {
                 "x": 60.0,
@@ -5710,7 +5710,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -5806,7 +5806,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null,
+              "linkId": "persistent_03_gate",
               "movableWhenDrained": false
             },
             {
@@ -5835,8 +5835,8 @@ const generatedStageCatalogJson = r'''
               "movableWhenDrained": false
             },
             {
-              "id": "side_wall",
-              "type": "wall",
+              "id": "persistent_03_gate",
+              "type": "gate",
               "position": {
                 "x": 282.0,
                 "y": 182.0
@@ -5854,7 +5854,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
-              "linkId": null,
+              "linkId": "persistent_03_gate",
               "movableWhenDrained": false
             }
           ],
@@ -5904,7 +5904,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -7051,7 +7051,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -7868,7 +7868,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -8092,7 +8092,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -8345,7 +8345,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -8667,7 +8667,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 0.9,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false

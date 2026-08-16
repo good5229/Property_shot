@@ -71,7 +71,7 @@ void main() {
     expect(metrics.accidentalSuccessInputs, 0);
     expect(metrics.dominantStrategy, 'anvil (무거움)');
     expect(metrics.alternativeStrategyCount, 1);
-    expect(metrics.uniqueSuccessfulInputs, 93);
+    expect(metrics.uniqueSuccessfulInputs, 84);
     expect(metrics.dominantStrategyShare, 1);
   });
 
@@ -79,8 +79,8 @@ void main() {
     const analyzer = DifficultyAnalyzer(acceptedStrategyIdsOverride: {'none'});
     final metrics = analyzer.analyzeLevel(0);
 
-    expect(metrics.accidentalSuccessInputs, 93);
-    expect(metrics.accidentalSuccessRate, closeTo(93 / 1440, 0.000001));
+    expect(metrics.accidentalSuccessInputs, 84);
+    expect(metrics.accidentalSuccessRate, closeTo(84 / 1440, 0.000001));
   });
 
   test('3단계 고해상도 분석은 무거움 없이도 성공하는 전략을 집계한다', () {

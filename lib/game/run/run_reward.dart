@@ -100,7 +100,8 @@ extension RunRewardEffectGuidance on RunRewardEffectKind {
     RunRewardEffectKind.optionalChallengeGuard =>
       '선택 도전을 놓친 채 클리어하면 1회 자동 보호합니다.',
     RunRewardEffectKind.failureCauseBoost => '실패 결과에서 충돌 순서와 원인을 더 선명하게 보세요.',
-    RunRewardEffectKind.ballAppearance => '선택 즉시 현재와 이후 공의 본체·테두리·반짝임이 바뀌어요.',
+    RunRewardEffectKind.ballAppearance =>
+      '선택 즉시 현재와 이후 공이 청록 유광 본체·청록과 금빛 이중 테두리·작은 반짝임으로 바뀌어요. 물리 성능과 판정은 그대로예요.',
     RunRewardEffectKind.stageRecordGuard => '스테이지 클리어 시 기록 발사 횟수를 1회 자동 줄입니다.',
     RunRewardEffectKind.nextStageHintAccess =>
       '다음 스테이지에서 팁 버튼을 열어 L1·L2 단서를 보세요.',
@@ -114,7 +115,7 @@ extension RunRewardEffectGuidance on RunRewardEffectKind {
     RunRewardEffectKind.firstImpactGuide => '조준 중 첫 충돌 대상 표시',
     RunRewardEffectKind.optionalChallengeGuard => '선택 도전 실패 1회 자동 보호',
     RunRewardEffectKind.failureCauseBoost => '실패 원인·충돌 순서 강화',
-    RunRewardEffectKind.ballAppearance => '청록·금색 공 꾸미기 활성',
+    RunRewardEffectKind.ballAppearance => '청록 유광·금빛 공 꾸미기 활성 · 물리 판정 불변',
     RunRewardEffectKind.stageRecordGuard => '클리어 기록 1회 자동 단축',
     RunRewardEffectKind.precisionCharge => '충전 속도 25% 완화',
     RunRewardEffectKind.cloneCore => '속성 복사 코어 사용 가능',
@@ -240,8 +241,8 @@ final List<RunReward> initialRunRewards = List.unmodifiable([
   ),
   RunReward(
     id: runRewardBallAppearanceId,
-    name: '공 꾸미기 묶음',
-    description: '공 본체를 청록 그라데이션·금색 외곽선·반짝임으로 꾸밉니다.',
+    name: '청록 유광 공 꾸미기',
+    description: '공 본체·금빛 테두리·하이라이트·작은 파티클을 바꿉니다. 크기와 물리 성능은 변하지 않습니다.',
     effectKind: RunRewardEffectKind.ballAppearance,
   ),
   RunReward(

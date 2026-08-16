@@ -2165,6 +2165,108 @@ void main() {
     expect(collisionShotIds, {firedShotId});
   });
 
+  testWidgets('섬 복구 발견은 홀 진입 애니메이션과 클리어 저장 뒤에만 기록된다', (tester) async {
+    var clearPersisted = false;
+    var discoveryWrites = 0;
+    var discoveryRecordedAfterClear = false;
+    final initial = _directClearState().copyWith(
+      equippedTrait: TraitType.heavy,
+      entities: [
+        for (final entity in _directClearState().entities)
+          entity.id == 'active_ball'
+              ? entity.copyWith(traits: const {TraitType.heavy})
+              : entity,
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: initial,
+          loadGameAssets: false,
+          onLevelCleared: (_, _, _, _) async {
+            clearPersisted = true;
+          },
+          onDiscoveriesRecorded: (_) async {
+            discoveryWrites++;
+            discoveryRecordedAfterClear = clearPersisted;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(discoveryWrites, 0);
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(clearPersisted, isTrue);
+    expect(discoveryWrites, 0);
+
+    await _pumpForAsyncWork(tester, frames: 160);
+    expect(discoveryWrites, 1);
+    expect(discoveryRecordedAfterClear, isTrue);
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+  });
+
+  testWidgets('섬 복구 발견 저장 실패는 다음 이동을 막고 재시도로 복구한다', (tester) async {
+    var discoveryAttempts = 0;
+    final initial = _directClearState().copyWith(
+      equippedTrait: TraitType.heavy,
+      entities: [
+        for (final entity in _directClearState().entities)
+          entity.id == 'active_ball'
+              ? entity.copyWith(traits: const {TraitType.heavy})
+              : entity,
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: initial,
+          loadGameAssets: false,
+          onLevelCleared: (_, _, _, _) async {},
+          onDiscoveriesRecorded: (_) async {
+            discoveryAttempts++;
+            return discoveryAttempts > 1;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 920));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 920));
+    await _pumpForAsyncWork(tester, frames: 160);
+
+    expect(discoveryAttempts, 1);
+    expect(find.byKey(const Key('clear_popup')), findsNothing);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsOneWidget,
+    );
+    expect(find.text('섬 복구 기록을 저장하지 못했습니다'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('clear_persistence_retry_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(discoveryAttempts, 2);
+    expect(
+      find.byKey(const Key('clear_persistence_error_popup')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('clear_popup')), findsOneWidget);
+  });
+
   testWidgets('1단계 직접 성공도 점수를 계산해 일반 런 저장 흐름에 전달한다', (tester) async {
     CreativeChainScoreAnalysis? recordedAnalysis;
     await tester.pumpWidget(

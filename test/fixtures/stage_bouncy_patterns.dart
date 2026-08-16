@@ -83,7 +83,7 @@ const stageBouncyRepresentatives = <StageBouncyRepresentative>[
     patternId: 'stage_bouncy_03',
     strategyId: 'none',
     degree: 286,
-    power: 0.98,
+    power: 1.00,
     familyId: 'wall_reflection',
   ),
   StageBouncyRepresentative(

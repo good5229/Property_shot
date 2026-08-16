@@ -14,7 +14,7 @@
         }
       ],
       "expectedFingerprints": [
-        "b37d1951359ba169"
+        "2fdf7cef3dcabdc9"
       ],
       "expectedPhase": "success"
     },
@@ -31,7 +31,7 @@
         }
       ],
       "expectedFingerprints": [
-        "f7a44a3bfd8544be"
+        "adc6578acba94fc4"
       ],
       "expectedPhase": "success"
     },
@@ -99,7 +99,7 @@
         }
       ],
       "expectedFingerprints": [
-        "f3ff6a5448a9bfe7"
+        "27aa8fcf5bf23207"
       ],
       "expectedPhase": "success"
     },
@@ -167,7 +167,7 @@
         }
       ],
       "expectedFingerprints": [
-        "ae5d6f6473c11241"
+        "5613b66be439a415"
       ],
       "expectedPhase": "success"
     },
@@ -218,7 +218,7 @@
         }
       ],
       "expectedFingerprints": [
-        "66e2274e1b58e0ae"
+        "879dbbd797b561c6"
       ],
       "expectedPhase": "success"
     },
@@ -282,12 +282,12 @@
       "shots": [
         {
           "angleRadians": -2.356194490192345,
-          "power": 1.0,
+          "power": 0.95,
           "equippedTrait": "heavy"
         }
       ],
       "expectedFingerprints": [
-        "c21416eff5f3f5c3"
+        "66297a904bc21402"
       ],
       "expectedPhase": "success"
     },
@@ -299,13 +299,13 @@
       "transferSourceId": "drain_weight",
       "shots": [
         {
-          "angleRadians": -2.1816615649929116,
-          "power": 0.1,
+          "angleRadians": -2.356194490192345,
+          "power": 1.0,
           "equippedTrait": "heavy"
         }
       ],
       "expectedFingerprints": [
-        "c27eaa9f0b634c28"
+        "2bcbb4aeb5f0a04f"
       ],
       "expectedPhase": "success"
     },
@@ -426,7 +426,7 @@
         }
       ],
       "expectedFingerprints": [
-        "a1d8523778ec8b44"
+        "a9b9a9905c6e386c"
       ],
       "expectedPhase": "success"
     },
@@ -443,7 +443,7 @@
         }
       ],
       "expectedFingerprints": [
-        "b4451edf124ceecc"
+        "754c8b74eb73aa18"
       ],
       "expectedPhase": "success"
     },
@@ -557,12 +557,12 @@
       "shots": [
         {
           "angleRadians": -1.1344640137963142,
-          "power": 0.32,
+          "power": 0.34,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "3a48f29fdd9047c4"
+        "9df15fb117b9e25a"
       ],
       "expectedPhase": "success"
     },
@@ -574,12 +574,12 @@
       "shots": [
         {
           "angleRadians": -1.1344640137963142,
-          "power": 0.34,
+          "power": 0.36,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "f5bfa4f13787ad6e"
+        "fe047519f238072c"
       ],
       "expectedPhase": "success"
     },
@@ -630,7 +630,7 @@
         }
       ],
       "expectedFingerprints": [
-        "7c3a1b37d2225dbe"
+        "e7acc59bc0d9b88e"
       ],
       "expectedPhase": "success"
     },
@@ -647,7 +647,7 @@
         }
       ],
       "expectedFingerprints": [
-        "d34cf713ce97cf3e"
+        "acf1bf9641a7ed96"
       ],
       "expectedPhase": "success"
     },

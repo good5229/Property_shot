@@ -36,12 +36,12 @@ class Stage9RotatingReflectorSolution {
 const stage9RotatingReflectorSolutions = <Stage9RotatingReflectorSolution>[
   Stage9RotatingReflectorSolution(
     patternId: 'stage_rotating_reflector_01',
-    firstDegree: 296,
+    firstDegree: 320,
     firstPower: 0.12,
     secondDegree: 222,
     secondPower: 0.48,
-    directDegree: 44,
-    directPower: 0.90,
+    directDegree: 46,
+    directPower: 0.88,
     expectedRotationOrder: ['reflector_a', 'reflector_a'],
   ),
   Stage9RotatingReflectorSolution(

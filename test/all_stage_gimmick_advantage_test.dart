@@ -97,7 +97,11 @@ void main() {
               final solution = stagePersistentRepresentativeSolutions
                   .firstWhere((item) => item.patternId == pattern.patternId);
               final first = resolver.resolve(initial, solution.firstInput);
-              expect(first.state.phase, GamePhase.planning);
+              expect(
+                first.state.phase,
+                GamePhase.planning,
+                reason: '${pattern.patternId} 준비 샷이 홀에 조기 진입했습니다.',
+              );
               final withoutPreparation = resolver.resolve(
                 initial,
                 solution.secondInput,
@@ -136,7 +140,11 @@ void main() {
                 parShots: pattern.parShots,
                 optionalChallengeIds: const <String>{},
               );
-              expect(second.state.phase, GamePhase.success);
+              expect(
+                second.state.phase,
+                GamePhase.success,
+                reason: '${pattern.patternId} 대표 기믹 연쇄가 홀에 도달하지 못했습니다.',
+              );
               expect(
                 chainAnalysis.totalScore / directAnalysis.totalScore,
                 greaterThanOrEqualTo(1.45),
@@ -164,7 +172,11 @@ void main() {
                 first.state,
                 solution.secondInput,
               );
-              expect(second.state.phase, GamePhase.success);
+              expect(
+                second.state.phase,
+                GamePhase.success,
+                reason: '${pattern.patternId} 대표 반사판 연쇄가 홀에 도달하지 못했습니다.',
+              );
               expect([
                 ...first.reflectorRotations,
                 ...second.reflectorRotations,
@@ -208,7 +220,11 @@ void main() {
                 isNot(GamePhase.success),
                 reason: '${pattern.patternId} 준비 전 같은 최종 입력이 홀에 바로 도달합니다.',
               );
-              expect(second.state.phase, GamePhase.success);
+              expect(
+                second.state.phase,
+                GamePhase.success,
+                reason: '${pattern.patternId} 대표 종합 기믹 연쇄가 홀에 도달하지 못했습니다.',
+              );
               final achievedEvents = {...first.events, ...second.events};
               expect(achievedEvents, containsAll(solution.expectedEvents));
               expect(
@@ -241,7 +257,9 @@ void main() {
             patternId: item.patternId,
             kind: '한 발 성공 영역',
             gimmick: item.gimmickSuccesses,
+            gimmickSamples: 900,
             bypass: item.bypassSuccesses,
+            bypassSamples: 900,
             // 셔플 변형 하나만 만난 플레이어에게도 기믹 풀이가 실제로
             // 유리해야 한다. 따라서 스테이지 합산이 아니라 각 패턴의
             // 성공 영역에서 40% 이상 우위를 요구한다.
@@ -273,6 +291,16 @@ void main() {
           greaterThanOrEqualTo(item.minimumRatio),
           reason: '${item.patternId} ${item.kind}에서 기믹 우위가 부족합니다.',
         );
+        if (item.kind != '연쇄 점수') {
+          expect(
+            item.bypassRate,
+            lessThanOrEqualTo(0.10),
+            reason:
+                '${item.patternId} 기믹 없는 성공 영역이 '
+                '${(item.bypassRate * 100).toStringAsFixed(1)}%로, '
+                '동일 900개 입력 표본의 10% 상한을 넘습니다.',
+          );
+        }
         if (item.stageId == 'stage_persistent' ||
             item.stageId == 'stage_property_shot') {
           final previous = multiShotTotals[item.stageId];
@@ -456,7 +484,7 @@ _TypedAdvantage _persistentSequenceAdvantage(
     gimmickSamples: 900,
     bypass: bypass,
     bypassSamples: 900,
-    minimumRatio: 1.0001,
+    minimumRatio: 1.4,
   );
 }
 
@@ -590,7 +618,7 @@ _TypedAdvantage _propertySequenceAdvantage(
     gimmickSamples: 900,
     bypass: bypass,
     bypassSamples: 900,
-    minimumRatio: 1.0001,
+    minimumRatio: 1.4,
   );
 }
 

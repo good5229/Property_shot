@@ -847,7 +847,7 @@ bool _initialBallOverlapsHole(GameState state) {
       .firstOrNull;
   if (hole == null) return false;
   return hole.position.distanceTo(state.activeBall.position) <=
-      hole.radius + state.activeBall.hitRadius;
+      hole.hitRadius + state.activeBall.hitRadius;
 }
 
 bool _holeWasPassedWithoutCapture(GameState initial, ShotResult result) {
@@ -858,7 +858,7 @@ bool _holeWasPassedWithoutCapture(GameState initial, ShotResult result) {
       .where((entity) => entity.type == EntityType.hole)
       .firstOrNull;
   if (hole == null || result.path.length < 2) return false;
-  final radius = hole.radius + initial.activeBall.hitRadius;
+  final radius = hole.hitRadius + initial.activeBall.hitRadius;
   for (var index = 1; index < result.path.length; index++) {
     if (_segmentDistanceToPoint(
           result.path[index - 1],
@@ -1197,7 +1197,7 @@ bool _hasStaticWallRoute(GameState state, Vec2 boardSize) {
   final startRow = nearestRow(ball.position.y);
   if (blocked(startColumn, startRow)) return false;
 
-  final targetRadius = hole.radius + radius;
+  final targetRadius = hole.hitRadius + radius;
   final queue = Queue<(int, int)>()..add((startColumn, startRow));
   final visited = <int>{keyFor(startColumn, startRow)};
   const directions = <(int, int)>[

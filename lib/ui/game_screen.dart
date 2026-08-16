@@ -293,7 +293,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final Set<String> _discoveredMilestoneIds = <String>{};
   ShotInput? _previousAimInput;
   late final Set<String> _persistedMilestoneIds;
-  Future<void> _discoveryWriteTail = Future<void>.value();
   late List<SolutionMasteryEntry> _solutionEntries;
   bool _newSolutionStamp = false;
   bool _successAimGhostActive = false;
@@ -878,38 +877,32 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final changed = achievedIds.difference(_discoveredMilestoneIds).isNotEmpty;
     if (changed) _feedback.discoveryMilestone();
     _discoveredMilestoneIds.addAll(achievedIds);
-    if (changed ||
-        _discoveredMilestoneIds.difference(_persistedMilestoneIds).isNotEmpty) {
-      _queueDiscoveryPersistence();
-    }
   }
 
-  void _queueDiscoveryPersistence() {
+  Future<bool> _persistDiscoveriesAfterClear() async {
+    if (_state.phase != GamePhase.success) return true;
     if (widget.progressPersistencePolicy ==
         GameProgressPersistencePolicy.disabled) {
-      return;
+      return true;
     }
-    _discoveryWriteTail = _discoveryWriteTail.then((_) async {
-      final pending = _discoveredMilestoneIds.difference(
-        _persistedMilestoneIds,
-      );
-      if (pending.isEmpty) return;
-      try {
-        final writer = widget.onDiscoveriesRecorded;
-        final stored = writer == null
-            ? await (() async {
-                await _progressStore.recordDiscoveries(
-                  _state.levelIndex,
-                  pending,
-                );
-                return true;
-              })()
-            : await writer(Set<String>.unmodifiable(pending));
-        if (stored) _persistedMilestoneIds.addAll(pending);
-      } on Object {
-        // 발견은 현재 플레이에 즉시 남기고 다음 상태 갱신 때 저장을 재시도한다.
-      }
-    });
+    final pending = _discoveredMilestoneIds.difference(_persistedMilestoneIds);
+    if (pending.isEmpty) return true;
+    try {
+      final writer = widget.onDiscoveriesRecorded;
+      final stored = writer == null
+          ? await (() async {
+              await _progressStore.recordDiscoveries(
+                _state.levelIndex,
+                pending,
+              );
+              return true;
+            })()
+          : await writer(Set<String>.unmodifiable(pending));
+      if (stored) _persistedMilestoneIds.addAll(pending);
+      return stored;
+    } on Object {
+      return false;
+    }
   }
 
   PlayTelemetryStageOutcomePayload _stageOutcomePayload() {
@@ -2401,6 +2394,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (!mounted || !_isAnimatingShot) return;
       if (!persisted) {
         setState(() {
+          _isAnimatingShot = false;
+          _showClearPopup = false;
+          _showFailurePopup = false;
+          _showClearPersistenceError = true;
+        });
+        return;
+      }
+      // 홀 진입 애니메이션과 클리어 저장이 모두 끝난 뒤에만 발견을 영구
+      // 기록한다. 따라서 관측소·등대·다리 복구 연출이 공보다 먼저 뜨지 않는다.
+      final discoveriesPersisted = await _persistDiscoveriesAfterClear();
+      if (!mounted || !_isAnimatingShot) return;
+      if (!discoveriesPersisted) {
+        _clearPersistenceRetry = _persistDiscoveriesAfterClear;
+        setState(() {
+          _clearPersistenceErrorTitle = '섬 복구 기록을 저장하지 못했습니다';
+          _clearPersistenceErrorBody =
+              '발견 기록 저장이 끝나야 클리어 결과와 섬 복구를 확인할 수 있습니다.';
+          _state = _state.copyWith(message: '섬 복구 기록을 저장하지 못했습니다. 다시 시도해 주세요.');
           _isAnimatingShot = false;
           _showClearPopup = false;
           _showFailurePopup = false;
@@ -6436,7 +6447,7 @@ class _DiscoveryResultCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            cleared ? '이번 탐사 기록' : '실패해도 발견은 남아요',
+            cleared ? '이번 탐사 기록' : '클리어하면 이번 발견이 기록돼요',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: const Color(0xFF236B4A),
               fontWeight: FontWeight.w900,

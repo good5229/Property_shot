@@ -772,7 +772,7 @@ class ShotResolver {
       final hole = _findHole(entities);
       final holeCaptureRadius = hole == null
           ? 0.0
-          : hole.radius + ball.hitRadius;
+          : hole.hitRadius + ball.hitRadius;
       final holeProgress = hole == null
           ? double.infinity
           : _segmentCircleEntryProgress(
@@ -1931,7 +1931,7 @@ class ShotResolver {
         return false;
       }
       return entity.position.distanceTo(hole.position) <=
-          hole.radius + entity.hitRadius * 0.85;
+          hole.hitRadius + entity.hitRadius * 0.85;
     });
   }
 
@@ -1945,7 +1945,7 @@ class ShotResolver {
           entity.id != 'active_ball' &&
           entity.active &&
           entity.position.distanceTo(hole.position) <=
-              hole.radius + entity.hitRadius * 0.85) {
+              hole.hitRadius + entity.hitRadius * 0.85) {
         return entity;
       }
     }
@@ -1955,7 +1955,7 @@ class ShotResolver {
         continue;
       }
       final points = move.path.length >= 2 ? move.path : [move.from, move.to];
-      final tolerance = hole.radius + entity.hitRadius * 0.85;
+      final tolerance = hole.hitRadius + entity.hitRadius * 0.85;
       for (var index = 1; index < points.length; index++) {
         if (_segmentDistance(points[index - 1], points[index], hole.position) <=
             tolerance) {
@@ -1988,7 +1988,7 @@ class ShotResolver {
         continue;
       }
       final points = move.path.length >= 2 ? move.path : [move.from, move.to];
-      final tolerance = hole.radius + entity.hitRadius * 0.85;
+      final tolerance = hole.hitRadius + entity.hitRadius * 0.85;
       for (var index = 1; index < points.length; index++) {
         if (_segmentDistance(points[index - 1], points[index], hole.position) <=
             tolerance) {
@@ -3183,7 +3183,7 @@ class ShotResolver {
       final hole = _findHole(entities);
       final holeCaptureRadius = hole == null
           ? 0.0
-          : hole.radius + current.hitRadius;
+          : hole.hitRadius + current.hitRadius;
       final holeProgress = current.type == EntityType.ball && hole != null
           ? _segmentCircleEntryProgress(
               current.position,

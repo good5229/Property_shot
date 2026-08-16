@@ -77,52 +77,64 @@ void main() {
     });
   }
 
-  testWidgets('다음 스테이지에서도 청록·금색 공 꾸미기가 유지되는 Golden', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  for (final fixture in const [
+    (size: Size(390, 844), suffix: '390x844'),
+    (size: Size(768, 1024), suffix: '768x1024'),
+    (size: Size(1440, 900), suffix: '1440x900'),
+  ]) {
+    testWidgets('청록 유광 공 꾸미기 실제 스프라이트 ${fixture.suffix} Golden', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      await tester.binding.setSurfaceSize(fixture.size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    final stage = generatedStageCatalog.stageById('stage_bouncy');
-    final pattern = stage.patternById('stage_bouncy_01');
-    final level = pattern.toLevelDefinition(
-      stageId: stage.stageId,
-      stageTitle: stage.title,
-    );
+      final stage = generatedStageCatalog.stageById('stage_bouncy');
+      final pattern = stage.patternById('stage_bouncy_01');
+      final level = pattern.toLevelDefinition(
+        stageId: stage.stageId,
+        stageTitle: stage.title,
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData(
-          fontFamily: 'GoldenNanumGothic',
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2F6B7A)),
-          useMaterial3: true,
-        ),
-        home: RepaintBoundary(
-          key: const Key('stage_bouncy_reward_ball_golden'),
-          child: GameScreen(
-            initialState: level.createState(1, productRules: true),
-            showStageSelector: false,
-            loadGameAssets: false,
-            initialAcquiredRewards: const {runRewardBallAppearanceId},
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            fontFamily: 'GoldenNanumGothic',
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF2F6B7A),
+            ),
+            useMaterial3: true,
+          ),
+          home: RepaintBoundary(
+            key: const Key('stage_bouncy_reward_ball_golden'),
+            child: GameScreen(
+              initialState: level.createState(1, productRules: true),
+              showStageSelector: false,
+              loadGameAssets: true,
+              initialAcquiredRewards: const {runRewardBallAppearanceId},
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 300)),
-    );
-    final gameWidgetState = tester.state<GameWidgetState<PropertyShotGame>>(
-      find.byType(GameWidget<PropertyShotGame>),
-    );
-    await gameWidgetState.currentGame.toBeLoaded();
-    await tester.pump(const Duration(seconds: 1));
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)),
+      );
+      final gameWidgetState = tester.state<GameWidgetState<PropertyShotGame>>(
+        find.byType(GameWidget<PropertyShotGame>),
+      );
+      await gameWidgetState.currentGame.toBeLoaded();
+      await tester.pump(const Duration(seconds: 1));
 
-    expect(gameWidgetState.currentGame.ballRewardAppearance, isTrue);
-    await expectLater(
-      find.byKey(const Key('stage_bouncy_reward_ball_golden')),
-      matchesGoldenFile('goldens/stage_bouncy_01_reward_ball_390x844.png'),
-    );
-  });
+      expect(gameWidgetState.currentGame.ballRewardAppearance, isTrue);
+      await expectLater(
+        find.byKey(const Key('stage_bouncy_reward_ball_golden')),
+        matchesGoldenFile(
+          'goldens/stage_bouncy_01_reward_ball_${fixture.suffix}.png',
+        ),
+      );
+    });
+  }
 
   testWidgets('탄성 벽 충돌은 카메라 펀치와 민트 파티클로 구분된다 Golden', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});

@@ -1790,6 +1790,13 @@ class PropertyShotGame extends FlameGame {
           _drawBallTraitTexture(canvas, entity);
         } else {
           _drawBallSprite(canvas, entity, ballImage);
+          if (ballRewardAppearance && entity.type == EntityType.ball) {
+            GameBallIconPainter.drawRewardMaterialOverlay(
+              canvas,
+              center: center,
+              radius: entity.radius,
+            );
+          }
         }
         if (entity.type == EntityType.ball) {
           _drawRewardBallAppearance(canvas, entity);
@@ -3515,6 +3522,13 @@ class PropertyShotGame extends FlameGame {
       _drawBallTraitTexture(canvas, entity);
     } else {
       _drawBallSprite(canvas, entity, ballImage);
+      if (ballRewardAppearance) {
+        GameBallIconPainter.drawRewardMaterialOverlay(
+          canvas,
+          center: center,
+          radius: entity.radius,
+        );
+      }
     }
     _drawRewardBallAppearance(canvas, entity);
     canvas.restore();
@@ -3590,6 +3604,8 @@ class PropertyShotGame extends FlameGame {
       canvas,
       center: _project(entity.position),
       radius: entity.radius,
+      phase: _pulseClock,
+      reducedMotion: reducedMotion,
     );
   }
 
@@ -3969,7 +3985,9 @@ class PropertyShotGame extends FlameGame {
     final speedRatio = ((position - previous).length / 8.0).clamp(0.0, 1.0);
     final trailCount = 3 + (speedRatio * 4).round();
     final trailPaint = Paint()
-      ..color = const Color(0x55FFFFFF)
+      ..color = ballRewardAppearance
+          ? const Color(0x994EE7D5)
+          : const Color(0x55FFFFFF)
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
     for (var i = 1; i <= trailCount; i++) {
@@ -3983,9 +4001,13 @@ class PropertyShotGame extends FlameGame {
         trail,
         math.max(1.3, 6 - i * 0.72),
         trailPaint
-          ..color = const Color(
-            0x55FFFFFF,
-          ).withValues(alpha: (0.44 - i * 0.045).clamp(0.08, 0.44)),
+          ..color =
+              (ballRewardAppearance
+                      ? (i.isEven
+                            ? const Color(0xFFFFD86B)
+                            : const Color(0xFF4EE7D5))
+                      : const Color(0xFFFFFFFF))
+                  .withValues(alpha: (0.44 - i * 0.045).clamp(0.08, 0.44)),
       );
     }
     _drawCueStrike(canvas, index, position);

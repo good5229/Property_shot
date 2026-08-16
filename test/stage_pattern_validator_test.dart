@@ -306,9 +306,7 @@ void main() {
       expect(report.hasCode(ValidationIssueCode.ballSpawnInsideSolid), isTrue);
     });
 
-    test('시작 홀 포획 경계는 hole.hitboxScale과 무관하다', () {
-      final insideDistance = 30.55;
-      final outsideDistance = 30.57;
+    test('시작 홀 포획 경계는 hole.hitboxScale을 실제 판정에 반영한다', () {
       final validator = StagePatternValidator();
 
       StageDefinition stageFor(double distance, double hitboxScale) {
@@ -324,18 +322,10 @@ void main() {
         );
       }
 
-      final smallInside = validator.validateLegacyStage(
-        stageFor(insideDistance, 0.1),
-      );
-      final largeInside = validator.validateLegacyStage(
-        stageFor(insideDistance, 2.0),
-      );
-      final smallOutside = validator.validateLegacyStage(
-        stageFor(outsideDistance, 0.1),
-      );
-      final largeOutside = validator.validateLegacyStage(
-        stageFor(outsideDistance, 2.0),
-      );
+      final smallInside = validator.validateLegacyStage(stageFor(12.5, 0.1));
+      final smallOutside = validator.validateLegacyStage(stageFor(12.7, 0.1));
+      final largeInside = validator.validateLegacyStage(stageFor(50.5, 2.0));
+      final largeOutside = validator.validateLegacyStage(stageFor(50.7, 2.0));
 
       expect(
         smallInside.hasCode(ValidationIssueCode.ballSpawnOverlapsHole),

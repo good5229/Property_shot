@@ -4129,7 +4129,7 @@ class _DiscoveryAtlasSheet extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 18),
             child: Text(
-              '실제로 확인한 물리 사건만 기록됩니다. 실패한 발사에서 찾은 규칙도 남아요.',
+              '실제로 확인한 물리 사건만 기록됩니다. 스테이지를 클리어하면 이번 도전에서 찾은 규칙이 섬 복구에 반영됩니다.',
               style: TextStyle(color: Color(0xFF52706A), height: 1.35),
             ),
           ),

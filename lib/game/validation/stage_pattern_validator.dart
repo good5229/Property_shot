@@ -1961,7 +1961,8 @@ bool _isInsideActiveBallCaptureRadius(
     return false;
   }
   final captureRadius =
-      math.min(hole.size.x, hole.size.y) / 2 + _activeBallHitRadius;
+      math.min(hole.size.x, hole.size.y) / 2 * hole.hitboxScale +
+      _activeBallHitRadius;
   return ballSpawn.distanceTo(hole.position) <= captureRadius;
 }
 

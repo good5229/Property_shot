@@ -18,12 +18,12 @@
           }
         ],
         "expectedFingerprints": [
-          "1f762afa6ce7286a"
+          "056d9257cfd0e69e"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1035,
-      "expectedReplaySignature": "19267f714cc6f995",
+      "expectedReplaySignature": "97264d7def32d8c9",
       "expectedChallengeAchieved": false,
       "expectedBreakdown": {
         "totalPoints": 1035,
@@ -56,8 +56,8 @@
         "safetyEvidence": {
           "checkedStateCount": 2,
           "dynamicObjectCount": 1,
-          "checkedMovementSegmentCount": 31,
-          "tunnelingCandidateCount": 2,
+          "checkedMovementSegmentCount": 30,
+          "tunnelingCandidateCount": 1,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 0,
           "verifiedFollowUpShotCount": 0,
@@ -155,12 +155,12 @@
           }
         ],
         "expectedFingerprints": [
-          "bf4d16b764125f1b"
+          "a91bd31af2cb5721"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1035,
-      "expectedReplaySignature": "2f2d169e3f0dca9f",
+      "expectedReplaySignature": "20b6fc24a125e7f4",
       "expectedChallengeAchieved": false,
       "expectedBreakdown": {
         "totalPoints": 1035,
@@ -193,8 +193,8 @@
         "safetyEvidence": {
           "checkedStateCount": 2,
           "dynamicObjectCount": 3,
-          "checkedMovementSegmentCount": 39,
-          "tunnelingCandidateCount": 2,
+          "checkedMovementSegmentCount": 38,
+          "tunnelingCandidateCount": 1,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 0,
           "verifiedFollowUpShotCount": 0,
@@ -225,12 +225,12 @@
         ],
         "expectedFingerprints": [
           "5e37e0d02528cad9",
-          "336266658723233c"
+          "3fe0f3f1327104b7"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1689,
-      "expectedReplaySignature": "b663550a1b592145",
+      "expectedReplaySignature": "e232c7288e632de1",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1689,
@@ -263,8 +263,8 @@
         "safetyEvidence": {
           "checkedStateCount": 3,
           "dynamicObjectCount": 6,
-          "checkedMovementSegmentCount": 104,
-          "tunnelingCandidateCount": 2,
+          "checkedMovementSegmentCount": 103,
+          "tunnelingCandidateCount": 1,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 1,
           "verifiedFollowUpShotCount": 1,
@@ -293,12 +293,12 @@
           }
         ],
         "expectedFingerprints": [
-          "b11ff2ed9e1e6eee"
+          "4f9504edcbaf9608"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1035,
-      "expectedReplaySignature": "7a09a981a6844c4c",
+      "expectedReplaySignature": "172cbe705477fbe4",
       "expectedChallengeAchieved": false,
       "expectedBreakdown": {
         "totalPoints": 1035,
@@ -331,8 +331,8 @@
         "safetyEvidence": {
           "checkedStateCount": 2,
           "dynamicObjectCount": 1,
-          "checkedMovementSegmentCount": 41,
-          "tunnelingCandidateCount": 2,
+          "checkedMovementSegmentCount": 40,
+          "tunnelingCandidateCount": 1,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 0,
           "verifiedFollowUpShotCount": 0,
@@ -363,12 +363,12 @@
         ],
         "expectedFingerprints": [
           "72e35b33ac563631",
-          "11b3771cb960a6f6"
+          "8ed4fe45c4ee97dc"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 2002,
-      "expectedReplaySignature": "f1dc427d8f6d0edd",
+      "expectedReplaySignature": "f135b5bdcfc4b423",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 2002,
@@ -401,7 +401,7 @@
         "safetyEvidence": {
           "checkedStateCount": 3,
           "dynamicObjectCount": 3,
-          "checkedMovementSegmentCount": 141,
+          "checkedMovementSegmentCount": 140,
           "tunnelingCandidateCount": 3,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 1,
@@ -431,12 +431,12 @@
           }
         ],
         "expectedFingerprints": [
-          "54a72c25df54b562"
+          "ac0087cf0cff22a2"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1035,
-      "expectedReplaySignature": "d9a5839a69733171",
+      "expectedReplaySignature": "be56279d2856cc02",
       "expectedChallengeAchieved": false,
       "expectedBreakdown": {
         "totalPoints": 1035,
@@ -469,8 +469,8 @@
         "safetyEvidence": {
           "checkedStateCount": 2,
           "dynamicObjectCount": 3,
-          "checkedMovementSegmentCount": 41,
-          "tunnelingCandidateCount": 2,
+          "checkedMovementSegmentCount": 40,
+          "tunnelingCandidateCount": 1,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 0,
           "verifiedFollowUpShotCount": 0,
@@ -501,12 +501,12 @@
         ],
         "expectedFingerprints": [
           "13fd797d09c931a6",
-          "bf07d84145897f63"
+          "1a0e9aa02f1adad3"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1945,
-      "expectedReplaySignature": "5a759d8a8460e889",
+      "expectedReplaySignature": "69b56d446a7566a3",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1945,
@@ -539,7 +539,7 @@
         "safetyEvidence": {
           "checkedStateCount": 3,
           "dynamicObjectCount": 6,
-          "checkedMovementSegmentCount": 102,
+          "checkedMovementSegmentCount": 101,
           "tunnelingCandidateCount": 6,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 1,

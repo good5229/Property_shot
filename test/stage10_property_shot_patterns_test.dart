@@ -73,16 +73,16 @@ void main() {
     }
   });
 
-  test('첨부 A의 홀은 가장자리 접촉을 포획하고 시각 판정 크기를 축소하지 않는다', () {
+  test('첨부 A의 홀은 시각 크기와 분리된 정밀 포획 판정을 사용한다', () {
     final pattern = stage.patternById('stage_property_shot_a');
     final holeDefinition = pattern.objects.firstWhere(
       (object) => object.type == EntityType.hole,
     );
     final hole = holeDefinition.toEntityState();
-    expect(hole.hitboxScale, 1.06);
+    expect(hole.hitboxScale, 0.9);
 
     final ballRadius = 12 * 0.88;
-    final captureRadius = hole.radius + ballRadius;
+    final captureRadius = hole.hitRadius + ballRadius;
     final edge = const ShotResolver().resolve(
       _holeEdgeState(hole, captureRadius - 0.25, const Vec2(1, 0)),
       const ShotInput(direction: Vec2(1, 0), power: 0.12),
@@ -140,8 +140,7 @@ void main() {
         expect(
           direct.state.phase,
           isNot(GamePhase.success),
-          reason:
-              '${solution.contract}는 첫 샷의 속성 기믹으로 연결 문을 연 뒤에만 홀 경로가 열립니다.',
+          reason: '${solution.contract}는 첫 샷의 속성 기믹으로 연결 문을 연 뒤에만 홀 경로가 열립니다.',
         );
       } else {
         expect(
@@ -149,7 +148,15 @@ void main() {
           GamePhase.success,
           reason: '${solution.patternId} 직접: ${direct.events}',
         );
-        _expectDirectBypass(solution, direct);
+        if (solution.contract == 'D') {
+          expect(direct.events, contains('power_slider_activated'));
+          expect(
+            direct.impacts.map((impact) => impact.entityId),
+            contains('d_stone'),
+          );
+        } else {
+          _expectDirectBypass(solution, direct);
+        }
       }
 
       final prepared = _preparedState(pattern, solution);
@@ -186,7 +193,9 @@ void main() {
         expect(pattern.solutionFamilies, contains('opened_gate_bank'));
         expect(
           bank.impacts.map((impact) => impact.entityId).toList(),
-          isNot(equals(second.impacts.map((impact) => impact.entityId).toList())),
+          isNot(
+            equals(second.impacts.map((impact) => impact.entityId).toList()),
+          ),
           reason: '${solution.patternId} 문 개방 뒤 대체 bank가 canonical과 같은 경로입니다.',
         );
       }

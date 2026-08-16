@@ -114,7 +114,7 @@ const stageChainGatePreparedShots = <StageChainGatePreparedShot>[
     firstDegree: 0,
     firstPower: 0.12,
     secondDegree: 319,
-    secondPower: 0.56,
+    secondPower: 0.615,
   ),
   StageChainGatePreparedShot(
     patternId: 'stage_chain_gate_02',

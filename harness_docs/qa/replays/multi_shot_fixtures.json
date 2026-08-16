@@ -20,7 +20,7 @@
       ],
       "expectedFingerprints": [
         "1a0ddfdc92359fca",
-        "cd100a66f36d7a81"
+        "fcdcd9fb7b778b09"
       ],
       "expectedPhase": "success"
     },
@@ -43,7 +43,7 @@
       ],
       "expectedFingerprints": [
         "00a1d308a7e108e2",
-        "cbbe790d543ec357"
+        "dd6e22f71e72ddb1"
       ],
       "expectedPhase": "success"
     },
@@ -66,7 +66,7 @@
       ],
       "expectedFingerprints": [
         "00a1d308a7e108e2",
-        "8b8433457bb69bcb"
+        "3d54caaedc2d1831"
       ],
       "expectedPhase": "success"
     },
@@ -89,7 +89,7 @@
       ],
       "expectedFingerprints": [
         "00a1d308a7e108e2",
-        "fcdc442bd1638191"
+        "2fd82f449c9d9f41"
       ],
       "expectedPhase": "success"
     },
@@ -106,7 +106,7 @@
         }
       ],
       "expectedFingerprints": [
-        "15b0da2baeecf9b5"
+        "91c9757acbb2a9ef"
       ],
       "expectedPhase": "success"
     },
@@ -129,7 +129,7 @@
       ],
       "expectedFingerprints": [
         "367a4ee59ae1325d",
-        "54705279c2565504"
+        "763edc1fb79eb0b4"
       ],
       "expectedPhase": "success"
     },
@@ -152,7 +152,7 @@
       ],
       "expectedFingerprints": [
         "50e98a0b5ae64d4e",
-        "6f6282f808fdff7b"
+        "a89122f9ac825e03"
       ],
       "expectedPhase": "success"
     },
@@ -198,7 +198,7 @@
       ],
       "expectedFingerprints": [
         "50e98a0b5ae64d4e",
-        "96b09be3635cfaa8"
+        "0d63d84267a4925a"
       ],
       "expectedPhase": "success"
     },
@@ -215,7 +215,7 @@
         }
       ],
       "expectedFingerprints": [
-        "4b4643d8cd25ceae"
+        "07fe15289299ab66"
       ],
       "expectedPhase": "success"
     },
@@ -261,7 +261,7 @@
       ],
       "expectedFingerprints": [
         "80504a994ed5e4d7",
-        "a75d6416c97592bc"
+        "653f0a8b273767ac"
       ],
       "expectedPhase": "success"
     },
@@ -284,7 +284,7 @@
       ],
       "expectedFingerprints": [
         "80504a994ed5e4d7",
-        "3d860133d7bc4226"
+        "73bcbbc45e8f144e"
       ],
       "expectedPhase": "success"
     },
@@ -330,7 +330,7 @@
       ],
       "expectedFingerprints": [
         "8280713c181357b1",
-        "e68640d41fc46a71"
+        "af5f399b1605f7e9"
       ],
       "expectedPhase": "success"
     },
@@ -353,7 +353,7 @@
       ],
       "expectedFingerprints": [
         "97cf8cb322e78af9",
-        "5e7f39a7b6205be9"
+        "5c55e7c1482a9473"
       ],
       "expectedPhase": "success"
     },
@@ -376,7 +376,7 @@
       ],
       "expectedFingerprints": [
         "41ca4cfb686af110",
-        "264f45cb5b3ef906"
+        "85689a129e05c7d2"
       ],
       "expectedPhase": "success"
     },
@@ -393,7 +393,7 @@
         }
       ],
       "expectedFingerprints": [
-        "e5c11393dd266eeb"
+        "2ca9e80e97b1dbc7"
       ],
       "expectedPhase": "success"
     },
@@ -427,7 +427,7 @@
         }
       ],
       "expectedFingerprints": [
-        "f6032b989eb82929"
+        "985d36fa00c892c1"
       ],
       "expectedPhase": "success"
     },
@@ -450,7 +450,7 @@
       ],
       "expectedFingerprints": [
         "17e4771985df10d8",
-        "45908f3f35b50f6c"
+        "cd4ba633e8b4ae48"
       ],
       "expectedPhase": "success"
     },
@@ -467,7 +467,7 @@
         }
       ],
       "expectedFingerprints": [
-        "3dabfc9713566c95"
+        "55e3e8f5c08d6941"
       ],
       "expectedPhase": "success"
     },
@@ -518,7 +518,7 @@
         }
       ],
       "expectedFingerprints": [
-        "7d09038058edf39d"
+        "7879ab897019af31"
       ],
       "expectedPhase": "success"
     },
@@ -541,7 +541,7 @@
       ],
       "expectedFingerprints": [
         "9ae01f61d15f0e0b",
-        "2954dff22dfda1a9"
+        "a2c92504b235d283"
       ],
       "expectedPhase": "success"
     },
@@ -632,7 +632,7 @@
       ],
       "expectedFingerprints": [
         "fd5e7868600881b2",
-        "8146f33b973dae43"
+        "a23aaa821c84a601"
       ],
       "expectedPhase": "success"
     },
@@ -643,19 +643,19 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.0,
-          "power": 0.6,
+          "angleRadians": 0.3490658503988659,
+          "power": 0.2,
           "equippedTrait": null
         },
         {
-          "angleRadians": 0.3490658503988659,
-          "power": 1.0,
+          "angleRadians": 0.0,
+          "power": 0.2,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "556533fbe4e9e638",
-        "e772f289c36bf495"
+        "661bb231adc02fc9",
+        "07ec9995f9fdb9a0"
       ],
       "expectedPhase": "success"
     },
@@ -666,19 +666,19 @@
       "copyCoreCount": 0,
       "shots": [
         {
-          "angleRadians": 0.0,
-          "power": 0.8,
+          "angleRadians": 0.3490658503988659,
+          "power": 0.2,
           "equippedTrait": null
         },
         {
-          "angleRadians": 0.3490658503988659,
-          "power": 1.0,
+          "angleRadians": 0.0,
+          "power": 0.4,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "6de2d0789d2d18bf",
-        "8fe7986da8398aaa"
+        "661bb231adc02fc9",
+        "f772469736519c56"
       ],
       "expectedPhase": "success"
     },
@@ -690,12 +690,18 @@
       "shots": [
         {
           "angleRadians": 0.3490658503988659,
-          "power": 1.0,
+          "power": 0.2,
+          "equippedTrait": null
+        },
+        {
+          "angleRadians": 0.0,
+          "power": 0.6,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "a1e7254b724a8cfd"
+        "661bb231adc02fc9",
+        "ff3dd44b0640fb2c"
       ],
       "expectedPhase": "success"
     },
@@ -826,7 +832,7 @@
       ],
       "expectedFingerprints": [
         "29e3337c0152b68f",
-        "063db2e92d9edbdb"
+        "80dcce1693296707"
       ],
       "expectedPhase": "success"
     },
@@ -849,7 +855,7 @@
       ],
       "expectedFingerprints": [
         "d49eef1b3241786e",
-        "8b7863027bb158bd"
+        "c350d4727067b9a5"
       ],
       "expectedPhase": "success"
     },
@@ -872,7 +878,7 @@
       ],
       "expectedFingerprints": [
         "d6da1fc9caeb2df6",
-        "24dd7b7c13109b0f"
+        "ca53654e03ad6e17"
       ],
       "expectedPhase": "success"
     },
@@ -895,7 +901,7 @@
       ],
       "expectedFingerprints": [
         "efc89b4544d9cf97",
-        "122c5b3796430a22"
+        "807baea976169392"
       ],
       "expectedPhase": "success"
     },
@@ -934,14 +940,14 @@
           "equippedTrait": null
         },
         {
-          "angleRadians": 1.3962634015954636,
-          "power": 1.0,
+          "angleRadians": -2.094395102393196,
+          "power": 0.6,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
         "f66c2fe7d5a6b517",
-        "001195036211387a"
+        "5b2d99e635a79fba"
       ],
       "expectedPhase": "success"
     },
@@ -964,29 +970,12 @@
       ],
       "expectedFingerprints": [
         "ddf47e9a1664085e",
-        "80edfc143bb34288"
+        "5a19c7d03655e980"
       ],
       "expectedPhase": "success"
     },
     {
       "id": "stage_10_multi_3",
-      "stageIndex": 9,
-      "routeTag": "direct",
-      "copyCoreCount": 0,
-      "shots": [
-        {
-          "angleRadians": 1.3962634015954636,
-          "power": 1.0,
-          "equippedTrait": null
-        }
-      ],
-      "expectedFingerprints": [
-        "6a37db3d55fe2062"
-      ],
-      "expectedPhase": "success"
-    },
-    {
-      "id": "stage_10_multi_4",
       "stageIndex": 9,
       "routeTag": "direct",
       "copyCoreCount": 0,
@@ -998,12 +987,12 @@
         }
       ],
       "expectedFingerprints": [
-        "ff801ff2b6e33bac"
+        "6ad12d0c4248d4e0"
       ],
       "expectedPhase": "success"
     },
     {
-      "id": "stage_10_multi_5",
+      "id": "stage_10_multi_4",
       "stageIndex": 9,
       "routeTag": "direct",
       "copyCoreCount": 0,
@@ -1015,7 +1004,24 @@
         }
       ],
       "expectedFingerprints": [
-        "44c2d0bc298b38d6"
+        "bf04bb96f8d79246"
+      ],
+      "expectedPhase": "success"
+    },
+    {
+      "id": "stage_10_multi_5",
+      "stageIndex": 9,
+      "routeTag": "direct",
+      "copyCoreCount": 0,
+      "shots": [
+        {
+          "angleRadians": -2.094395102393196,
+          "power": 1.0,
+          "equippedTrait": null
+        }
+      ],
+      "expectedFingerprints": [
+        "6309cf561f4ac400"
       ],
       "expectedPhase": "success"
     }

@@ -57,6 +57,20 @@ void main() {
       expect(RunReward.fromJson(jsonDecode(encoded)).toJson(), reward.toJson());
     });
 
+    test('공 꾸미기는 시각 변화와 물리 불변을 선택 전에 명확히 알린다', () {
+      final appearance = initialRunRewards.firstWhere(
+        (reward) => reward.id == runRewardBallAppearanceId,
+      );
+
+      expect(appearance.name, contains('청록 유광'));
+      expect(appearance.description, contains('본체'));
+      expect(appearance.description, contains('테두리'));
+      expect(appearance.description, contains('파티클'));
+      expect(appearance.description, contains('물리 성능은 변하지'));
+      expect(appearance.usageHint, contains('물리 성능과 판정은 그대로'));
+      expect(appearance.stageGuide, contains('물리 판정 불변'));
+    });
+
     test('빈 ID와 중복 ID 카탈로그를 거부한다', () {
       expect(
         () => RunReward(

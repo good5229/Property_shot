@@ -5,10 +5,15 @@ import 'package:flutter/material.dart';
 import '../game/domain/trait.dart';
 
 class GameBallIconPainter extends CustomPainter {
-  const GameBallIconPainter(this.trait, {this.rewardAppearance = false});
+  const GameBallIconPainter(
+    this.trait, {
+    this.rewardAppearance = false,
+    this.reducedMotion = false,
+  });
 
   final TraitType? trait;
   final bool rewardAppearance;
+  final bool reducedMotion;
 
   static void drawBall(
     Canvas canvas, {
@@ -20,23 +25,26 @@ class GameBallIconPainter extends CustomPainter {
   }) {
     final traitColor = trait == null ? Colors.white : _traitBallColor(trait);
     final baseColor = rewardAppearance
-        ? Color.lerp(traitColor, const Color(0xFF24B8AE), 0.72)!
+        ? Color.lerp(traitColor, const Color(0xFF19BDB5), 0.82)!
         : traitColor;
     final gradient = RadialGradient(
       center: const Alignment(-0.45, -0.55),
       radius: 0.96,
       colors: [
         rewardAppearance
-            ? const Color(0xFFFFF4B8)
+            ? const Color(0xFFFFF8CC)
             : Colors.white.withValues(alpha: 0.98),
+        if (rewardAppearance) const Color(0xFF79EFE2),
         baseColor,
         Color.lerp(
           baseColor,
-          rewardAppearance ? const Color(0xFF075B58) : const Color(0xFF152018),
-          rewardAppearance ? 0.52 : 0.22,
+          rewardAppearance ? const Color(0xFF034F55) : const Color(0xFF152018),
+          rewardAppearance ? 0.62 : 0.22,
         )!,
       ],
-      stops: const [0.0, 0.58, 1.0],
+      stops: rewardAppearance
+          ? const [0.0, 0.24, 0.62, 1.0]
+          : const [0.0, 0.58, 1.0],
     );
     if (drawShadow) {
       canvas.drawOval(
@@ -68,6 +76,14 @@ class GameBallIconPainter extends CustomPainter {
     );
 
     if (rewardAppearance) {
+      canvas.drawCircle(
+        center,
+        radius * 0.88,
+        Paint()
+          ..color = const Color(0x5526E3D2)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1.2, radius * 0.055),
+      );
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius * 0.72),
         -math.pi * 0.9,
@@ -78,6 +94,14 @@ class GameBallIconPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = math.max(1.4, radius * 0.08)
           ..strokeCap = StrokeCap.round,
+      );
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: center.translate(-radius * 0.27, -radius * 0.34),
+          width: radius * 0.43,
+          height: radius * 0.2,
+        ),
+        Paint()..color = const Color(0xB8FFFFFF),
       );
     }
 
@@ -131,8 +155,10 @@ class GameBallIconPainter extends CustomPainter {
     Canvas canvas, {
     required Offset center,
     required double radius,
+    double phase = 0,
+    bool reducedMotion = false,
   }) {
-    final ringRadius = radius + 5.2;
+    final ringRadius = radius + math.max(3.6, radius * 0.25);
     canvas.drawCircle(
       center,
       ringRadius + 1.4,
@@ -192,6 +218,67 @@ class GameBallIconPainter extends CustomPainter {
       math.max(1.0, radius * 0.061),
       sparkle,
     );
+
+    // 꾸미기 파티클은 물리 엔티티와 무관한 결정론적 장식이다. 모션 감소 시
+    // 회전·맥동 없이 세 점만 남겨 외형 식별성은 보존한다.
+    final particleCount = reducedMotion ? 3 : 7;
+    final particlePhase = reducedMotion ? 0.0 : phase * 0.24;
+    for (var index = 0; index < particleCount; index++) {
+      final angle =
+          -math.pi * 0.7 + index * math.pi * 2 / particleCount + particlePhase;
+      final wave = reducedMotion ? 0.0 : math.sin(phase * 1.8 + index) * 1.4;
+      final distance = ringRadius + math.max(3.2, radius * 0.18) + wave;
+      final particleCenter =
+          center + Offset(math.cos(angle), math.sin(angle)) * distance;
+      final particleRadius = math.max(
+        1.1,
+        radius * (index.isEven ? 0.055 : 0.04),
+      );
+      canvas.drawCircle(
+        particleCenter,
+        particleRadius,
+        Paint()
+          ..color =
+              (index.isEven ? const Color(0xFFFFD86B) : const Color(0xFF83FFF0))
+                  .withValues(alpha: reducedMotion ? 0.72 : 0.86),
+      );
+    }
+  }
+
+  /// 생성 스프라이트 위에도 본체 색과 유광 재질을 적용한다.
+  /// 원의 반지름은 렌더에만 쓰이며 게임 엔티티의 크기·히트박스를 바꾸지 않는다.
+  static void drawRewardMaterialOverlay(
+    Canvas canvas, {
+    required Offset center,
+    required double radius,
+  }) {
+    final bodyRadius = radius * 0.91;
+    final bounds = Rect.fromCircle(center: center, radius: bodyRadius);
+    canvas.save();
+    canvas.clipPath(Path()..addOval(bounds));
+    canvas.drawCircle(
+      center,
+      bodyRadius,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.42, -0.52),
+          radius: 1.05,
+          colors: [Color(0x66F6FFCE), Color(0x9A24D7CA), Color(0xB8056669)],
+          stops: [0.0, 0.58, 1.0],
+        ).createShader(bounds),
+    );
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: bodyRadius * 0.7),
+      -math.pi * 0.93,
+      math.pi * 1.2,
+      false,
+      Paint()
+        ..color = const Color(0xD6E8FFFA)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.2, radius * 0.075)
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.restore();
   }
 
   @override
@@ -204,12 +291,21 @@ class GameBallIconPainter extends CustomPainter {
       drawShadow: true,
       rewardAppearance: rewardAppearance,
     );
+    if (rewardAppearance) {
+      drawRewardAppearance(
+        canvas,
+        center: Offset(size.width / 2, size.height / 2),
+        radius: size.shortestSide * 0.42,
+        reducedMotion: reducedMotion,
+      );
+    }
   }
 
   @override
   bool shouldRepaint(covariant GameBallIconPainter oldDelegate) =>
       oldDelegate.trait != trait ||
-      oldDelegate.rewardAppearance != rewardAppearance;
+      oldDelegate.rewardAppearance != rewardAppearance ||
+      oldDelegate.reducedMotion != reducedMotion;
 }
 
 Color _traitBallColor(TraitType trait) {

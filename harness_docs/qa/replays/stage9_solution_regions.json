@@ -13,19 +13,19 @@
       "patternId": "stage_rotating_reflector_01",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 20,
-        "largestConnectedRegion": 13
+        "successCount": 19,
+        "largestConnectedRegion": 12
       },
       "prepared": {
         "sampleCount": 3645,
-        "successCount": 378,
-        "largestConnectedRegion": 253,
-        "successfulFirstInputs": 21,
-        "successfulSecondInputs": 29,
-        "firstSelectableAngleBins": 4,
+        "successCount": 575,
+        "largestConnectedRegion": 575,
+        "successfulFirstInputs": 25,
+        "successfulSecondInputs": 23,
+        "firstSelectableAngleBins": 5,
         "secondSelectableAngleBins": 5,
         "firstPowerSpanPercent": 8,
-        "secondPowerSpanPercent": 16
+        "secondPowerSpanPercent": 12
       }
     },
     {
@@ -37,29 +37,29 @@
       },
       "prepared": {
         "sampleCount": 3645,
-        "successCount": 435,
-        "largestConnectedRegion": 435,
+        "successCount": 464,
+        "largestConnectedRegion": 464,
         "successfulFirstInputs": 29,
-        "successfulSecondInputs": 15,
+        "successfulSecondInputs": 16,
         "firstSelectableAngleBins": 6,
         "secondSelectableAngleBins": 3,
         "firstPowerSpanPercent": 8,
-        "secondPowerSpanPercent": 8
+        "secondPowerSpanPercent": 10
       }
     },
     {
       "patternId": "stage_rotating_reflector_03",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 63,
-        "largestConnectedRegion": 28
+        "successCount": 92,
+        "largestConnectedRegion": 56
       },
       "prepared": {
         "sampleCount": 6561,
-        "successCount": 104,
+        "successCount": 107,
         "largestConnectedRegion": 25,
         "successfulFirstInputs": 17,
-        "successfulSecondInputs": 47,
+        "successfulSecondInputs": 49,
         "firstSelectableAngleBins": 4,
         "secondSelectableAngleBins": 7,
         "firstPowerSpanPercent": 10,
@@ -70,17 +70,17 @@
       "patternId": "stage_rotating_reflector_04",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 309,
-        "largestConnectedRegion": 180
+        "successCount": 321,
+        "largestConnectedRegion": 184
       },
       "prepared": {
         "sampleCount": 3645,
-        "successCount": 201,
-        "largestConnectedRegion": 89,
-        "successfulFirstInputs": 23,
-        "successfulSecondInputs": 11,
+        "successCount": 245,
+        "largestConnectedRegion": 109,
+        "successfulFirstInputs": 24,
+        "successfulSecondInputs": 13,
         "firstSelectableAngleBins": 3,
-        "secondSelectableAngleBins": 2,
+        "secondSelectableAngleBins": 3,
         "firstPowerSpanPercent": 8,
         "secondPowerSpanPercent": 10
       }

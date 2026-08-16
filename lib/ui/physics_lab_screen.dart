@@ -17,10 +17,12 @@ class PhysicsLabScreen extends StatefulWidget {
     required this.onBack,
     this.loadGameAssets = true,
     this.showWeeklyHistory = true,
+    this.referenceDate,
   });
   final VoidCallback onBack;
   final bool loadGameAssets;
   final bool showWeeklyHistory;
+  final DateTime? referenceDate;
 
   @override
   State<PhysicsLabScreen> createState() => _PhysicsLabScreenState();
@@ -34,10 +36,10 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
   LabGoalPosition _draftGoal = LabGoalPosition.north;
   String? _creatorMessage;
   late final WeeklyLabChallenge _weekly = WeeklyLabChallenge.forDate(
-    DateTime.now(),
+    widget.referenceDate ?? DateTime.now(),
   );
   late final List<WeeklyLabChallenge> _weeklyCycle =
-      WeeklyLabChallenge.recentCycle(DateTime.now());
+      WeeklyLabChallenge.recentCycle(widget.referenceDate ?? DateTime.now());
   Set<String> _completedWeeks = const {};
 
   @override
