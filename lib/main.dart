@@ -2733,6 +2733,7 @@ class _HomeActions extends StatelessWidget {
     required VoidCallback onPressed,
     required IconData icon,
     String? imageAsset,
+    Key? imageKey,
     required String label,
     required Color foreground,
     required Color border,
@@ -2741,7 +2742,7 @@ class _HomeActions extends StatelessWidget {
     onPressed: onPressed,
     icon: imageAsset == null
         ? Icon(icon, size: 19)
-        : _MenuAssetImage(path: imageAsset, size: 38),
+        : _MenuAssetImage(key: imageKey, path: imageAsset, size: 38),
     label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     style: OutlinedButton.styleFrom(
       minimumSize: const Size.fromHeight(50),
@@ -2761,7 +2762,11 @@ class _HomeActions extends StatelessWidget {
         FilledButton.icon(
           key: const Key('start_game_button'),
           onPressed: onStart,
-          icon: const Icon(Icons.play_arrow_rounded),
+          icon: const _MenuAssetImage(
+            key: Key('start_voyage_art'),
+            path: 'assets/generated/nav-helm-v1.png',
+            size: 40,
+          ),
           label: Text(hasCompletedFirstStage ? '항해 시작·이어가기' : '첫 스테이지 시작'),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(56),
@@ -2826,6 +2831,8 @@ class _HomeActions extends StatelessWidget {
             key: const Key('stage_select_button'),
             onPressed: onStageSelect,
             icon: Icons.map_outlined,
+            imageAsset: 'assets/generated/nav-stage-map-v1.png',
+            imageKey: const Key('stage_navigation_art'),
             label: '섬 지도 둘러보기',
             foreground: const Color(0xFF245B60),
             border: const Color(0xFF3E7773),
@@ -2852,6 +2859,8 @@ class _HomeActions extends StatelessWidget {
                   key: const Key('stage_select_button'),
                   onPressed: onStageSelect,
                   icon: Icons.map_outlined,
+                  imageAsset: 'assets/generated/nav-stage-map-v1.png',
+                  imageKey: const Key('stage_navigation_art'),
                   label: '스테이지',
                   foreground: const Color(0xFF245B60),
                   border: const Color(0xFF3E7773),
@@ -2915,7 +2924,11 @@ class _HomeActions extends StatelessWidget {
               ),
               backgroundColor: const Color(0xCCF7FAF3),
               collapsedBackgroundColor: const Color(0xCCF7FAF3),
-              leading: const Icon(Icons.apps_rounded),
+              leading: const _MenuAssetImage(
+                key: Key('other_activities_art'),
+                path: 'assets/generated/nav-activities-v1.png',
+                size: 38,
+              ),
               title: const Text(
                 '다른 활동',
                 style: TextStyle(fontWeight: FontWeight.w900),
@@ -2942,6 +2955,8 @@ class _HomeActions extends StatelessWidget {
                         key: const Key('replay_library_entry_button'),
                         onPressed: onReplayLibrary,
                         icon: Icons.movie_filter_outlined,
+                        imageAsset: 'assets/generated/nav-replay-v1.png',
+                        imageKey: const Key('replay_navigation_art'),
                         label: '리플레이',
                         foreground: const Color(0xFF514B66),
                         border: const Color(0xFF70678A),
@@ -2953,6 +2968,9 @@ class _HomeActions extends StatelessWidget {
                         key: const Key('daily_challenge_entry_button'),
                         onPressed: onDailyChallenge,
                         icon: Icons.today_rounded,
+                        imageAsset:
+                            'assets/generated/nav-daily-challenge-v1.png',
+                        imageKey: const Key('daily_navigation_art'),
                         label: '오늘',
                         foreground: const Color(0xFF874D2B),
                         border: const Color(0xFFB06E45),
@@ -3899,10 +3917,11 @@ class _StageSelectScreen extends StatelessWidget {
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(
-                                          Icons.route_rounded,
-                                          size: 18,
-                                          color: Color(0xFF397372),
+                                        const _MenuAssetImage(
+                                          key: Key('first_voyage_route_art'),
+                                          path:
+                                              'assets/generated/nav-stage-map-v1.png',
+                                          size: 28,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
@@ -4260,9 +4279,9 @@ class _IslandLandmarkIllustration extends StatelessWidget {
   Widget _landmarkAsset(IslandLandmark landmark) => Image.asset(
     switch (landmark) {
       IslandLandmark.observatory =>
-        'assets/generated/island-observatory-v1.png',
-      IslandLandmark.lighthouse => 'assets/generated/island-lighthouse-v1.png',
-      IslandLandmark.bridge => 'assets/generated/island-bridge-v1.png',
+        'assets/generated/island-observatory-v2.png',
+      IslandLandmark.lighthouse => 'assets/generated/island-lighthouse-v2.png',
+      IslandLandmark.bridge => 'assets/generated/island-bridge-v2.png',
     },
     fit: BoxFit.contain,
     filterQuality: FilterQuality.medium,
@@ -4412,7 +4431,10 @@ class _IslandRestorationCelebration extends StatelessWidget {
             FilledButton.icon(
               key: const Key('island_restoration_celebration_continue'),
               onPressed: onContinue,
-              icon: const Icon(Icons.explore_rounded),
+              icon: const _MenuAssetImage(
+                path: 'assets/generated/nav-helm-v1.png',
+                size: 30,
+              ),
               label: const Text('새 지원으로 항해 계속'),
             ),
           ],
@@ -4560,7 +4582,7 @@ class _IslandRestorationCard extends StatelessWidget {
             Row(
               children: [
                 const _MenuAssetImage(
-                  path: 'assets/generated/island-observatory-v1.png',
+                  path: 'assets/generated/island-observatory-v2.png',
                   size: 34,
                 ),
                 const SizedBox(width: 8),

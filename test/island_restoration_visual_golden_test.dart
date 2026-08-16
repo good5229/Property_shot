@@ -59,9 +59,9 @@ void main() {
     );
     await tester.runAsync(() async {
       for (final asset in const [
-        'assets/generated/island-observatory-v1.png',
-        'assets/generated/island-lighthouse-v1.png',
-        'assets/generated/island-bridge-v1.png',
+        'assets/generated/island-observatory-v2.png',
+        'assets/generated/island-lighthouse-v2.png',
+        'assets/generated/island-bridge-v2.png',
       ]) {
         await precacheImage(AssetImage(asset), context);
       }

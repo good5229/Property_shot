@@ -9,8 +9,9 @@
 | `assets/generated/crate-v2.png` | 상자 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
 | `assets/generated/stone-v2.png` | 무거운 돌 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
 | `assets/generated/jelly-bumper-v1.png` | 젤리 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
-| `assets/generated/island-{observatory,lighthouse,bridge}-v1.png` | 섬 복구 현황·집중 지원·완료 연출 시설 컷아웃 | 섬 세계 배경을 참조한 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
-| `assets/generated/nav-{physics-lab,expedition,reward-satchel}-v1.png` | 실험실·관측일지/탐사·런 보상 메뉴 이미지 | 섬 세계 배경을 참조한 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/island-{observatory,lighthouse,bridge}-v2.png` | 섬 복구 현황·집중 지원·완료 연출 시설 컷아웃 | 첫 항해 삽화 스타일을 참조한 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/nav-{physics-lab,expedition,reward-satchel,helm,stage-map,replay,daily-challenge,activities}-v1.png` | 실험실·탐사·보상·항해·지도·리플레이·오늘의 도전 메뉴 이미지 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/hint-{key,lantern}-v1.png` | 팁 잠금·열람 상태 이미지 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/generated/island-restoration-world-v1.webp` | 홈·섬 지도 세계 배경 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/stages/chapter_1.json` | 1장 10단계 정의 | 프로젝트 자체 데이터 |
 | `ios/Runner/Assets.xcassets/AppIcon.appiconset/` | iOS 아이콘 파생 파일 | 원본에서 규격별 생성 |

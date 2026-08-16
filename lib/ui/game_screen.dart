@@ -5034,7 +5034,7 @@ class _HintAccessButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = available ? '💡 팁 보기' : '🔑 팁 잠김';
+    final label = available ? '팁 보기' : '팁 잠김';
     final reason = keyAvailable
         ? '열쇠를 공으로 건드리면 현재 스테이지 팁을 사용할 수 있습니다'
         : '이 스테이지의 힌트 접근권이 아직 없습니다';
@@ -5051,8 +5051,16 @@ class _HintAccessButton extends StatelessWidget {
           child: FilledButton.tonalIcon(
             key: const Key('pattern_hint_button'),
             onPressed: onPressed,
-            icon: Icon(
-              available ? Icons.lightbulb_outline : Icons.key_outlined,
+            icon: SizedBox.square(
+              dimension: 30,
+              child: Image.asset(
+                available
+                    ? 'assets/generated/hint-lantern-v1.png'
+                    : 'assets/generated/hint-key-v1.png',
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.medium,
+                excludeFromSemantics: true,
+              ),
             ),
             label: Text(label),
             style: FilledButton.styleFrom(
@@ -5143,12 +5151,29 @@ class _PatternHintSheetState extends State<_PatternHintSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  '💡 현재 스테이지 팁 · $displayLevel단계',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF403923),
-                  ),
+                Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: 36,
+                      child: Image.asset(
+                        'assets/generated/hint-lantern-v1.png',
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.medium,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '현재 스테이지 팁 · $displayLevel단계',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF403923),
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 Text(hint.text, style: Theme.of(context).textTheme.bodyLarge),
@@ -5180,7 +5205,15 @@ class _PatternHintSheetState extends State<_PatternHintSheet> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.tips_and_updates_outlined),
+                        : SizedBox.square(
+                            dimension: 26,
+                            child: Image.asset(
+                              'assets/generated/hint-lantern-v1.png',
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.medium,
+                              excludeFromSemantics: true,
+                            ),
+                          ),
                     label: const Text('더 구체적으로'),
                   ),
               ],

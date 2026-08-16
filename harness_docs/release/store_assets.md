@@ -45,11 +45,12 @@
 
 ## 섬 시설·메뉴 컷아웃
 
-- 시설 파일: `assets/generated/island-observatory-v1.png`, `assets/generated/island-lighthouse-v1.png`, `assets/generated/island-bridge-v1.png`
-- 메뉴 파일: `assets/generated/nav-physics-lab-v1.png`, `assets/generated/nav-expedition-v1.png`, `assets/generated/nav-reward-satchel-v1.png`
+- 시설 파일: `assets/generated/island-observatory-v2.png`, `assets/generated/island-lighthouse-v2.png`, `assets/generated/island-bridge-v2.png`
+- 메뉴 파일: `assets/generated/nav-physics-lab-v1.png`, `assets/generated/nav-expedition-v1.png`, `assets/generated/nav-reward-satchel-v1.png`, `assets/generated/nav-helm-v1.png`, `assets/generated/nav-stage-map-v1.png`, `assets/generated/nav-replay-v1.png`, `assets/generated/nav-daily-challenge-v1.png`, `assets/generated/nav-activities-v1.png`
+- 힌트 파일: `assets/generated/hint-key-v1.png`, `assets/generated/hint-lantern-v1.png`
 - 목적: 복구 시설과 핵심 활동을 추상 기호가 아니라 실제 세계 안의 물체로 인지하게 한다. 뒤로가기·닫기·펼치기처럼 표준 조작 기호는 Material Icons를 유지한다.
-- 생성 방식: Codex 기본 이미지 생성 도구에서 `island-restoration-world-v1.webp`를 프로젝트 내부 시각 참조로 사용해 투명 PNG를 생성했다. 등대와 보상 가방은 생성된 격자 배경을 별도 편집 단계에서 실제 알파로 제거했고, 최종 6종 모두 RGBA를 확인한 뒤 최대 640px로 축소했다.
-- 프롬프트 요약: 청록 구리·크림색 석재·꿀빛 황동·따뜻한 목재, 해돋이 림 조명, 모바일 40~128px에서도 읽히는 손으로 칠한 듯한 3/4 시점 컷아웃. 글자·UI 프레임·인물·워터마크·특정 작품 모방을 금지했다.
+- 생성 방식: 기존 3개 핵심 메뉴는 섬 세계 배경을, 이번 시설 v2·항해 메뉴·힌트는 `stage-icon-bouncy-v1.png`를 프로젝트 내부 스타일 참조로 사용해 투명 PNG를 생성했다. 모두 RGBA를 확인한 뒤 최대 640px로 축소했다.
+- 프롬프트 요약: 청록·모래·산호 팔레트, 짙은 청록 외곽선, 둥근 장난감 형태, 따뜻한 크림 하이라이트, 모바일 30~128px에서도 읽히는 하나의 중심 사물. 타륜·접힌 지도·필름 릴·해돋이 깃발·활동 카드·열쇠·랜턴과 섬 시설을 표현하고 글자·UI 프레임·인물·워터마크·특정 작품 모방을 금지했다.
 - 검토 상태: 홈 320/390/768, 섬 지도 320/390/768, 복구 3상태와 완료 연출 Golden에서 크롭·텍스트 우선순위·상태 구분을 확인한다. 실제 상업 이용 전 이미지 생성 도구의 최신 이용약관과 산출물 권리 정책을 최종 확인한다.
 
 ## 첫 항해 단계 삽화

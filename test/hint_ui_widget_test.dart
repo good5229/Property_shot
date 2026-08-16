@@ -34,7 +34,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('pattern_hint_button')), findsOneWidget);
-    expect(find.text('🔑 팁 잠김'), findsOneWidget);
+    expect(find.text('팁 잠김'), findsOneWidget);
     expect(find.bySemanticsLabel('힌트 열쇠'), findsOneWidget);
     final semantic = tester.getSemantics(
       find.byKey(const Key('pattern_hint_button')),
@@ -163,11 +163,11 @@ void main() {
         )
         .currentGame;
     expect(game.animationEndCursorForTest, greaterThan(0));
-    expect(find.text('🔑 팁 잠김'), findsOneWidget);
+    expect(find.text('팁 잠김'), findsOneWidget);
 
     stored.complete(true);
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('💡 팁 보기'), findsOneWidget);
+    expect(find.text('팁 보기'), findsOneWidget);
   });
 }
 

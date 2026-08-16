@@ -43,6 +43,8 @@ void main() {
           'assets/generated/stone-v2.png',
           'assets/generated/crate-v2.png',
           'assets/generated/stage-icon-heavy-v1.png',
+          'assets/generated/nav-helm-v1.png',
+          'assets/generated/nav-stage-map-v1.png',
         ]) {
           await precacheImage(AssetImage(asset), context);
         }
@@ -51,6 +53,14 @@ void main() {
 
       expect(find.text('속성 한방'), findsOneWidget);
       expect(find.byKey(const Key('start_game_button')), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('start_voyage_art'))),
+        const Size.square(40),
+      );
+      expect(
+        tester.getSize(find.byKey(const Key('stage_navigation_art'))),
+        const Size.square(38),
+      );
       expect(
         tester.getSize(find.byKey(const Key('first_mission_stage_art'))),
         const Size.square(74),
