@@ -248,6 +248,6 @@ dart run tool/generate_stage_catalog.dart --check --validate-runtime
 - NanumGothic: SIL Open Font License 1.1
 - Material Icons: Apache-2.0
 
-돌·젤리·상자 PNG는 AI 생성 후 투명화한 프로젝트 애셋입니다. 풍선·뾰족함·공은 외부 PNG가 아니라 Canvas 코드로 그립니다. OpenGameArt CC0 원본 3종은 레거시 증빙으로만 보관하며 현재 제품 화면에는 사용하지 않습니다.
+돌·젤리·상자와 섬 시설 3종, 실험실·탐사·보상 메뉴 이미지는 AI 생성 후 투명화한 프로젝트 애셋입니다. 섬 시설과 메뉴 이미지는 프로젝트의 섬 세계 배경을 시각 참조로 삼아 같은 청록 구리·크림 석재·황동·목재 재질로 통일했습니다. 풍선·뾰족함·공은 외부 PNG가 아니라 Canvas 코드로 그립니다. OpenGameArt CC0 원본 3종은 레거시 증빙으로만 보관하며 현재 제품 화면에는 사용하지 않습니다.
 
 자세한 출처와 사용 범위는 [에셋 권리대장](harness_docs/release/asset_rights_ledger.md)을 따릅니다.

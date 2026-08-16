@@ -26,31 +26,47 @@ void main() {
           backgroundColor: const Color(0xFFFFF9E8),
           body: RepaintBoundary(
             key: const Key('landmark_visual_states'),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                for (final progress in const [0.0, 0.5, 1.0])
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (final landmark in IslandLandmark.values)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: buildIslandLandmarkIllustrationForTesting(
-                            landmark: landmark,
-                            progress: progress,
-                            size: 38,
+            child: ColoredBox(
+              color: const Color(0xFFFFF9E8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (final progress in const [0.0, 0.5, 1.0])
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (final landmark in IslandLandmark.values)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: buildIslandLandmarkIllustrationForTesting(
+                              landmark: landmark,
+                              progress: progress,
+                              size: 38,
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-              ],
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
+    final context = tester.element(
+      find.byKey(const Key('landmark_visual_states')),
+    );
+    await tester.runAsync(() async {
+      for (final asset in const [
+        'assets/generated/island-observatory-v1.png',
+        'assets/generated/island-lighthouse-v1.png',
+        'assets/generated/island-bridge-v1.png',
+      ]) {
+        await precacheImage(AssetImage(asset), context);
+      }
+    });
+    await tester.pump();
 
     expect(find.bySemanticsLabel('관측소 폐허'), findsOneWidget);
     expect(find.bySemanticsLabel('등대 수리 중'), findsOneWidget);

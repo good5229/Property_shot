@@ -2732,13 +2732,16 @@ class _HomeActions extends StatelessWidget {
     required Key key,
     required VoidCallback onPressed,
     required IconData icon,
+    String? imageAsset,
     required String label,
     required Color foreground,
     required Color border,
   }) => OutlinedButton.icon(
     key: key,
     onPressed: onPressed,
-    icon: Icon(icon, size: 19),
+    icon: imageAsset == null
+        ? Icon(icon, size: 19)
+        : _MenuAssetImage(path: imageAsset, size: 30),
     label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     style: OutlinedButton.styleFrom(
       minimumSize: const Size.fromHeight(50),
@@ -2783,11 +2786,14 @@ class _HomeActions extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFC78B45)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.science_outlined, color: Color(0xFF7A481A)),
-                  SizedBox(width: 10),
-                  Expanded(
+                  const _MenuAssetImage(
+                    path: 'assets/generated/island-observatory-v1.png',
+                    size: 38,
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2833,6 +2839,7 @@ class _HomeActions extends StatelessWidget {
                   key: const Key('expedition_entry_button'),
                   onPressed: onExpedition,
                   icon: Icons.explore_outlined,
+                  imageAsset: 'assets/generated/nav-expedition-v1.png',
                   label: '3단계 탐사',
                   foreground: const Color(0xFF704315),
                   border: const Color(0xFF9F6529),
@@ -2860,6 +2867,7 @@ class _HomeActions extends StatelessWidget {
                   key: const Key('reward_inventory_entry_button'),
                   onPressed: onRewardInventory,
                   icon: Icons.backpack_outlined,
+                  imageAsset: 'assets/generated/nav-reward-satchel-v1.png',
                   label: '내 런 보상',
                   foreground: const Color(0xFF6B4B20),
                   border: const Color(0xFF946B35),
@@ -2920,6 +2928,8 @@ class _HomeActions extends StatelessWidget {
                         key: const Key('reward_inventory_entry_button'),
                         onPressed: onRewardInventory,
                         icon: Icons.backpack_outlined,
+                        imageAsset:
+                            'assets/generated/nav-reward-satchel-v1.png',
                         label: '보상',
                         foreground: const Color(0xFF6B4B20),
                         border: const Color(0xFF946B35),
@@ -2955,6 +2965,24 @@ class _HomeActions extends StatelessWidget {
       ],
     );
   }
+}
+
+class _MenuAssetImage extends StatelessWidget {
+  const _MenuAssetImage({required this.path, required this.size});
+
+  final String path;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: size,
+    child: Image.asset(
+      path,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      excludeFromSemantics: true,
+    ),
+  );
 }
 
 class _HomePlayPreview extends StatelessWidget {
@@ -3714,10 +3742,9 @@ class _StageSelectScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(14),
                           child: Row(
                             children: [
-                              const Icon(
-                                Icons.explore_rounded,
+                              const _MenuAssetImage(
+                                path: 'assets/generated/nav-expedition-v1.png',
                                 size: 28,
-                                color: Color(0xFF4F8460),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -3764,17 +3791,16 @@ class _StageSelectScreen extends StatelessWidget {
                         key: const Key('physics_lab_button'),
                         onTap: onPhysicsLab,
                         borderRadius: BorderRadius.circular(16),
-                        child: const Padding(
+                        child: Padding(
                           padding: EdgeInsets.all(14),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.science_outlined,
+                              const _MenuAssetImage(
+                                path: 'assets/generated/nav-physics-lab-v1.png',
                                 size: 28,
-                                color: Color(0xFF6D5720),
                               ),
-                              SizedBox(width: 10),
-                              Expanded(
+                              const SizedBox(width: 10),
+                              const Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -3797,7 +3823,7 @@ class _StageSelectScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              Icon(
+                              const Icon(
                                 Icons.chevron_right_rounded,
                                 color: Color(0xFF6D5720),
                               ),
@@ -4157,15 +4183,77 @@ class _IslandLandmarkIllustration extends StatelessWidget {
       label: '${landmark.label} $stateLabel',
       child: SizedBox.square(
         dimension: size,
-        child: CustomPaint(
-          painter: _IslandLandmarkPainter(
-            landmark: landmark,
-            progress: normalized,
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Opacity(
+              opacity: 0.5,
+              child: ColorFiltered(
+                colorFilter: const ColorFilter.matrix(<double>[
+                  .2126,
+                  .7152,
+                  .0722,
+                  0,
+                  0,
+                  .2126,
+                  .7152,
+                  .0722,
+                  0,
+                  0,
+                  .2126,
+                  .7152,
+                  .0722,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ]),
+                child: _landmarkAsset(landmark),
+              ),
+            ),
+            if (normalized > 0)
+              ClipRect(
+                clipper: _RestorationRevealClipper(normalized),
+                child: _landmarkAsset(landmark),
+              ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _landmarkAsset(IslandLandmark landmark) => Image.asset(
+    switch (landmark) {
+      IslandLandmark.observatory =>
+        'assets/generated/island-observatory-v1.png',
+      IslandLandmark.lighthouse => 'assets/generated/island-lighthouse-v1.png',
+      IslandLandmark.bridge => 'assets/generated/island-bridge-v1.png',
+    },
+    fit: BoxFit.contain,
+    filterQuality: FilterQuality.medium,
+    excludeFromSemantics: true,
+  );
+}
+
+class _RestorationRevealClipper extends CustomClipper<Rect> {
+  const _RestorationRevealClipper(this.progress);
+
+  final double progress;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(
+    0,
+    size.height * (1 - progress.clamp(0.0, 1.0)),
+    size.width,
+    size.height,
+  );
+
+  @override
+  bool shouldReclip(covariant _RestorationRevealClipper oldClipper) =>
+      oldClipper.progress != progress;
 }
 
 @visibleForTesting
@@ -4302,135 +4390,6 @@ class _IslandRestorationCelebration extends StatelessWidget {
   }
 }
 
-class _IslandLandmarkPainter extends CustomPainter {
-  const _IslandLandmarkPainter({
-    required this.landmark,
-    required this.progress,
-  });
-
-  final IslandLandmark landmark;
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final active = progress >= 1;
-    final building = progress > 0 && !active;
-    final line = Paint()
-      ..color = active ? const Color(0xFF236B4A) : const Color(0xFF746F62)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(1.4, size.width * 0.07)
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final fill = Paint()
-      ..color = active
-          ? const Color(0xFFBCE5B8)
-          : building
-          ? const Color(0xFFE8D7A7)
-          : const Color(0xFFD2CEC0);
-    final accent = Paint()
-      ..color = active ? const Color(0xFFF5BE45) : const Color(0xFF9B9075)
-      ..style = PaintingStyle.fill;
-    final w = size.width;
-    final h = size.height;
-    switch (landmark) {
-      case IslandLandmark.observatory:
-        canvas.drawPath(
-          Path()
-            ..moveTo(w * .18, h * .78)
-            ..lineTo(w * .28, h * .46)
-            ..quadraticBezierTo(w * .5, h * .25, w * .72, h * .46)
-            ..lineTo(w * .82, h * .78)
-            ..close(),
-          fill,
-        );
-        canvas.drawPath(
-          Path()
-            ..moveTo(w * .18, h * .78)
-            ..lineTo(w * .28, h * .46)
-            ..quadraticBezierTo(w * .5, h * .25, w * .72, h * .46)
-            ..lineTo(w * .82, h * .78),
-          line,
-        );
-        canvas.drawLine(Offset(w * .5, h * .3), Offset(w * .72, h * .13), line);
-        canvas.drawCircle(Offset(w * .74, h * .12), w * .08, accent);
-      case IslandLandmark.lighthouse:
-        final tower = Path()
-          ..moveTo(w * .3, h * .82)
-          ..lineTo(w * .38, h * .28)
-          ..lineTo(w * .62, h * .28)
-          ..lineTo(w * .7, h * .82)
-          ..close();
-        canvas.drawPath(tower, fill);
-        canvas.drawPath(tower, line);
-        canvas.drawRect(
-          Rect.fromLTWH(w * .34, h * .16, w * .32, h * .14),
-          accent,
-        );
-        canvas.drawLine(
-          Offset(w * .27, h * .82),
-          Offset(w * .73, h * .82),
-          line,
-        );
-        if (active) {
-          final beam = Paint()
-            ..color = const Color(0x66FFD45A)
-            ..style = PaintingStyle.fill;
-          canvas.drawPath(
-            Path()
-              ..moveTo(w * .66, h * .2)
-              ..lineTo(w, h * .04)
-              ..lineTo(w, h * .36)
-              ..close(),
-            beam,
-          );
-        }
-      case IslandLandmark.bridge:
-        canvas.drawRect(
-          Rect.fromLTWH(w * .12, h * .35, w * .16, h * .48),
-          fill,
-        );
-        canvas.drawRect(
-          Rect.fromLTWH(w * .72, h * .35, w * .16, h * .48),
-          fill,
-        );
-        canvas.drawLine(Offset(w * .1, h * .42), Offset(w * .9, h * .42), line);
-        canvas.drawPath(
-          Path()
-            ..moveTo(w * .18, h * .38)
-            ..quadraticBezierTo(w * .5, h * .82, w * .82, h * .38),
-          line,
-        );
-        if (active) {
-          canvas.drawLine(
-            Offset(w * .22, h * .58),
-            Offset(w * .78, h * .58),
-            line,
-          );
-        }
-    }
-    if (building) {
-      final scaffold = Paint()
-        ..color = const Color(0xFFB36B35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(1, w * .045);
-      canvas.drawLine(
-        Offset(w * .08, h * .9),
-        Offset(w * .9, h * .12),
-        scaffold,
-      );
-      canvas.drawLine(
-        Offset(w * .2, h * .94),
-        Offset(w * .98, h * .25),
-        scaffold,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _IslandLandmarkPainter oldDelegate) =>
-      oldDelegate.landmark != landmark || oldDelegate.progress != progress;
-}
-
 class _IslandRestorationCard extends StatelessWidget {
   const _IslandRestorationCard({
     required this.progress,
@@ -4443,12 +4402,6 @@ class _IslandRestorationCard extends StatelessWidget {
   final IslandLandmark? selectedFocus;
   final ValueChanged<IslandLandmark> onFocusSelected;
   final bool compact;
-
-  IconData _icon(IslandLandmark landmark) => switch (landmark) {
-    IslandLandmark.observatory => Icons.science_rounded,
-    IslandLandmark.lighthouse => Icons.light_rounded,
-    IslandLandmark.bridge => Icons.alt_route_rounded,
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -4552,7 +4505,10 @@ class _IslandRestorationCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.home_work_rounded, color: Color(0xFF396A50)),
+                const _MenuAssetImage(
+                  path: 'assets/generated/island-observatory-v1.png',
+                  size: 24,
+                ),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -4707,7 +4663,11 @@ class _IslandRestorationCard extends StatelessWidget {
                       key: Key('island_focus_${landmark.name}'),
                       selected: selectedFocus == landmark,
                       onSelected: (_) => onFocusSelected(landmark),
-                      avatar: Icon(_icon(landmark), size: 16),
+                      avatar: _IslandLandmarkIllustration(
+                        landmark: landmark,
+                        progress: 1,
+                        size: 22,
+                      ),
                       label: Text(switch (landmark) {
                         IslandLandmark.observatory => '정밀 충전',
                         IslandLandmark.lighthouse => 'L2까지',
@@ -5221,11 +5181,7 @@ class _IslandBackdrop extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0x24E8FBF7),
-                Color(0x52BFE8E3),
-                Color(0xA6F6D995),
-              ],
+              colors: [Color(0x24E8FBF7), Color(0x52BFE8E3), Color(0xA6F6D995)],
               stops: [0, 0.58, 1],
             ),
           ),

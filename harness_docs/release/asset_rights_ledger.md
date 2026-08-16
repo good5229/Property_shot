@@ -41,6 +41,8 @@
 - `assets/generated/stone-v2.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 무거운 돌 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
 - `assets/generated/jelly-bumper-v1.png`: Codex 기본 이미지 생성 도구로 만든 고해상도 젤리 범퍼 스프라이트. 외부 원본을 입력하지 않았고 초록색 키 배경을 알파로 제거해 게임 화면과 팝업에 사용한다. 원본과 변환 이력, 생성 프롬프트 요약과 상업 이용 전 최종 권리 검토 항목은 `harness_docs/release/store_assets.md`에 기록한다.
 - `assets/generated/island-restoration-world-v1.webp`: Codex 기본 이미지 생성 도구로 만든 프로젝트 전용 섬 세계 배경을 WebP로 최적화한 번들 자산. 외부 이미지를 입력하거나 특정 작품의 화풍을 요구하지 않았으며, 관측소·등대·다리의 복구 목표를 홈과 섬 지도에서 한 장면으로 연결한다. 생성 프롬프트와 사용 목적은 `harness_docs/release/store_assets.md`에 기록한다.
+- `assets/generated/island-observatory-v1.png`, `island-lighthouse-v1.png`, `island-bridge-v1.png`: 위 프로젝트 전용 섬 세계 배경만을 시각 참조로 사용해 같은 팔레트·재질·시점으로 생성한 RGBA 시설 컷아웃이다. 복구 상태는 UI에서 동일 이미지의 회색 바탕을 컬러로 채워 표현하며, 제3자 이미지나 특정 작품명은 입력하지 않았다.
+- `assets/generated/nav-physics-lab-v1.png`, `nav-expedition-v1.png`, `nav-reward-satchel-v1.png`: Material 기호만으로 구분하기 어려운 핵심 메뉴를 위해 섬 세계 배경의 팔레트·재질만 참조해 생성한 RGBA 메뉴 컷아웃이다. 실험 장치·나침반/관측일지·보상 가방을 각각 나타내며 글자·로고·워터마크를 포함하지 않는다.
 - 생성 자산과 NanumGothic 글꼴의 현재 SHA-256은 `assets/licenses/asset_hashes.txt`에 함께 고정한다. 자산 교체 시 생성 원본·변환 이력·최종 번들 목록과 해시를 같은 작업에서 갱신한다.
 - 공 얼굴·광택·속성 색상은 `lib/ui/game_ball_painter.dart`의 `GameBallIconPainter`로 그리며, 홈·게임·섬 지도·팝업·Golden에서 동일한 표현을 공유한다. `assets/icons/ball.png`는 저장소에 권리 증거로 남지만 `pubspec.yaml`과 제품 번들에서는 제외한다.
 - `power-slider-canvas`: `lib/game/property_shot_game.dart`에서 직접 그린 독자적인 Canvas 발판·화살표·작동 링이다. 외부 이미지·폰트·패키지 에셋을 사용하지 않으므로 외부 라이선스가 없고, 기존 퍼즐 게임의 영역 발동 기능은 기능 참고만 했다. 생성 프롬프트나 제3자 원본은 없다. `test/goldens/power_slider_*.png`에서 390x844·768x1024의 기본·작동·팝업·저모션 결과를 기록한다.
@@ -50,7 +52,7 @@
 ## 제품 번들 경계
 
 - Flutter 자산 선언은 디렉터리 단위가 아니라 최종 실행 파일 단위로 고정한다.
-- 제품 번들에는 최종 스프라이트 3개, 자체 음악 1개, 단계 정의 1개와 선언된 글꼴만 포함한다.
+- 제품 번들에는 플레이 스프라이트 3개, 섬 세계 배경 1개, 시설·메뉴 컷아웃 6개, 자체 음악 1개, 단계 정의 1개와 선언된 글꼴만 포함한다.
 - 생성 원본, 앱 아이콘 작업 원본, CC0 레거시 이미지, 라이선스 증거와 README는 저장소에는 보존하되 Flutter 자산 번들에서 제외한다.
 - `test/bundle_asset_contract_test.dart`가 실행 파일의 포함과 보관 파일의 제외를 회귀 검사한다.
 

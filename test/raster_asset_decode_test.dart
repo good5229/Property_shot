@@ -11,6 +11,12 @@ void main() {
       'assets/generated/stone-v2.png',
       'assets/generated/crate-v2.png',
       'assets/generated/jelly-bumper-v1.png',
+      'assets/generated/island-observatory-v1.png',
+      'assets/generated/island-lighthouse-v1.png',
+      'assets/generated/island-bridge-v1.png',
+      'assets/generated/nav-physics-lab-v1.png',
+      'assets/generated/nav-expedition-v1.png',
+      'assets/generated/nav-reward-satchel-v1.png',
     ]) {
       final bytes = await rootBundle.load(asset);
       final codec = await ui
