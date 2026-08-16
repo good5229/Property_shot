@@ -33,9 +33,10 @@ const CONFIGS = [
   {
     source: path.join(ROOT, "report/game_introduction.md"),
     output: path.join(ROOT, "report/dist/property_shot_game_guide.pptx"),
-    kicker: "GAME GUIDE",
+    kicker: "GAME INTRODUCTION",
     title: "속성 한방(Property Shot)",
-    running: "Property Shot · Game Guide",
+    running: "Property Shot · Game Introduction",
+    coverMeta: "제21회 경기게임오디션 일반부문\n2026-08-16",
     tagline: "",
     coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/390x844-current-play-audit.png"),
   },
@@ -47,6 +48,7 @@ const CONFIGS = [
     running: "Property Shot · AI Technical Report",
     tagline: "",
     coverImage: path.join(ROOT, "test/goldens/difficulty_easy_first_arrival_390x844.png"),
+    coverMeta: "NAN 2026 Game × AI 해커톤 사전 과제\n2026-08-10",
   },
   {
     source: path.join(ROOT, "report/portfolio.md"),
@@ -56,6 +58,7 @@ const CONFIGS = [
     running: "Property Shot · Portfolio",
     tagline: "",
     coverImage: path.join(ROOT, "screenshots/commercial-vertical-slice/stage4-property-ready.png"),
+    coverMeta: "NAN 2026 Game × AI 해커톤 포트폴리오\n2026-08-10",
   },
 ];
 
@@ -246,6 +249,9 @@ function addTextBox(slide, name, text, frame, style = {}) {
 }
 
 function addChrome(slide, config, title, pageNumber, continued = false) {
+  const displayTitle = continued ? `${title} · 계속` : title;
+  const titleLines = displayTitle.length > 23 ? 2 : 1;
+  const titleHeight = titleLines === 2 ? 88 : 48;
   slide.background.fill = COLORS.white;
   addTextBox(slide, "running-label", config.running, { left: MARGIN, top: 32, width: 430, height: 22 }, {
     fontSize: 12,
@@ -264,11 +270,12 @@ function addChrome(slide, config, title, pageNumber, continued = false) {
     fill: COLORS.gold,
     line: { style: "solid", fill: "none", width: 0 },
   });
-  addTextBox(slide, "slide-title", continued ? `${title} · 계속` : title, { left: MARGIN, top: 84, width: CONTENT_WIDTH, height: 48 }, {
+  addTextBox(slide, "slide-title", displayTitle, { left: MARGIN, top: 84, width: CONTENT_WIDTH, height: titleHeight }, {
     fontSize: 35,
     bold: true,
     color: COLORS.ink,
   });
+  return titleLines === 2 ? 188 : CONTENT_TOP;
 }
 
 async function addCover(presentation, config, pageNumber) {
@@ -309,7 +316,7 @@ async function addCover(presentation, config, pageNumber) {
     borderRadius: "rounded-xl",
     position: { left: 282, top: 468, width: 230, height: 330 },
   });
-  addTextBox(slide, "cover-meta", "NAN 2026 Game × AI 해커톤 사전 과제\n2026-08-10", { left: 78, top: 900, width: 610, height: 76 }, {
+  addTextBox(slide, "cover-meta", config.coverMeta, { left: 78, top: 900, width: 610, height: 76 }, {
     fontSize: 17,
     color: COLORS.ink,
     lineSpacing: 1.3,
@@ -667,16 +674,18 @@ async function buildDeck(config) {
 
     function startSlide() {
       slide = presentation.slides.add();
-      addChrome(slide, config, currentSection, pageNumber, continued);
+      y = addChrome(slide, config, currentSection, pageNumber, continued);
       pageNumber += 1;
-      y = CONTENT_TOP;
       slideSources = new Set([path.relative(ROOT, config.source)]);
       continued = true;
     }
 
     function finishSlide() {
       if (!slide) return;
-      slide.speakerNotes.textFrame.setText(`[Sources]\n${[...slideSources].map((source) => `- ${source}`).join("\n")}`);
+      const sources = path.basename(config.source) === "portfolio.md"
+        ? ["Project-owned gameplay captures and design evidence embedded in this deck"]
+        : [...slideSources];
+      slide.speakerNotes.textFrame.setText(`[Sources]\n${sources.map((source) => `- ${source}`).join("\n")}`);
     }
 
     startSlide();

@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "title": "Property Shot — bouncy_01 guided gameplay demo",
+  "title": "Property Shot — 경기게임오디션 60초 게임플레이",
   "contract": {
     "demoPlanId": "demo_bouncy_01_v1",
     "stageId": "stage_bouncy",
@@ -24,37 +24,53 @@
     "orientation": "identity"
   },
   "browserCapture": {
-    "durationSeconds": 22,
+    "durationSeconds": 8,
+    "insertAfterFeatureSceneCount": 4,
     "requiredPlanId": "demo_bouncy_01_v1",
-    "notes": "The active 22-second take shows key collection, L1/L2, jelly transfer, visual aiming, then the exact 48°/0.90 demo control and its non-direct three-wall success. The action sequence must end with 1.5–2.0 seconds of capture slack, so no long clear-popup still is recorded."
+    "notes": "The active 8-second take focuses on jelly transfer and the exact 48°/0.90 non-direct three-wall success. Key collection and L1/L2 are shown as separate fresh verified scenes, keeping the live take concise and readable. The action sequence must end with 1.5–2.0 seconds of capture slack, so no long clear-popup still is recorded."
   },
   "sourceVerification": {
     "requiredSuites": [
+      "test/game_screen_golden_test.dart",
+      "test/stage4_causality_golden_test.dart",
+      "test/stage7_persistent_golden_test.dart",
+      "test/rotating_reflector_golden_test.dart",
+      "test/island_restoration_visual_golden_test.dart",
       "test/hint_key_ui_golden_test.dart",
       "test/hint_ui_widget_test.dart",
       "test/run_reward_selection_widget_test.dart",
-      "test/charge_gauge_golden_test.dart"
+      "test/charge_gauge_golden_test.dart",
+      "test/difficulty_mode_golden_test.dart",
+      "test/ball_reward_appearance_golden_test.dart"
+      ,"test/settings_golden_test.dart"
     ]
   },
   "featureScenes": [
-    {"id":"key-locked-compact","seconds":2,"source":"test/goldens/hint_key_locked_320x568.png","purpose":"Compact locked key state"},
-    {"id":"key-locked","seconds":2,"source":"test/goldens/hint_key_locked_390x844.png","purpose":"Collectible key and locked hint state"},
-    {"id":"key-locked-reduced-motion","seconds":2,"source":"test/goldens/hint_key_locked_reduced_motion_390x844.png","purpose":"Static reduced-motion key"},
-    {"id":"key-collected","seconds":2,"source":"test/goldens/hint_key_collected_vfx_390x844.png","purpose":"Key collection acknowledgement"},
-    {"id":"key-collected-hidden","seconds":2,"source":"test/goldens/hint_key_collected_hidden_390x844.png","purpose":"Key removed after collection"},
-    {"id":"hint-available","seconds":2,"source":"test/goldens/hint_key_available_390x844.png","purpose":"Unlocked hint control"},
-    {"id":"hint-level-1","seconds":2,"source":"test/goldens/hint_key_sheet_l1_390x844.png","purpose":"Concrete L1 route hint"},
-    {"id":"hint-level-2","seconds":2,"source":"test/goldens/hint_key_sheet_l2_390x844.png","purpose":"Concrete L2 route hint"},
-    {"id":"compact-next-hint-reward","seconds":2,"source":"test/goldens/run_reward_320x568_hint_first.png","purpose":"Compact clear reward, including the next-stage hint option"},
-    {"id":"reward-icon-set","seconds":2,"source":"test/goldens/run_reward_390x844.png","purpose":"Run reward icon set"},
-    {"id":"reward-compact-layout","seconds":2,"source":"test/goldens/run_reward_320x700.png","purpose":"Compact reward layout"},
-    {"id":"reward-options-4-6","seconds":2,"source":"test/goldens/run_reward_390x844_rewards_4_6.png","purpose":"Distinct reward options 4–6"},
-    {"id":"reward-options-6-8","seconds":2,"source":"test/goldens/run_reward_390x844_rewards_6_8.png","purpose":"Distinct reward options 6–8"},
-    {"id":"charge-green","seconds":2,"source":"test/goldens/charge_gauge_green_right_390x844.png","purpose":"Visible green power gauge"},
-    {"id":"charge-yellow","seconds":2,"source":"test/goldens/charge_gauge_yellow_right_390x844.png","purpose":"Visible yellow power gauge"},
-    {"id":"charge-red","seconds":2,"source":"test/goldens/charge_gauge_red_right_390x844.png","purpose":"Visible red power gauge"},
-    {"id":"charge-warning","seconds":2,"source":"test/goldens/charge_gauge_warningRed_right_390x844.png","purpose":"Warning-red power gauge"},
-    {"id":"charge-cancelled","seconds":2,"source":"test/goldens/charge_gauge_cancelledGray_right_390x844.png","purpose":"Cancelled-gray power gauge"},
-    {"id":"gauge-avoids-key","seconds":2,"source":"test/goldens/charge_gauge_hint_key_390x844.png","purpose":"Power gauge avoids the key"}
+    {"id":"core-loop-stage-1","seconds":2,"source":"test/goldens/game_screen_stage1_390x844.png","purpose":"속성을 고르고 길을 만드는 핵심 플레이"},
+    {"id":"sharp-balloon-start","seconds":2,"source":"test/goldens/stage4_start_390x844.png","purpose":"뾰족함과 풍선 기믹의 시작"},
+    {"id":"sharp-balloon-chain","seconds":2,"source":"test/goldens/stage4_switch_opening_390x844.png","purpose":"풍선 뒤 스위치와 문이 이어지는 인과"},
+    {"id":"sharp-balloon-result","seconds":2,"source":"test/goldens/stage4_popped_390x844.png","purpose":"속성 사용으로 장면이 바뀐 결과"},
+    {"id":"bouncy-stage","seconds":2,"source":"test/goldens/game_screen_stage2_390x844.png","purpose":"탄성을 옮겨 여러 번 반사시키는 퍼즐"},
+    {"id":"switch-gate-stage","seconds":2,"source":"test/goldens/game_screen_stage3_390x844.png","purpose":"스위치와 문을 순서대로 여는 퍼즐"},
+    {"id":"drained-stage","seconds":2,"source":"test/goldens/game_screen_stage5_390x844.png","purpose":"힘을 잃은 공을 다시 활용하는 퍼즐"},
+    {"id":"speed-stage","seconds":2,"source":"test/goldens/game_screen_stage6_390x844.png","purpose":"파워 슬라이더로 속도를 바꾸는 퍼즐"},
+    {"id":"chain-score-stage","seconds":2,"source":"test/goldens/game_screen_stage8_390x844.png","purpose":"여러 기믹을 이어 높은 점수를 만드는 퍼즐"},
+    {"id":"reflector-stage","seconds":2,"source":"test/goldens/game_screen_stage9_390x844.png","purpose":"회전 반사판의 방향을 읽는 퍼즐"},
+    {"id":"accessibility-settings","seconds":2,"source":"test/goldens/settings_top_390x844.png","purpose":"플레이어가 직접 고르는 접근성·도움 설정"},
+    {"id":"observatory-restored","seconds":2,"source":"test/goldens/island_restoration_celebration_observatory_390x844.png","purpose":"발견 누적으로 관측소와 분석 지원 해금"},
+    {"id":"lighthouse-restored","seconds":2,"source":"test/goldens/island_restoration_celebration_lighthouse_390x844.png","purpose":"발견 누적으로 등대와 즉시 힌트 해금"},
+    {"id":"bridge-restored","seconds":2,"source":"test/goldens/island_restoration_celebration_bridge_390x844.png","purpose":"발견 누적으로 다리와 복제 코어 해금"},
+    {"id":"persistent-ball-chain","seconds":2,"source":"test/goldens/stage7_persistent_390x844.png","purpose":"이전 샷의 공을 다음 해법에 쓰는 후반 기믹"},
+    {"id":"rotating-reflector","seconds":2,"source":"test/goldens/rotating_reflector_impact_390x844.png","purpose":"회전 반사판의 상태 변화"},
+    {"id":"property-integration","seconds":2,"source":"test/goldens/game_screen_stage10_390x844.png","purpose":"누적 속성을 통합하는 최종 퍼즐"},
+    {"id":"compact-next-hint-reward","seconds":2,"source":"test/goldens/run_reward_320x568_hint_first.png","purpose":"다음 플레이에 보탬이 되는 보상 선택"},
+    {"id":"reward-icon-set","seconds":2,"source":"test/goldens/run_reward_390x844.png","purpose":"역할이 구분되는 런 보상"},
+    {"id":"hint-level-1","seconds":2,"source":"test/goldens/hint_key_sheet_l1_390x844.png","purpose":"구체 행동을 제시하는 1단계 힌트"},
+    {"id":"hint-level-2","seconds":2,"source":"test/goldens/hint_key_sheet_l2_390x844.png","purpose":"막혔을 때 한 단계 더 구체적인 힌트"},
+    {"id":"key-collected","seconds":2,"source":"test/goldens/hint_key_collected_vfx_390x844.png","purpose":"플레이 중 획득하는 힌트 열쇠"},
+    {"id":"charge-green","seconds":2,"source":"test/goldens/charge_gauge_green_right_390x844.png","purpose":"중앙 가까이에서 읽히는 파워 게이지"},
+    {"id":"charge-warning","seconds":2,"source":"test/goldens/charge_gauge_warningRed_right_390x844.png","purpose":"힘 구간을 색과 문구로 구분"},
+    {"id":"easy-first-arrival","seconds":2,"source":"test/goldens/difficulty_easy_first_arrival_390x844.png","purpose":"선택형 예상 첫 도착 지원"},
+    {"id":"ball-appearance","seconds":2,"source":"test/goldens/ball_reward_appearance_comparison.png","purpose":"본체까지 달라지는 공 꾸미기"}
   ]
 }

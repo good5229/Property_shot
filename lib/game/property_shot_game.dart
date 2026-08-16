@@ -365,6 +365,7 @@ class PropertyShotGame extends FlameGame {
     );
     canvas.scale(scale);
     if (_animationPath.isNotEmpty) {
+      _applyCinematicCamera(canvas);
       _drawScreenShake(canvas);
     }
     _drawBoard(canvas);
@@ -604,6 +605,39 @@ class PropertyShotGame extends FlameGame {
     );
   }
 
+  /// Adds a brief, deterministic camera punch around meaningful impacts.
+  ///
+  /// This transform is visual only: the resolver, hitboxes and replay input stay
+  /// in logical board coordinates. Reduced-motion users keep a stable camera.
+  void _applyCinematicCamera(Canvas canvas) {
+    if (reducedMotion || _animationImpacts.isEmpty) {
+      return;
+    }
+    ShotImpact? latest;
+    for (final impact in _animationImpacts) {
+      if (impact.pathIndex > _animationCursor) continue;
+      if (latest == null || impact.pathIndex > latest.pathIndex) {
+        latest = impact;
+      }
+    }
+    if (latest == null) return;
+    final elapsed = _animationCursor - latest.pathIndex;
+    if (elapsed < 0 || elapsed > 8) return;
+
+    final importance = switch (latest.entityType) {
+      EntityType.hole => 1.0,
+      EntityType.balloon || EntityType.switchPad => 0.78,
+      EntityType.powerSlider || EntityType.rotatingReflector => 0.68,
+      _ => (0.38 + latest.strength * 0.34).clamp(0.38, 0.72),
+    };
+    final envelope = math.sin((elapsed / 8) * math.pi).clamp(0.0, 1.0);
+    final zoom = 1 + 0.018 * importance * envelope;
+    final focus = _project(latest.position);
+    canvas.translate(focus.dx, focus.dy);
+    canvas.scale(zoom);
+    canvas.translate(-focus.dx, -focus.dy);
+  }
+
   void _drawStage4Relations(Canvas canvas, List<EntityState> entities) {
     if (state.levelIndex != 3) {
       return;
@@ -817,6 +851,108 @@ class PropertyShotGame extends FlameGame {
           elasticWave,
         );
       }
+      _drawTraitImpactParticles(
+        canvas,
+        impact: impact,
+        center: center,
+        progress: progress,
+      );
+      if (impact.entityType == EntityType.hole) {
+        _drawGoalConvergence(canvas, center, progress);
+      }
+    }
+  }
+
+  void _drawTraitImpactParticles(
+    Canvas canvas, {
+    required ShotImpact impact,
+    required Offset center,
+    required double progress,
+  }) {
+    if (impact.sourceTraits.isEmpty) return;
+    final trait = _primaryVisualTrait(impact.sourceTraits);
+    final color = _traitColor(trait);
+    final count = reducedMotion ? 3 : 7;
+    final normal = impact.normal.normalized();
+    final baseAngle = math.atan2(normal.y, normal.x);
+    final fade = (1 - progress).clamp(0.0, 1.0);
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.82 * fade)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = trait == TraitType.sharp ? 2.2 : 1.8;
+    for (var index = 0; index < count; index++) {
+      final spread = (index - (count - 1) / 2) * 0.34;
+      final phase = ((impact.pathIndex + index * 3) % 7) * 0.045;
+      final angle = baseAngle + math.pi + spread + phase;
+      final distance = reducedMotion
+          ? 11.0
+          : 10 + progress * (16 + index % 3 * 4);
+      final direction = Offset(math.cos(angle), math.sin(angle));
+      final particleCenter = center + direction * distance;
+      switch (trait) {
+        case TraitType.heavy:
+          final size = 2.5 + (index % 2) * 1.2;
+          canvas.drawRect(
+            Rect.fromCenter(center: particleCenter, width: size, height: size),
+            paint,
+          );
+        case TraitType.bouncy:
+          canvas.drawCircle(
+            particleCenter,
+            2.1 + (index % 2) * 0.8,
+            paint..style = PaintingStyle.fill,
+          );
+          canvas.drawArc(
+            Rect.fromCenter(center: particleCenter, width: 8, height: 5),
+            angle - 0.8,
+            1.4,
+            false,
+            paint..style = PaintingStyle.stroke,
+          );
+        case TraitType.sticky:
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: particleCenter.translate(0, progress * 5),
+              width: 4.5,
+              height: 6.5,
+            ),
+            paint..style = PaintingStyle.fill,
+          );
+        case TraitType.sharp:
+          canvas.drawLine(
+            particleCenter - direction * 4,
+            particleCenter + direction * 4,
+            paint..style = PaintingStyle.stroke,
+          );
+      }
+    }
+  }
+
+  TraitType _primaryVisualTrait(Set<TraitType> traits) {
+    for (final trait in const [
+      TraitType.sharp,
+      TraitType.heavy,
+      TraitType.bouncy,
+      TraitType.sticky,
+    ]) {
+      if (traits.contains(trait)) return trait;
+    }
+    return TraitType.heavy;
+  }
+
+  void _drawGoalConvergence(Canvas canvas, Offset center, double progress) {
+    final fade = (1 - progress).clamp(0.0, 1.0);
+    final ray = Paint()
+      ..color = const Color(0xFFFFE59B).withValues(alpha: 0.78 * fade)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final count = reducedMotion ? 4 : 10;
+    for (var index = 0; index < count; index++) {
+      final angle = index * math.pi * 2 / count + 0.12;
+      final direction = Offset(math.cos(angle), math.sin(angle));
+      final outer = center + direction * (30 - progress * 9);
+      final inner = center + direction * (18 - progress * 5);
+      canvas.drawLine(outer, inner, ray);
     }
   }
 
@@ -1597,6 +1733,7 @@ class PropertyShotGame extends FlameGame {
           _drawRewardBallAppearance(canvas, entity);
         }
       }
+      _drawCircularRimLight(canvas, entity, highlighted: highlighted);
     } else {
       if (entity.type == EntityType.rotatingReflector) {
         _drawRotatingReflector(canvas, entity, stroke);
@@ -1639,6 +1776,12 @@ class PropertyShotGame extends FlameGame {
         _drawCuteBlockDetails(canvas, entity, rect, topPath);
         _drawDirectionalLight(canvas, entity, rect, topPath);
       }
+      _drawMaterialOutline(
+        canvas,
+        topPath,
+        topPoints,
+        highlighted: highlighted,
+      );
       _drawTraitTexture(canvas, entity, rect);
     }
 
@@ -2183,6 +2326,66 @@ class PropertyShotGame extends FlameGame {
       shadow,
     );
     canvas.restore();
+  }
+
+  void _drawMaterialOutline(
+    Canvas canvas,
+    Path topPath,
+    List<Offset> corners, {
+    required bool highlighted,
+  }) {
+    canvas.drawPath(
+      topPath,
+      Paint()
+        ..color = highlighted
+            ? const Color(0xFFFFC857)
+            : const Color(0xC923352D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = highlighted ? 4.4 : 2.6
+        ..strokeJoin = StrokeJoin.round,
+    );
+    if (highlighted) return;
+    final rim = Paint()
+      ..color = _lightColor.withValues(alpha: 0.62)
+      ..strokeWidth = 1.15
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      corners[0].translate(2, 1),
+      corners[1].translate(-2, 1),
+      rim,
+    );
+    canvas.drawLine(
+      corners[0].translate(1, 2),
+      corners[3].translate(1, -2),
+      rim,
+    );
+  }
+
+  void _drawCircularRimLight(
+    Canvas canvas,
+    EntityState entity, {
+    required bool highlighted,
+  }) {
+    if (entity.type == EntityType.balloon) return;
+    final center = _project(entity.position);
+    final radius = entity.radius + (entity.type == EntityType.hole ? 1 : 0);
+    final bounds = Rect.fromCircle(center: center, radius: radius);
+    final outline = Paint()
+      ..color = highlighted ? const Color(0xFFFFC857) : const Color(0xC923352D)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = highlighted ? 4.2 : 2.2;
+    canvas.drawArc(bounds, 0, math.pi * 2, false, outline);
+    canvas.drawArc(
+      bounds.deflate(1.2),
+      math.pi * 1.05,
+      math.pi * 0.72,
+      false,
+      Paint()
+        ..color = _lightColor.withValues(alpha: 0.72)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.3
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   void _drawHoleSurface(Canvas canvas, EntityState entity, Paint stroke) {

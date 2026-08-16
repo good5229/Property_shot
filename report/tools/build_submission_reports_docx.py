@@ -77,8 +77,8 @@ CONFIGS = {
         source=ROOT / "report" / "game_introduction.md",
         output=ROOT / "report" / "dist" / "property_shot_game_guide.docx",
         title="속성 한방(Property Shot)",
-        kicker="Game Guide",
-        running_label="Property Shot · Game Guide",
+        kicker="GAME INTRODUCTION",
+        running_label="Property Shot · Game Introduction",
         preset="compact_reference_guide",
         header_fill="E8EEF5",
         tagline="",
@@ -249,12 +249,23 @@ def add_cover(doc: Document, config: ReportConfig) -> None:
     meta = doc.add_paragraph()
     meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
     meta.paragraph_format.space_after = Pt(6)
-    base.set_run_font(meta.add_run("2026-08-10 KST"), size=11, color=NAVY, bold=True)
+    is_game_audition = config.source.name == "game_introduction.md"
+    base.set_run_font(
+        meta.add_run("2026-08-16 KST" if is_game_audition else "2026-08-10 KST"),
+        size=11,
+        color=NAVY,
+        bold=True,
+    )
 
     event = doc.add_paragraph()
     event.alignment = WD_ALIGN_PARAGRAPH.CENTER
     event.paragraph_format.space_after = Pt(10)
-    base.set_run_font(event.add_run("NAN 2026 Game × AI 해커톤 사전 과제"), size=10, color=MUTED)
+    event_label = (
+        "제21회 경기게임오디션 일반부문"
+        if is_game_audition
+        else "NAN 2026 Game × AI 해커톤 사전 과제"
+    )
+    base.set_run_font(event.add_run(event_label), size=10, color=MUTED)
     doc.add_page_break()
 
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Compose the attested bouncy_01 browser take with short feature scenes.
+"""Compose a contest-first hook, the attested browser take, and feature scenes.
 
-The only dynamic portion is a 22-second browser capture that has been checked
-against ``demo_bouncy_01_v1``. The final 38 seconds are 19 distinct,
-two-second feature scenes: key, L1/L2, compact reward, ball customization,
-power-gauge states, and other game mechanisms. This prevents a direct-clear
-first-stage recording or a long static clear popup from being silently reused.
+The only dynamic portion is an 8-second browser capture checked against
+``demo_bouncy_01_v1``. Four two-second gameplay scenes establish the property
+transfer hook before that take; the remaining scenes show progression and
+player-support features. This prevents a direct-clear first-stage recording or
+a long static clear popup from being silently reused.
 """
 
 from __future__ import annotations
@@ -184,10 +184,18 @@ def main() -> int:
     for old in args.output_frames_dir.glob("frame-*.png"):
         old.unlink()
 
+    insert_after = browser_capture["insertAfterFeatureSceneCount"]
+    before_browser = scenes[:insert_after]
+    after_browser = scenes[insert_after:]
+
     frame_index = 0
+    for scene in before_browser:
+        source = ROOT / scene["source"]
+        for _ in range(video["fps"] * scene["seconds"]):
+            frame_index = _copy(source, args.output_frames_dir, frame_index)
     for source in base_frames:
         frame_index = _copy(source, args.output_frames_dir, frame_index)
-    for scene in scenes:
+    for scene in after_browser:
         source = ROOT / scene["source"]
         for _ in range(video["fps"] * scene["seconds"]):
             frame_index = _copy(source, args.output_frames_dir, frame_index)

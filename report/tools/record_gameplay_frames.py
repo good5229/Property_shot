@@ -183,9 +183,6 @@ def _validate_telemetry(
         object_id=contract["traitSourceObjectId"],
         attribute_after="탄성",
     )
-    _event(current_events, "key_collected", **context, key_id=contract["keyId"], key_collected=True)
-    hint_l1 = _event(current_events, "hint_opened", **context, hint_level=1)
-    hint_l2 = _event(current_events, "hint_level_opened", **context, hint_level=2)
     shot = _event(current_events, "shot_released", **context, telemetry_result="cleared")
     if abs(float(shot.get("힘", -1)) - contract["aim"]["power"]) > 0.001:
         raise TelemetryEvidenceError("clearing shot power is not the verified 0.90")
@@ -199,8 +196,6 @@ def _validate_telemetry(
     outcome = _event(current_events, "stage_cleared", **context, direct_clear=False)
     if outcome.get("shot_id") != shot.get("shot_id"):
         raise TelemetryEvidenceError("stage clear is not attributed to the verified clearing shot")
-    if not (_event_time(hint_l1) <= _event_time(hint_l2) <= _event_time(outcome)):
-        raise TelemetryEvidenceError("L1/L2 hints were not opened before the captured clear")
     gimmicks = set(outcome.get("gimmick_types", []))
     if not {"bouncy", "wall_reflection"}.issubset(gimmicks):
         raise TelemetryEvidenceError("stage outcome lacks the bouncy wall-reflection route")
@@ -323,6 +318,12 @@ async def main() -> int:
             )
             return 1
         telemetry_events = await _read_persisted_telemetry(page)
+        # Persist the raw take before contract validation so a rejected capture
+        # remains diagnosable instead of leaving stale evidence from an older build.
+        (args.frames_dir / "demo-telemetry.json").write_text(
+            json.dumps(telemetry_events, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
         try:
             evidence = _validate_telemetry(
                 telemetry_events,
@@ -333,10 +334,6 @@ async def main() -> int:
             await browser.close()
             print(f"DEMO RECORD INVALID: {error}")
             return 1
-        (args.frames_dir / "demo-telemetry.json").write_text(
-            json.dumps(telemetry_events, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
         evidence["captureTailSeconds"] = round(tail_seconds, 3)
         await context.close()
         if video_artifact is None:
@@ -353,7 +350,11 @@ async def main() -> int:
     if not ffmpeg_candidates:
         print("DEMO RECORD INVALID: Playwright ffmpeg executable is missing")
         return 1
-    capture_offset = max(0.0, started - page_created_at)
+    # CanvasKit exposes the HUD fractionally before the board's first fully
+    # painted frame. Skip that 750 ms warm-up so the submitted take never
+    # opens on an empty board; the shorter action timeline preserves at least
+    # 1.5 seconds of settled success after this trim.
+    capture_offset = max(0.0, started - page_created_at + 0.75)
     subprocess.run(
         [
             str(ffmpeg_candidates[0]),

@@ -21,7 +21,7 @@ final legacyLevels = <LevelDefinition>[
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(302, 132),
-        size: Vec2(52, 52),
+        size: Vec2(64, 64),
         solid: false,
       ),
       EntityState(
@@ -74,7 +74,7 @@ final legacyLevels = <LevelDefinition>[
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(300, 130),
-        size: Vec2(68, 68),
+        size: Vec2(74, 74),
         solid: false,
       ),
       EntityState(
@@ -142,7 +142,7 @@ final legacyLevels = <LevelDefinition>[
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(304, 96),
-        size: Vec2(50, 50),
+        size: Vec2(62, 62),
         solid: false,
       ),
       EntityState(

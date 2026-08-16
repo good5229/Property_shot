@@ -1315,7 +1315,9 @@ StagePattern _nearHolePattern(StagePattern source) {
     objects.firstWhere((object) => object['id'] == 'hole'),
   );
   json['objects'] = [hole];
-  json['ballSpawn'] = const {'x': 260.0, 'y': 132.0};
+  // Keep the fixture close enough to exercise the near-hole path while
+  // remaining outside the enlarged tutorial hole's capture radius.
+  json['ballSpawn'] = const {'x': 250.0, 'y': 132.0};
   json['patternId'] = 'near_hole';
   return StagePattern.fromJson(json);
 }

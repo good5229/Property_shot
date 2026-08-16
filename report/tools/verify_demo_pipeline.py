@@ -121,35 +121,50 @@ def validate_manifest(manifest_path: Path) -> list[str]:
         raise ValidationError("video orientation must be identity (no mirror or rotation)")
 
     expected_feature_ids = {
-        "key-locked-compact",
-        "key-locked",
-        "key-locked-reduced-motion",
-        "key-collected",
-        "key-collected-hidden",
-        "hint-available",
-        "hint-level-1",
-        "hint-level-2",
+        "core-loop-stage-1",
+        "sharp-balloon-start",
+        "sharp-balloon-chain",
+        "sharp-balloon-result",
+        "bouncy-stage",
+        "switch-gate-stage",
+        "drained-stage",
+        "speed-stage",
+        "chain-score-stage",
+        "reflector-stage",
+        "accessibility-settings",
+        "observatory-restored",
+        "lighthouse-restored",
+        "bridge-restored",
+        "persistent-ball-chain",
+        "rotating-reflector",
+        "property-integration",
         "compact-next-hint-reward",
         "reward-icon-set",
-        "reward-compact-layout",
-        "reward-options-4-6",
-        "reward-options-6-8",
+        "hint-level-1",
+        "hint-level-2",
+        "key-collected",
         "charge-green",
-        "charge-yellow",
-        "charge-red",
         "charge-warning",
-        "charge-cancelled",
-        "gauge-avoids-key",
+        "easy-first-arrival",
+        "ball-appearance",
     }
     actual_ids = {scene.get("id") for scene in scenes if isinstance(scene, dict)}
     if actual_ids != expected_feature_ids:
         raise ValidationError("feature scene IDs differ from the required bouncy/key/hint/reward set")
     required_suites = source_verification.get("requiredSuites")
     expected_suites = {
+        "test/game_screen_golden_test.dart",
+        "test/stage4_causality_golden_test.dart",
+        "test/stage7_persistent_golden_test.dart",
+        "test/rotating_reflector_golden_test.dart",
+        "test/island_restoration_visual_golden_test.dart",
         "test/hint_key_ui_golden_test.dart",
         "test/hint_ui_widget_test.dart",
         "test/run_reward_selection_widget_test.dart",
         "test/charge_gauge_golden_test.dart",
+        "test/difficulty_mode_golden_test.dart",
+        "test/ball_reward_appearance_golden_test.dart",
+        "test/settings_golden_test.dart",
     }
     if not isinstance(required_suites, list) or set(required_suites) != expected_suites:
         raise ValidationError("feature sources must declare the current targeted Golden suites")
@@ -167,10 +182,12 @@ def validate_manifest(manifest_path: Path) -> list[str]:
         feature_seconds += seconds
 
     browser_seconds = browser.get("durationSeconds")
-    if browser_seconds != 22 or browser.get("requiredPlanId") != contract["demoPlanId"]:
-        raise ValidationError("browser capture must be a 22-second attested bouncy plan take")
-    if len(scenes) != 19 or feature_seconds != 38:
-        raise ValidationError("the montage must have 19 distinct two-second feature scenes")
+    if browser_seconds != 8 or browser.get("requiredPlanId") != contract["demoPlanId"]:
+        raise ValidationError("browser capture must be an 8-second attested bouncy plan take")
+    if browser.get("insertAfterFeatureSceneCount") != 4:
+        raise ValidationError("the attested browser take must follow the four-scene gameplay hook")
+    if len(scenes) != 26 or feature_seconds != 52:
+        raise ValidationError("the montage must have 26 distinct two-second feature scenes")
     if browser_seconds + feature_seconds != video.get("durationSeconds"):
         raise ValidationError("browser capture + feature scenes must total exactly 60 seconds")
 

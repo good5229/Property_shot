@@ -47,9 +47,9 @@ import 'ui/tutorial_experiment.dart';
 
 String _stageIntroMessage(int levelIndex) {
   return switch (levelIndex) {
-    0 => '방향 조정 · 길게 누르기 · 손 떼기',
-    1 => '방향 조정 · 길게 누르기 · 손 떼기',
-    2 => '스위치 살피기 · 여러 경로로 도전',
+    0 => '무거움을 옮겨 상자를 밀고 길을 만드세요',
+    1 => '탄성을 옮겨 바닥과 벽의 반사를 이용하세요',
+    2 => '무거움으로 스위치를 눌러 문을 여세요',
     3 => '풍선 확인 · 여러 경로로 도전',
     4 => '공과 원본의 변화를 함께 살펴보세요',
     5 => '감속을 읽고 발판으로 속도를 되살려 보세요',
@@ -1411,19 +1411,43 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           discoveriesByStageId: updated,
           stageIds: levels.map((level) => level.id).toList(growable: false),
         );
-        final restoredNow = IslandLandmark.values.any(
-          (landmark) =>
-              !before.isRestored(landmark) && after.isRestored(landmark),
-        );
+        IslandLandmark? restoredLandmark;
+        for (final landmark in IslandLandmark.values) {
+          if (!before.isRestored(landmark) && after.isRestored(landmark)) {
+            restoredLandmark = landmark;
+            break;
+          }
+        }
         setState(() {
           _discoveriesByStageId = updated;
         });
-        if (restoredNow) _feedback.restorationCompleted();
+        if (restoredLandmark != null) {
+          _feedback.restorationCompleted();
+          unawaited(_showIslandRestorationCelebration(restoredLandmark));
+        }
       }
       return true;
     } on Object {
       return false;
     }
+  }
+
+  Future<void> _showIslandRestorationCelebration(
+    IslandLandmark landmark,
+  ) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: buildIslandRestorationCelebrationForTesting(
+          landmark: landmark,
+          onContinue: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
   }
 
   Future<SolutionMasteryRecordResult> _recordSolutionRoute(
@@ -2667,8 +2691,8 @@ class _HomeHero extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           compact
-              ? '주변 속성을 공에 담아\n연쇄 반응을 완성하세요.'
-              : '주변 물체의 성질을 공에 담아\n한 번의 샷으로 연쇄 반응을 완성하세요.',
+              ? '섬의 물리 규칙을 발견해\n멈춘 시설을 다시 깨우세요.'
+              : '주변 물체의 성질을 공에 담아 길을 만들고\n섬의 관측소·등대·다리를 다시 깨우세요.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: const Color(0xFF285C5D),
@@ -4155,6 +4179,129 @@ Widget buildIslandLandmarkIllustrationForTesting({
   size: size,
 );
 
+@visibleForTesting
+Widget buildIslandRestorationCelebrationForTesting({
+  required IslandLandmark landmark,
+  VoidCallback? onContinue,
+}) => _IslandRestorationCelebration(landmark: landmark, onContinue: onContinue);
+
+class _IslandRestorationCelebration extends StatelessWidget {
+  const _IslandRestorationCelebration({
+    required this.landmark,
+    this.onContinue,
+  });
+
+  final IslandLandmark landmark;
+  final VoidCallback? onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = GameFeedback.reducedMotionEnabled;
+    final illustration = _IslandLandmarkIllustration(
+      landmark: landmark,
+      progress: 1,
+      size: 116,
+    );
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label:
+          '${landmark.label} 복구 완료. ${landmark.benefitLabel}. ${landmark.benefitDescription}',
+      child: Container(
+        key: Key('island_restoration_celebration_${landmark.name}'),
+        constraints: const BoxConstraints(maxWidth: 390),
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFFFF5C7), Color(0xFFD9F1DB)],
+          ),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFF4F8A5D), width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x330D4B32),
+              blurRadius: 24,
+              offset: Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '섬이 다시 빛나기 시작했어요',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: const Color(0xFF52706A),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (reduceMotion)
+              illustration
+            else
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 520),
+                tween: Tween(begin: 0.82, end: 1),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) =>
+                    Transform.scale(scale: value, child: child),
+                child: illustration,
+              ),
+            const SizedBox(height: 8),
+            Text(
+              '${landmark.label} 복구 완료',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: const Color(0xFF245B43),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xEFFFFFFF),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    '새 지원 해금 · ${landmark.benefitLabel}',
+                    key: const Key('island_restoration_unlocked_benefit'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF315C46),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    landmark.benefitDescription,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF52706A),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              key: const Key('island_restoration_celebration_continue'),
+              onPressed: onContinue,
+              icon: const Icon(Icons.explore_rounded),
+              label: const Text('새 지원으로 항해 계속'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _IslandLandmarkPainter extends CustomPainter {
   const _IslandLandmarkPainter({
     required this.landmark,
@@ -5058,57 +5205,32 @@ class _IslandBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(painter: _IslandBackdropPainter());
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          'assets/generated/island-restoration-world-v1.webp',
+          key: const Key('island_world_backdrop'),
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+          filterQuality: FilterQuality.medium,
+          semanticLabel: '관측소와 등대와 다리가 이어진 복구 중인 섬',
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x24E8FBF7),
+                Color(0x52BFE8E3),
+                Color(0xA6F6D995),
+              ],
+              stops: [0, 0.58, 1],
+            ),
+          ),
+        ),
+      ],
+    );
   }
-}
-
-class _IslandBackdropPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final water = Paint()..color = const Color(0xFFBFE8E3);
-    canvas.drawRect(Offset.zero & size, water);
-    final sand = Paint()..color = const Color(0xFFF6D995);
-    final island = Path()
-      ..moveTo(-20, size.height * 0.72)
-      ..quadraticBezierTo(
-        size.width * 0.32,
-        size.height * 0.58,
-        size.width * 0.63,
-        size.height * 0.72,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.88,
-        size.height * 0.84,
-        size.width + 20,
-        size.height * 0.66,
-      )
-      ..lineTo(size.width + 20, size.height + 20)
-      ..lineTo(-20, size.height + 20)
-      ..close();
-    canvas.drawPath(island, sand);
-    final wave = Paint()
-      ..color = const Color(0x664EAAA5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    for (var index = 0; index < 4; index++) {
-      final y = size.height * (0.16 + index * 0.09);
-      canvas.drawArc(
-        Rect.fromLTWH(size.width * 0.08, y, size.width * 0.22, 14),
-        math.pi * 0.1,
-        math.pi * 0.8,
-        false,
-        wave,
-      );
-      canvas.drawArc(
-        Rect.fromLTWH(size.width * 0.72, y + 18, size.width * 0.2, 14),
-        math.pi * 0.1,
-        math.pi * 0.8,
-        false,
-        wave,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

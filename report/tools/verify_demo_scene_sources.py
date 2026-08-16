@@ -42,7 +42,11 @@ def main() -> int:
     if args.dry_run:
         print(f"scene-source plan: {len(source_hashes)} images · {len(suites)} Golden suites")
         return 0
-    subprocess.run(["flutter", "test", *suites], cwd=ROOT, check=True)
+    subprocess.run(
+        ["flutter", "test", "--concurrency=1", "--reporter", "compact", *suites],
+        cwd=ROOT,
+        check=True,
+    )
     evidence = {
         "schemaVersion": 1,
         "generatedAtUtc": datetime.now(timezone.utc).isoformat(),

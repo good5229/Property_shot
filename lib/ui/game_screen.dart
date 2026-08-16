@@ -4356,20 +4356,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                   ),
                                                   if (tutorialTarget != null)
                                                     Positioned(
-                                                      left: math.min(
-                                                        math.max(
-                                                          6.0,
-                                                          (tutorialTarget
-                                                                      .position
-                                                                      .x -
-                                                                  58) *
-                                                              scale,
-                                                        ),
-                                                        math.max(
-                                                          6.0,
-                                                          boardSize.width - 150,
-                                                        ),
-                                                      ),
+                                                      left:
+                                                          tutorialTarget
+                                                                  .position
+                                                                  .x >
+                                                              logicalSize.x / 2
+                                                          ? null
+                                                          : math.min(
+                                                              math.max(
+                                                                6.0,
+                                                                (tutorialTarget
+                                                                            .position
+                                                                            .x -
+                                                                        58) *
+                                                                    scale,
+                                                              ),
+                                                              math.max(
+                                                                6.0,
+                                                                boardSize
+                                                                        .width -
+                                                                    150,
+                                                              ),
+                                                            ),
+                                                      right:
+                                                          tutorialTarget
+                                                                  .position
+                                                                  .x >
+                                                              logicalSize.x / 2
+                                                          ? 6
+                                                          : null,
                                                       top: math.min(
                                                         math.max(
                                                           6.0,
@@ -4385,11 +4400,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                         ),
                                                       ),
                                                       child: IgnorePointer(
-                                                        child:
-                                                            _TutorialCoachMark(
-                                                              text:
-                                                                  _tutorialHint,
+                                                        child: SizedBox(
+                                                          width: math.min(
+                                                            300,
+                                                            math.max(
+                                                              0,
+                                                              boardSize.width -
+                                                                  12,
                                                             ),
+                                                          ),
+                                                          child:
+                                                              _TutorialCoachMark(
+                                                                text:
+                                                                    _tutorialHint,
+                                                              ),
+                                                        ),
                                                       ),
                                                     ),
                                                   if (widget.showDiscoveryHud &&
@@ -4846,28 +4871,51 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_activeTutorialVariant == TutorialExperimentVariant.silent) {
       return null;
     }
-    if (_state.levelIndex != 0 ||
+    if (_state.levelIndex > 2 ||
         _state.shotCount != 0 ||
         _state.phase != GamePhase.planning ||
         _state.selectedSourceId != null) {
       return null;
     }
     if (_state.equippedTrait == null) {
-      for (final entity in _state.traitSources) {
-        return entity;
-      }
-      return null;
+      final preferredId = switch (_state.levelIndex) {
+        0 => 'anvil',
+        1 => 'jelly',
+        2 => 'steel',
+        _ => null,
+      };
+      return _state.traitSources
+              .where((entity) => entity.id == preferredId)
+              .firstOrNull ??
+          _state.traitSources.firstOrNull;
     }
     return _state.activeBall;
   }
 
   String get _tutorialHint {
     if (_activeTutorialVariant == TutorialExperimentVariant.action) {
-      return _state.equippedTrait == null
-          ? '속성 있는 물체를 눌러 공에 옮겨요'
-          : '공을 길게 눌러 힘을 모으고 손을 떼요';
+      if (_state.equippedTrait == null) return '빛나는 속성 물체를 눌러 공에 옮겨요';
+      return switch (_state.levelIndex) {
+        0 => '상자 방향으로 조준하고 공을 길게 눌러요',
+        1 => '홀 직행 대신 바닥 반사를 먼저 만들어요',
+        2 => '홀보다 스위치를 먼저 향해 문을 열어요',
+        _ => '공을 길게 눌러 힘을 모으고 손을 떼요',
+      };
     }
-    return _state.equippedTrait == null ? '바위를 눌러 무거움을 골라요' : '공을 길게 눌러 발사해요';
+    if (_state.equippedTrait == null) {
+      return switch (_state.levelIndex) {
+        0 => '바위를 눌러 무거움을 골라요',
+        1 => '젤리를 눌러 탄성을 골라요',
+        2 => '쇳덩이를 눌러 무거움을 골라요',
+        _ => '속성 물체를 눌러 능력을 골라요',
+      };
+    }
+    return switch (_state.levelIndex) {
+      0 => '상자를 밀도록 조준해 발사해요',
+      1 => '바닥을 먼저 향해 반사 경로를 만들어요',
+      2 => '스위치를 먼저 눌러 문을 열어요',
+      _ => '공을 길게 눌러 발사해요',
+    };
   }
 }
 

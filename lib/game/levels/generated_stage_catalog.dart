@@ -30,8 +30,8 @@ const generatedStageCatalogJson = r'''
                 "y": 132.0
               },
               "size": {
-                "x": 52.0,
-                "y": 52.0
+                "x": 64.0,
+                "y": 64.0
               },
               "traits": [],
               "movable": false,
@@ -875,8 +875,8 @@ const generatedStageCatalogJson = r'''
                 "y": 130.0
               },
               "size": {
-                "x": 68.0,
-                "y": 68.0
+                "x": 74.0,
+                "y": 74.0
               },
               "traits": [],
               "movable": false,
@@ -1628,8 +1628,8 @@ const generatedStageCatalogJson = r'''
                 "y": 96.0
               },
               "size": {
-                "x": 50.0,
-                "y": 50.0
+                "x": 62.0,
+                "y": 62.0
               },
               "traits": [],
               "movable": false,

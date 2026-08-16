@@ -1231,8 +1231,36 @@ void main() {
           .label,
       contains('추천 경로를 준비했습니다'),
     );
-    expect(find.text('공을 길게 눌러 발사해요'), findsOneWidget);
+    expect(find.text('상자를 밀도록 조준해 발사해요'), findsOneWidget);
     expect(find.text('공을 길게 눌러 힘을 모으세요'), findsOneWidget);
+  });
+
+  testWidgets('2단계 첫 화면은 젤리 탄성과 반사를 행동으로 안내한다', (tester) async {
+    await tester.pumpWidget(
+      PropertyShotApp(
+        initialState: levels[1].createState(1, productRules: true),
+        showStageSelector: false,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('젤리를 눌러 탄성을 골라요'), findsOneWidget);
+    final board = tester.getRect(find.byKey(const Key('aim_area')));
+    final coach = tester.getRect(find.byKey(const Key('tutorial_coach_mark')));
+    expect(coach.left, greaterThanOrEqualTo(board.left));
+    expect(coach.right, lessThanOrEqualTo(board.right));
+  });
+
+  testWidgets('3단계 첫 화면은 무거움과 스위치의 인과를 행동으로 안내한다', (tester) async {
+    await tester.pumpWidget(
+      PropertyShotApp(
+        initialState: levels[2].createState(2, productRules: true),
+        showStageSelector: false,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('쇳덩이를 눌러 무거움을 골라요'), findsOneWidget);
   });
 
   test('네 속성은 발동 조건과 소모 규칙을 짧게 안내한다', () {
@@ -2394,7 +2422,7 @@ void main() {
           .getSemantics(find.byKey(const Key('compact_message')))
           .getSemanticsData()
           .label,
-      contains('길게 누르기'),
+      contains('무거움을 옮겨 상자를 밀고'),
     );
     expect(tester.takeException(), isNull);
   });

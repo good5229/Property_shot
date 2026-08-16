@@ -19,6 +19,9 @@ void main() {
       ..addFont(rootBundle.load('assets/fonts/NanumGothic-Regular.ttf'))
       ..addFont(rootBundle.load('assets/fonts/NanumGothic-Bold.ttf'));
     await canvasLoader.load();
+    final materialIcons = FontLoader('MaterialIcons')
+      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+    await materialIcons.load();
   });
 
   for (final fixture in const [
