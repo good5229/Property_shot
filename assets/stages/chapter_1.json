@@ -1513,7 +1513,7 @@
               "id": "bouncy_04_goal_blocker",
               "type": "wall",
               "position": {"x": 100, "y": 170},
-              "size": {"x": 80, "y": 20},
+              "size": {"x": 120, "y": 20},
               "traits": [],
               "movable": false,
               "solid": true,
@@ -3488,7 +3488,8 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"drain_weight","type":"weight","position":{"x":178,"y":286},"size":{"x":56,"y":52},"traits":["heavy"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.86,"restitution":0.62,"linkId":null,"movableWhenDrained":true},
             {"id":"weight_route_ball","type":"ball","position":{"x":178,"y":205},"size":{"x":24,"y":24},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"spent","hitboxScale":0.88,"restitution":0.72,"linkId":null},
-            {"id":"side_crate","type":"crate","position":{"x":286,"y":330},"size":{"x":50,"y":50},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.68,"linkId":null}
+            {"id":"side_crate","type":"crate","position":{"x":286,"y":330},"size":{"x":50,"y":50},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.68,"linkId":null},
+            {"id":"drained_01_direct_guard","type":"wall","position":{"x":71.5,"y":438.6},"size":{"x":12,"y":28},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
           ]
         },
         {
@@ -3590,7 +3591,8 @@
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"last_slider","type":"power_slider","position":{"x":180,"y":370},"size":{"x":112,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},
-            {"id":"quiet_crate","type":"crate","position":{"x":76,"y":210},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+            {"id":"quiet_crate","type":"crate","position":{"x":76,"y":210},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null},
+            {"id":"speed_01_direct_guard","type":"wall","position":{"x":93,"y":437},"size":{"x":18,"y":36},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
           ]
         },
         {
@@ -3614,7 +3616,8 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"bank_wall","type":"wall","position":{"x":224,"y":298},"size":{"x":18,"y":250},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.78,"linkId":null},
             {"id":"after_bank_slider","type":"power_slider","position":{"x":138,"y":226},"size":{"x":106,"y":46},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":0,"y":-1},"referenceSpeed":40,"allowedTargets":["ball"]},
-            {"id":"quiet_crate","type":"crate","position":{"x":292,"y":430},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+            {"id":"quiet_crate","type":"crate","position":{"x":292,"y":430},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null},
+            {"id":"speed_02_direct_guard","type":"wall","position":{"x":72,"y":350},"size":{"x":34,"y":18},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
           ]
         },
         {
@@ -3662,7 +3665,8 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"left_slider","type":"power_slider","position":{"x":118,"y":298},"size":{"x":86,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":1,"y":0},"referenceSpeed":34,"allowedTargets":["ball"]},
             {"id":"right_slider","type":"power_slider","position":{"x":242,"y":298},"size":{"x":86,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":-1,"y":0},"referenceSpeed":46,"allowedTargets":["ball"]},
-            {"id":"choice_crate","type":"crate","position":{"x":74,"y":188},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null}
+            {"id":"choice_crate","type":"crate","position":{"x":74,"y":188},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null},
+            {"id":"speed_04_direct_guard","type":"wall","position":{"x":180,"y":420},"size":{"x":34,"y":18},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
           ]
         }
       ]
@@ -3717,7 +3721,7 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"switch_hold","type":"switch_pad","position":{"x":150,"y":420},"size":{"x":46,"y":32},"traits":[],"movable":false,"solid":true,"linkId":"hold_gate"},
             {"id":"hold_pad","type":"sticky_surface","position":{"x":208,"y":390},"size":{"x":36,"y":28},"traits":["sticky"],"movable":false,"solid":true},
-            {"id":"hold_gate","type":"gate","position":{"x":244,"y":300},"size":{"x":24,"y":170},"traits":[],"movable":false,"solid":true},
+            {"id":"hold_gate","type":"gate","position":{"x":205,"y":300},"size":{"x":30,"y":170},"traits":[],"movable":false,"solid":true},
             {"id":"weight_source","type":"weight","position":{"x":92,"y":350},"size":{"x":52,"y":40},"traits":["heavy"],"movable":false,"solid":true},
             {"id":"hold_crate","type":"crate","position":{"x":278,"y":392},"size":{"x":44,"y":44},"traits":[],"movable":true,"solid":true}
           ]
@@ -3800,7 +3804,8 @@
             {"id":"three_jelly","type":"bumper","position":{"x":200,"y":150},"size":{"x":56,"y":56},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
             {"id":"three_balloon","type":"balloon","position":{"x":72,"y":230},"size":{"x":46,"y":46},"traits":[],"movable":false,"solid":true,"restitution":0.82},
             {"id":"cushion_slider","type":"power_slider","position":{"x":220,"y":460},"size":{"x":104,"y":42},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":40,"allowedTargets":["ball"]},
-            {"id":"three_sticky","type":"sticky_surface","position":{"x":204,"y":540},"size":{"x":32,"y":40},"traits":["sticky"],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12}
+            {"id":"three_sticky","type":"sticky_surface","position":{"x":204,"y":540},"size":{"x":32,"y":40},"traits":["sticky"],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12},
+            {"id":"chain_score_01_direct_guard","type":"wall","position":{"x":96,"y":462},"size":{"x":18,"y":36},"traits":[],"movable":false,"solid":true,"restitution":0.8}
           ]
         },
         {
@@ -3810,12 +3815,12 @@
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {"x":60,"y":480},
           "copyCharges": 1,
-          "bonusGoal": "벽에서 상자와 첫 번째 공까지 힘을 이어 높은 연쇄 점수를 만들어 보세요.",
+          "bonusGoal": "차단벽을 여러 번 튕긴 뒤 첫 번째 공까지 힘을 이어 보세요.",
           "copyCoreReward": 0,
-          "intendedStrategyId": "wall_crate_past_ball",
-          "acceptedStrategyIds": ["wall_crate_past_ball", "switch_gate_route", "none"],
-          "solutionFamilies": ["wall_crate_past_ball", "direct_bypass", "switch_gate_route"],
-          "optionalChallenges": ["moving_crate_chain", "previous_ball_chain", "optional_gate_route"],
+          "intendedStrategyId": "multi_wall_past_ball",
+          "acceptedStrategyIds": ["multi_wall_past_ball", "switch_gate_route", "none"],
+          "solutionFamilies": ["multi_wall_past_ball", "direct_bypass", "switch_gate_route"],
+          "optionalChallenges": ["multi_wall_chain", "previous_ball_chain", "optional_gate_route"],
           "metadata": {},
           "objects": [
             {"id":"hole","type":"hole","position":{"x":72,"y":132},"size":{"x":80,"y":80},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
@@ -3825,7 +3830,8 @@
             {"id":"chain_crate","type":"crate","position":{"x":180,"y":245},"size":{"x":72,"y":64},"traits":[],"movable":true,"solid":true,"restitution":0.66},
             {"id":"chain_stone","type":"weight","position":{"x":250,"y":80},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
             {"id":"chain_switch","type":"switch_pad","position":{"x":300,"y":460},"size":{"x":48,"y":32},"traits":[],"movable":false,"solid":true,"linkId":"chain_gate"},
-            {"id":"chain_gate","type":"gate","position":{"x":300,"y":160},"size":{"x":24,"y":140},"traits":[],"movable":false,"solid":true,"linkId":"chain_gate"}
+            {"id":"chain_gate","type":"gate","position":{"x":300,"y":160},"size":{"x":24,"y":140},"traits":[],"movable":false,"solid":true,"linkId":"chain_gate"},
+            {"id":"chain_score_02_direct_guard","type":"wall","position":{"x":62,"y":428},"size":{"x":34,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8}
           ]
         },
         {
@@ -3850,7 +3856,8 @@
             {"id":"speed_slider","type":"power_slider","position":{"x":125,"y":390},"size":{"x":70,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"]},
             {"id":"chain_stone","type":"weight","position":{"x":150,"y":330},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
             {"id":"bounce_wall","type":"wall","position":{"x":195,"y":390},"size":{"x":60,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8},
-            {"id":"chain_jelly","type":"bumper","position":{"x":300,"y":440},"size":{"x":58,"y":58},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92}
+            {"id":"chain_jelly","type":"bumper","position":{"x":300,"y":440},"size":{"x":58,"y":58},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
+            {"id":"chain_score_03_direct_guard","type":"wall","position":{"x":72,"y":160},"size":{"x":72,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8}
           ]
         },
         {
@@ -3875,7 +3882,8 @@
             {"id":"score_crate","type":"crate","position":{"x":270,"y":300},"size":{"x":58,"y":58},"traits":[],"movable":true,"solid":true,"restitution":0.66},
             {"id":"score_jelly","type":"bumper","position":{"x":146.5,"y":180.6},"size":{"x":76,"y":76},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
             {"id":"score_balloon","type":"balloon","position":{"x":57.6,"y":297.4},"size":{"x":64,"y":64},"traits":[],"movable":false,"solid":true,"restitution":0.82},
-            {"id":"score_slider","type":"power_slider","position":{"x":280,"y":240},"size":{"x":100,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]}
+            {"id":"score_slider","type":"power_slider","position":{"x":280,"y":240},"size":{"x":100,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},
+            {"id":"chain_score_04_direct_guard","type":"wall","position":{"x":96,"y":423},"size":{"x":18,"y":28},"traits":[],"movable":false,"solid":true,"restitution":0.8}
           ]
         }
       ]

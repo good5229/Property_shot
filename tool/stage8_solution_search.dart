@@ -197,7 +197,9 @@ List<_ChainCandidate> _findChains(
           final analysis = _analyzer.analyze(
             [first, second],
             parShots: pattern.parShots,
-            optionalChallengeIds: CreativeChainChallengeId.all,
+            // 우위 계약과 동일하게 선택 도전 보너스를 제외한 기본 점수로
+            // 후보를 정렬한다. 보너스로 약한 연쇄가 강해 보이는 오판을 막는다.
+            optionalChallengeIds: const <String>{},
           );
           final causalEvents = _causalEvents(second, analysis);
           final targetIds = {

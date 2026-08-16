@@ -1570,7 +1570,7 @@ const generatedStageCatalogJson = r'''
                 "y": 170.0
               },
               "size": {
-                "x": 80.0,
+                "x": 120.0,
                 "y": 20.0
               },
               "traits": [],
@@ -3810,6 +3810,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.68,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "drained_01_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 71.5,
+                "y": 438.6
+              },
+              "size": {
+                "x": 12.0,
+                "y": 28.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -4596,6 +4619,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.66,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "speed_01_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 93.0,
+                "y": 437.0
+              },
+              "size": {
+                "x": 18.0,
+                "y": 36.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -4794,6 +4840,29 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.66,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "speed_02_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 72.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 34.0,
+                "y": 18.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
               "linkId": null,
               "movableWhenDrained": false
             }
@@ -5201,6 +5270,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.66,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "speed_04_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 180.0,
+                "y": 420.0
+              },
+              "size": {
+                "x": 34.0,
+                "y": 18.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -5596,11 +5688,11 @@ const generatedStageCatalogJson = r'''
               "id": "hold_gate",
               "type": "gate",
               "position": {
-                "x": 244.0,
+                "x": 205.0,
                 "y": 300.0
               },
               "size": {
-                "x": 24.0,
+                "x": 30.0,
                 "y": 170.0
               },
               "traits": [],
@@ -6325,6 +6417,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.12,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "chain_score_01_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 96.0,
+                "y": 462.0
+              },
+              "size": {
+                "x": 18.0,
+                "y": 36.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.8,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -6543,24 +6658,47 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.72,
               "linkId": "chain_gate",
               "movableWhenDrained": false
+            },
+            {
+              "id": "chain_score_02_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 62.0,
+                "y": 428.0
+              },
+              "size": {
+                "x": 34.0,
+                "y": 18.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.8,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 1,
-          "bonusGoal": "벽에서 상자와 첫 번째 공까지 힘을 이어 높은 연쇄 점수를 만들어 보세요.",
+          "bonusGoal": "차단벽을 여러 번 튕긴 뒤 첫 번째 공까지 힘을 이어 보세요.",
           "copyCoreReward": 0,
-          "intendedStrategyId": "wall_crate_past_ball",
+          "intendedStrategyId": "multi_wall_past_ball",
           "acceptedStrategyIds": [
+            "multi_wall_past_ball",
             "none",
-            "switch_gate_route",
-            "wall_crate_past_ball"
+            "switch_gate_route"
           ],
           "solutionFamilies": [
             "direct_bypass",
-            "switch_gate_route",
-            "wall_crate_past_ball"
+            "multi_wall_past_ball",
+            "switch_gate_route"
           ],
           "optionalChallenges": [
-            "moving_crate_chain",
+            "multi_wall_chain",
             "optional_gate_route",
             "previous_ball_chain"
           ],
@@ -6769,6 +6907,29 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.92,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "chain_score_03_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 72.0,
+                "y": 160.0
+              },
+              "size": {
+                "x": 72.0,
+                "y": 18.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.8,
               "linkId": null,
               "movableWhenDrained": false
             }
@@ -6995,6 +7156,29 @@ const generatedStageCatalogJson = r'''
               "allowedTargets": [
                 "ball"
               ]
+            },
+            {
+              "id": "chain_score_04_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 96.0,
+                "y": 423.0
+              },
+              "size": {
+                "x": 18.0,
+                "y": 28.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.8,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,

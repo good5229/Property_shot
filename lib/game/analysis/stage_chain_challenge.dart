@@ -29,7 +29,10 @@ class StageChainChallengeEvaluator {
       'stage_chain_score_02' =>
         _hasWallImpact(causalEvents) &&
             _containsEvents(causalEvents, const [
-              _ExpectedEvent(PhysicsEventKind.impact, 'chain_crate'),
+              _ExpectedEvent(
+                PhysicsEventKind.impact,
+                'chain_score_02_direct_guard',
+              ),
               _ExpectedEvent(PhysicsEventKind.impact, 'spent_ball_1'),
             ]),
       'stage_chain_score_03' => _containsEvents(causalEvents, const [

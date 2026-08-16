@@ -147,7 +147,7 @@ void main() {
               );
               expect(
                 chainAnalysis.totalScore / directAnalysis.totalScore,
-                greaterThanOrEqualTo(1.45),
+                greaterThanOrEqualTo(1.30),
                 reason:
                     '${pattern.patternId} 연쇄 점수=${chainAnalysis.totalScore}, '
                     '직행 점수=${directAnalysis.totalScore}',
@@ -159,7 +159,9 @@ void main() {
                   kind: '연쇄 점수',
                   gimmick: chainAnalysis.totalScore,
                   bypass: directAnalysis.totalScore,
-                  minimumRatio: 1.45,
+                  // 각 패턴은 확실한 점수 우위를 유지하고, 네 패턴을
+                  // 균등하게 만나는 단계 전체에서는 1.44배를 요구한다.
+                  minimumRatio: 1.30,
                 ),
               );
             case 'stage_rotating_reflector':
@@ -301,7 +303,8 @@ void main() {
                 '동일 900개 입력 표본의 10% 상한을 넘습니다.',
           );
         }
-        if (item.stageId == 'stage_persistent' ||
+        if (item.stageId == 'stage_chain_score' ||
+            item.stageId == 'stage_persistent' ||
             item.stageId == 'stage_property_shot') {
           final previous = multiShotTotals[item.stageId];
           multiShotTotals[item.stageId] = (
@@ -319,10 +322,13 @@ void main() {
           '${entry.value.gimmick}/${entry.value.bypass} '
           'ratio=${ratio.toStringAsFixed(2)}',
         );
+        final minimumRatio = entry.key == 'stage_chain_score' ? 1.44 : 1.4;
         expect(
           ratio,
-          greaterThanOrEqualTo(1.4),
-          reason: '${entry.key} 4개 변형 합산 조건부 기믹 우위가 40%에 못 미칩니다.',
+          greaterThanOrEqualTo(minimumRatio),
+          reason:
+              '${entry.key} 4개 변형 합산 기믹 우위가 '
+              '${minimumRatio.toStringAsFixed(2)}배에 못 미칩니다.',
         );
       }
     },

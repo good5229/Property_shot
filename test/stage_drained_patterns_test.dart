@@ -76,7 +76,13 @@ void main() {
 
   test('비워진 돌 질량은 무거움 보유 전보다 정량적으로 낮고 더 멀리 밀린다', () {
     final pattern = stage.patternById('stage_drained_01');
-    final base = _state(pattern);
+    // 질량 전달만 격리해서 비교한다. 실제 플레이의 직선 차단벽은 아래
+    // 대표·대체 해법 및 전 패턴 직선 통로 회귀 테스트에서 별도로 검증한다.
+    final initial = _state(pattern);
+    final base = _replaceEntity(
+      initial,
+      initial.entityById('drained_01_direct_guard')!.copyWith(active: false),
+    );
     final original = base.entityById('drain_weight')!;
     final heavyMovable = original.copyWith(movable: true);
     final drained = original.copyWith(

@@ -70,7 +70,7 @@ void main() {
   });
 
   for (final solution in stageChainScoreSolutions) {
-    test('${solution.patternId} 직접 경로는 특정 기믹 없이 한 발로 성공한다', () {
+    test('${solution.patternId} 1발 대체 경로는 벽·기물을 거쳐 성공한다', () {
       _expectUiPower(solution.directPower);
       final pattern = stage.patternById(solution.patternId);
       final result = resolver.resolve(_state(pattern), solution.directInput);
@@ -86,9 +86,14 @@ void main() {
         reason: '${solution.patternId}: ${result.events.join(' → ')}',
       );
       expect(analysis.clearReached, isTrue);
-      expect(analysis.breakdown.causalDepth, 0);
+      expect(
+        result.impacts.any((impact) => impact.entityType != EntityType.hole),
+        isTrue,
+        reason: '${solution.patternId}: 열린 직선 슛을 대체 경로로 두지 않는다.',
+      );
+      expect(analysis.breakdown.causalDepth, greaterThanOrEqualTo(1));
       expect(analysis.breakdown.pastBallCount, 0);
-      expect(analysis.totalScore, 1035);
+      expect(analysis.totalScore, greaterThan(1035));
       expect(
         challengeEvaluator.isAchieved(
           patternId: solution.patternId,

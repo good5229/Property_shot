@@ -102,16 +102,9 @@ const stageBouncyRepresentatives = <StageBouncyRepresentative>[
   ),
   StageBouncyRepresentative(
     patternId: 'stage_bouncy_04',
-    strategyId: 'none',
-    degree: 60,
-    power: 0.74,
-    familyId: 'wall_reflection',
-  ),
-  StageBouncyRepresentative(
-    patternId: 'stage_bouncy_04',
     strategyId: 'jelly',
-    degree: 107,
-    power: 0.85,
+    degree: 104,
+    power: 0.90,
     familyId: 'wall_reflection',
   ),
   StageBouncyRepresentative(

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('8단계 직접·고연쇄 해법은 연결된 입력 허용 영역을 가진다', () {
+  test('8단계 정밀 뱅크·고연쇄 해법은 의도한 입력 허용 영역을 가진다', () {
     final root =
         jsonDecode(
               File(
@@ -32,8 +32,8 @@ void main() {
       final chain = Map<String, Object?>.from(pattern['chain'] as Map);
       expect(
         direct['largestConnectedRegion'],
-        greaterThanOrEqualTo(100),
-        reason: '${pattern['patternId']} 직접 경로',
+        inInclusiveRange(10, 500),
+        reason: '${pattern['patternId']} 1발 뱅크 경로는 가능하지만 넓지 않아야 한다.',
       );
       expect(
         chain['successCount'],

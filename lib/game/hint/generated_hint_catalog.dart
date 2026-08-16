@@ -1163,7 +1163,7 @@ const generatedHintCatalogJson = r'''
       "hintVersion": 1,
       "intentTags": [
         "chain",
-        "crate"
+        "bank"
       ],
       "directClearPolicy": {
         "allowed": true
@@ -1171,27 +1171,27 @@ const generatedHintCatalogJson = r'''
       "hints": [
         {
           "level": 1,
-          "text": "상자와 돌을 한 번에 지나려 하지 말고 첫 공의 위치를 남겨 보세요.",
-          "intentTags": [
-            "chain",
-            "past_ball"
-          ],
-          "referencedObjectIds": [
-            "chain_crate",
-            "chain_stone"
-          ]
-        },
-        {
-          "level": 2,
-          "text": "첫 공을 벽 쪽에 남긴 뒤 두 번째 공이 상자와 돌을 차례로 건드리게 해 보세요.",
+          "text": "첫 공을 위쪽 벽 가까이에 남겨 두 번째 공의 쿠션으로 써 보세요.",
           "intentTags": [
             "chain",
             "past_ball"
           ],
           "referencedObjectIds": [
             "wall_left",
-            "chain_crate",
-            "chain_stone"
+            "wall_right"
+          ]
+        },
+        {
+          "level": 2,
+          "text": "두 번째 공을 아래 경계와 짧은 차단벽에 연속으로 튕긴 뒤 남은 첫 공을 맞혀 보세요.",
+          "intentTags": [
+            "chain",
+            "past_ball",
+            "bank"
+          ],
+          "referencedObjectIds": [
+            "chain_score_02_direct_guard",
+            "wall_left"
           ]
         }
       ]

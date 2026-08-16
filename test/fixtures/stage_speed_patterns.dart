@@ -111,7 +111,7 @@ const stageSpeedBypassSolutions = <StageSpeedSolution>[
   ),
   StageSpeedSolution(
     patternId: 'stage_speed_02',
-    degree: 90,
+    degree: 96,
     power: 0.52,
     familyId: 'outer_wall_bypass',
     bypass: true,
