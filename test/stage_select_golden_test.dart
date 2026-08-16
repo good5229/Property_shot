@@ -23,6 +23,7 @@ void main() {
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
     (name: '1024x768', width: 1024.0, height: 768.0),
+    (name: '1440x900', width: 1440.0, height: 900.0),
   ]) {
     testWidgets('섬 지도 Golden ${fixture.name}', (tester) async {
       SharedPreferences.setMockInitialValues(
@@ -74,6 +75,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('stage_route_map')), findsOneWidget);
+      expect(
+        tester
+            .getSize(find.byKey(const Key('stage_select_content_column')))
+            .width,
+        fixture.width > 1180 ? 1180 : fixture.width,
+      );
       expect(find.byKey(const Key('stage_tile_3')), findsOneWidget);
       expect(find.byKey(const Key('stage_tile_5')), findsOneWidget);
       expect(find.byKey(const Key('stage_tile_8')), findsOneWidget);

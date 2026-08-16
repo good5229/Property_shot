@@ -3698,268 +3698,287 @@ class _StageSelectScreen extends StatelessWidget {
             children: [
               const Positioned.fill(child: _IslandBackdrop()),
               SafeArea(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
-                  children: [
-                    Row(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    key: const Key('stage_select_content_column'),
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
                       children: [
-                        IconButton(
-                          tooltip: '처음 화면',
-                          onPressed: onBack,
-                          icon: const Icon(Icons.arrow_back),
-                          color: const Color(0xFF173F43),
+                        Row(
+                          children: [
+                            IconButton(
+                              tooltip: '처음 화면',
+                              onPressed: onBack,
+                              icon: const Icon(Icons.arrow_back),
+                              color: const Color(0xFF173F43),
+                            ),
+                            const Expanded(
+                              child: Text(
+                                '섬 지도',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Color(0xFF173F43),
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 48),
+                          ],
                         ),
-                        const Expanded(
-                          child: Text(
-                            '섬 지도',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Color(0xFF173F43),
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 48,
+                          child: _NextGoalCard(
+                            recommendation: recommendation,
+                            detailed:
+                                _totalDiscoveryCount(discoveriesByStageId) >=
+                                IslandLandmark.lighthouse.upgradeDiscoveries,
+                            onTap: () =>
+                                onSelectStage(recommendation.stageIndex),
+                          ),
+                        ),
+                        Material(
+                          key: const Key('map_hint_card'),
+                          color: const Color(0xD9E8F4D9),
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            key: const Key('discovery_atlas_button'),
+                            onTap: () => _showDiscoveryAtlas(context),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  _MenuAssetImage(
+                                    key: const Key('discovery_navigation_art'),
+                                    path:
+                                        'assets/generated/nav-expedition-v1.png',
+                                    size: navigationArtSize,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          '섬 물리 관측일지',
+                                          style: TextStyle(
+                                            color: Color(0xFF315C46),
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          compact
+                                              ? '발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
+                                                    '${levels.length * 3} · 눌러서 도감 보기'
+                                              : '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
+                                                    '${levels.length * 3} · 눌러서 발견 도감을 확인하세요.',
+                                          style: const TextStyle(
+                                            color: Color(0xFF52706A),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Color(0xFF4F8460),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 48),
+                        const SizedBox(height: 12),
+                        Material(
+                          color: const Color(0xE6FFF7D6),
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            key: const Key('physics_lab_button'),
+                            onTap: onPhysicsLab,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  _MenuAssetImage(
+                                    key: const Key(
+                                      'physics_lab_navigation_art',
+                                    ),
+                                    path:
+                                        'assets/generated/nav-physics-lab-v1.png',
+                                    size: navigationArtSize,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '물리 실험실',
+                                          style: TextStyle(
+                                            color: Color(0xFF5B4715),
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        SizedBox(height: 3),
+                                        Text(
+                                          '무거움·탄성·점착·뾰족함·스위치를 기록 없이 연습하세요.',
+                                          style: TextStyle(
+                                            color: Color(0xFF715F35),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Color(0xFF6D5720),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _IslandRestorationCard(
+                          progress: IslandRestorationProgress.fromDiscoveries(
+                            discoveriesByStageId: discoveriesByStageId,
+                            stageIds: levels.map((level) => level.id).toList(),
+                          ),
+                          selectedFocus: islandSupportFocus,
+                          onFocusSelected: onIslandSupportSelected,
+                          compact: compact,
+                          wide: wide,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          key: const Key('stage_route_map'),
+                          padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xB8FFFDF3),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: const Color(0x6687B5A8),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final narrow = constraints.maxWidth < 500;
+                              final cardWidth =
+                                  constraints.maxWidth * (narrow ? 0.94 : 0.84);
+                              final cardStep = narrow ? 148.0 : 142.0;
+                              final thumbnailSize = constraints.maxWidth >= 600
+                                  ? 104.0
+                                  : constraints.maxWidth >= 330
+                                  ? 86.0
+                                  : 80.0;
+                              final mapHeight = math.max(
+                                350.0,
+                                8 + levels.length * cardStep,
+                              );
+                              return Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      8,
+                                      0,
+                                      8,
+                                      4,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.route_rounded,
+                                          size: 18,
+                                          color: Color(0xFF397372),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '첫 항해 진행',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelLarge
+                                              ?.copyWith(
+                                                color: const Color(0xFF397372),
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${(unlockedLevel + 1).clamp(1, levels.length)} / ${levels.length}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelLarge
+                                              ?.copyWith(
+                                                color: const Color(0xFF52706A),
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: mapHeight,
+                                    child: Stack(
+                                      children: [
+                                        Positioned.fill(
+                                          child: IgnorePointer(
+                                            child: CustomPaint(
+                                              painter: _StageRoutePainter(
+                                                unlockedLevel: unlockedLevel,
+                                                cardStep: cardStep,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        for (
+                                          var index = 0;
+                                          index < levels.length;
+                                          index++
+                                        )
+                                          Positioned(
+                                            top: 8 + index * cardStep,
+                                            left: index.isEven ? 0 : null,
+                                            right: index.isOdd ? 0 : null,
+                                            width: cardWidth,
+                                            child: _StageTile(
+                                              index: index,
+                                              locked: index > unlockedLevel,
+                                              discoveredMilestoneIds:
+                                                  discoveriesByStageId[levels[index]
+                                                      .id] ??
+                                                  const {},
+                                              solutionStampCount:
+                                                  solutionCountsByStageId[levels[index]
+                                                      .id] ??
+                                                  0,
+                                              thumbnailSize: thumbnailSize,
+                                              onTap: () => onSelectStage(index),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 48,
-                      child: _NextGoalCard(
-                        recommendation: recommendation,
-                        detailed:
-                            _totalDiscoveryCount(discoveriesByStageId) >=
-                            IslandLandmark.lighthouse.upgradeDiscoveries,
-                        onTap: () => onSelectStage(recommendation.stageIndex),
-                      ),
-                    ),
-                    Material(
-                      key: const Key('map_hint_card'),
-                      color: const Color(0xD9E8F4D9),
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        key: const Key('discovery_atlas_button'),
-                        onTap: () => _showDiscoveryAtlas(context),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Row(
-                            children: [
-                              _MenuAssetImage(
-                                key: const Key('discovery_navigation_art'),
-                                path: 'assets/generated/nav-expedition-v1.png',
-                                size: navigationArtSize,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      '섬 물리 관측일지',
-                                      style: TextStyle(
-                                        color: Color(0xFF315C46),
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      compact
-                                          ? '발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
-                                                '${levels.length * 3} · 눌러서 도감 보기'
-                                          : '전체 발견 ${_totalDiscoveryCount(discoveriesByStageId)} / '
-                                                '${levels.length * 3} · 눌러서 발견 도감을 확인하세요.',
-                                      style: const TextStyle(
-                                        color: Color(0xFF52706A),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                color: Color(0xFF4F8460),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Material(
-                      color: const Color(0xE6FFF7D6),
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        key: const Key('physics_lab_button'),
-                        onTap: onPhysicsLab,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: EdgeInsets.all(14),
-                          child: Row(
-                            children: [
-                              _MenuAssetImage(
-                                key: const Key('physics_lab_navigation_art'),
-                                path: 'assets/generated/nav-physics-lab-v1.png',
-                                size: navigationArtSize,
-                              ),
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '물리 실험실',
-                                      style: TextStyle(
-                                        color: Color(0xFF5B4715),
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                    SizedBox(height: 3),
-                                    Text(
-                                      '무거움·탄성·점착·뾰족함·스위치를 기록 없이 연습하세요.',
-                                      style: TextStyle(
-                                        color: Color(0xFF715F35),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                color: Color(0xFF6D5720),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _IslandRestorationCard(
-                      progress: IslandRestorationProgress.fromDiscoveries(
-                        discoveriesByStageId: discoveriesByStageId,
-                        stageIds: levels.map((level) => level.id).toList(),
-                      ),
-                      selectedFocus: islandSupportFocus,
-                      onFocusSelected: onIslandSupportSelected,
-                      compact: compact,
-                      wide: wide,
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      key: const Key('stage_route_map'),
-                      padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xB8FFFDF3),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: const Color(0x6687B5A8),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final narrow = constraints.maxWidth < 500;
-                          final cardWidth =
-                              constraints.maxWidth * (narrow ? 0.94 : 0.84);
-                          final cardStep = narrow ? 148.0 : 142.0;
-                          final thumbnailSize = constraints.maxWidth >= 600
-                              ? 104.0
-                              : constraints.maxWidth >= 330
-                              ? 86.0
-                              : 80.0;
-                          final mapHeight = math.max(
-                            350.0,
-                            8 + levels.length * cardStep,
-                          );
-                          return Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.route_rounded,
-                                      size: 18,
-                                      color: Color(0xFF397372),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '첫 항해 진행',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelLarge
-                                          ?.copyWith(
-                                            color: const Color(0xFF397372),
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      '${(unlockedLevel + 1).clamp(1, levels.length)} / ${levels.length}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelLarge
-                                          ?.copyWith(
-                                            color: const Color(0xFF52706A),
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(
-                                height: mapHeight,
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: IgnorePointer(
-                                        child: CustomPaint(
-                                          painter: _StageRoutePainter(
-                                            unlockedLevel: unlockedLevel,
-                                            cardStep: cardStep,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    for (
-                                      var index = 0;
-                                      index < levels.length;
-                                      index++
-                                    )
-                                      Positioned(
-                                        top: 8 + index * cardStep,
-                                        left: index.isEven ? 0 : null,
-                                        right: index.isOdd ? 0 : null,
-                                        width: cardWidth,
-                                        child: _StageTile(
-                                          index: index,
-                                          locked: index > unlockedLevel,
-                                          discoveredMilestoneIds:
-                                              discoveriesByStageId[levels[index]
-                                                  .id] ??
-                                              const {},
-                                          solutionStampCount:
-                                              solutionCountsByStageId[levels[index]
-                                                  .id] ??
-                                              0,
-                                          thumbnailSize: thumbnailSize,
-                                          onTap: () => onSelectStage(index),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
