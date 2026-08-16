@@ -55,7 +55,7 @@ void main() {
     await gesture.up(timeStamp: const Duration(milliseconds: 1800));
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('시도 횟수 0'), findsOneWidget);
     final blockedGesture = await _startGesture(
       tester,
       _logicalOffset(tester, 56, 456),
@@ -63,14 +63,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 760));
     await blockedGesture.up(timeStamp: const Duration(milliseconds: 2800));
     await tester.pump();
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('시도 횟수 0'), findsOneWidget);
     expect(usedRewards, [runRewardShotCancelAssistId]);
 
     persisted.complete();
     await _pumpAsync(tester);
 
     expect(usedRewards, [runRewardShotCancelAssistId]);
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('시도 횟수 0'), findsOneWidget);
     expect(
       tester
           .getSemantics(find.byKey(const Key('compact_message')))
@@ -106,7 +106,7 @@ void main() {
 
     expect(find.byKey(const Key('reward_use_recap')), findsNothing);
     expect(find.textContaining('보상 적용'), findsNothing);
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('시도 횟수 0'), findsOneWidget);
   });
 
   testWidgets('공 꾸미기 보상은 게임판의 공 렌더 설정에 연결된다', (tester) async {
@@ -227,7 +227,13 @@ void main() {
     await aim.up(timeStamp: const Duration(milliseconds: 1150));
     await tester.pump();
 
-    expect(find.textContaining('첫 충돌 안내 · 홀'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('compact_message')))
+          .getSemanticsData()
+          .label,
+      contains('첫 충돌 안내 · 홀'),
+    );
     final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
     await tester.pump(const Duration(milliseconds: 920));
     await launch.up(timeStamp: const Duration(milliseconds: 1920));
@@ -243,6 +249,8 @@ void main() {
   });
 
   testWidgets('정밀 충전 보상은 실제 발사의 힘 상승을 25% 늦춘다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final telemetry = LocalPlayTelemetry(persistLocally: false);
     await tester.pumpWidget(
       _gameApp(
@@ -254,11 +262,14 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('active_reward_guide')), findsNothing);
-    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    expect(find.byKey(const Key('hud_reward_button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_reward_button')));
     await tester.pump();
+    expect(find.text('이번 단계 보상'), findsOneWidget);
     expect(find.byKey(const Key('active_reward_guide')), findsOneWidget);
-    expect(find.textContaining('충전 속도 25% 완화'), findsOneWidget);
+    expect(find.textContaining('충전 속도 25% 완화'), findsWidgets);
+    await tester.tap(find.text('확인'));
+    await tester.pump();
     expect(
       telemetry.events.where((event) => event['event_code'] == 'reward_used'),
       hasLength(1),
@@ -354,7 +365,7 @@ void main() {
     expect(find.byKey(const Key('recover_past_ball_button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('recover_past_ball_button')));
     await _pumpAsync(tester);
-    expect(find.textContaining('과거 공 1번을 회수했습니다'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('과거 공 1번을 회수했습니다')), findsWidgets);
     expect(find.byKey(const Key('failure_popup')), findsNothing);
   });
 

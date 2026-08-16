@@ -128,8 +128,8 @@ void main() {
     await tester.tap(find.byKey(const Key('daily_official_button')));
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.byKey(const Key('home_button')), findsOneWidget);
-    expect(find.byTooltip('메인 메뉴'), findsOneWidget);
-    expect(find.text('점수 0'), findsOneWidget);
+    expect(find.byTooltip('스테이지 포기'), findsOneWidget);
+    expect(find.textContaining('점수 0'), findsOneWidget);
     expect(
       telemetry.events.map((event) => event['event_code']),
       containsAllInOrder([
@@ -141,6 +141,9 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('home_button')));
+    await tester.pump();
+    expect(find.byKey(const Key('stage_abandon_dialog')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('stage_abandon_confirm_button')));
     await tester.pump();
 
     expect(exited, isTrue);

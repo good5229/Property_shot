@@ -36,7 +36,6 @@ import '../game/run/stage_pattern_session.dart';
 import '../game/simulation/shot_resolver.dart';
 import '../game/simulation/trait_resolver.dart';
 import 'game_feedback.dart';
-import 'game_ball_painter.dart';
 import 'bonus_goal.dart';
 import 'creative_chain_score_summary.dart';
 import 'debug_menu.dart';
@@ -1025,25 +1024,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       useSafeArea: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => FractionallySizedBox(
-        heightFactor: .54,
+      builder: (sheetContext) => Align(
         alignment: Alignment.bottomCenter,
-        child: _PatternHintSheet(
-          entry: entry,
-          entitlement: entitlement!,
-          onMore: (currentLevel) async {
-            final updated = await openHint(requestedLevel: currentLevel + 1);
-            if (updated == null) return null;
-            if (mounted) setState(() => _hintEntitlement = updated);
-            _recordTyped(
-              PlayTelemetryEventType.hintLevelOpened,
-              hint: _hintTelemetryPayload(
-                updated,
-                level: updated.unlockedHintLevel,
-              ),
-            );
-            return updated;
-          },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 500),
+          child: _PatternHintSheet(
+            entry: entry,
+            entitlement: entitlement!,
+            onMore: (currentLevel) async {
+              final updated = await openHint(requestedLevel: currentLevel + 1);
+              if (updated == null) return null;
+              if (mounted) setState(() => _hintEntitlement = updated);
+              _recordTyped(
+                PlayTelemetryEventType.hintLevelOpened,
+                hint: _hintTelemetryPayload(
+                  updated,
+                  level: updated.unlockedHintLevel,
+                ),
+              );
+              return updated;
+            },
+          ),
         ),
       ),
     );
@@ -3493,6 +3494,42 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     widget.onExit!();
   }
 
+  Future<void> _confirmExitStage() async {
+    if (widget.onExit == null || !mounted) return;
+    final destination =
+        widget.exitTooltipOverride ??
+        (widget.exitToMainMenu ? '메인 메뉴' : '섬 지도');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('stage_abandon_dialog'),
+        title: const Text('이 스테이지를 포기할까요?'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Text(
+            '현재 시도는 여기서 끝나고 $destination로 돌아갑니다. '
+            '이미 저장된 발견과 보상은 사라지지 않아요.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('stage_abandon_cancel_button'),
+            autofocus: true,
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('계속 도전'),
+          ),
+          FilledButton.tonal(
+            key: const Key('stage_abandon_confirm_button'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('포기하고 나가기'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) _exitStage();
+  }
+
   void _recordHintExposureIfNeeded() {
     final target = _tutorialTarget;
     final visible = target != null;
@@ -4057,7 +4094,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     onPause: _togglePause,
                                     onExit: widget.onExit == null
                                         ? null
-                                        : _exitStage,
+                                        : _confirmExitStage,
                                     exitToMainMenu: widget.exitToMainMenu,
                                     hudScore: widget.hudScore,
                                     onDebug: widget.showDebugControls
@@ -4090,7 +4127,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       onPause: _togglePause,
                                       onExit: widget.onExit == null
                                           ? null
-                                          : _exitStage,
+                                          : _confirmExitStage,
                                       exitToMainMenu: widget.exitToMainMenu,
                                       hudScore: widget.hudScore,
                                       onDebug: widget.showDebugControls
@@ -5125,98 +5162,100 @@ class _PatternHintSheetState extends State<_PatternHintSheet> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxHeight = math.min(constraints.maxHeight, 500.0);
-        return Container(
-          key: const Key('pattern_hint_sheet'),
-          width: double.infinity,
-          height: maxHeight,
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFF7DB),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 18)],
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 38,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFB6A985),
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    SizedBox.square(
-                      dimension: 36,
-                      child: Image.asset(
-                        'assets/generated/hint-lantern-v2.png',
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
-                        excludeFromSemantics: true,
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            key: const Key('pattern_hint_sheet'),
+            constraints: BoxConstraints(maxWidth: 480, maxHeight: maxHeight),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF7DB),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 18)],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFB6A985),
+                        borderRadius: BorderRadius.circular(99),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '현재 스테이지 팁 · $displayLevel단계',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF403923),
-                            ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      SizedBox.square(
+                        dimension: 36,
+                        child: Image.asset(
+                          'assets/generated/hint-lantern-v2.png',
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                          excludeFromSemantics: true,
+                        ),
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '현재 스테이지 팁 · $displayLevel단계',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF403923),
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(hint.text, style: Theme.of(context).textTheme.bodyLarge),
+                  const SizedBox(height: 14),
+                  Text(
+                    canMore
+                        ? '다음 단계는 정확한 각도나 힘 대신, 다음에 시험할 기믹과 순서를 알려줍니다.'
+                        : '이 팁은 언제든 다시 열어 볼 수 있습니다.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF665F4E),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(hint.text, style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 14),
-                Text(
-                  canMore
-                      ? '다음 단계는 정확한 각도나 힘 대신, 다음에 시험할 기믹과 순서를 알려줍니다.'
-                      : '이 팁은 언제든 다시 열어 볼 수 있습니다.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF665F4E),
                   ),
-                ),
-                const SizedBox(height: 12),
-                if (canMore)
-                  FilledButton.icon(
-                    key: const Key('pattern_hint_more_button'),
-                    onPressed: () async {
-                      setState(() => _loading = true);
-                      final updated = await widget.onMore(displayLevel);
-                      if (!mounted) return;
-                      setState(() {
-                        _loading = false;
-                        if (updated != null) _entitlement = updated;
-                      });
-                    },
-                    icon: _loading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : SizedBox.square(
-                            dimension: 26,
-                            child: Image.asset(
-                              'assets/generated/hint-lantern-v2.png',
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
-                              excludeFromSemantics: true,
+                  const SizedBox(height: 12),
+                  if (canMore)
+                    FilledButton.icon(
+                      key: const Key('pattern_hint_more_button'),
+                      onPressed: () async {
+                        setState(() => _loading = true);
+                        final updated = await widget.onMore(displayLevel);
+                        if (!mounted) return;
+                        setState(() {
+                          _loading = false;
+                          if (updated != null) _entitlement = updated;
+                        });
+                      },
+                      icon: _loading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : SizedBox.square(
+                              dimension: 26,
+                              child: Image.asset(
+                                'assets/generated/hint-lantern-v2.png',
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                                excludeFromSemantics: true,
+                              ),
                             ),
-                          ),
-                    label: const Text('더 구체적으로'),
-                  ),
-              ],
+                      label: const Text('더 구체적으로'),
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -7488,66 +7527,6 @@ List<_LeaderboardRow> _leaderboardRows(GameState state) {
   return rows.take(4).toList();
 }
 
-class _DiscoveryProgressRow extends StatelessWidget {
-  const _DiscoveryProgressRow({required this.milestones});
-
-  final List<StageDiscoveryMilestone> milestones;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label:
-        '이번 탐사 발견 ${milestones.where((item) => item.achieved).length}/${milestones.length}',
-    child: ExcludeSemantics(
-      child: Wrap(
-        key: const Key('discovery_progress'),
-        spacing: 6,
-        runSpacing: 4,
-        children: [
-          for (final milestone in milestones)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: milestone.achieved
-                    ? const Color(0xFFDDF3E5)
-                    : const Color(0xFFECEDE7),
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(
-                  color: milestone.achieved
-                      ? const Color(0xFF58A778)
-                      : const Color(0xFFB6B9AE),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      milestone.achieved
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                      size: 14,
-                      color: milestone.achieved
-                          ? const Color(0xFF2F8A62)
-                          : const Color(0xFF747A72),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      milestone.label,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
-}
-
 class _CausalRibbon extends StatelessWidget {
   const _CausalRibbon({required this.milestones});
 
@@ -7662,11 +7641,13 @@ Widget buildCausalRibbonForTesting({
   required List<StageDiscoveryMilestone> milestones,
 }) => _CausalRibbon(milestones: milestones);
 
-class _CompactHudDetails extends StatefulWidget {
+class _CompactHudDetails extends StatelessWidget {
   const _CompactHudDetails({
     required this.objective,
     required this.message,
     required this.tutorialActive,
+    required this.milestones,
+    this.condensed = false,
     this.progressHint,
     this.rewardGuide,
   });
@@ -7674,115 +7655,220 @@ class _CompactHudDetails extends StatefulWidget {
   final String objective;
   final String message;
   final bool tutorialActive;
+  final List<StageDiscoveryMilestone> milestones;
+  final bool condensed;
   final String? progressHint;
   final String? rewardGuide;
 
   @override
-  State<_CompactHudDetails> createState() => _CompactHudDetailsState();
-}
-
-class _CompactHudDetailsState extends State<_CompactHudDetails> {
-  bool _expanded = false;
-
-  @override
   Widget build(BuildContext context) {
-    final hasDetails =
-        widget.progressHint != null || widget.rewardGuide != null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final discoveryText = milestones.isEmpty
+        ? '이 스테이지에는 별도의 발견 기록이 없습니다.'
+        : milestones
+              .map((item) => '${item.achieved ? '완료' : '대기'} · ${item.label}')
+              .join('\n');
+    if (condensed) {
+      final summary = [
+        objective,
+        if (milestones.isNotEmpty) discoveryText,
+        if (rewardGuide != null) '보상 · $rewardGuide',
+        if (progressHint != null) '진행 · $progressHint',
+        '조작 · 손가락이나 마우스로 방향을 정하고, 공을 길게 눌러 힘을 모은 뒤 놓으세요.',
+        '현재 · $message',
+      ].join('\n');
+      return Stack(
+        children: [
+          Semantics(
+            key: const Key('compact_objective'),
+            container: true,
+            label: objective,
+            child: const SizedBox.shrink(),
+          ),
+          Semantics(
+            key: const Key('compact_message'),
+            container: true,
+            liveRegion: true,
+            label: '게임 안내: $message',
+            child: const SizedBox.shrink(),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _HudInfoButton(
+              key: const Key('hud_status_button'),
+              assetPath: 'assets/generated/nav-stage-map-v1.png',
+              title: '스테이지 정보',
+              message: summary,
+              liveRegion: true,
+            ),
+          ),
+        ],
+      );
+    }
+    return Wrap(
+      key: const Key('hud_info_actions'),
+      spacing: 4,
+      runSpacing: 4,
       children: [
-        SizedBox(
-          height: 44,
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.objective,
-                      key: const Key('compact_objective'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF46584E),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        height: 1.2,
-                      ),
-                    ),
-                    if (widget.tutorialActive)
-                      Semantics(
-                        key: const Key('compact_message'),
-                        liveRegion: true,
-                        label: '게임 안내: ${widget.message}',
-                        child: Offstage(child: Text(widget.message)),
-                      )
-                    else
-                      Semantics(
-                        liveRegion: true,
-                        label: '게임 안내: ${widget.message}',
-                        child: Text(
-                          widget.message,
-                          key: const Key('compact_message'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(fontSize: 12, height: 1.2),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (hasDetails)
-                Semantics(
-                  button: true,
-                  expanded: _expanded,
-                  label: _expanded ? '보상과 추가 정보 접기' : '보상과 추가 정보 펼치기',
-                  child: IconButton(
-                    key: const Key('hud_details_toggle'),
-                    tooltip: _expanded ? '추가 정보 접기' : '보상과 추가 정보',
-                    onPressed: () => setState(() => _expanded = !_expanded),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 44,
-                      height: 44,
-                    ),
-                    icon: Icon(
-                      _expanded
-                          ? Icons.expand_less_rounded
-                          : Icons.expand_more_rounded,
-                    ),
-                  ),
-                ),
-            ],
+        Semantics(
+          key: const Key('compact_objective'),
+          container: true,
+          label: objective,
+          child: ExcludeSemantics(
+            child: Opacity(
+              opacity: 0,
+              child: SizedBox(width: 0, height: 0, child: Text(objective)),
+            ),
           ),
         ),
-        if (_expanded && widget.progressHint != null)
-          Text(
-            widget.progressHint!,
-            key: const Key('level_progress'),
-            maxLines: 2,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF2F8A62),
-              fontWeight: FontWeight.w700,
+        Semantics(
+          key: const Key('compact_message'),
+          container: true,
+          liveRegion: true,
+          label: '게임 안내: $message',
+          child: ExcludeSemantics(
+            child: Opacity(
+              opacity: 0,
+              child: SizedBox(width: 0, height: 0, child: Text(message)),
             ),
           ),
-        if (_expanded && widget.rewardGuide != null)
-          Text(
-            '보상 · ${widget.rewardGuide}',
-            key: const Key('active_reward_guide'),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF7A5420),
-              fontWeight: FontWeight.w800,
+        ),
+        if (progressHint != null)
+          Opacity(
+            opacity: 0,
+            child: SizedBox(
+              width: 0,
+              height: 0,
+              child: Text(progressHint!, key: const Key('level_progress')),
             ),
+          ),
+        if (rewardGuide != null)
+          Opacity(
+            opacity: 0,
+            child: SizedBox(
+              width: 0,
+              height: 0,
+              child: Text(rewardGuide!, key: const Key('active_reward_guide')),
+            ),
+          ),
+        _HudInfoButton(
+          key: const Key('hud_objective_button'),
+          assetPath: 'assets/generated/nav-stage-map-v1.png',
+          title: '이번 스테이지 목표',
+          message: objective,
+        ),
+        if (milestones.isNotEmpty)
+          _HudInfoButton(
+            key: const Key('hud_discovery_button'),
+            assetPath: 'assets/generated/nav-activities-v1.png',
+            title:
+                '발견 ${milestones.where((item) => item.achieved).length}/${milestones.length}',
+            message: discoveryText,
+          ),
+        if (rewardGuide != null)
+          _HudInfoButton(
+            key: const Key('hud_reward_button'),
+            assetPath: 'assets/generated/nav-reward-satchel-v1.png',
+            title: '이번 단계 보상',
+            message: rewardGuide!,
+          ),
+        const _HudInfoButton(
+          key: Key('hud_controls_button'),
+          assetPath: 'assets/generated/nav-helm-v1.png',
+          title: '조작 방법',
+          message: '손가락이나 마우스로 방향을 정하고, 공을 길게 눌러 힘을 모은 뒤 놓으세요.',
+        ),
+        _HudInfoButton(
+          key: const Key('hud_status_button'),
+          assetPath: 'assets/generated/hint-lantern-v2.png',
+          title: tutorialActive ? '현재 안내' : '플레이 상태',
+          message: message,
+          liveRegion: true,
+        ),
+        if (progressHint != null)
+          _HudInfoButton(
+            key: const Key('hud_progress_button'),
+            assetPath: 'assets/generated/nav-expedition-v1.png',
+            title: '진행 상황',
+            message: progressHint!,
           ),
       ],
     );
   }
+}
+
+class _HudInfoButton extends StatelessWidget {
+  const _HudInfoButton({
+    super.key,
+    required this.assetPath,
+    required this.title,
+    required this.message,
+    this.liveRegion = false,
+  });
+
+  final String assetPath;
+  final String title;
+  final String message;
+  final bool liveRegion;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    liveRegion: liveRegion,
+    label: '$title. $message',
+    child: Tooltip(
+      message: '$title · $message',
+      child: IconButton(
+        tooltip: title,
+        onPressed: () => showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            key: Key('${key.toString()}_dialog'),
+            titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+            contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            title: Row(
+              children: [
+                SizedBox.square(
+                  dimension: 42,
+                  child: Image.asset(
+                    assetPath,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    excludeFromSemantics: true,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Text(title)),
+              ],
+            ),
+            content: ConstrainedBox(
+              key: const Key('hud_info_dialog_content'),
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Text(message),
+            ),
+            actions: [
+              TextButton(
+                autofocus: true,
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        ),
+        icon: SizedBox.square(
+          dimension: 32,
+          child: Image.asset(
+            assetPath,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            excludeFromSemantics: true,
+          ),
+        ),
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        padding: const EdgeInsets.all(5),
+      ),
+    ),
+  );
 }
 
 class _Hud extends StatelessWidget {
@@ -7826,6 +7912,7 @@ class _Hud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final exitLabel = exitTooltipOverride ?? '스테이지 포기';
     final progressHint = showDiscovery ? _levelProgressHint(state) : null;
     final compactProgressHint = showDiscovery
         ? _compactLevelProgressHint(state)
@@ -7891,23 +7978,52 @@ class _Hud extends StatelessWidget {
                         ),
                 ),
                 const SizedBox(width: 6),
-                Text('시도 ${state.shotCount}'),
+                _HudMetric(
+                  assetPath: 'assets/generated/nav-replay-v1.png',
+                  tooltip: '시도 횟수 ${state.shotCount}',
+                  value: '시도 ${state.shotCount}',
+                  iconOnly: dense,
+                ),
                 const SizedBox(width: 6),
-                Text('점수 ${hudScore ?? state.score}'),
+                _HudMetric(
+                  assetPath: 'assets/generated/stage-icon-chain-score-v1.png',
+                  tooltip: '현재 점수 ${hudScore ?? state.score}',
+                  value: '점수 ${hudScore ?? state.score}',
+                  iconOnly: dense,
+                ),
+                if (dense)
+                  _CompactHudDetails(
+                    objective:
+                        objectiveOverride ??
+                        '발견 $discoveries/${discoveryMilestones.length} · '
+                            '${stageDiscoveryCompactPath(state.levelIndex)}',
+                    message: state.message,
+                    tutorialActive: tutorialActive,
+                    milestones: discoveryMilestones,
+                    condensed: true,
+                    progressHint: compactProgressHint,
+                    rewardGuide: rewardGuide,
+                  ),
                 if (!showStageSelector && onExit != null)
-                  IconButton(
-                    key: const Key('home_button'),
-                    tooltip:
-                        exitTooltipOverride ??
-                        (exitToMainMenu ? '메인 메뉴' : '섬 지도'),
-                    onPressed: onExit,
-                    icon: Icon(
-                      exitToMainMenu ? Icons.home_rounded : Icons.map_outlined,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 44,
-                      height: 44,
+                  Semantics(
+                    key: const Key('stage_abandon_button'),
+                    button: true,
+                    label: exitLabel,
+                    child: IconButton(
+                      key: const Key('home_button'),
+                      tooltip: exitLabel,
+                      onPressed: onExit,
+                      icon: Image.asset(
+                        'assets/generated/nav-stage-map-v1.png',
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        excludeFromSemantics: true,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 44,
+                        height: 44,
+                      ),
                     ),
                   ),
                 if (!showStageSelector)
@@ -7940,7 +8056,7 @@ class _Hud extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 2),
+            if (!dense) const SizedBox(height: 2),
             if (showStageSelector && !dense)
               SizedBox(
                 height: 30,
@@ -7971,16 +8087,18 @@ class _Hud extends StatelessWidget {
                   ],
                 ),
               ),
-            _CompactHudDetails(
-              objective:
-                  objectiveOverride ??
-                  '발견 $discoveries/${discoveryMilestones.length} · '
-                      '${stageDiscoveryCompactPath(state.levelIndex)}',
-              message: state.message,
-              tutorialActive: tutorialActive,
-              progressHint: compactProgressHint,
-              rewardGuide: rewardGuide,
-            ),
+            if (!dense)
+              _CompactHudDetails(
+                objective:
+                    objectiveOverride ??
+                    '발견 $discoveries/${discoveryMilestones.length} · '
+                        '${stageDiscoveryCompactPath(state.levelIndex)}',
+                message: state.message,
+                tutorialActive: tutorialActive,
+                milestones: discoveryMilestones,
+                progressHint: compactProgressHint,
+                rewardGuide: rewardGuide,
+              ),
           ],
         ),
       );
@@ -7997,20 +8115,34 @@ class _Hud extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              Text('시도 ${state.shotCount}'),
+              _HudMetric(
+                assetPath: 'assets/generated/nav-replay-v1.png',
+                tooltip: '시도 횟수 ${state.shotCount}',
+                value: '시도 ${state.shotCount}',
+              ),
               const SizedBox(width: 12),
-              Text('점수 ${hudScore ?? state.score}'),
+              _HudMetric(
+                assetPath: 'assets/generated/stage-icon-chain-score-v1.png',
+                tooltip: '현재 점수 ${hudScore ?? state.score}',
+                value: '점수 ${hudScore ?? state.score}',
+              ),
               if (!showStageSelector && onExit != null)
-                IconButton(
-                  key: const Key('home_button'),
-                  tooltip:
-                      exitTooltipOverride ??
-                      (exitToMainMenu ? '메인 메뉴' : '섬 지도'),
-                  onPressed: onExit,
-                  icon: Icon(
-                    exitToMainMenu ? Icons.home_rounded : Icons.map_outlined,
+                Semantics(
+                  key: const Key('stage_abandon_button'),
+                  button: true,
+                  label: exitLabel,
+                  child: IconButton(
+                    key: const Key('home_button'),
+                    tooltip: exitLabel,
+                    onPressed: onExit,
+                    icon: Image.asset(
+                      'assets/generated/nav-stage-map-v1.png',
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      excludeFromSemantics: true,
+                    ),
+                    visualDensity: VisualDensity.compact,
                   ),
-                  visualDensity: VisualDensity.compact,
                 ),
               if (!showStageSelector)
                 IconButton(
@@ -8035,49 +8167,15 @@ class _Hud extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          if (showDiscovery || objectiveOverride != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
+          _CompactHudDetails(
+            objective:
                 objectiveOverride ?? stageDiscoveryQuestion(state.levelIndex),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF46584E),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          if (showDiscovery) ...[
-            const SizedBox(height: 4),
-            _DiscoveryProgressRow(milestones: discoveryMilestones),
-          ],
-          if (rewardGuide != null) ...[
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '이번 단계 보상 · $rewardGuide',
-                key: const Key('active_reward_guide'),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: const Color(0xFF7A5420),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-          const _AimInstruction(),
-          if (progressHint != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                progressHint,
-                key: const Key('level_progress'),
-                softWrap: true,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: const Color(0xFF2F8A62),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            message: state.message,
+            tutorialActive: tutorialActive,
+            milestones: showDiscovery ? discoveryMilestones : const [],
+            progressHint: progressHint,
+            rewardGuide: rewardGuide,
+          ),
           const SizedBox(height: 8),
           if (showStageSelector)
             Row(
@@ -8108,55 +8206,50 @@ class _Hud extends StatelessWidget {
                 ),
               ],
             ),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7FAF3),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFF9AA89F)),
-            ),
-            child: Semantics(
-              liveRegion: true,
-              label: '게임 안내: ${state.message}',
-              child: Text(state.message, softWrap: true),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _AimInstruction extends StatelessWidget {
-  const _AimInstruction();
+class _HudMetric extends StatelessWidget {
+  const _HudMetric({
+    required this.assetPath,
+    required this.tooltip,
+    required this.value,
+    this.iconOnly = false,
+  });
+
+  final String assetPath;
+  final String tooltip;
+  final String value;
+  final bool iconOnly;
 
   @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: const Color(0xFF2F6F57),
-      fontWeight: FontWeight.w700,
-    );
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.touch_app, size: 16, color: const Color(0xFF2F6F57)),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              '손가락을 움직여 조준하고, 공을 0.45초 이상 누른 뒤 손을 떼세요.',
-              key: const Key('aim_instruction'),
-              softWrap: true,
-              style: style,
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Semantics(
+      label: tooltip,
+      child: ExcludeSemantics(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              assetPath,
+              width: 25,
+              height: 25,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
             ),
-          ),
-        ],
+            if (!iconOnly) ...[
+              const SizedBox(width: 2),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+            ],
+          ],
+        ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _TutorialCoachMark extends StatelessWidget {
@@ -8813,28 +8906,24 @@ class _EntityThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trait = entity.traits.isEmpty ? null : entity.traits.first;
     final assetPath = _assetPath(entity);
     return Semantics(
       image: true,
       label: '${_entityName(entity)} 아이콘',
       child: _ThumbnailFrame(
-        backgroundColor: trait == null
-            ? const Color(0xFFE0E6E1)
-            : _traitUiColor(trait),
-        child: entity.type == EntityType.ball
-            ? CustomPaint(
-                painter: GameBallIconPainter(trait),
-                size: const Size(34, 34),
-              )
-            : assetPath == null
+        child: assetPath == null
             ? CustomPaint(
                 painter: _EntityIconPainter(entity),
-                size: const Size(34, 34),
+                size: const Size(44, 44),
               )
             : Padding(
-                padding: const EdgeInsets.all(3),
-                child: Image.asset(assetPath, fit: BoxFit.contain),
+                padding: const EdgeInsets.all(1),
+                child: Image.asset(
+                  assetPath,
+                  key: Key('entity_thumbnail_${entity.type.name}'),
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
               ),
       ),
     );
@@ -8852,10 +8941,11 @@ class _BallThumbnail extends StatelessWidget {
       image: true,
       label: trait == null ? '공 아이콘' : '${trait!.label} 공 아이콘',
       child: _ThumbnailFrame(
-        backgroundColor: trait == null ? Colors.white : _traitUiColor(trait!),
-        child: CustomPaint(
-          painter: GameBallIconPainter(trait),
-          size: const Size(34, 34),
+        child: Image.asset(
+          _ballAssetPath(trait),
+          key: const Key('ball_thumbnail_asset'),
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
         ),
       ),
     );
@@ -8863,22 +8953,17 @@ class _BallThumbnail extends StatelessWidget {
 }
 
 class _ThumbnailFrame extends StatelessWidget {
-  const _ThumbnailFrame({required this.child, required this.backgroundColor});
+  const _ThumbnailFrame({required this.child});
 
   final Widget child;
-  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF24352D), width: 1.5),
-      ),
-      child: ClipOval(child: Center(child: child)),
+      width: 56,
+      height: 56,
+      alignment: Alignment.center,
+      child: child,
     );
   }
 }
@@ -9089,12 +9174,32 @@ class _EntityIconPainter extends CustomPainter {
 
 String? _assetPath(EntityState entity) {
   return switch (entity.type) {
+    EntityType.ball => _ballAssetPath(
+      entity.traits.isEmpty ? null : entity.traits.first,
+    ),
+    EntityType.hole => 'assets/generated/hole-flag-v1.png',
+    EntityType.wall => 'assets/generated/wall-segment-v1.png',
     EntityType.crate => 'assets/generated/crate-v3.png',
     EntityType.weight => 'assets/generated/stone-v3.png',
     EntityType.bumper => 'assets/generated/jelly-bumper-v2.png',
-    _ => null,
+    EntityType.stickySurface => 'assets/generated/sticky-pad-v1.png',
+    EntityType.switchPad => 'assets/generated/switch-pad-v1.png',
+    EntityType.gate => 'assets/generated/gate-closed-v1.png',
+    EntityType.balloon => 'assets/generated/balloon-v1.png',
+    EntityType.spikeSource => 'assets/generated/spike-source-v1.png',
+    EntityType.powerSlider => 'assets/generated/power-slider-v1.png',
+    EntityType.rotatingReflector =>
+      'assets/generated/rotating-reflector-v1.png',
   };
 }
+
+String _ballAssetPath(TraitType? trait) => switch (trait) {
+  TraitType.heavy => 'assets/generated/ball-heavy-v1.png',
+  TraitType.bouncy => 'assets/generated/ball-bouncy-v1.png',
+  TraitType.sticky => 'assets/generated/ball-sticky-v1.png',
+  TraitType.sharp => 'assets/generated/ball-sharp-v1.png',
+  null => 'assets/generated/ball-base-v1.png',
+};
 
 String _entityName(EntityState entity) {
   switch (entity.type) {
@@ -9219,17 +9324,4 @@ String _reflectorDirectionLabel(int orientation) {
     2 => '세로 방향',
     _ => '오른쪽 위에서 왼쪽 아래 대각선',
   };
-}
-
-Color _traitUiColor(TraitType trait) {
-  switch (trait) {
-    case TraitType.heavy:
-      return const Color(0xFFB8C7D0);
-    case TraitType.bouncy:
-      return const Color(0xFFA9E7BF);
-    case TraitType.sticky:
-      return const Color(0xFFD2B5F0);
-    case TraitType.sharp:
-      return const Color(0xFFF5B18B);
-  }
 }

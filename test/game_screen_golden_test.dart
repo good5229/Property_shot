@@ -80,11 +80,7 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         expect(find.byKey(const Key('aim_area')), findsOneWidget);
-        if (fixture.width < 900) {
-          expect(find.byKey(const Key('compact_message')), findsOneWidget);
-        } else {
-          expect(find.byKey(const Key('compact_message')), findsNothing);
-        }
+        expect(find.byKey(const Key('compact_message')), findsOneWidget);
         expect(find.text(levels[stageIndex].name), findsOneWidget);
         await expectLater(
           find.byKey(const Key('game_screen_golden')),

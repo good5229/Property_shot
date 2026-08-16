@@ -70,6 +70,15 @@ void main() {
         );
         final game = gameWidgetState.currentGame;
         await game.toBeLoaded();
+        if (variant == 'popup') {
+          await tester.runAsync(
+            () => precacheImage(
+              const AssetImage('assets/generated/power-slider-v1.png'),
+              tester.element(find.byType(GameWidget<PropertyShotGame>)),
+            ),
+          );
+          await tester.pump();
+        }
 
         if (variant == 'activated' || variant == 'reduced') {
           final result = const ShotResolver().resolve(
@@ -122,6 +131,11 @@ void main() {
             find.text('기물을 기준 속력까지 올립니다. 진행 방향은 유지되고 같은 접촉에는 한 번만 적용됩니다.'),
             findsOneWidget,
           );
+          expect(
+            find.byKey(const Key('entity_thumbnail_powerSlider')),
+            findsOneWidget,
+          );
+          await tester.pump(const Duration(milliseconds: 100));
         } else {
           await tester.pump(const Duration(milliseconds: 80));
         }

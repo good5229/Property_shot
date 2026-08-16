@@ -76,6 +76,30 @@ void main() {
     expect(find.text(entry.hints[1].text), findsOneWidget);
   });
 
+  testWidgets('넓은 화면에서도 팁 시트는 읽기 좋은 폭으로 제한된다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var entitlement = _entitlement(entry, openedCount: 0);
+    await tester.pumpWidget(
+      _app(
+        level: level,
+        entry: entry,
+        entitlement: entitlement,
+        onOpen: ({int? requestedLevel}) async {
+          entitlement = entitlement.copyWith(consumed: true, openedCount: 1);
+          return entitlement;
+        },
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('pattern_hint_button')));
+    await tester.pump(const Duration(milliseconds: 300));
+    final sheet = tester.getSize(find.byKey(const Key('pattern_hint_sheet')));
+    expect(sheet.width, lessThanOrEqualTo(480));
+    expect(sheet.height, lessThan(500));
+  });
+
   testWidgets('보상으로 복원된 접근권은 스테이지 진입 시 가용 이벤트를 한 번 기록한다', (tester) async {
     final telemetry = LocalPlayTelemetry();
     final entitlement = RunHintEntitlement(

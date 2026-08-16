@@ -93,6 +93,10 @@ void main() {
 
     await tester.tap(find.byKey(const Key('home_button')));
     await tester.pump();
+    expect(find.byKey(const Key('stage_abandon_dialog')), findsOneWidget);
+    expect(find.text('이 스테이지를 포기할까요?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('stage_abandon_confirm_button')));
+    await tester.pump();
     expect(find.byKey(const Key('start_game_button')), findsOneWidget);
   });
 
@@ -146,6 +150,17 @@ void main() {
     expect(find.text('정밀 충전 조절'), findsOneWidget);
     expect(find.text('런 동안 계속 활성'), findsOneWidget);
     expect(find.textContaining('충전 속도를 25% 늦춰'), findsOneWidget);
+    expect(
+      tester
+          .widgetList<Image>(find.byType(Image))
+          .any(
+            (image) =>
+                image.image is AssetImage &&
+                (image.image as AssetImage).assetName ==
+                    'assets/generated/power-slider-v1.png',
+          ),
+      isTrue,
+    );
     expect(
       find.byKey(const Key('reward_inventory_usage_precision_charge_control')),
       findsOneWidget,
@@ -242,7 +257,7 @@ void main() {
 
     final screen = tester.widget<GameScreen>(find.byType(GameScreen));
     expect(screen.initialState?.shotCount, 1);
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(_currentShotCount(tester), 1);
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
   });
 
@@ -284,6 +299,40 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('entity_info_panel')), findsOneWidget);
     expect(find.text('현재 세로 방향 · 3회 회전'), findsOneWidget);
+    expect(
+      find.byKey(const Key('entity_thumbnail_rotatingReflector')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('스테이지 포기는 취소할 수 있고 확인한 뒤에만 화면을 나간다', (tester) async {
+    var exited = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameScreen(
+          initialState: levels.first.createState(0),
+          showStageSelector: false,
+          onExit: () => exited = true,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('stage_abandon_button')));
+    await tester.pump();
+    expect(find.byKey(const Key('stage_abandon_dialog')), findsOneWidget);
+    expect(exited, isFalse);
+
+    await tester.tap(find.byKey(const Key('stage_abandon_cancel_button')));
+    await tester.pump();
+    expect(find.byKey(const Key('stage_abandon_dialog')), findsNothing);
+    expect(exited, isFalse);
+
+    await tester.tap(find.byKey(const Key('stage_abandon_button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('stage_abandon_confirm_button')));
+    await tester.pump();
+    expect(exited, isTrue);
   });
 
   testWidgets('9단계 화면은 현재 반사와 다음 충돌 회전을 한글로 안내한다', (tester) async {
@@ -297,10 +346,46 @@ void main() {
 
     expect(find.text('9. 판을 돌려 놓아라'), findsOneWidget);
     expect(find.textContaining('반사판 회전 → 다음 경로'), findsOneWidget);
-    expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsNothing);
-    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    expect(find.byKey(const Key('hud_progress_button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_progress_button')));
     await tester.pump();
-    expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsOneWidget);
+    expect(find.text('진행 상황'), findsOneWidget);
+    expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsWidgets);
+  });
+
+  testWidgets('상단 정보는 생성 이미지 아이콘을 누를 때 좁은 설명 팝업으로 열린다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      PropertyShotApp(
+        initialState: levels[1].createState(1, productRules: true),
+        showStageSelector: false,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('hud_info_actions')), findsOneWidget);
+    expect(find.byKey(const Key('hud_objective_button')), findsOneWidget);
+    expect(find.byKey(const Key('hud_controls_button')), findsOneWidget);
+    expect(find.byKey(const Key('hud_status_button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_objective_button')));
+    await tester.pump();
+    expect(find.text('이번 스테이지 목표'), findsOneWidget);
+    final dialogContent = tester.getSize(
+      find.byKey(const Key('hud_info_dialog_content')),
+    );
+    expect(dialogContent.width, lessThanOrEqualTo(360));
+    expect(
+      tester
+          .widgetList<Image>(find.byType(Image))
+          .any(
+            (image) =>
+                image.image is AssetImage &&
+                (image.image as AssetImage).assetName ==
+                    'assets/generated/nav-stage-map-v1.png',
+          ),
+      isTrue,
+    );
   });
 
   testWidgets('10단계 화면은 새 기믹 없이 자유로운 종합 경로를 안내한다', (tester) async {
@@ -314,10 +399,11 @@ void main() {
 
     expect(find.text('10. 속성 한방'), findsOneWidget);
     expect(find.textContaining('속성 → 기믹 연계 → 홀'), findsOneWidget);
-    expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsNothing);
-    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    expect(find.byKey(const Key('hud_progress_button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_progress_button')));
     await tester.pump();
-    expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsOneWidget);
+    expect(find.text('진행 상황'), findsOneWidget);
+    expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsWidgets);
   });
 
   testWidgets('섬 지도는 진행 경로와 실제 한 번 탭 동작을 안내한다', (tester) async {
@@ -585,7 +671,7 @@ void main() {
     );
     await rewoundSession.loadState();
     expect(rewoundSession.currentShotInputs, isEmpty);
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
   });
 
   testWidgets('홈 시작은 복제와 옮기기를 소비 전 코어 수에서 재생한다', (tester) async {
@@ -1222,7 +1308,7 @@ void main() {
 
     await tester.tapAt(_logicalOffset(tester, 78, 154));
     await tester.pump();
-    expect(find.textContaining('추천 경로 설명'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('추천 경로 설명')), findsWidgets);
     await tester.tap(find.byKey(const Key('transfer_button')));
     await tester.pump();
 
@@ -1362,7 +1448,7 @@ void main() {
     await tester.drag(aimArea, const Offset(-80, 80));
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
     expect(find.byKey(const Key('launch_button')), findsNothing);
   });
 
@@ -1378,7 +1464,7 @@ void main() {
     await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump();
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(_currentShotCount(tester), 1);
   });
 
   testWidgets('발사 입력 지연은 손을 뗀 뒤 비동기 저장과 물리 판정을 포함한다', (tester) async {
@@ -1438,8 +1524,7 @@ void main() {
     await _releaseTimedGesture(first, const Duration(milliseconds: 760));
     await tester.pump();
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
-    expect(find.textContaining('시도 2'), findsNothing);
+    expect(_currentShotCount(tester), 1);
   });
 
   testWidgets('발사 애니메이션 중에는 두 번째 샷을 만들지 않는다', (tester) async {
@@ -1462,8 +1547,7 @@ void main() {
     await _releaseTimedGesture(second, const Duration(milliseconds: 760));
     await tester.pump(const Duration(milliseconds: 80));
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
-    expect(find.textContaining('시도 2'), findsNothing);
+    expect(_currentShotCount(tester), 1);
   });
 
   testWidgets('발사 애니메이션 중에는 물체 정보 팝업이 열리지 않는다', (tester) async {
@@ -1513,7 +1597,7 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('failure_popup')), findsNothing);
     expect(find.byKey(const Key('previous_aim_semantics')), findsOneWidget);
-    expect(find.textContaining('직전 조준이 회색으로 남아 있습니다'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('직전 조준이 회색으로 남아 있습니다')), findsWidgets);
     final game = tester
         .widget<GameWidget<PropertyShotGame>>(
           find.byType(GameWidget<PropertyShotGame>),
@@ -1558,7 +1642,7 @@ void main() {
         .game!;
     expect(game.previousAimInput, isNull);
     expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
-    expect(find.textContaining('각도나 힘 한 가지만'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('각도나 힘 한 가지만')), findsWidgets);
   });
 
   testWidgets('인과를 만든 다중 샷 실패는 준비 상태 연습과 기록 분리를 제공한다', (tester) async {
@@ -1621,8 +1705,8 @@ void main() {
     expect(assistedMarked, isTrue);
     expect(rewound, isTrue);
     expect(find.byKey(const Key('failure_popup')), findsNothing);
-    expect(find.textContaining('최고 기록은 연습 기록으로 분리'), findsOneWidget);
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('최고 기록은 연습 기록으로 분리')), findsWidgets);
+    expect(_currentShotCount(tester), 1);
   });
 
   testWidgets('일시정지 중에는 힘 조준으로 발사되지 않는다', (tester) async {
@@ -1640,7 +1724,7 @@ void main() {
     await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
   });
 
   testWidgets('롱프레스가 취소되면 발사하지 않는다', (tester) async {
@@ -1655,7 +1739,7 @@ void main() {
     await gesture.cancel();
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
     expect(
       tester
           .getSemantics(find.byKey(const Key('compact_message')))
@@ -1677,7 +1761,7 @@ void main() {
     await gesture.cancel();
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
   });
 
   testWidgets('앱 생명주기 전환 중 충전은 취소되고 복귀 후 발사되지 않는다', (tester) async {
@@ -1697,7 +1781,7 @@ void main() {
     await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
     expect(tester.takeException(), isNull);
   });
 
@@ -1715,7 +1799,7 @@ void main() {
     await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
     expect(tester.takeException(), isNull);
   });
 
@@ -1735,7 +1819,7 @@ void main() {
     await gesture.up(timeStamp: const Duration(milliseconds: 1761));
     await tester.pump();
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(_currentShotCount(tester), 1);
     expect(tester.takeException(), isNull);
   });
 
@@ -1748,6 +1832,7 @@ void main() {
 
     expect(find.byKey(const Key('ball_info_panel')), findsOneWidget);
     expect(find.text('공 속성 없음'), findsOneWidget);
+    expect(find.byKey(const Key('ball_thumbnail_asset')), findsOneWidget);
   });
 
   testWidgets('물체를 누르면 물체 속성 설명이 표시된다', (tester) async {
@@ -1759,6 +1844,22 @@ void main() {
 
     expect(find.byKey(const Key('entity_info_panel')), findsOneWidget);
     expect(find.textContaining('무거움'), findsWidgets);
+    final popupImages = tester.widgetList<Image>(
+      find.descendant(
+        of: find.byKey(const Key('entity_info_panel')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(
+      popupImages.any(
+        (image) =>
+            image.image is AssetImage &&
+            (image.image as AssetImage).assetName.startsWith(
+              'assets/generated/',
+            ),
+      ),
+      isTrue,
+    );
   });
 
   testWidgets('과거 공을 누르면 순번·속성·고정 상태만 표시한다', (tester) async {
@@ -1910,7 +2011,7 @@ void main() {
 
     expect(find.byKey(const Key('clear_popup')), findsNothing);
     expect(find.byKey(const Key('aim_area')), findsOneWidget);
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
   });
 
   testWidgets('클리어 결과 이동 중에는 기록 다시 도전을 함께 저장하지 않는다', (tester) async {
@@ -2328,7 +2429,7 @@ void main() {
 
     expect(attempts, 1);
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
-    expect(find.textContaining('다음 단계 기록을 저장하지 못했습니다'), findsOneWidget);
+    expect(_currentGameState(tester).message, contains('다음 단계 기록을 저장하지 못했습니다'));
     expect(tester.takeException(), isNull);
   });
 
@@ -2397,11 +2498,11 @@ void main() {
     expect(find.byKey(const Key('compact_hud')), findsOneWidget);
     expect(find.byKey(const Key('compact_control_panel')), findsOneWidget);
     expect(find.byKey(const Key('compact_objective')), findsOneWidget);
-    final compactObjective = tester.widget<Text>(
-      find.byKey(const Key('compact_objective')),
-    );
-    expect(compactObjective.data, '발견 0/3 · 무거움 → 상자 → 홀');
-    expect(compactObjective.maxLines, 1);
+    final compactObjective = tester
+        .getSemantics(find.byKey(const Key('compact_objective')))
+        .getSemanticsData()
+        .label;
+    expect(compactObjective, '발견 0/3 · 무거움 → 상자 → 홀');
     expect(find.byKey(const Key('compact_message')), findsOneWidget);
     final compactMessage = tester
         .getSemantics(find.byKey(const Key('compact_message')))
@@ -2648,24 +2749,32 @@ void main() {
     }
   });
 
-  testWidgets('현재 단계의 퍼즐 목표가 첫 화면에 표시된다', (tester) async {
+  testWidgets('현재 단계의 퍼즐 목표가 상단 정보 아이콘에 표시된다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
 
-    expect(find.textContaining('발견 0/3 · 무거움'), findsOneWidget);
+    final objective = tester
+        .getSemantics(find.byKey(const Key('compact_objective')))
+        .getSemanticsData()
+        .label;
+    expect(objective, contains('발견 0/3 · 무거움'));
+    expect(find.byKey(const Key('hud_status_button')), findsOneWidget);
   });
 
   testWidgets('3단계는 스위치 경로와 점착의 고정 역할을 첫 화면에 표시한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       PropertyShotApp(initialState: levels[2].createState(2)),
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('level_progress')), findsNothing);
-    await tester.tap(find.byKey(const Key('hud_details_toggle')));
+    expect(find.byKey(const Key('hud_progress_button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_progress_button')));
     await tester.pump();
+    expect(find.text('진행 상황'), findsOneWidget);
     expect(find.byKey(const Key('level_progress')), findsOneWidget);
-    expect(find.text('무거움은 스위치 · 점착은 공 고정'), findsOneWidget);
+    expect(find.text('무거움은 스위치 · 점착은 공 고정'), findsWidgets);
   });
 }
 
@@ -2757,6 +2866,16 @@ GameState _directClearState({int levelIndex = 0}) {
 }
 
 const _testPointerDownAt = Duration(seconds: 1);
+
+GameState _currentGameState(WidgetTester tester) => tester
+    .widget<GameWidget<PropertyShotGame>>(
+      find.byType(GameWidget<PropertyShotGame>),
+    )
+    .game!
+    .state;
+
+int _currentShotCount(WidgetTester tester) =>
+    _currentGameState(tester).shotCount;
 
 Future<void> _pumpForAsyncWork(
   WidgetTester tester, {

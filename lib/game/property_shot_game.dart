@@ -1813,6 +1813,10 @@ class PropertyShotGame extends FlameGame {
       final litPaint = _materialPaint(entity, rect);
       final image = _objectImages[entity.type];
       final hasGeneratedGimmick = _gimmickImages.containsKey(entity.type);
+      final usesGeneratedSprite =
+          entity.type == EntityType.wall && _wallImage != null ||
+          image != null ||
+          hasGeneratedGimmick;
       if (entity.traits.isNotEmpty &&
           state.phase == GamePhase.planning &&
           _animationPath.isEmpty) {
@@ -1874,12 +1878,16 @@ class PropertyShotGame extends FlameGame {
           _drawDirectionalLight(canvas, entity, rect, topPath);
         }
       }
-      _drawMaterialOutline(
-        canvas,
-        topPath,
-        topPoints,
-        highlighted: highlighted,
-      );
+      // 생성 이미지 자체의 외곽선이 충분히 선명하므로 물리 hitbox와 같은
+      // 사각 테두리를 다시 덧그리지 않는다. 터치/충돌 영역은 그대로다.
+      if (!usesGeneratedSprite) {
+        _drawMaterialOutline(
+          canvas,
+          topPath,
+          topPoints,
+          highlighted: highlighted,
+        );
+      }
       _drawTraitTexture(canvas, entity, rect);
     }
 

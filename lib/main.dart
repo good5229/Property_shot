@@ -2320,7 +2320,14 @@ class _RewardInventoryEmptyState extends StatelessWidget {
       ),
       child: const Column(
         children: [
-          Icon(Icons.backpack_outlined, size: 42, color: Color(0xFF8A6527)),
+          SizedBox.square(
+            dimension: 58,
+            child: Image(
+              image: AssetImage('assets/generated/nav-reward-satchel-v1.png'),
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
           SizedBox(height: 10),
           Text(
             '첫 보상을 얻으러 가볼까요?',
@@ -2345,7 +2352,7 @@ class _RewardInventoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = _rewardInventoryIcon(reward.effectKind);
+    final iconAsset = _rewardInventoryAsset(reward.effectKind);
     return Semantics(
       container: true,
       label:
@@ -2369,11 +2376,14 @@ class _RewardInventoryCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: icon.background,
-              foregroundColor: icon.foreground,
-              child: Icon(icon.icon),
+            SizedBox.square(
+              dimension: 54,
+              child: Image.asset(
+                iconAsset,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                excludeFromSemantics: true,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -2480,59 +2490,23 @@ String _rewardInventoryStatus(
   };
 }
 
-({IconData icon, Color foreground, Color background}) _rewardInventoryIcon(
-  RunRewardEffectKind kind,
-) => switch (kind) {
-  RunRewardEffectKind.cloneCore => (
-    icon: Icons.copy_all_rounded,
-    foreground: const Color(0xFF236B4A),
-    background: const Color(0xFFDDF3D5),
-  ),
-  RunRewardEffectKind.shotCancelAssist => (
-    icon: Icons.undo_rounded,
-    foreground: const Color(0xFF285B7D),
-    background: const Color(0xFFDCEEFF),
-  ),
-  RunRewardEffectKind.spentBallRecovery => (
-    icon: Icons.replay_circle_filled_rounded,
-    foreground: const Color(0xFF704A8F),
-    background: const Color(0xFFEEDFF7),
-  ),
-  RunRewardEffectKind.firstImpactGuide => (
-    icon: Icons.center_focus_strong_rounded,
-    foreground: const Color(0xFF9B5A22),
-    background: const Color(0xFFFFE9C8),
-  ),
-  RunRewardEffectKind.optionalChallengeGuard => (
-    icon: Icons.shield_rounded,
-    foreground: const Color(0xFF356072),
-    background: const Color(0xFFDCECF0),
-  ),
-  RunRewardEffectKind.failureCauseBoost => (
-    icon: Icons.account_tree_rounded,
-    foreground: const Color(0xFF9A3F3F),
-    background: const Color(0xFFFFDDDC),
-  ),
-  RunRewardEffectKind.ballAppearance => (
-    icon: Icons.auto_awesome_rounded,
-    foreground: const Color(0xFF087F7A),
-    background: const Color(0xFFFFE9A8),
-  ),
-  RunRewardEffectKind.stageRecordGuard => (
-    icon: Icons.workspace_premium_rounded,
-    foreground: const Color(0xFF8A651D),
-    background: const Color(0xFFFFE8A9),
-  ),
-  RunRewardEffectKind.nextStageHintAccess => (
-    icon: Icons.lightbulb_rounded,
-    foreground: const Color(0xFF8A5B00),
-    background: const Color(0xFFFFF0B8),
-  ),
-  RunRewardEffectKind.precisionCharge => (
-    icon: Icons.slow_motion_video_rounded,
-    foreground: const Color(0xFF315E8B),
-    background: const Color(0xFFDDEBFF),
-  ),
+String _rewardInventoryAsset(RunRewardEffectKind kind) => switch (kind) {
+  RunRewardEffectKind.cloneCore =>
+    'assets/generated/stage-icon-property-transfer-v1.png',
+  RunRewardEffectKind.shotCancelAssist => 'assets/generated/nav-helm-v1.png',
+  RunRewardEffectKind.spentBallRecovery =>
+    'assets/generated/stage-icon-persistent-ball-v1.png',
+  RunRewardEffectKind.firstImpactGuide =>
+    'assets/generated/nav-stage-map-v1.png',
+  RunRewardEffectKind.optionalChallengeGuard =>
+    'assets/generated/island-lighthouse-v2.png',
+  RunRewardEffectKind.failureCauseBoost => 'assets/generated/nav-replay-v1.png',
+  RunRewardEffectKind.ballAppearance => 'assets/generated/ball-bouncy-v1.png',
+  RunRewardEffectKind.stageRecordGuard =>
+    'assets/generated/nav-activities-v1.png',
+  RunRewardEffectKind.nextStageHintAccess =>
+    'assets/generated/hint-lantern-v2.png',
+  RunRewardEffectKind.precisionCharge => 'assets/generated/power-slider-v1.png',
 };
 
 class _HomeScreen extends StatelessWidget {

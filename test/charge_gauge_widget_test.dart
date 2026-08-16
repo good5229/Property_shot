@@ -1,7 +1,9 @@
+import 'package:flame/game.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 
@@ -30,7 +32,7 @@ void main() {
     await gesture.up(timeStamp: const Duration(milliseconds: 760));
     await tester.pump();
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(_currentShotCount(tester), 1);
   });
 
   testWidgets('과충전 release는 시도와 물리 발사를 만들지 않는다', (tester) async {
@@ -62,7 +64,7 @@ void main() {
     await gesture.up(timeStamp: const Duration(milliseconds: 2280));
     await tester.pump();
 
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
     expect(
       tester
           .getSemantics(find.byKey(const Key('compact_message')))
@@ -95,7 +97,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 2200));
     await overcharged.up(timeStamp: const Duration(milliseconds: 2200));
     await tester.pump();
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(_currentShotCount(tester), 0);
 
     final retry = await tester.createGesture(pointer: 72);
     await retry.down(
@@ -106,7 +108,7 @@ void main() {
     await retry.up(timeStamp: const Duration(milliseconds: 3060));
     await tester.pump();
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(_currentShotCount(tester), 1);
   });
 
   testWidgets('활성화 지연 450ms 전에는 rail을 숨기고 시작 시 최소 힘을 표시한다', (tester) async {
@@ -389,12 +391,20 @@ void main() {
 
           await gesture.up(timeStamp: const Duration(milliseconds: 1680));
           await tester.pump();
-          expect(find.textContaining('시도 1'), findsOneWidget);
+          expect(_currentShotCount(tester), 1);
         },
       );
     }
   }
 }
+
+int _currentShotCount(WidgetTester tester) => tester
+    .widget<GameWidget<PropertyShotGame>>(
+      find.byType(GameWidget<PropertyShotGame>),
+    )
+    .game!
+    .state
+    .shotCount;
 
 Future<void> _pumpChargeFrames(WidgetTester tester, Duration duration) async {
   const frame = Duration(milliseconds: 80);
