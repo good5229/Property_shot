@@ -151,7 +151,8 @@ class PropertyShotGame extends FlameGame {
   ui.Image? _holeImage;
   ui.Image? _wallImage;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
-  static const int _runtimeAssetDecodeSize = 256;
+  static const int _runtimeAssetDecodeSize = 384;
+  static const int _runtimeWallAssetDecodeSize = 768;
   static const FilterQuality _runtimeFilterQuality = FilterQuality.high;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
@@ -178,7 +179,10 @@ class PropertyShotGame extends FlameGame {
       _loadUiImage('assets/generated/ball-sticky-v1.png'),
       _loadUiImage('assets/generated/ball-sharp-v1.png'),
       _loadUiImage('assets/generated/hole-flag-v1.png'),
-      _loadUiImage('assets/generated/wall-segment-v1.png'),
+      _loadUiImage(
+        'assets/generated/wall-segment-v1.png',
+        targetWidth: _runtimeWallAssetDecodeSize,
+      ),
       _loadUiImage('assets/generated/sticky-pad-v1.png'),
       _loadUiImage('assets/generated/spike-source-v1.png'),
       _loadUiImage('assets/generated/power-slider-v1.png'),
@@ -203,11 +207,14 @@ class PropertyShotGame extends FlameGame {
     _gimmickImages[EntityType.rotatingReflector] = images[16];
   }
 
-  Future<ui.Image> _loadUiImage(String assetPath) async {
+  Future<ui.Image> _loadUiImage(
+    String assetPath, {
+    int targetWidth = _runtimeAssetDecodeSize,
+  }) async {
     final data = await rootBundle.load(assetPath);
     final codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(),
-      targetWidth: _runtimeAssetDecodeSize,
+      targetWidth: targetWidth,
     );
     try {
       final frame = await codec.getNextFrame();

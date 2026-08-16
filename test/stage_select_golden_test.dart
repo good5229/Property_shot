@@ -24,6 +24,7 @@ void main() {
     (name: '768x1024', width: 768.0, height: 1024.0),
     (name: '1024x768', width: 1024.0, height: 768.0),
     (name: '1440x900', width: 1440.0, height: 900.0),
+    (name: '1920x1080', width: 1920.0, height: 1080.0),
   ]) {
     testWidgets('섬 지도 Golden ${fixture.name}', (tester) async {
       SharedPreferences.setMockInitialValues(

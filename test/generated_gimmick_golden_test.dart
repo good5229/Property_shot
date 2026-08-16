@@ -27,6 +27,8 @@ void main() {
     for (final fixture in const [
       (name: '390x844', width: 390.0, height: 844.0),
       (name: '768x1024', width: 768.0, height: 1024.0),
+      (name: '1440x900', width: 1440.0, height: 900.0),
+      (name: '1920x1080', width: 1920.0, height: 1080.0),
     ]) {
       testWidgets('생성 스프라이트 전체 오브젝트 ${stageIndex + 1}단계 Golden ${fixture.name}', (
         tester,
@@ -76,6 +78,8 @@ void main() {
     for (final fixture in const [
       (name: '390x844', width: 390.0, height: 844.0),
       (name: '768x1024', width: 768.0, height: 1024.0),
+      (name: '1440x900', width: 1440.0, height: 900.0),
+      (name: '1920x1080', width: 1920.0, height: 1080.0),
     ]) {
       testWidgets('속성 공 ${trait.name} Golden ${fixture.name}', (tester) async {
         SharedPreferences.setMockInitialValues(<String, Object>{});

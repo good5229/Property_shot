@@ -59,6 +59,20 @@ void main() {
 
       expect(frame.image.width, greaterThan(0), reason: asset);
       expect(frame.image.height, greaterThan(0), reason: asset);
+      expect(
+        frame.image.width > frame.image.height
+            ? frame.image.width
+            : frame.image.height,
+        greaterThanOrEqualTo(600),
+        reason: '$asset: 네 화면 등급에서 확대해도 주축 해상도를 유지해야 합니다.',
+      );
+      expect(
+        frame.image.width < frame.image.height
+            ? frame.image.width
+            : frame.image.height,
+        greaterThanOrEqualTo(240),
+        reason: '$asset: 좁은 축도 실제 UI 크기에서 윤곽이 뭉개지지 않아야 합니다.',
+      );
       codec.dispose();
       frame.image.dispose();
     }

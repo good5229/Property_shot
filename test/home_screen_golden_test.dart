@@ -21,6 +21,8 @@ void main() {
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
     (name: '1024x768', width: 1024.0, height: 768.0),
+    (name: '1440x900', width: 1440.0, height: 900.0),
+    (name: '1920x1080', width: 1920.0, height: 1080.0),
   ]) {
     testWidgets('홈 화면 Golden ${fixture.name}', (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -164,6 +166,7 @@ void main() {
       for (final asset in const [
         'assets/generated/stone-v3.png',
         'assets/generated/crate-v3.png',
+        'assets/generated/nav-activities-v1.png',
       ]) {
         await precacheImage(AssetImage(asset), context);
       }
@@ -178,6 +181,73 @@ void main() {
       matchesGoldenFile('goldens/home_screen_experienced_390x844.png'),
     );
   });
+
+  for (final fixture in const [
+    (name: '390x844', width: 390.0, height: 844.0),
+    (name: '768x1024', width: 768.0, height: 1024.0),
+    (name: '1440x900', width: 1440.0, height: 900.0),
+    (name: '1920x1080', width: 1920.0, height: 1080.0),
+  ]) {
+    testWidgets('숙련 홈 전체 활동 이미지 Golden ${fixture.name}', (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'property_shot_cleared_levels': <String>['0', '1', '2'],
+        'property_shot_cleared_stage_ids': <String>[
+          'stage_heavy',
+          'stage_bouncy',
+          'stage_chain_gate',
+        ],
+      });
+      await tester.binding.setSurfaceSize(Size(fixture.width, fixture.height));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        const PropertyShotApp(
+          showHome: true,
+          fontFamilyOverride: 'GoldenNanumGothic',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final context = tester.element(
+        find.byKey(const Key('home_screen_golden')),
+      );
+      await tester.runAsync(() async {
+        for (final asset in const [
+          'assets/generated/stone-v3.png',
+          'assets/generated/crate-v3.png',
+          'assets/generated/nav-helm-v1.png',
+          'assets/generated/nav-stage-map-v1.png',
+          'assets/generated/nav-expedition-v1.png',
+          'assets/generated/nav-reward-satchel-v1.png',
+          'assets/generated/nav-replay-v1.png',
+          'assets/generated/nav-daily-challenge-v1.png',
+          'assets/generated/nav-activities-v1.png',
+        ]) {
+          await precacheImage(AssetImage(asset), context);
+        }
+      });
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('advanced_activities_menu')));
+      await tester.pumpAndSettle();
+
+      for (final key in const [
+        'start_voyage_art',
+        'stage_navigation_art',
+        'expedition_entry_button',
+        'reward_inventory_entry_button',
+        'replay_library_entry_button',
+        'daily_challenge_entry_button',
+      ]) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+      expect(tester.takeException(), isNull);
+      await expectLater(
+        find.byKey(const Key('home_screen_golden')),
+        matchesGoldenFile(
+          'goldens/home_screen_experienced_expanded_${fixture.name}.png',
+        ),
+      );
+    });
+  }
 
   testWidgets('태블릿 홈은 미리보기와 행동 메뉴를 2열로 사용한다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
