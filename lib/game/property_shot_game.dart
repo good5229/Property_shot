@@ -146,6 +146,7 @@ class PropertyShotGame extends FlameGame {
   Timer? _animationCompletionTimer;
   final Set<String> _reportedImpactKeys = <String>{};
   final Map<EntityType, ui.Image> _objectImages = {};
+  final Map<EntityType, ui.Image> _gimmickImages = {};
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
   static const int _runtimeAssetDecodeSize = 256;
   static const FilterQuality _runtimeFilterQuality = FilterQuality.medium;
@@ -165,10 +166,16 @@ class PropertyShotGame extends FlameGame {
       _loadUiImage('assets/generated/crate-v2.png'),
       _loadUiImage('assets/generated/stone-v2.png'),
       _loadUiImage('assets/generated/jelly-bumper-v1.png'),
+      _loadUiImage('assets/generated/gate-closed-v1.png'),
+      _loadUiImage('assets/generated/switch-pad-v1.png'),
+      _loadUiImage('assets/generated/balloon-v1.png'),
     ]);
     _objectImages[EntityType.crate] = images[0];
     _objectImages[EntityType.weight] = images[1];
     _objectImages[EntityType.bumper] = images[2];
+    _gimmickImages[EntityType.gate] = images[3];
+    _gimmickImages[EntityType.switchPad] = images[4];
+    _gimmickImages[EntityType.balloon] = images[5];
   }
 
   Future<ui.Image> _loadUiImage(String assetPath) async {
@@ -1745,6 +1752,7 @@ class PropertyShotGame extends FlameGame {
       final topPath = _pathFromPoints(topPoints);
       final litPaint = _materialPaint(entity, rect);
       final image = _objectImages[entity.type];
+      final hasGeneratedGimmick = _gimmickImages.containsKey(entity.type);
       if (entity.traits.isNotEmpty &&
           state.phase == GamePhase.planning &&
           _animationPath.isEmpty) {
@@ -1754,7 +1762,9 @@ class PropertyShotGame extends FlameGame {
         _drawMovingObjectSprite(canvas, entity, rect, image);
       } else {
         _drawContactShadow(canvas, entity, rect);
-        _drawDepthFaces(canvas, entity, topPoints);
+        if (!hasGeneratedGimmick) {
+          _drawDepthFaces(canvas, entity, topPoints);
+        }
         if (entity.type == EntityType.powerSlider) {
           _drawPowerSlider(canvas, entity, stroke);
         } else if (entity.type == EntityType.bumper) {
@@ -1763,18 +1773,29 @@ class PropertyShotGame extends FlameGame {
           _drawStickySurface(canvas, entity, topPath, litPaint, stroke);
         } else if (entity.type == EntityType.switchPad) {
           _drawSwitchPad(canvas, entity, topPath, litPaint, stroke);
-        } else if (entity.type == EntityType.gate &&
-            entity.visualState == 'opening') {
-          _drawGateOpening(canvas, entity, topPoints);
+        } else if (entity.type == EntityType.gate) {
+          final gateImage = _gimmickImages[EntityType.gate];
+          if (gateImage == null) {
+            if (entity.visualState == 'opening') {
+              _drawGateOpening(canvas, entity, topPoints);
+            } else {
+              canvas.drawPath(topPath, litPaint);
+              canvas.drawPath(topPath, stroke);
+            }
+          } else {
+            _drawGateSprite(canvas, entity, gateImage);
+          }
         } else if (entity.type == EntityType.spikeSource) {
           _drawSpikeSource(canvas, entity, rect);
         } else {
           canvas.drawPath(topPath, litPaint);
           canvas.drawPath(topPath, stroke);
         }
-        _drawCanvasSurfaceFinish(canvas, entity, rect, topPath);
-        _drawCuteBlockDetails(canvas, entity, rect, topPath);
-        _drawDirectionalLight(canvas, entity, rect, topPath);
+        if (!hasGeneratedGimmick) {
+          _drawCanvasSurfaceFinish(canvas, entity, rect, topPath);
+          _drawCuteBlockDetails(canvas, entity, rect, topPath);
+          _drawDirectionalLight(canvas, entity, rect, topPath);
+        }
       }
       _drawMaterialOutline(
         canvas,
@@ -2008,6 +2029,37 @@ class PropertyShotGame extends FlameGame {
     final widthScale = pressed ? 1.12 : 1.0;
     final heightScale = pressed ? 0.78 : 1.0;
     final bodyCenter = center.translate(0, pressed ? 3 : -2);
+    final balloonImage = _gimmickImages[EntityType.balloon];
+    if (balloonImage != null) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: bodyCenter.translate(0, radius * 0.42),
+          width: radius * 1.85 * widthScale,
+          height: radius * 0.42,
+        ),
+        Paint()
+          ..color = const Color(0x33414B40)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+      );
+      final source = Rect.fromLTWH(
+        0,
+        0,
+        balloonImage.width.toDouble(),
+        balloonImage.height.toDouble(),
+      );
+      final target = Rect.fromCenter(
+        center: bodyCenter,
+        width: radius * 2.18 * widthScale,
+        height: radius * 2.18 * heightScale,
+      );
+      canvas.drawImageRect(
+        balloonImage,
+        source,
+        target,
+        Paint()..filterQuality = _runtimeFilterQuality,
+      );
+      return;
+    }
     canvas.drawOval(
       Rect.fromCenter(
         center: bodyCenter.translate(0, 5),
@@ -2942,6 +2994,44 @@ class PropertyShotGame extends FlameGame {
               ? 0.55
               : math.sin(_pulseClock * math.pi * 7).abs())
         : 0.0;
+    final switchImage = _gimmickImages[EntityType.switchPad];
+    if (switchImage != null) {
+      final rect = _projectedRect(entity);
+      final longSide = math.max(rect.width, rect.height);
+      final shortSide = math.min(rect.width, rect.height);
+      final side = math.max(34.0, math.min(longSide * 0.78, shortSide * 2.2));
+      final source = Rect.fromLTWH(
+        0,
+        0,
+        switchImage.width.toDouble(),
+        switchImage.height.toDouble(),
+      );
+      canvas.save();
+      canvas.translate(center.dx, center.dy + (pressed ? 3 : 0));
+      canvas.scale(1, pressed ? 0.8 : 1);
+      canvas.drawImageRect(
+        switchImage,
+        source,
+        Rect.fromCenter(center: Offset.zero, width: side, height: side),
+        Paint()
+          ..filterQuality = _runtimeFilterQuality
+          ..colorFilter = pressed
+              ? const ColorFilter.mode(Color(0xFF75D99A), BlendMode.modulate)
+              : null,
+      );
+      canvas.restore();
+      if (pressed) {
+        canvas.drawCircle(
+          center,
+          side * 0.42 + pulse * 3,
+          Paint()
+            ..color = const Color(0xAA9BFFC0)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.4,
+        );
+      }
+      return;
+    }
     canvas.drawPath(
       topPath,
       Paint()
@@ -3053,6 +3143,75 @@ class PropertyShotGame extends FlameGame {
     canvas.drawCircle(Offset(leftHingeX, lowerHingeY), 2.5, hinge);
     canvas.drawCircle(Offset(rightHingeX, upperHingeY), 2.5, hinge);
     canvas.drawCircle(Offset(rightHingeX, lowerHingeY), 2.5, hinge);
+  }
+
+  void _drawGateSprite(Canvas canvas, EntityState entity, ui.Image image) {
+    final rect = _projectedRect(entity);
+    final center = rect.center;
+    final vertical = rect.height > rect.width;
+    final visualWidth = vertical ? rect.height : rect.width;
+    final visualHeight = vertical ? rect.width : rect.height;
+    var openingProgress = entity.open || entity.visualState == 'open'
+        ? 1.0
+        : 0.0;
+    if (entity.visualState == 'opening') {
+      final openingMove = _animationMoves
+          .where(
+            (move) =>
+                move.entityId == entity.id && move.visualState == 'opening',
+          )
+          .fold<ShotAnimationMove?>(
+            null,
+            (latest, move) =>
+                latest == null ||
+                    move.triggerPathIndex > latest.triggerPathIndex
+                ? move
+                : latest,
+          );
+      openingProgress = openingMove == null
+          ? 1.0
+          : ((_animationCursor - openingMove.triggerPathIndex) / 12)
+                .clamp(0.0, 1.0)
+                .toDouble();
+    }
+    final easedOpening = 1 - math.pow(1 - openingProgress, 3).toDouble();
+    final sourceWidth = image.width.toDouble();
+    final sourceHeight = image.height.toDouble();
+    final halfSource = sourceWidth / 2;
+    final halfTarget = visualWidth / 2;
+    final slide = easedOpening * (visualWidth * 0.28 + 4);
+    final paint = Paint()
+      ..filterQuality = _runtimeFilterQuality
+      ..color = entity.open ? const Color(0xCCFFFFFF) : const Color(0xFFFFFFFF);
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    if (vertical) canvas.rotate(math.pi / 2);
+    final leftTarget = Rect.fromLTWH(
+      -visualWidth / 2 - slide,
+      -visualHeight / 2,
+      halfTarget,
+      visualHeight,
+    );
+    final rightTarget = Rect.fromLTWH(
+      slide,
+      -visualHeight / 2,
+      halfTarget,
+      visualHeight,
+    );
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, halfSource, sourceHeight),
+      leftTarget,
+      paint,
+    );
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(halfSource, 0, halfSource, sourceHeight),
+      rightTarget,
+      paint,
+    );
+    canvas.restore();
   }
 
   void _drawBallPulse(Canvas canvas, EntityState entity) {
@@ -3314,6 +3473,9 @@ class PropertyShotGame extends FlameGame {
           );
         }
       case EntityType.switchPad:
+        if (_gimmickImages.containsKey(EntityType.switchPad)) {
+          return;
+        }
         final pulse = entity.pressed || entity.visualState == 'pressed'
             ? (reducedMotion || !strongFlash
                   ? 0.55
@@ -3328,6 +3490,9 @@ class PropertyShotGame extends FlameGame {
                 : const Color(0xFFFFF2A8),
         );
       case EntityType.gate:
+        if (_gimmickImages.containsKey(EntityType.gate)) {
+          return;
+        }
         if (entity.visualState == 'opening') {
           return;
         }

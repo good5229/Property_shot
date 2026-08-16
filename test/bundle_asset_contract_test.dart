@@ -12,6 +12,9 @@ void main() {
       bundledAssets,
       containsAll(const {
         'assets/generated/crate-v2.png',
+        'assets/generated/gate-closed-v1.png',
+        'assets/generated/switch-pad-v1.png',
+        'assets/generated/balloon-v1.png',
         'assets/generated/island-restoration-world-v1.webp',
         'assets/generated/island-observatory-v2.png',
         'assets/generated/island-lighthouse-v2.png',

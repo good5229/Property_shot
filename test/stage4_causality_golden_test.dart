@@ -51,7 +51,7 @@ void main() {
               initialState: _stage4State(variant),
               showStageSelector: false,
               fontFamilyOverride: 'GoldenNanumGothic',
-              loadGameAssets: false,
+              loadGameAssets: true,
             ),
           ),
         );
