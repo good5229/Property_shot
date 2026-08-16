@@ -5055,10 +5055,10 @@ class _HintAccessButton extends StatelessWidget {
               dimension: 30,
               child: Image.asset(
                 available
-                    ? 'assets/generated/hint-lantern-v1.png'
+                    ? 'assets/generated/hint-lantern-v2.png'
                     : 'assets/generated/hint-key-v1.png',
                 fit: BoxFit.contain,
-                filterQuality: FilterQuality.medium,
+                filterQuality: FilterQuality.high,
                 excludeFromSemantics: true,
               ),
             ),
@@ -5156,9 +5156,9 @@ class _PatternHintSheetState extends State<_PatternHintSheet> {
                     SizedBox.square(
                       dimension: 36,
                       child: Image.asset(
-                        'assets/generated/hint-lantern-v1.png',
+                        'assets/generated/hint-lantern-v2.png',
                         fit: BoxFit.contain,
-                        filterQuality: FilterQuality.medium,
+                        filterQuality: FilterQuality.high,
                         excludeFromSemantics: true,
                       ),
                     ),
@@ -5208,9 +5208,9 @@ class _PatternHintSheetState extends State<_PatternHintSheet> {
                         : SizedBox.square(
                             dimension: 26,
                             child: Image.asset(
-                              'assets/generated/hint-lantern-v1.png',
+                              'assets/generated/hint-lantern-v2.png',
                               fit: BoxFit.contain,
-                              filterQuality: FilterQuality.medium,
+                              filterQuality: FilterQuality.high,
                               excludeFromSemantics: true,
                             ),
                           ),
@@ -9089,9 +9089,9 @@ class _EntityIconPainter extends CustomPainter {
 
 String? _assetPath(EntityState entity) {
   return switch (entity.type) {
-    EntityType.crate => 'assets/generated/crate-v2.png',
-    EntityType.weight => 'assets/generated/stone-v2.png',
-    EntityType.bumper => 'assets/generated/jelly-bumper-v1.png',
+    EntityType.crate => 'assets/generated/crate-v3.png',
+    EntityType.weight => 'assets/generated/stone-v3.png',
+    EntityType.bumper => 'assets/generated/jelly-bumper-v2.png',
     _ => null,
   };
 }

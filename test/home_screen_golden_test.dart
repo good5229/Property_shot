@@ -40,8 +40,8 @@ void main() {
       );
       await tester.runAsync(() async {
         for (final asset in const [
-          'assets/generated/stone-v2.png',
-          'assets/generated/crate-v2.png',
+          'assets/generated/stone-v3.png',
+          'assets/generated/crate-v3.png',
           'assets/generated/stage-icon-heavy-v1.png',
           'assets/generated/nav-helm-v1.png',
           'assets/generated/nav-stage-map-v1.png',
@@ -162,8 +162,8 @@ void main() {
     final context = tester.element(find.byKey(const Key('home_screen_golden')));
     await tester.runAsync(() async {
       for (final asset in const [
-        'assets/generated/stone-v2.png',
-        'assets/generated/crate-v2.png',
+        'assets/generated/stone-v3.png',
+        'assets/generated/crate-v3.png',
       ]) {
         await precacheImage(AssetImage(asset), context);
       }

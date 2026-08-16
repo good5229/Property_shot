@@ -57,7 +57,7 @@ void main() {
       final context = tester.element(find.byKey(const Key('aim_area')));
       await tester.runAsync(() async {
         await precacheImage(
-          const AssetImage('assets/generated/jelly-bumper-v1.png'),
+          const AssetImage('assets/generated/jelly-bumper-v2.png'),
           context,
         );
       });

@@ -62,9 +62,9 @@ void main() {
         final context = tester.element(find.byKey(const Key('aim_area')));
         await tester.runAsync(() async {
           for (final asset in const [
-            'assets/generated/stone-v2.png',
-            'assets/generated/crate-v2.png',
-            'assets/generated/jelly-bumper-v1.png',
+            'assets/generated/stone-v3.png',
+            'assets/generated/crate-v3.png',
+            'assets/generated/jelly-bumper-v2.png',
           ]) {
             await precacheImage(AssetImage(asset), context);
           }

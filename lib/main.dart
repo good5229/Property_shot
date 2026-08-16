@@ -3039,7 +3039,7 @@ class _HomePlayPreview extends StatelessWidget {
               left: 34,
               top: 40,
               child: Image.asset(
-                'assets/generated/stone-v2.png',
+                'assets/generated/stone-v3.png',
                 width: 72,
                 height: 54,
                 fit: BoxFit.contain,
@@ -3049,7 +3049,7 @@ class _HomePlayPreview extends StatelessWidget {
               left: 146,
               top: 92,
               child: Image.asset(
-                'assets/generated/crate-v2.png',
+                'assets/generated/crate-v3.png',
                 width: 56,
                 height: 56,
                 fit: BoxFit.contain,

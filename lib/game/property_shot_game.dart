@@ -147,9 +147,12 @@ class PropertyShotGame extends FlameGame {
   final Set<String> _reportedImpactKeys = <String>{};
   final Map<EntityType, ui.Image> _objectImages = {};
   final Map<EntityType, ui.Image> _gimmickImages = {};
+  final Map<TraitType?, ui.Image> _ballImages = {};
+  ui.Image? _holeImage;
+  ui.Image? _wallImage;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
   static const int _runtimeAssetDecodeSize = 256;
-  static const FilterQuality _runtimeFilterQuality = FilterQuality.medium;
+  static const FilterQuality _runtimeFilterQuality = FilterQuality.high;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
   static const Offset _lightDirection = Offset(-0.72, -0.69);
@@ -163,12 +166,23 @@ class PropertyShotGame extends FlameGame {
       return;
     }
     final images = await Future.wait([
-      _loadUiImage('assets/generated/crate-v2.png'),
-      _loadUiImage('assets/generated/stone-v2.png'),
-      _loadUiImage('assets/generated/jelly-bumper-v1.png'),
+      _loadUiImage('assets/generated/crate-v3.png'),
+      _loadUiImage('assets/generated/stone-v3.png'),
+      _loadUiImage('assets/generated/jelly-bumper-v2.png'),
       _loadUiImage('assets/generated/gate-closed-v1.png'),
       _loadUiImage('assets/generated/switch-pad-v1.png'),
       _loadUiImage('assets/generated/balloon-v1.png'),
+      _loadUiImage('assets/generated/ball-base-v1.png'),
+      _loadUiImage('assets/generated/ball-heavy-v1.png'),
+      _loadUiImage('assets/generated/ball-bouncy-v1.png'),
+      _loadUiImage('assets/generated/ball-sticky-v1.png'),
+      _loadUiImage('assets/generated/ball-sharp-v1.png'),
+      _loadUiImage('assets/generated/hole-flag-v1.png'),
+      _loadUiImage('assets/generated/wall-segment-v1.png'),
+      _loadUiImage('assets/generated/sticky-pad-v1.png'),
+      _loadUiImage('assets/generated/spike-source-v1.png'),
+      _loadUiImage('assets/generated/power-slider-v1.png'),
+      _loadUiImage('assets/generated/rotating-reflector-v1.png'),
     ]);
     _objectImages[EntityType.crate] = images[0];
     _objectImages[EntityType.weight] = images[1];
@@ -176,6 +190,17 @@ class PropertyShotGame extends FlameGame {
     _gimmickImages[EntityType.gate] = images[3];
     _gimmickImages[EntityType.switchPad] = images[4];
     _gimmickImages[EntityType.balloon] = images[5];
+    _ballImages[null] = images[6];
+    _ballImages[TraitType.heavy] = images[7];
+    _ballImages[TraitType.bouncy] = images[8];
+    _ballImages[TraitType.sticky] = images[9];
+    _ballImages[TraitType.sharp] = images[10];
+    _holeImage = images[11];
+    _wallImage = images[12];
+    _gimmickImages[EntityType.stickySurface] = images[13];
+    _gimmickImages[EntityType.spikeSource] = images[14];
+    _gimmickImages[EntityType.powerSlider] = images[15];
+    _gimmickImages[EntityType.rotatingReflector] = images[16];
   }
 
   Future<ui.Image> _loadUiImage(String assetPath) async {
@@ -183,7 +208,6 @@ class PropertyShotGame extends FlameGame {
     final codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(),
       targetWidth: _runtimeAssetDecodeSize,
-      targetHeight: _runtimeAssetDecodeSize,
     );
     try {
       final frame = await codec.getNextFrame();
@@ -351,6 +375,18 @@ class PropertyShotGame extends FlameGame {
       image.dispose();
     }
     _objectImages.clear();
+    for (final image in _gimmickImages.values) {
+      image.dispose();
+    }
+    _gimmickImages.clear();
+    for (final image in _ballImages.values) {
+      image.dispose();
+    }
+    _ballImages.clear();
+    _holeImage?.dispose();
+    _holeImage = null;
+    _wallImage?.dispose();
+    _wallImage = null;
     for (final cached in _staticEntityPictures.values) {
       cached.picture.dispose();
     }
@@ -1724,18 +1760,30 @@ class PropertyShotGame extends FlameGame {
         );
       }
       if (entity.type == EntityType.hole) {
-        _drawHoleSurface(canvas, entity, stroke);
-        _drawHoleFlag(canvas, entity);
+        final holeImage = _holeImage;
+        if (holeImage == null) {
+          _drawHoleSurface(canvas, entity, stroke);
+          _drawHoleFlag(canvas, entity);
+        } else {
+          _drawHoleSprite(canvas, entity, holeImage);
+        }
       } else {
-        GameBallIconPainter.drawBall(
-          canvas,
-          center: center,
-          radius: entity.radius,
-          trait: entity.traits.isEmpty ? null : entity.traits.first,
-          rewardAppearance:
-              ballRewardAppearance && entity.type == EntityType.ball,
-        );
-        _drawBallTraitTexture(canvas, entity);
+        final ballImage = entity.type == EntityType.ball
+            ? _ballImages[entity.traits.isEmpty ? null : entity.traits.first]
+            : null;
+        if (ballImage == null) {
+          GameBallIconPainter.drawBall(
+            canvas,
+            center: center,
+            radius: entity.radius,
+            trait: entity.traits.isEmpty ? null : entity.traits.first,
+            rewardAppearance:
+                ballRewardAppearance && entity.type == EntityType.ball,
+          );
+          _drawBallTraitTexture(canvas, entity);
+        } else {
+          _drawBallSprite(canvas, entity, ballImage);
+        }
         if (entity.type == EntityType.ball) {
           _drawRewardBallAppearance(canvas, entity);
         }
@@ -1743,7 +1791,12 @@ class PropertyShotGame extends FlameGame {
       _drawCircularRimLight(canvas, entity, highlighted: highlighted);
     } else {
       if (entity.type == EntityType.rotatingReflector) {
-        _drawRotatingReflector(canvas, entity, stroke);
+        final reflectorImage = _gimmickImages[EntityType.rotatingReflector];
+        if (reflectorImage == null) {
+          _drawRotatingReflector(canvas, entity, stroke);
+        } else {
+          _drawRotatingReflectorSprite(canvas, entity, reflectorImage);
+        }
         _drawEntityIcon(canvas, entity);
         return;
       }
@@ -1758,7 +1811,9 @@ class PropertyShotGame extends FlameGame {
           _animationPath.isEmpty) {
         _drawSelectablePulse(canvas, entity);
       }
-      if (image != null) {
+      if (entity.type == EntityType.wall && _wallImage != null) {
+        _drawWallSprite(canvas, entity, _wallImage!);
+      } else if (image != null) {
         _drawMovingObjectSprite(canvas, entity, rect, image);
       } else {
         _drawContactShadow(canvas, entity, rect);
@@ -1766,11 +1821,21 @@ class PropertyShotGame extends FlameGame {
           _drawDepthFaces(canvas, entity, topPoints);
         }
         if (entity.type == EntityType.powerSlider) {
-          _drawPowerSlider(canvas, entity, stroke);
+          final sliderImage = _gimmickImages[EntityType.powerSlider];
+          if (sliderImage == null) {
+            _drawPowerSlider(canvas, entity, stroke);
+          } else {
+            _drawOrientedRectSprite(canvas, entity, sliderImage);
+          }
         } else if (entity.type == EntityType.bumper) {
           _drawJellyBody(canvas, entity, litPaint, stroke);
         } else if (entity.type == EntityType.stickySurface) {
-          _drawStickySurface(canvas, entity, topPath, litPaint, stroke);
+          final stickyImage = _gimmickImages[EntityType.stickySurface];
+          if (stickyImage == null) {
+            _drawStickySurface(canvas, entity, topPath, litPaint, stroke);
+          } else {
+            _drawFlatRectSprite(canvas, entity, stickyImage);
+          }
         } else if (entity.type == EntityType.switchPad) {
           _drawSwitchPad(canvas, entity, topPath, litPaint, stroke);
         } else if (entity.type == EntityType.gate) {
@@ -1786,7 +1851,12 @@ class PropertyShotGame extends FlameGame {
             _drawGateSprite(canvas, entity, gateImage);
           }
         } else if (entity.type == EntityType.spikeSource) {
-          _drawSpikeSource(canvas, entity, rect);
+          final spikeImage = _gimmickImages[EntityType.spikeSource];
+          if (spikeImage == null) {
+            _drawSpikeSource(canvas, entity, rect);
+          } else {
+            _drawFlatRectSprite(canvas, entity, spikeImage);
+          }
         } else {
           canvas.drawPath(topPath, litPaint);
           canvas.drawPath(topPath, stroke);
@@ -2479,6 +2549,156 @@ class PropertyShotGame extends FlameGame {
         ..strokeWidth = 2,
     );
     canvas.drawOval(outer, stroke);
+  }
+
+  void _drawBallSprite(Canvas canvas, EntityState entity, ui.Image image) {
+    final center = _project(entity.position);
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    final diameter = entity.traits.contains(TraitType.sharp)
+        ? entity.radius * 2.52
+        : entity.radius * 2.28;
+    final target = Rect.fromCenter(
+      center: center,
+      width: diameter,
+      height: diameter,
+    );
+    canvas.drawImageRect(
+      image,
+      source,
+      target,
+      Paint()..filterQuality = _runtimeFilterQuality,
+    );
+  }
+
+  void _drawHoleSprite(Canvas canvas, EntityState entity, ui.Image image) {
+    final center = _project(entity.position);
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    final extent = entity.radius * 3.15;
+    final target = Rect.fromCenter(
+      center: center.translate(0, -entity.radius * 0.34),
+      width: extent,
+      height: extent,
+    );
+    canvas.drawImageRect(
+      image,
+      source,
+      target,
+      Paint()..filterQuality = _runtimeFilterQuality,
+    );
+  }
+
+  void _drawFlatRectSprite(Canvas canvas, EntityState entity, ui.Image image) {
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    final target = _projectedRect(entity).inflate(2);
+    canvas.drawImageRect(
+      image,
+      source,
+      target,
+      Paint()..filterQuality = _runtimeFilterQuality,
+    );
+  }
+
+  void _drawOrientedRectSprite(
+    Canvas canvas,
+    EntityState entity,
+    ui.Image image,
+  ) {
+    final direction = entity.direction.length <= 0.0001
+        ? const Vec2(1, 0)
+        : entity.direction.normalized();
+    final angle = math.atan2(direction.y, direction.x);
+    final center = _project(entity.position);
+    final rect = _projectedRect(entity).inflate(2);
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angle);
+    canvas.drawImageRect(
+      image,
+      source,
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: rect.width,
+        height: rect.height,
+      ),
+      Paint()..filterQuality = _runtimeFilterQuality,
+    );
+    canvas.restore();
+  }
+
+  void _drawWallSprite(Canvas canvas, EntityState entity, ui.Image image) {
+    final center = _project(entity.position);
+    final rect = _projectedRect(entity).inflate(1.5);
+    final vertical = rect.height > rect.width;
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    if (vertical) canvas.rotate(math.pi / 2);
+    canvas.drawImageRect(
+      image,
+      source,
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: vertical ? rect.height : rect.width,
+        height: vertical ? rect.width : rect.height,
+      ),
+      Paint()..filterQuality = _runtimeFilterQuality,
+    );
+    canvas.restore();
+  }
+
+  void _drawRotatingReflectorSprite(
+    Canvas canvas,
+    EntityState entity,
+    ui.Image image,
+  ) {
+    final center = _project(entity.position);
+    final angle = _reflectorRenderOrientation(entity) * math.pi / 4;
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angle);
+    canvas.drawImageRect(
+      image,
+      source,
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: entity.size.x * 1.18,
+        height: math.max(entity.size.y * 2.5, entity.size.x * 0.62),
+      ),
+      Paint()..filterQuality = _runtimeFilterQuality,
+    );
+    canvas.restore();
   }
 
   void _drawGoalBeacon(Canvas canvas, EntityState entity) {
@@ -3267,14 +3487,20 @@ class PropertyShotGame extends FlameGame {
       Paint()..color = Colors.white.withValues(alpha: opacity),
     );
     _drawCircularContactShadow(canvas, entity);
-    GameBallIconPainter.drawBall(
-      canvas,
-      center: center,
-      radius: entity.radius,
-      trait: entity.traits.isEmpty ? null : entity.traits.first,
-      rewardAppearance: ballRewardAppearance,
-    );
-    _drawBallTraitTexture(canvas, entity);
+    final ballImage =
+        _ballImages[entity.traits.isEmpty ? null : entity.traits.first];
+    if (ballImage == null) {
+      GameBallIconPainter.drawBall(
+        canvas,
+        center: center,
+        radius: entity.radius,
+        trait: entity.traits.isEmpty ? null : entity.traits.first,
+        rewardAppearance: ballRewardAppearance,
+      );
+      _drawBallTraitTexture(canvas, entity);
+    } else {
+      _drawBallSprite(canvas, entity, ballImage);
+    }
     _drawRewardBallAppearance(canvas, entity);
     canvas.restore();
     canvas.restore();

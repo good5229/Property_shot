@@ -18,6 +18,14 @@
 
 ## 게임 스프라이트
 
+### 보드 전체 캐주얼 스프라이트 v1
+
+- 파일: `assets/generated/ball-{base,heavy,bouncy,sticky,sharp}-v1.png`, `hole-flag-v1.png`, `wall-segment-v1.png`, `crate-v3.png`, `stone-v3.png`, `jelly-bumper-v2.png`, `sticky-pad-v1.png`, `spike-source-v1.png`, `power-slider-v1.png`, `rotating-reflector-v1.png`
+- 목적: 공·속성 공·홀·깃발·벽과 모든 주요 물리 기믹을 항해 메뉴 및 첫 항해 삽화와 같은 가벼운 장난감 섬 콘셉트로 통일한다.
+- 생성 방식: Codex 기본 이미지 생성 도구의 내장 생성 모드로 각각 신규 생성했다. 청록·모래·산호·금색 팔레트, 굵은 어두운 청록 외곽선, 24~96px에서 읽히는 4~6개 큰 형태를 공통 제약으로 사용했다. 외부 작품·상표·문자·워터마크는 입력하지 않았다.
+- 변환: `tool/prepare_generated_gameplay_assets.py`가 캔버스 가장자리와 연결된 검정 또는 무채색 격자 매트만 제거하고 내부 외곽선을 보존한 뒤 Lanczos로 최대 768px RGBA PNG를 만든다.
+- 렌더 계약: 10개 전 스테이지와 네 속성 공을 390×844·768×1024에서 실제 Flame 렌더러로 Golden 검증한다. 그림은 기존 충돌체와 분리되어 물리 판정과 리플레이 입력을 바꾸지 않는다.
+
 - 파일: `assets/generated/crate-v2.png`
 - 목적: 게임 화면과 물체 속성 팝업의 상자 표현
 - 생성 방식: Codex 기본 이미지 생성 도구로 신규 생성 후, 격리된 Pillow 환경에서 초록색 키 배경을 알파로 제거
@@ -56,10 +64,11 @@
 
 - 시설 파일: `assets/generated/island-observatory-v2.png`, `assets/generated/island-lighthouse-v2.png`, `assets/generated/island-bridge-v2.png`
 - 메뉴 파일: `assets/generated/nav-physics-lab-v1.png`, `assets/generated/nav-expedition-v1.png`, `assets/generated/nav-reward-satchel-v1.png`, `assets/generated/nav-helm-v1.png`, `assets/generated/nav-stage-map-v1.png`, `assets/generated/nav-replay-v1.png`, `assets/generated/nav-daily-challenge-v1.png`, `assets/generated/nav-activities-v1.png`
-- 힌트 파일: `assets/generated/hint-key-v1.png`, `assets/generated/hint-lantern-v1.png`
+- 힌트 파일: `assets/generated/hint-key-v1.png`, `assets/generated/hint-lantern-v2.png`
 - 목적: 복구 시설과 핵심 활동을 추상 기호가 아니라 실제 세계 안의 물체로 인지하게 한다. 뒤로가기·닫기·펼치기처럼 표준 조작 기호는 Material Icons를 유지한다.
 - 생성 방식: 기존 3개 핵심 메뉴는 섬 세계 배경을, 이번 시설 v2·항해 메뉴·힌트는 `stage-icon-bouncy-v1.png`를 프로젝트 내부 스타일 참조로 사용해 투명 PNG를 생성했다. 모두 RGBA를 확인한 뒤 최대 640px로 축소했다.
 - 프롬프트 요약: 청록·모래·산호 팔레트, 짙은 청록 외곽선, 둥근 장난감 형태, 따뜻한 크림 하이라이트, 모바일 30~128px에서도 읽히는 하나의 중심 사물. 타륜·접힌 지도·필름 릴·해돋이 깃발·활동 카드·열쇠·랜턴과 섬 시설을 표현하고 글자·UI 프레임·인물·워터마크·특정 작품 모방을 금지했다.
+- 등불 v2: PC의 30px 버튼에서 v1의 미세 금속 장식과 광점이 깨져 보이던 문제를 해결하기 위해 손잡이·큰 민트 발광부·금색 상하단만 남겼다. 768px RGBA 원본을 `FilterQuality.high`로 축소하며 1440×900 전용 Golden에서 표시를 확인한다.
 - 검토 상태: 홈 320/390/768, 섬 지도 320/390/768, 복구 3상태와 완료 연출 Golden에서 크롭·텍스트 우선순위·상태 구분을 확인한다. 실제 상업 이용 전 이미지 생성 도구의 최신 이용약관과 산출물 권리 정책을 최종 확인한다.
 
 ## 첫 항해 단계 삽화

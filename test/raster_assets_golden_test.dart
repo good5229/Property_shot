@@ -47,7 +47,7 @@ void main() {
                           width: 72,
                           height: 58,
                           child: Image(
-                            image: AssetImage('assets/generated/stone-v2.png'),
+                            image: AssetImage('assets/generated/stone-v3.png'),
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -66,7 +66,7 @@ void main() {
                           width: 70,
                           height: 70,
                           child: Image(
-                            image: AssetImage('assets/generated/crate-v2.png'),
+                            image: AssetImage('assets/generated/crate-v3.png'),
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -77,7 +77,7 @@ void main() {
                           height: 62,
                           child: Image(
                             image: AssetImage(
-                              'assets/generated/jelly-bumper-v1.png',
+                              'assets/generated/jelly-bumper-v2.png',
                             ),
                             fit: BoxFit.contain,
                           ),
@@ -98,9 +98,9 @@ void main() {
       );
       await tester.runAsync(() async {
         for (final asset in const [
-          'assets/generated/stone-v2.png',
-          'assets/generated/crate-v2.png',
-          'assets/generated/jelly-bumper-v1.png',
+          'assets/generated/stone-v3.png',
+          'assets/generated/crate-v3.png',
+          'assets/generated/jelly-bumper-v2.png',
         ]) {
           await precacheImage(AssetImage(asset), context);
         }

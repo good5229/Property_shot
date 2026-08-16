@@ -89,6 +89,30 @@ void main() {
     );
   });
 
+  testWidgets('desktop available hint lantern Golden', (tester) async {
+    await _pumpGame(
+      tester,
+      level: level,
+      entry: entry,
+      size: const Size(1440, 900),
+      entitlement: _entitlement(entry),
+      collectedKeyIds: {entry.key!.id},
+    );
+
+    final lantern = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('pattern_hint_button')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(lantern.filterQuality, FilterQuality.high);
+    expect(find.text('팁 보기'), findsOneWidget);
+    await expectLater(
+      find.byKey(const Key('hint_key_golden')),
+      matchesGoldenFile('goldens/hint_key_available_1440x900.png'),
+    );
+  });
+
   testWidgets('hint L1/L2 sheet Golden', (tester) async {
     var entitlement = _entitlement(entry);
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -230,6 +254,17 @@ Future<void> _pumpGame(
     ),
   );
   await tester.pump();
+  final context = tester.element(find.byType(GameScreen));
+  await tester.runAsync(() async {
+    await precacheImage(
+      const AssetImage('assets/generated/hint-lantern-v2.png'),
+      context,
+    );
+    await precacheImage(
+      const AssetImage('assets/generated/hint-key-v1.png'),
+      context,
+    );
+  });
   final gameWidget = tester.state<GameWidgetState<PropertyShotGame>>(
     find.byType(GameWidget<PropertyShotGame>),
   );

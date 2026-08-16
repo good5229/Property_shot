@@ -6,15 +6,16 @@
 
 | 경로 | 용도 | 권리 상태 |
 |---|---|---|
-| `assets/generated/crate-v2.png` | 상자 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
-| `assets/generated/stone-v2.png` | 무거운 돌 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
-| `assets/generated/jelly-bumper-v1.png` | 젤리 썸네일·게임 오브젝트 고해상도 스프라이트 | 생성 기록과 상업 이용 전 최종 권리 검토 필요 |
 | `assets/generated/gate-closed-v1.png` | 가로·세로 문과 개방 애니메이션용 2분할 스프라이트 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/generated/switch-pad-v1.png` | 스위치 기본·눌림 상태 스프라이트 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/generated/balloon-v1.png` | 풍선 기본·압축 상태 스프라이트 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/ball-{base,heavy,bouncy,sticky,sharp}-v1.png` | 기본 공과 네 속성 공의 실제 게임 스프라이트 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/hole-flag-v1.png`, `wall-segment-v1.png` | 홀·깃발과 가로·세로 벽 스프라이트 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/{crate-v3,stone-v3,jelly-bumper-v2}.png` | 상자·바위·젤리의 경량 캐주얼 스프라이트 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/{sticky-pad,spike-source,power-slider,rotating-reflector}-v1.png` | 점착·뾰족함·가속·회전 기믹 스프라이트 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/generated/island-{observatory,lighthouse,bridge}-v2.png` | 섬 복구 현황·집중 지원·완료 연출 시설 컷아웃 | 첫 항해 삽화 스타일을 참조한 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/generated/nav-{physics-lab,expedition,reward-satchel,helm,stage-map,replay,daily-challenge,activities}-v1.png` | 실험실·탐사·보상·항해·지도·리플레이·오늘의 도전 메뉴 이미지 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
-| `assets/generated/hint-{key,lantern}-v1.png` | 팁 잠금·열람 상태 이미지 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
+| `assets/generated/hint-key-v1.png`, `hint-lantern-v2.png` | 팁 잠금·열람 상태 이미지 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/generated/island-restoration-world-v1.webp` | 홈·섬 지도 세계 배경 | 프로젝트 전용 생성 자산, 최종 권리 검토 필요 |
 | `assets/stages/chapter_1.json` | 1장 10단계 정의 | 프로젝트 자체 데이터 |
 | `ios/Runner/Assets.xcassets/AppIcon.appiconset/` | iOS 아이콘 파생 파일 | 원본에서 규격별 생성 |
