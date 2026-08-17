@@ -346,10 +346,12 @@ void main() {
 
     expect(find.text('9. 판을 돌려 놓아라'), findsOneWidget);
     expect(find.textContaining('반사판 회전 → 다음 경로'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_details_menu')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('hud_progress_button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('hud_progress_button')));
     await tester.pump();
-    expect(find.text('진행 상황'), findsOneWidget);
+    expect(find.text('진행 상황'), findsWidgets);
     expect(find.text('현재 면 반사 · 충돌 뒤 90도 회전'), findsWidgets);
   });
 
@@ -365,22 +367,22 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('hud_info_actions')), findsOneWidget);
-    expect(find.byKey(const Key('hud_objective_button')), findsOneWidget);
-    expect(find.byKey(const Key('hud_controls_button')), findsOneWidget);
-    expect(find.byKey(const Key('hud_status_button')), findsOneWidget);
+    expect(find.byKey(const Key('hud_details_menu')), findsOneWidget);
     final titleRect = tester.getRect(find.text(levels[1].name));
-    final objectiveRect = tester.getRect(
-      find.byKey(const Key('hud_objective_button')),
-    );
     final aimRect = tester.getRect(find.byKey(const Key('aim_area')));
     expect(titleRect.width, greaterThan(160));
     expect(titleRect.height, lessThanOrEqualTo(56));
-    expect(objectiveRect.width, greaterThanOrEqualTo(70));
-    expect(objectiveRect.height, greaterThanOrEqualTo(70));
-    expect(objectiveRect.bottom, lessThanOrEqualTo(aimRect.top));
+    expect(
+      tester.getRect(find.byKey(const Key('hud_details_menu'))).bottom,
+      lessThanOrEqualTo(aimRect.top),
+    );
+    await tester.tap(find.byKey(const Key('hud_details_menu')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('hud_objective_button')), findsOneWidget);
+    expect(find.byKey(const Key('hud_controls_button')), findsNothing);
     await tester.tap(find.byKey(const Key('hud_objective_button')));
     await tester.pump();
-    expect(find.text('이번 스테이지 목표'), findsOneWidget);
+    expect(find.text('이번 스테이지 목표'), findsWidgets);
     final dialogContent = tester.getSize(
       find.byKey(const Key('hud_info_dialog_content')),
     );
@@ -409,10 +411,12 @@ void main() {
 
     expect(find.text('10. 속성 한방'), findsOneWidget);
     expect(find.textContaining('속성 → 기믹 연계 → 홀'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_details_menu')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('hud_progress_button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('hud_progress_button')));
     await tester.pump();
-    expect(find.text('진행 상황'), findsOneWidget);
+    expect(find.text('진행 상황'), findsWidgets);
     expect(find.text('직접 성공 · 속성 · 연쇄 모두 가능'), findsWidgets);
   });
 
@@ -1908,9 +1912,9 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('clear_popup')), findsOneWidget);
-    expect(find.textContaining('예시 기록'), findsOneWidget);
+    expect(find.textContaining('예시 기록'), findsNothing);
     expect(find.byKey(const Key('clear_stars')), findsOneWidget);
-    expect(find.text('파 3회 · 3/3 별'), findsOneWidget);
+    expect(find.text('파 3회'), findsOneWidget);
     expect(find.byKey(const Key('retry_stage_button')), findsOneWidget);
     expect(find.bySemanticsLabel('공을 조준하는 게임 화면'), findsNothing);
 
@@ -2021,7 +2025,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byKey(const Key('clear_popup')), findsOneWidget);
-      expect(find.text('파 2회 · 3/3 별'), findsOneWidget);
+      expect(find.text('파 2회'), findsOneWidget);
       await expectLater(
         find.byKey(const Key('clear_popup_golden')),
         matchesGoldenFile('goldens/clear_popup_${fixture.name}.png'),
@@ -2890,7 +2894,7 @@ void main() {
         .getSemanticsData()
         .label;
     expect(objective, contains('발견 0/3 · 무거움'));
-    expect(find.byKey(const Key('hud_status_button')), findsOneWidget);
+    expect(find.byKey(const Key('hud_details_menu')), findsOneWidget);
   });
 
   testWidgets('3단계는 스위치 경로와 점착의 고정 역할을 첫 화면에 표시한다', (tester) async {
@@ -2901,10 +2905,12 @@ void main() {
     );
     await tester.pump();
 
+    await tester.tap(find.byKey(const Key('hud_details_menu')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('hud_progress_button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('hud_progress_button')));
     await tester.pump();
-    expect(find.text('진행 상황'), findsOneWidget);
+    expect(find.text('진행 상황'), findsWidgets);
     expect(find.byKey(const Key('level_progress')), findsOneWidget);
     expect(find.text('무거움은 스위치 · 점착은 공 고정'), findsWidgets);
   });

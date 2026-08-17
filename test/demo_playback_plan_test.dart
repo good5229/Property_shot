@@ -76,7 +76,7 @@ void main() {
     expect(find.byKey(const Key('demo_bouncy_01_screen')), findsOneWidget);
     expect(find.byKey(const Key('aim_area')), findsOneWidget);
     expect(find.byKey(const Key('verified_demo_launch')), findsOneWidget);
-    expect(find.text('팁 잠김'), findsOneWidget);
+    expect(find.bySemanticsLabel('팁 잠김'), findsOneWidget);
     expect(find.bySemanticsLabel('힌트 열쇠'), findsOneWidget);
     expect(find.byKey(const Key('start_game_button')), findsNothing);
   });

@@ -78,6 +78,14 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('연쇄 점수 ${analysis.totalScore}점'), findsOneWidget);
+      expect(find.text('홀 진입'), findsNothing);
+      await tester.ensureVisible(
+        find.byKey(const Key('creative_chain_details_tile')),
+      );
+      await tester.tap(
+        find.byKey(const Key('creative_chain_details_tile')),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('홀 진입'), findsOneWidget);
     });
   }
@@ -138,7 +146,7 @@ void main() {
     const Size(768, 1024),
   ]) {
     testWidgets(
-      '8단계 실제 클리어 팝업은 ${size.width.toInt()}×${size.height.toInt()}에서 점수 근거를 스크롤한다',
+      '8단계 실제 클리어 팝업은 ${size.width.toInt()}×${size.height.toInt()}에서 점수 근거를 요청할 때만 연다',
       (tester) async {
         addTearDown(() => tester.binding.setSurfaceSize(null));
         await tester.binding.setSurfaceSize(size);
@@ -214,6 +222,11 @@ void main() {
           of: find.byKey(const Key('clear_result_scroll')),
           matching: find.byType(Scrollable),
         );
+        expect(lastEvidence.hitTestable(), findsNothing);
+        await tester.tap(
+          find.byKey(const Key('creative_chain_details_tile')),
+        );
+        await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           lastEvidence,
           120,
@@ -222,16 +235,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(lastEvidence, findsOneWidget);
         expect(lastEvidence.hitTestable(), findsOneWidget);
-        await tester.scrollUntilVisible(
-          find.byKey(const Key('clear_leaderboard')),
-          120,
-          scrollable: resultScrollable,
-        );
-        await tester.pumpAndSettle();
-        expect(
-          find.byKey(const Key('clear_leaderboard')).hitTestable(),
-          findsOneWidget,
-        );
+        expect(find.byKey(const Key('clear_leaderboard')), findsNothing);
         expect(
           find.byKey(const Key('next_stage_button')).hitTestable(),
           findsOneWidget,

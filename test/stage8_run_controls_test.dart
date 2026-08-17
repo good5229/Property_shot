@@ -32,17 +32,17 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(find.byTooltip('시도 횟수 1'), findsOneWidget);
     await tester.tap(find.byKey(const Key('rewind_button')).first);
     await tester.pump();
     await tester.tap(find.byKey(const Key('rewind_button')).first);
     await tester.pump();
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(find.byTooltip('시도 횟수 1'), findsOneWidget);
     expect(rewindCalls, 1);
 
     persisted.complete();
     await _pumpForAsyncWork(tester);
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(find.byTooltip('시도 횟수 0'), findsOneWidget);
   });
 
   testWidgets('8단계 처음부터는 저장 완료 뒤에만 화면과 샷 기록을 초기화한다', (tester) async {
@@ -66,17 +66,17 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(find.byTooltip('시도 횟수 1'), findsOneWidget);
     await tester.tap(find.byKey(const Key('reset_button')).first);
     await tester.pump();
     await tester.tap(find.byKey(const Key('reset_button')).first);
     await tester.pump();
-    expect(find.textContaining('시도 1'), findsOneWidget);
+    expect(find.byTooltip('시도 횟수 1'), findsOneWidget);
     expect(restartCalls, 1);
 
     persisted.complete();
     await _pumpForAsyncWork(tester);
-    expect(find.textContaining('시도 0'), findsOneWidget);
+    expect(find.byTooltip('시도 횟수 0'), findsOneWidget);
   });
 }
 

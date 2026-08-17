@@ -7,10 +7,39 @@ class CreativeChainScoreSummary extends StatelessWidget {
     super.key,
     required this.analysis,
     this.showDetails = true,
+    this.collapsibleDetails = false,
   });
 
   final CreativeChainScoreAnalysis analysis;
   final bool showDetails;
+  final bool collapsibleDetails;
+
+  List<Widget> _evidenceRows(BuildContext context) => [
+    for (var index = 0; index < analysis.evidence.length; index++)
+      Padding(
+        key: Key('creative_chain_evidence_$index'),
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                analysis.evidence[index].label,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '+${analysis.evidence[index].points}점',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF2F7655),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -50,32 +79,21 @@ class CreativeChainScoreSummary extends StatelessWidget {
                 ),
               ],
             ),
-            if (showDetails) ...[
-              const SizedBox(height: 8),
-              for (var index = 0; index < analysis.evidence.length; index++)
-                Padding(
-                  key: Key('creative_chain_evidence_$index'),
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          analysis.evidence[index].label,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '+${analysis.evidence[index].points}점',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF2F7655),
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
+            if (showDetails && collapsibleDetails)
+              Material(
+                color: Colors.transparent,
+                child: ExpansionTile(
+                  key: const Key('creative_chain_details_tile'),
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('점수 근거 보기'),
+                  children: _evidenceRows(context),
                 ),
+              )
+            else if (showDetails) ...[
+              const SizedBox(height: 8),
+              ..._evidenceRows(context),
             ],
           ],
         ),

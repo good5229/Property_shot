@@ -2037,7 +2037,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _isAnimatingShot = true;
     _setState(
       result.state,
-      path: result.path,
+      path: result.animationPath.isEmpty ? result.path : result.animationPath,
       transitionStart: shotStartState,
       moves: result.moves,
       impacts: result.impacts,
@@ -4118,6 +4118,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     showDiscovery: widget.showDiscoveryHud,
                                     exitTooltipOverride:
                                         widget.exitTooltipOverride,
+                                    hintAvailable: _hintAvailable,
+                                    hintVisible: _patternHintEntry != null,
+                                    hintKeyAvailable:
+                                        _currentHintKey != null &&
+                                        !_collectedHintKeyIds.contains(
+                                          _currentHintKey!.id,
+                                        ),
+                                    onHint: _patternHintEntry == null
+                                        ? null
+                                        : _hintAvailable
+                                        ? _showPatternHintSheet
+                                        : null,
                                   ),
                                 if (compactLayout)
                                   Padding(
@@ -4152,6 +4164,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       showDiscovery: widget.showDiscoveryHud,
                                       exitTooltipOverride:
                                           widget.exitTooltipOverride,
+                                      hintAvailable: _hintAvailable,
+                                      hintVisible: _patternHintEntry != null,
+                                      hintKeyAvailable:
+                                          _currentHintKey != null &&
+                                          !_collectedHintKeyIds.contains(
+                                            _currentHintKey!.id,
+                                          ),
+                                      onHint: _patternHintEntry == null
+                                          ? null
+                                          : _hintAvailable
+                                          ? _showPatternHintSheet
+                                          : null,
                                     ),
                                   ),
                                 if (persistentTutorialHint != null)
@@ -4571,27 +4595,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                                     .reducedMotionEnabled,
                                                           ),
                                                         ),
-                                                      ),
-                                                    ),
-                                                  if (_patternHintEntry != null)
-                                                    Positioned(
-                                                      top: 10,
-                                                      right: 10,
-                                                      child: _HintAccessButton(
-                                                        available:
-                                                            _hintAvailable,
-                                                        keyAvailable:
-                                                            _currentHintKey !=
-                                                                null &&
-                                                            !_collectedHintKeyIds
-                                                                .contains(
-                                                                  _currentHintKey!
-                                                                      .id,
-                                                                ),
-                                                        onPressed:
-                                                            _hintAvailable
-                                                            ? _showPatternHintSheet
-                                                            : null,
                                                       ),
                                                     ),
                                                   if (widget.demoLaunchInput !=
@@ -5077,11 +5080,13 @@ class _HintAccessButton extends StatelessWidget {
     required this.available,
     required this.keyAvailable,
     required this.onPressed,
+    this.compact = false,
   });
 
   final bool available;
   final bool keyAvailable;
   final VoidCallback? onPressed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -5097,35 +5102,57 @@ class _HintAccessButton extends StatelessWidget {
       hint: reason,
       onTap: onPressed,
       child: ExcludeSemantics(
-        child: SizedBox(
-          height: 44,
-          child: FilledButton.tonalIcon(
-            key: const Key('pattern_hint_button'),
-            onPressed: onPressed,
-            icon: SizedBox.square(
-              dimension: 30,
-              child: Image.asset(
-                available
-                    ? 'assets/generated/hint-lantern-v2.png'
-                    : 'assets/generated/hint-key-v1.png',
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-                excludeFromSemantics: true,
+        child: compact
+            ? IconButton(
+                key: const Key('pattern_hint_button'),
+                tooltip: '$label · $reason',
+                onPressed: onPressed,
+                icon: SizedBox.square(
+                  dimension: 34,
+                  child: Image.asset(
+                    available
+                        ? 'assets/generated/hint-lantern-v2.png'
+                        : 'assets/generated/hint-key-v1.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    excludeFromSemantics: true,
+                  ),
+                ),
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                padding: const EdgeInsets.all(4),
+              )
+            : SizedBox(
+                height: 44,
+                child: FilledButton.tonalIcon(
+                  key: const Key('pattern_hint_button'),
+                  onPressed: onPressed,
+                  icon: SizedBox.square(
+                    dimension: 30,
+                    child: Image.asset(
+                      available
+                          ? 'assets/generated/hint-lantern-v2.png'
+                          : 'assets/generated/hint-key-v1.png',
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                  label: Text(label),
+                  style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    backgroundColor: available
+                        ? const Color(0xFFFDF0B4)
+                        : const Color(0xFFE8E2D3),
+                    foregroundColor: available
+                        ? const Color(0xFF5A4825)
+                        : const Color(0xFF6C665B),
+                  ),
+                ),
               ),
-            ),
-            label: Text(label),
-            style: FilledButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              backgroundColor: available
-                  ? const Color(0xFFFDF0B4)
-                  : const Color(0xFFE8E2D3),
-              foregroundColor: available
-                  ? const Color(0xFF5A4825)
-                  : const Color(0xFF6C665B),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -5552,7 +5579,6 @@ class ClearResultPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = _leaderboardRows(state);
     final stars = _starsForShot(state.shotCount, level.parShots);
     final rewardSelectionPending =
         rewardCandidates.isNotEmpty && selectedRewardId == null;
@@ -5604,6 +5630,56 @@ class ClearResultPopup extends StatelessWidget {
                             ),
                             child: Column(
                               children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    18,
+                                    14,
+                                    18,
+                                    6,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        '클리어!',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.headlineSmall,
+                                      ),
+                                      Text('${state.shotCount}번 · 별 $stars/3'),
+                                      Row(
+                                        key: const Key('clear_stars'),
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          for (
+                                            var index = 0;
+                                            index < 3;
+                                            index++
+                                          )
+                                            Icon(
+                                              index < stars
+                                                  ? Icons.star_rounded
+                                                  : Icons.star_border_rounded,
+                                              color: index < stars
+                                                  ? const Color(0xFFF0AE34)
+                                                  : const Color(0xFFB7B6A9),
+                                              size: 26,
+                                            ),
+                                        ],
+                                      ),
+                                      Text(
+                                        '파 ${level.parShots}회',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelMedium
+                                            ?.copyWith(
+                                              color: const Color(0xFF6A5947),
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 Expanded(
                                   child: Stack(
                                     children: [
@@ -5619,60 +5695,6 @@ class ClearResultPopup extends StatelessWidget {
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Text(
-                                                '클리어!',
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.headlineSmall,
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Text('${state.shotCount}번 만에 성공'),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                key: const Key('clear_stars'),
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  for (
-                                                    var index = 0;
-                                                    index < 3;
-                                                    index++
-                                                  )
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 2,
-                                                          ),
-                                                      child: Icon(
-                                                        index < stars
-                                                            ? Icons.star_rounded
-                                                            : Icons
-                                                                  .star_border_rounded,
-                                                        color: index < stars
-                                                            ? const Color(
-                                                                0xFFF0AE34,
-                                                              )
-                                                            : const Color(
-                                                                0xFFB7B6A9,
-                                                              ),
-                                                        size: 32,
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                              Text(
-                                                '파 ${level.parShots}회 · $stars/3 별',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelLarge
-                                                    ?.copyWith(
-                                                      color: const Color(
-                                                        0xFF6A5947,
-                                                      ),
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                    ),
-                                              ),
                                               if (discoveries.isNotEmpty) ...[
                                                 const SizedBox(height: 10),
                                                 _DiscoveryResultCard(
@@ -5822,121 +5844,110 @@ class ClearResultPopup extends StatelessWidget {
                                                           label: reward.name,
                                                           hint:
                                                               '${reward.role.label}. ${reward.description} ${reward.activationLabel}. ${reward.usageHint}',
-                                                          child: OutlinedButton(
-                                                            key: Key(
-                                                              'run_reward_${reward.id}',
-                                                            ),
-                                                            onPressed:
-                                                                selectedRewardId ==
-                                                                        null &&
-                                                                    !isSelectingReward
-                                                                ? () => onRewardSelected
-                                                                      ?.call(
-                                                                        reward
-                                                                            .id,
-                                                                      )
-                                                                : null,
-                                                            style: OutlinedButton.styleFrom(
-                                                              minimumSize:
-                                                                  const Size(
-                                                                    double
-                                                                        .infinity,
-                                                                    68,
-                                                                  ),
-                                                              padding:
-                                                                  const EdgeInsets.symmetric(
-                                                                    horizontal:
-                                                                        10,
-                                                                    vertical: 8,
-                                                                  ),
-                                                              shape: RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                      8,
-                                                                    ),
+                                                          child: Tooltip(
+                                                            message:
+                                                                '${reward.description}\n${reward.activationLabel} · ${reward.usageHint}',
+                                                            child: OutlinedButton(
+                                                              key: Key(
+                                                                'run_reward_${reward.id}',
                                                               ),
-                                                            ),
-                                                            child: Row(
-                                                              children: [
-                                                                ExcludeSemantics(
-                                                                  child: _RunRewardIcon(
-                                                                    reward:
-                                                                        reward,
-                                                                    selected:
-                                                                        selectedRewardId ==
-                                                                        reward
-                                                                            .id,
+                                                              autofocus:
+                                                                  rewardSelectionPending &&
+                                                                  reward ==
+                                                                      rewardCandidates
+                                                                          .first,
+                                                              onPressed:
+                                                                  selectedRewardId ==
+                                                                          null &&
+                                                                      !isSelectingReward
+                                                                  ? () => onRewardSelected
+                                                                        ?.call(
+                                                                          reward
+                                                                              .id,
+                                                                        )
+                                                                  : null,
+                                                              style: OutlinedButton.styleFrom(
+                                                                minimumSize:
+                                                                    const Size(
+                                                                      double
+                                                                          .infinity,
+                                                                      56,
+                                                                    ),
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          10,
+                                                                      vertical:
+                                                                          8,
+                                                                    ),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        8,
+                                                                      ),
+                                                                ),
+                                                              ),
+                                                              child: Row(
+                                                                children: [
+                                                                  ExcludeSemantics(
+                                                                    child: _RunRewardIcon(
+                                                                      reward:
+                                                                          reward,
+                                                                      selected:
+                                                                          selectedRewardId ==
+                                                                          reward
+                                                                              .id,
+                                                                    ),
                                                                   ),
-                                                                ),
-                                                                const SizedBox(
-                                                                  width: 10,
-                                                                ),
-                                                                Expanded(
-                                                                  child: Column(
-                                                                    mainAxisSize:
-                                                                        MainAxisSize
-                                                                            .min,
-                                                                    crossAxisAlignment:
-                                                                        CrossAxisAlignment
-                                                                            .start,
-                                                                    children: [
-                                                                      Text(
-                                                                        reward
-                                                                            .name,
-                                                                        style: const TextStyle(
-                                                                          fontWeight:
-                                                                              FontWeight.w800,
-                                                                        ),
-                                                                      ),
-                                                                      Text(
-                                                                        '${reward.role.label} · ${reward.role.description}',
-                                                                        key: Key(
-                                                                          'run_reward_role_${reward.id}',
-                                                                        ),
-                                                                        style:
-                                                                            Theme.of(
-                                                                              context,
-                                                                            ).textTheme.labelSmall?.copyWith(
-                                                                              color: const Color(
-                                                                                0xFF8A6527,
-                                                                              ),
-                                                                              fontWeight: FontWeight.w800,
-                                                                            ),
-                                                                      ),
-                                                                      const SizedBox(
-                                                                        height:
-                                                                            2,
-                                                                      ),
-                                                                      Text(
-                                                                        reward
-                                                                            .description,
-                                                                        style: Theme.of(
-                                                                          context,
-                                                                        ).textTheme.bodySmall,
-                                                                      ),
-                                                                      const SizedBox(
-                                                                        height:
-                                                                            3,
-                                                                      ),
-                                                                      Text(
-                                                                        '${reward.activationLabel} · ${reward.usageHint}',
-                                                                        key: Key(
-                                                                          'run_reward_usage_${reward.id}',
-                                                                        ),
-                                                                        style:
-                                                                            Theme.of(
-                                                                              context,
-                                                                            ).textTheme.labelSmall?.copyWith(
-                                                                              color: const Color(
-                                                                                0xFF315E60,
-                                                                              ),
-                                                                              fontWeight: FontWeight.w700,
-                                                                            ),
-                                                                      ),
-                                                                    ],
+                                                                  const SizedBox(
+                                                                    width: 10,
                                                                   ),
-                                                                ),
-                                                              ],
+                                                                  Expanded(
+                                                                    child: Column(
+                                                                      mainAxisSize:
+                                                                          MainAxisSize
+                                                                              .min,
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      children: [
+                                                                        Text(
+                                                                          reward
+                                                                              .name,
+                                                                          style: const TextStyle(
+                                                                            fontWeight:
+                                                                                FontWeight.w800,
+                                                                          ),
+                                                                        ),
+                                                                        Text(
+                                                                          reward
+                                                                              .activationLabel,
+                                                                          key: Key(
+                                                                            'run_reward_role_${reward.id}',
+                                                                          ),
+                                                                          style:
+                                                                              Theme.of(
+                                                                                context,
+                                                                              ).textTheme.labelSmall?.copyWith(
+                                                                                color: const Color(
+                                                                                  0xFF8A6527,
+                                                                                ),
+                                                                                fontWeight: FontWeight.w800,
+                                                                              ),
+                                                                        ),
+                                                                        Offstage(
+                                                                          key: Key(
+                                                                            'run_reward_usage_${reward.id}',
+                                                                          ),
+                                                                          child: Text(
+                                                                            reward.usageHint,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
                                                             ),
                                                           ),
                                                         ),
@@ -6058,6 +6069,7 @@ class ClearResultPopup extends StatelessWidget {
                                                   analysis: chainScoreAnalysis!,
                                                   showDetails: GameFeedback
                                                       .chainScoreDetailsEnabled,
+                                                  collapsibleDetails: true,
                                                 ),
                                               ],
                                               if (!isFinal) ...[
@@ -6080,73 +6092,7 @@ class ClearResultPopup extends StatelessWidget {
                                                 const SizedBox(height: 4),
                                                 Text('내 최고 기록 $bestShot회'),
                                               ],
-                                              const SizedBox(height: 14),
-                                              Container(
-                                                key: const Key(
-                                                  'clear_leaderboard',
-                                                ),
-                                                width: double.infinity,
-                                                padding: const EdgeInsets.all(
-                                                  12,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.74),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: const Color(
-                                                      0xFFE4C56A,
-                                                    ),
-                                                  ),
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    const Text(
-                                                      '예시 기록 · 온라인 순위 아님',
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      '현재는 데모용 기록만 표시합니다.',
-                                                      style: Theme.of(
-                                                        context,
-                                                      ).textTheme.bodySmall,
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    for (
-                                                      var i = 0;
-                                                      i < rows.length;
-                                                      i++
-                                                    )
-                                                      Padding(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              vertical: 3,
-                                                            ),
-                                                        child: Row(
-                                                          children: [
-                                                            SizedBox(
-                                                              width: 28,
-                                                              child: Text(
-                                                                '${i + 1}위',
-                                                              ),
-                                                            ),
-                                                            Expanded(
-                                                              child: Text(
-                                                                rows[i].name,
-                                                              ),
-                                                            ),
-                                                            Text(
-                                                              '${rows[i].shots}회',
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ),
+                                              const SizedBox(height: 10),
                                             ],
                                           ),
                                         ),
@@ -6190,7 +6136,7 @@ class ClearResultPopup extends StatelessWidget {
                                     children: [
                                       FilledButton.icon(
                                         key: const Key('next_stage_button'),
-                                        autofocus: true,
+                                        autofocus: !rewardSelectionPending,
                                         onPressed: rewardSelectionPending
                                             ? null
                                             : onNext,
@@ -6556,25 +6502,7 @@ class _FailurePopup extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(state.message),
-                      if (discoveries.any((item) => item.achieved)) ...[
-                        const SizedBox(height: 8),
-                        _DiscoveryResultCard(
-                          milestones: discoveries,
-                          cleared: false,
-                        ),
-                      ],
-                      if (discoveries.any((item) => !item.achieved)) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          '다음 실험: ${discoveries.firstWhere((item) => !item.achieved).label}에 집중해 보세요.',
-                          key: const Key('failure_next_experiment'),
-                          style: const TextStyle(
-                            color: Color(0xFF285B7D),
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 8),
                       const Text(
                         '이번에 바꿀 것',
                         key: Key('failure_change_heading'),
@@ -6587,15 +6515,55 @@ class _FailurePopup extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (failureReplay != null) ...[
+                      if (discoveries.isNotEmpty || failureReplay != null) ...[
                         const SizedBox(height: 6),
-                        Text(
-                          '원인: ${const FailureReplayAnalyzer().analyze(failureReplay!).title}',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF8B402D),
+                        ExpansionTile(
+                          key: const Key('failure_details_tile'),
+                          tilePadding: EdgeInsets.zero,
+                          childrenPadding: const EdgeInsets.only(bottom: 6),
+                          title: const Text(
+                            '실험 결과 자세히',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          children: [
+                            if (discoveries.any((item) => item.achieved))
+                              _DiscoveryResultCard(
+                                milestones: discoveries,
+                                cleared: false,
                               ),
+                            if (discoveries.any((item) => !item.achieved))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '다음 실험: ${discoveries.firstWhere((item) => !item.achieved).label}',
+                                    key: const Key('failure_next_experiment'),
+                                    style: const TextStyle(
+                                      color: Color(0xFF285B7D),
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (failureReplay != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '멈춘 원인: ${const FailureReplayAnalyzer().analyze(failureReplay!).title}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF8B402D),
+                                        ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                       if (assistRecommendation != null) ...[
@@ -6756,13 +6724,6 @@ class _AssistRecommendationCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _LeaderboardRow {
-  const _LeaderboardRow(this.name, this.shots);
-
-  final String name;
-  final int shots;
 }
 
 int _starsForShot(int shotCount, int parShots) {
@@ -7518,29 +7479,6 @@ class _ChargeGaugeRailPainter extends CustomPainter {
   }
 }
 
-List<_LeaderboardRow> _leaderboardRows(GameState state) {
-  final base = switch (state.levelIndex) {
-    0 => const [
-      _LeaderboardRow('나무별', 2),
-      _LeaderboardRow('몽글이', 3),
-      _LeaderboardRow('민트공', 4),
-    ],
-    1 => const [
-      _LeaderboardRow('반짝젤리', 2),
-      _LeaderboardRow('두둥실', 4),
-      _LeaderboardRow('초록길', 5),
-    ],
-    _ => const [
-      _LeaderboardRow('문지기', 3),
-      _LeaderboardRow('찰싹이', 5),
-      _LeaderboardRow('돌돌이', 6),
-    ],
-  };
-  final rows = [...base, _LeaderboardRow('나', state.shotCount)]
-    ..sort((a, b) => a.shots.compareTo(b.shots));
-  return rows.take(4).toList();
-}
-
 class _CausalRibbon extends StatelessWidget {
   const _CausalRibbon({required this.milestones});
 
@@ -7683,47 +7621,45 @@ class _CompactHudDetails extends StatelessWidget {
         : milestones
               .map((item) => '${item.achieved ? '완료' : '대기'} · ${item.label}')
               .join('\n');
-    if (condensed) {
-      final summary = [
-        objective,
-        if (milestones.isNotEmpty) discoveryText,
-        if (rewardGuide != null) '보상 · $rewardGuide',
-        if (progressHint != null) '진행 · $progressHint',
-        '조작 · 손가락이나 마우스로 방향을 정하고, 공을 길게 눌러 힘을 모은 뒤 놓으세요.',
-        '현재 · $message',
-      ].join('\n');
-      return Stack(
-        children: [
-          Semantics(
-            key: const Key('compact_objective'),
-            container: true,
-            label: objective,
-            child: const SizedBox.shrink(),
-          ),
-          Semantics(
-            key: const Key('compact_message'),
-            container: true,
-            liveRegion: true,
-            label: '게임 안내: $message',
-            child: const SizedBox.shrink(),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _HudInfoButton(
-              key: const Key('hud_status_button'),
-              assetPath: 'assets/generated/nav-stage-map-v1.png',
-              title: '스테이지 정보',
-              message: summary,
-              liveRegion: true,
-            ),
-          ),
-        ],
-      );
-    }
-    return Wrap(
+    final entries = <_HudDetailEntry>[
+      _HudDetailEntry(
+        id: 'objective',
+        title: '이번 스테이지 목표',
+        message: objective,
+        assetPath: 'assets/generated/nav-stage-map-v1.png',
+      ),
+      if (milestones.isNotEmpty)
+        _HudDetailEntry(
+          id: 'discovery',
+          title:
+              '발견 ${milestones.where((item) => item.achieved).length}/${milestones.length}',
+          message: discoveryText,
+          assetPath: 'assets/generated/nav-activities-v1.png',
+        ),
+      if (rewardGuide != null)
+        _HudDetailEntry(
+          id: 'reward',
+          title: '이번 단계 보상',
+          message: rewardGuide!,
+          assetPath: 'assets/generated/nav-reward-satchel-v1.png',
+        ),
+      _HudDetailEntry(
+        id: 'status',
+        title: tutorialActive ? '현재 안내' : '플레이 상태',
+        message: message,
+        assetPath: 'assets/generated/hint-lantern-v2.png',
+      ),
+      if (progressHint != null)
+        _HudDetailEntry(
+          id: 'progress',
+          title: '진행 상황',
+          message: progressHint!,
+          assetPath: 'assets/generated/nav-expedition-v1.png',
+        ),
+    ];
+    return Stack(
       key: const Key('hud_info_actions'),
-      spacing: 4,
-      runSpacing: 4,
+      alignment: Alignment.center,
       children: [
         Semantics(
           key: const Key('compact_objective'),
@@ -7766,140 +7702,99 @@ class _CompactHudDetails extends StatelessWidget {
               child: Text(rewardGuide!, key: const Key('active_reward_guide')),
             ),
           ),
-        _HudInfoButton(
-          key: const Key('hud_objective_button'),
-          assetPath: 'assets/generated/nav-stage-map-v1.png',
-          title: '이번 스테이지 목표',
-          message: objective,
-          spacious: spacious,
-        ),
-        if (milestones.isNotEmpty)
-          _HudInfoButton(
-            key: const Key('hud_discovery_button'),
-            assetPath: 'assets/generated/nav-activities-v1.png',
-            title:
-                '발견 ${milestones.where((item) => item.achieved).length}/${milestones.length}',
-            message: discoveryText,
-            spacious: spacious,
-          ),
-        if (rewardGuide != null)
-          _HudInfoButton(
-            key: const Key('hud_reward_button'),
-            assetPath: 'assets/generated/nav-reward-satchel-v1.png',
-            title: '이번 단계 보상',
-            message: rewardGuide!,
-            spacious: spacious,
-          ),
-        _HudInfoButton(
-          key: const Key('hud_controls_button'),
-          assetPath: 'assets/generated/nav-helm-v1.png',
-          title: '조작 방법',
-          message: '손가락이나 마우스로 방향을 정하고, 공을 길게 눌러 힘을 모은 뒤 놓으세요.',
-          spacious: spacious,
-        ),
-        _HudInfoButton(
-          key: const Key('hud_status_button'),
-          assetPath: 'assets/generated/hint-lantern-v2.png',
-          title: tutorialActive ? '현재 안내' : '플레이 상태',
-          message: message,
-          liveRegion: true,
-          spacious: spacious,
-        ),
-        if (progressHint != null)
-          _HudInfoButton(
-            key: const Key('hud_progress_button'),
-            assetPath: 'assets/generated/nav-expedition-v1.png',
-            title: '진행 상황',
-            message: progressHint!,
-            spacious: spacious,
-          ),
-      ],
-    );
-  }
-}
-
-class _HudInfoButton extends StatelessWidget {
-  const _HudInfoButton({
-    super.key,
-    required this.assetPath,
-    required this.title,
-    required this.message,
-    this.liveRegion = false,
-    this.spacious = false,
-  });
-
-  final String assetPath;
-  final String title;
-  final String message;
-  final bool liveRegion;
-  final bool spacious;
-
-  @override
-  Widget build(BuildContext context) {
-    final buttonExtent = spacious ? 72.0 : 48.0;
-    final imageExtent = spacious ? 58.0 : 36.0;
-    return Semantics(
-      button: true,
-      liveRegion: liveRegion,
-      label: '$title. $message',
-      child: Tooltip(
-        message: '$title · $message',
-        child: IconButton(
-          tooltip: title,
-          onPressed: () => showDialog<void>(
-            context: context,
-            builder: (dialogContext) => AlertDialog(
-              key: Key('${key.toString()}_dialog'),
-              titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-              contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              title: Row(
-                children: [
-                  SizedBox.square(
-                    dimension: 42,
-                    child: Image.asset(
-                      assetPath,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                      excludeFromSemantics: true,
+        PopupMenuButton<_HudDetailEntry>(
+          key: const Key('hud_details_menu'),
+          tooltip: '스테이지 정보 더 보기',
+          onSelected: (entry) => _showHudDetailDialog(context, entry),
+          itemBuilder: (context) => [
+            for (final entry in entries)
+              PopupMenuItem<_HudDetailEntry>(
+                key: Key('hud_${entry.id}_button'),
+                value: entry,
+                child: Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: 30,
+                      child: Image.asset(
+                        entry.assetPath,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        excludeFromSemantics: true,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(title)),
-                ],
-              ),
-              content: ConstrainedBox(
-                key: const Key('hud_info_dialog_content'),
-                constraints: const BoxConstraints(maxWidth: 360),
-                child: Text(message),
-              ),
-              actions: [
-                TextButton(
-                  autofocus: true,
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('확인'),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(entry.title)),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+          ],
           icon: SizedBox.square(
-            dimension: imageExtent,
+            dimension: condensed
+                ? 34
+                : spacious
+                ? 42
+                : 36,
             child: Image.asset(
-              assetPath,
+              'assets/generated/nav-stage-map-v1.png',
               fit: BoxFit.contain,
               filterQuality: FilterQuality.high,
               excludeFromSemantics: true,
             ),
           ),
-          constraints: BoxConstraints.tightFor(
-            width: buttonExtent,
-            height: buttonExtent,
-          ),
-          padding: const EdgeInsets.all(4),
         ),
-      ),
+      ],
     );
   }
+}
+
+class _HudDetailEntry {
+  const _HudDetailEntry({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.assetPath,
+  });
+
+  final String id;
+  final String title;
+  final String message;
+  final String assetPath;
+}
+
+void _showHudDetailDialog(BuildContext context, _HudDetailEntry entry) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      key: Key('hud_${entry.id}_dialog'),
+      title: Row(
+        children: [
+          SizedBox.square(
+            dimension: 42,
+            child: Image.asset(
+              entry.assetPath,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              excludeFromSemantics: true,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(entry.title)),
+        ],
+      ),
+      content: ConstrainedBox(
+        key: const Key('hud_info_dialog_content'),
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: Text(entry.message),
+      ),
+      actions: [
+        TextButton(
+          autofocus: true,
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('확인'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Hud extends StatelessWidget {
@@ -7921,6 +7816,10 @@ class _Hud extends StatelessWidget {
     this.objectiveOverride,
     this.showDiscovery = true,
     this.exitTooltipOverride,
+    this.hintVisible = false,
+    this.hintAvailable = false,
+    this.hintKeyAvailable = false,
+    this.onHint,
   });
 
   final bool compact;
@@ -7940,6 +7839,10 @@ class _Hud extends StatelessWidget {
   final String? objectiveOverride;
   final bool showDiscovery;
   final String? exitTooltipOverride;
+  final bool hintVisible;
+  final bool hintAvailable;
+  final bool hintKeyAvailable;
+  final VoidCallback? onHint;
 
   @override
   Widget build(BuildContext context) {
@@ -8013,27 +7916,33 @@ class _Hud extends StatelessWidget {
                   assetPath: 'assets/generated/nav-replay-v1.png',
                   tooltip: '시도 횟수 ${state.shotCount}',
                   value: '시도 ${state.shotCount}',
-                  iconOnly: dense,
+                  iconOnly: true,
                 ),
                 const SizedBox(width: 6),
                 _HudMetric(
                   assetPath: 'assets/generated/stage-icon-chain-score-v1.png',
                   tooltip: '현재 점수 ${hudScore ?? state.score}',
                   value: '점수 ${hudScore ?? state.score}',
-                  iconOnly: dense,
+                  iconOnly: true,
                 ),
-                if (dense)
-                  _CompactHudDetails(
-                    objective:
-                        objectiveOverride ??
-                        '발견 $discoveries/${discoveryMilestones.length} · '
-                            '${stageDiscoveryCompactPath(state.levelIndex)}',
-                    message: state.message,
-                    tutorialActive: tutorialActive,
-                    milestones: discoveryMilestones,
-                    condensed: true,
-                    progressHint: compactProgressHint,
-                    rewardGuide: rewardGuide,
+                _CompactHudDetails(
+                  objective:
+                      objectiveOverride ??
+                      '발견 $discoveries/${discoveryMilestones.length} · '
+                          '${stageDiscoveryCompactPath(state.levelIndex)}',
+                  message: state.message,
+                  tutorialActive: tutorialActive,
+                  milestones: discoveryMilestones,
+                  condensed: dense,
+                  progressHint: compactProgressHint,
+                  rewardGuide: rewardGuide,
+                ),
+                if (hintVisible)
+                  _HintAccessButton(
+                    available: hintAvailable,
+                    keyAvailable: hintKeyAvailable,
+                    onPressed: onHint,
+                    compact: true,
                   ),
                 if (!showStageSelector && onExit != null)
                   Semantics(
@@ -8118,18 +8027,6 @@ class _Hud extends StatelessWidget {
                   ],
                 ),
               ),
-            if (!dense)
-              _CompactHudDetails(
-                objective:
-                    objectiveOverride ??
-                    '발견 $discoveries/${discoveryMilestones.length} · '
-                        '${stageDiscoveryCompactPath(state.levelIndex)}',
-                message: state.message,
-                tutorialActive: tutorialActive,
-                milestones: discoveryMilestones,
-                progressHint: compactProgressHint,
-                rewardGuide: rewardGuide,
-              ),
           ],
         ),
       );
@@ -8157,6 +8054,23 @@ class _Hud extends StatelessWidget {
                 value: '시도 ${state.shotCount}',
                 spacious: true,
               ),
+              _CompactHudDetails(
+                objective:
+                    objectiveOverride ??
+                    stageDiscoveryQuestion(state.levelIndex),
+                message: state.message,
+                tutorialActive: tutorialActive,
+                milestones: showDiscovery ? discoveryMilestones : const [],
+                progressHint: progressHint,
+                rewardGuide: rewardGuide,
+                spacious: true,
+              ),
+              if (hintVisible)
+                _HintAccessButton(
+                  available: hintAvailable,
+                  keyAvailable: hintKeyAvailable,
+                  onPressed: onHint,
+                ),
               const SizedBox(width: 12),
               _HudMetric(
                 assetPath: 'assets/generated/stage-icon-chain-score-v1.png',
@@ -8210,17 +8124,6 @@ class _Hud extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                 ),
             ],
-          ),
-          const SizedBox(height: 2),
-          _CompactHudDetails(
-            objective:
-                objectiveOverride ?? stageDiscoveryQuestion(state.levelIndex),
-            message: state.message,
-            tutorialActive: tutorialActive,
-            milestones: showDiscovery ? discoveryMilestones : const [],
-            progressHint: progressHint,
-            rewardGuide: rewardGuide,
-            spacious: true,
           ),
           const SizedBox(height: 8),
           if (showStageSelector)

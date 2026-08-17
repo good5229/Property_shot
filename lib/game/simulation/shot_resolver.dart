@@ -13,6 +13,7 @@ class ShotResult {
     required this.state,
     required this.path,
     required this.events,
+    this.animationPath = const [],
     this.moves = const [],
     this.impacts = const [],
     this.powerSliderActivations = const [],
@@ -23,6 +24,10 @@ class ShotResult {
 
   final GameState state;
   final List<Vec2> path;
+
+  /// 화면 재생에만 쓰는 보간 경로다. 비어 있으면 [path]를 그대로 사용한다.
+  /// 판정·리플레이 지문·다음 샷의 착지 상태에는 영향을 주지 않는다.
+  final List<Vec2> animationPath;
   final List<String> events;
   final List<ShotAnimationMove> moves;
   final List<ShotImpact> impacts;
@@ -1690,6 +1695,34 @@ class ShotResolver {
       stopped = true;
     }
 
+    // 거리 예산 또는 저속 임계점에서 자연스럽게 끝난 샷은 마지막 위치에서
+    // 즉시 정지시키지 않는다. 마지막 실제 이동 구간을 점점 짧아지는 조각으로
+    // 나눠 여러 프레임에 걸쳐 0으로 수렴하게 한다. 끝점은 물리 결과와 같으므로
+    // 애니메이션 종료 뒤 공이 되돌아가는 현상도 만들지 않는다.
+    final animationPath = [...path];
+    if (!success && !stopped && path.length >= 2) {
+      final start = path[path.length - 2];
+      final end = path.last;
+      if (start.distanceTo(end) > 0.3) {
+        animationPath.removeLast();
+        for (final progress in const [
+          0.32,
+          0.55,
+          0.72,
+          0.84,
+          0.91,
+          0.955,
+          0.98,
+          0.992,
+          0.997,
+          0.999,
+          1.0,
+        ]) {
+          animationPath.add(start + (end - start) * progress);
+        }
+      }
+    }
+
     if (success &&
         events.contains('existing_ball_hole_entered') &&
         !impacts.any((impact) => impact.entityType == EntityType.hole)) {
@@ -1784,6 +1817,9 @@ class ShotResolver {
     return ShotResult(
       state: next,
       path: path,
+      animationPath: animationPath.length == path.length
+          ? const []
+          : animationPath,
       events: events,
       moves: moves,
       impacts: impacts,

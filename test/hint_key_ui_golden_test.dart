@@ -47,7 +47,7 @@ void main() {
       size: const Size(320, 568),
     );
 
-    expect(find.text('팁 잠김'), findsOneWidget);
+    expect(find.bySemanticsLabel('팁 잠김'), findsOneWidget);
     expect(find.bySemanticsLabel('힌트 열쇠'), findsOneWidget);
     await expectLater(
       find.byKey(const Key('hint_key_golden')),
@@ -63,7 +63,7 @@ void main() {
       size: const Size(390, 844),
     );
 
-    expect(find.text('팁 잠김'), findsOneWidget);
+    expect(find.bySemanticsLabel('팁 잠김'), findsOneWidget);
     expect(find.bySemanticsLabel('힌트 열쇠'), findsOneWidget);
     await expectLater(
       find.byKey(const Key('hint_key_golden')),
@@ -81,7 +81,7 @@ void main() {
       collectedKeyIds: {entry.key!.id},
     );
 
-    expect(find.text('팁 보기'), findsOneWidget);
+    expect(find.bySemanticsLabel('팁 보기'), findsOneWidget);
     expect(find.bySemanticsLabel('힌트 열쇠'), findsNothing);
     await expectLater(
       find.byKey(const Key('hint_key_golden')),

@@ -262,14 +262,15 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.byKey(const Key('hud_details_menu')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hud_details_menu')));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.ensureVisible(find.byKey(const Key('hud_reward_button')));
     expect(find.byKey(const Key('hud_reward_button')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('hud_reward_button')));
-    await tester.pump();
-    expect(find.text('이번 단계 보상'), findsOneWidget);
     expect(find.byKey(const Key('active_reward_guide')), findsOneWidget);
-    expect(find.textContaining('충전 속도 25% 완화'), findsWidgets);
-    await tester.tap(find.text('확인'));
-    await tester.pump();
+    expect(find.text('이번 단계 보상'), findsOneWidget);
+    await tester.tapAt(const Offset(12, 500));
+    await tester.pump(const Duration(milliseconds: 300));
     expect(
       telemetry.events.where((event) => event['event_code'] == 'reward_used'),
       hasLength(1),

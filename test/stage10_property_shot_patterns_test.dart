@@ -73,6 +73,49 @@ void main() {
     }
   });
 
+  test('벽 반사 뒤 자연 종료되는 공은 저속 꼬리로 0에 수렴한다', () {
+    for (final solution in stage10PropertyShotSolutions) {
+      final pattern = stage.patternById(solution.patternId);
+      final initial = _preparedState(pattern, solution);
+      for (final input in [solution.firstInput, solution.directInput]) {
+        final result = resolver.resolve(initial, input);
+        if (result.state.phase == GamePhase.success ||
+            !result.events.contains('bounced') ||
+            result.events.any(
+              (event) =>
+                  event == 'sticky_attached' || event.startsWith('blocked_by_'),
+            )) {
+          continue;
+        }
+        expect(result.animationPath, isNotEmpty);
+        expect(
+          result.animationPath.last,
+          result.path.last,
+          reason: '감속 연출은 실제 물리 끝점을 바꾸면 안 됩니다.',
+        );
+        final segments = <double>[
+          for (var index = 1; index < result.animationPath.length; index++)
+            result.animationPath[index - 1].distanceTo(
+              result.animationPath[index],
+            ),
+        ];
+        final tail = segments.sublist(segments.length - 8);
+        expect(
+          tail.last,
+          lessThan(0.15),
+          reason: '${solution.patternId}가 눈에 보이는 속도에서 급정지했습니다.',
+        );
+        for (var index = 1; index < tail.length; index++) {
+          expect(
+            tail[index],
+            lessThan(tail[index - 1]),
+            reason: '${solution.patternId} 감속 꼬리가 단조 감소해야 합니다.',
+          );
+        }
+      }
+    }
+  });
+
   test('첨부 A의 홀은 시각 크기와 분리된 정밀 포획 판정을 사용한다', () {
     final pattern = stage.patternById('stage_property_shot_a');
     final holeDefinition = pattern.objects.firstWhere(

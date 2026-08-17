@@ -1,9 +1,9 @@
 [
   {"type": "wait", "milliseconds": 1000},
-  {"type": "click", "x": 324, "y": 600},
+  {"type": "click_role", "role": "button", "name": "젤리, 탄성 속성 보유", "fallback": {"x": 324, "y": 600}},
   {"type": "wait", "milliseconds": 700},
-  {"type": "click_role", "role": "button", "name": "선택한 탄성 속성을 공으로 옮기기", "fallback": {"x": 153, "y": 684}},
+  {"type": "click_role", "role": "button", "name": "속성 옮기기", "fallback": {"x": 153, "y": 684}},
   {"type": "wait", "milliseconds": 1000},
   {"type": "click_role", "role": "button", "name": "검증된 48도 90퍼센트 시연 발사", "fallback": {"x": 195, "y": 117}},
-  {"type": "wait", "milliseconds": 3150}
+  {"type": "wait", "milliseconds": 1700}
 ]

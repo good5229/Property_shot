@@ -81,7 +81,7 @@ async def _perform_actions(page: Page, actions: list[dict[str, Any]]) -> float:
                 # Flutter Web may omit the semantics DOM entirely.  Prefer the
                 # reviewed label when present, but fall back quickly enough that
                 # five missing roles cannot lengthen the 22-second take.
-                await page.get_by_role(role, name=name, exact=True).click(timeout=50)
+                await page.get_by_role(role, name=name, exact=True).click(timeout=500)
             except Exception:
                 fallback = action.get("fallback")
                 if not isinstance(fallback, dict):
@@ -294,6 +294,17 @@ async def main() -> int:
         capture_started_at = datetime.now(timezone.utc)
         await page.reload(wait_until="networkidle")
         await page.wait_for_timeout(1200)
+        # Flutter Web keeps its semantics tree dormant until the accessibility
+        # placeholder is activated.  Enabling it makes the tracked action
+        # timeline follow stable user-facing labels instead of viewport-specific
+        # coordinates; reviewed coordinates remain a fallback for older builds.
+        try:
+            await page.get_by_role(
+                "button", name="Enable accessibility", exact=True
+            ).press("Enter", timeout=1000)
+            await page.wait_for_timeout(100)
+        except Exception:
+            pass
         started = time.monotonic()
         actions_task = asyncio.create_task(_perform_actions(page, actions))
         # Playwright records the compositor in real time. Per-frame PNG

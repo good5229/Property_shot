@@ -146,13 +146,10 @@ void main() {
     final hintChoice = tester.getRect(
       find.byKey(Key('run_reward_${hintReward.id}')),
     );
-    final leaderboard = tester.getRect(
-      find.byKey(const Key('clear_leaderboard')),
-    );
     expect(selection.top, greaterThanOrEqualTo(panel.top));
     expect(selection.top, lessThan(panel.bottom - 96));
     expect(hintChoice.top, lessThan(panel.bottom - 48));
-    expect(leaderboard.top, greaterThan(selection.top));
+    expect(find.byKey(const Key('clear_leaderboard')), findsNothing);
     await expectLater(
       find.byKey(const Key('run_reward_compact_hint_golden')),
       matchesGoldenFile('goldens/run_reward_320x568_hint_first.png'),
