@@ -22,7 +22,7 @@ GitHub Issues own task status. This file owns planning context.
   - progress:
     - [x] 캠페인 저장과 분리된 60초 핵심 체험과 대표 3장면
     - [x] 속성 강탈의 양면 효과 강화
-    - [ ] 첫 화면·설명 단순화와 점진적 공개
+    - [x] 첫 화면·설명 단순화와 점진적 공개
     - [ ] Codex Puzzle Forge와 역할·반려 증거 시각화
     - [ ] 챌린지 기간 신규 개발 내역과 제출용 자료
     - [ ] 검증된 일일 변주와 Hive 확장 경계

@@ -98,7 +98,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('첫 클리어 뒤 핵심 활동을 열고 고급 활동은 3회까지 예고한다', (tester) async {
+  testWidgets('첫 클리어 뒤 부가 활동을 접고 3회까지 다음 해금을 예고한다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'property_shot_cleared_levels': <String>['0'],
       'property_shot_cleared_stage_ids': <String>['stage_heavy'],
@@ -109,10 +109,21 @@ void main() {
     for (final key in const [
       'expedition_entry_button',
       'stage_select_button',
-      'reward_inventory_entry_button',
+      'advanced_activities_menu',
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget, reason: key);
     }
+    expect(
+      find.byKey(const Key('reward_inventory_entry_button')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('advanced_activities_preview')), findsNothing);
+    await tester.tap(find.byKey(const Key('advanced_activities_menu')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('reward_inventory_entry_button')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const Key('advanced_activities_preview')),
       findsOneWidget,
@@ -121,6 +132,57 @@ void main() {
     expect(find.byKey(const Key('daily_challenge_entry_button')), findsNothing);
     expect(find.byKey(const Key('first_mission_card')), findsNothing);
   });
+
+  for (final fixture in const [
+    (name: '390x844', width: 390.0, height: 844.0),
+    (name: '768x1024', width: 768.0, height: 1024.0),
+  ]) {
+    testWidgets('첫 클리어 점진 공개 Golden ${fixture.name}', (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'property_shot_cleared_levels': <String>['0'],
+        'property_shot_cleared_stage_ids': <String>['stage_heavy'],
+      });
+      await tester.binding.setSurfaceSize(Size(fixture.width, fixture.height));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        const PropertyShotApp(
+          showHome: true,
+          fontFamilyOverride: 'GoldenNanumGothic',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final context = tester.element(
+        find.byKey(const Key('home_screen_golden')),
+      );
+      await tester.runAsync(() async {
+        for (final asset in const [
+          'assets/generated/stone-v3.png',
+          'assets/generated/crate-v3.png',
+          'assets/generated/stage-icon-property-transfer-v1.png',
+          'assets/generated/nav-helm-v1.png',
+          'assets/generated/nav-stage-map-v1.png',
+          'assets/generated/nav-expedition-v1.png',
+          'assets/generated/nav-activities-v1.png',
+        ]) {
+          await precacheImage(AssetImage(asset), context);
+        }
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('advanced_activities_menu')), findsOneWidget);
+      expect(
+        find.byKey(const Key('reward_inventory_entry_button')),
+        findsNothing,
+      );
+      await expectLater(
+        find.byKey(const Key('home_screen_golden')),
+        matchesGoldenFile(
+          'goldens/home_screen_progressive_${fixture.name}.png',
+        ),
+      );
+    });
+  }
 
   testWidgets('세 스테이지를 익히면 리플레이와 오늘의 도전을 연다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{

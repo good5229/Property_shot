@@ -2861,10 +2861,36 @@ class _HomeActions extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          if (!advancedActivitiesUnlocked)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          ExpansionTile(
+            key: const Key('advanced_activities_menu'),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+            childrenPadding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(color: Color(0xFF8CA8A1)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            collapsedShape: RoundedRectangleBorder(
+              side: const BorderSide(color: Color(0xFF8CA8A1)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: const Color(0xCCF7FAF3),
+            collapsedBackgroundColor: const Color(0xCCF7FAF3),
+            leading: const _MenuAssetImage(
+              key: Key('other_activities_art'),
+              path: 'assets/generated/nav-activities-v1.png',
+              size: 38,
+            ),
+            title: const Text(
+              '다른 활동',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            subtitle: Text(
+              advancedActivitiesUnlocked
+                  ? '보상 · 리플레이 · 오늘의 도전'
+                  : '내 런 보상 · 다음 활동은 3단계 후',
+            ),
+            children: [
+              if (!advancedActivitiesUnlocked) ...[
                 _secondary(
                   key: const Key('reward_inventory_entry_button'),
                   onPressed: onRewardInventory,
@@ -2877,10 +2903,10 @@ class _HomeActions extends StatelessWidget {
                 const SizedBox(height: 8),
                 Container(
                   key: const Key('advanced_activities_preview'),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: const Color(0xCCFFF8E6),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFC49A55)),
                   ),
                   child: const Row(
@@ -2899,34 +2925,7 @@ class _HomeActions extends StatelessWidget {
                     ],
                   ),
                 ),
-              ],
-            )
-          else
-            ExpansionTile(
-              key: const Key('advanced_activities_menu'),
-              tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-              childrenPadding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(color: Color(0xFF8CA8A1)),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              collapsedShape: RoundedRectangleBorder(
-                side: const BorderSide(color: Color(0xFF8CA8A1)),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              backgroundColor: const Color(0xCCF7FAF3),
-              collapsedBackgroundColor: const Color(0xCCF7FAF3),
-              leading: const _MenuAssetImage(
-                key: Key('other_activities_art'),
-                path: 'assets/generated/nav-activities-v1.png',
-                size: 38,
-              ),
-              title: const Text(
-                '다른 활동',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              subtitle: const Text('보상 · 리플레이 · 오늘의 도전'),
-              children: [
+              ] else
                 Row(
                   children: [
                     Expanded(
@@ -2970,8 +2969,8 @@ class _HomeActions extends StatelessWidget {
                     ),
                   ],
                 ),
-              ],
-            ),
+            ],
+          ),
         ],
       ],
     );
