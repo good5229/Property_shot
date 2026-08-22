@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "title": "Codex Puzzle Forge",
+  "source": {
+    "humanManifest": "harness_docs/design/puzzle_forge_evidence.json",
+    "productionCatalog": "assets/stages/chapter_1.json",
+    "productionPatternCount": 40,
+    "staticValidation": "passed",
+    "runtimeValidation": "passed"
+  },
+  "roles": [
+    {
+      "id": "human_goal",
+      "actor": "사람",
+      "title": "재미 목표 설정",
+      "body": "속성을 옮긴 뒤 공과 원본이 함께 달라지고, 실패한 공도 다음 해법이 되는 퍼즐을 60초 안에 이해하게 한다."
+    },
+    {
+      "id": "codex_candidate",
+      "actor": "Codex",
+      "title": "후보 제작",
+      "body": "사람이 정한 재미 목표를 배치·힌트·검증 가능한 패턴 후보로 구체화한다."
+    },
+    {
+      "id": "validator_gate",
+      "actor": "StagePatternValidator",
+      "title": "결함 반려·통과",
+      "body": "후보를 정적 배치와 실제 ShotResolver 증거로 검사하고 결함 코드를 남긴다."
+    },
+    {
+      "id": "human_adoption",
+      "actor": "사람",
+      "title": "최종 채택",
+      "body": "통과 결과와 플레이 의도를 함께 보고 최종 패턴을 채택하거나 다시 요청한다."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "auto_clear_spawn",
+      "status": "rejected",
+      "stageId": "stage_heavy",
+      "patternId": "stage_heavy_01",
+      "proposal": "첫 진입이 막히지 않도록 공을 목표 가까이에 둔 후보",
+      "validatorCodes": [
+        "ball_spawn_overlaps_hole"
+      ],
+      "humanDecision": "플레이 입력 없이 끝날 수 있어 반려"
+    },
+    {
+      "id": "broken_causal_link",
+      "status": "rejected",
+      "stageId": "stage_balloon",
+      "patternId": "stage_balloon_01",
+      "proposal": "풍선과 문 인과를 확장하다 연결 대상을 잘못 지정한 후보",
+      "validatorCodes": [
+        "missing_linked_target"
+      ],
+      "humanDecision": "원인을 수행해도 결과가 열리지 않아 반려"
+    },
+    {
+      "id": "persistent_ball_adopted",
+      "status": "adopted",
+      "stageId": "stage_persistent",
+      "patternId": "stage_persistent_01",
+      "proposal": "첫 공을 남겨 다음 공의 쿠션과 스토퍼로 쓰는 후보",
+      "validatorCodes": [],
+      "humanDecision": "핵심 의도와 검증을 모두 만족해 60초 체험에 채택"
+    }
+  ]
+}

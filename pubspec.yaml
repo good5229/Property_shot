@@ -105,6 +105,7 @@ flutter:
     - assets/generated/stage-icon-finale-v1.png
     - assets/audio/property_shot_island_loop.wav
     - assets/stages/chapter_1.json
+    - assets/forge/puzzle_forge_summary.json
 
   fonts:
     - family: NanumGothic

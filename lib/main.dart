@@ -42,6 +42,7 @@ import 'ui/bonus_goal.dart';
 import 'ui/core_experience_screen.dart';
 import 'ui/play_telemetry.dart';
 import 'ui/physics_lab_screen.dart';
+import 'ui/puzzle_forge_screen.dart';
 import 'ui/replay_library_screen.dart';
 import 'ui/run_difficulty_attribution_store.dart';
 import 'ui/tutorial_experiment.dart';
@@ -315,6 +316,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showRewardInventory = false;
   bool _showExpedition = false;
   bool _showCoreExperience = false;
+  bool _showPuzzleForge = false;
   Future<Set<String>>? _rewardInventoryFuture;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
@@ -1692,6 +1694,11 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onBack: () => _changeSurface(() => _showPhysicsLab = false),
       );
     }
+    if (_showPuzzleForge) {
+      return PuzzleForgeScreen(
+        onBack: () => _changeSurface(() => _showPuzzleForge = false),
+      );
+    }
     if (_showCoreExperience) {
       return CoreExperienceScreen(
         onExit: () => _changeSurface(() => _showCoreExperience = false),
@@ -1789,6 +1796,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       advancedActivitiesUnlocked: _clearedLevels.length >= 3,
       telemetry: _telemetry,
       onCoreExperience: () => _changeSurface(() => _showCoreExperience = true),
+      onPuzzleForge: () => _changeSurface(() => _showPuzzleForge = true),
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => _changeSurface(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
@@ -2527,6 +2535,7 @@ class _HomeScreen extends StatelessWidget {
     required this.advancedActivitiesUnlocked,
     required this.telemetry,
     required this.onCoreExperience,
+    required this.onPuzzleForge,
     required this.onStart,
     required this.onStageSelect,
     required this.onRewardInventory,
@@ -2542,6 +2551,7 @@ class _HomeScreen extends StatelessWidget {
   final bool advancedActivitiesUnlocked;
   final LocalPlayTelemetry telemetry;
   final VoidCallback onCoreExperience;
+  final VoidCallback onPuzzleForge;
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onRewardInventory;
@@ -2586,7 +2596,7 @@ class _HomeScreen extends StatelessWidget {
                   return SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
                       compact ? 18 : 24,
-                      tablet ? 56 : 20,
+                      tablet ? 56 : 68,
                       compact ? 18 : 24,
                       28,
                     ),
@@ -2642,14 +2652,38 @@ class _HomeScreen extends StatelessWidget {
             Positioned(
               top: 8,
               right: 8,
-              child: IconButton.filledTonal(
-                key: const Key('feedback_settings_button'),
-                tooltip: '소리와 진동 설정',
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => _FeedbackSettingsDialog(telemetry: telemetry),
-                ),
-                icon: const Icon(Icons.tune_rounded),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Semantics(
+                    key: const Key('puzzle_forge_entry_button'),
+                    label: 'AI 제작 과정',
+                    button: true,
+                    child: IconButton.filledTonal(
+                      tooltip: 'AI 제작 과정',
+                      onPressed: onPuzzleForge,
+                      icon: Image.asset(
+                        'assets/generated/stage-icon-property-transfer-v1.png',
+                        width: 28,
+                        height: 28,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton.filledTonal(
+                    key: const Key('feedback_settings_button'),
+                    tooltip: '소리와 진동 설정',
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      builder: (_) =>
+                          _FeedbackSettingsDialog(telemetry: telemetry),
+                    ),
+                    icon: const Icon(Icons.tune_rounded),
+                  ),
+                ],
               ),
             ),
           ],
