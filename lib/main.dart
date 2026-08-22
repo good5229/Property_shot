@@ -39,6 +39,7 @@ import 'ui/game_screen.dart';
 import 'ui/daily_challenge_screen.dart';
 import 'ui/game_ball_painter.dart';
 import 'ui/bonus_goal.dart';
+import 'ui/core_experience_screen.dart';
 import 'ui/play_telemetry.dart';
 import 'ui/physics_lab_screen.dart';
 import 'ui/replay_library_screen.dart';
@@ -313,6 +314,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showReplayLibrary = false;
   bool _showRewardInventory = false;
   bool _showExpedition = false;
+  bool _showCoreExperience = false;
   Future<Set<String>>? _rewardInventoryFuture;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
@@ -1690,6 +1692,15 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onBack: () => _changeSurface(() => _showPhysicsLab = false),
       );
     }
+    if (_showCoreExperience) {
+      return CoreExperienceScreen(
+        onExit: () => _changeSurface(() => _showCoreExperience = false),
+        onContinueCampaign: () {
+          _changeSurface(() => _showCoreExperience = false);
+          unawaited(_startOrResume());
+        },
+      );
+    }
     final activeStage = _activeStage;
     final activeLevel = _activeLevel;
     final activeState = _activeState;
@@ -1777,6 +1788,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       hasCompletedFirstStage: _clearedLevels.isNotEmpty,
       advancedActivitiesUnlocked: _clearedLevels.length >= 3,
       telemetry: _telemetry,
+      onCoreExperience: () => _changeSurface(() => _showCoreExperience = true),
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => _changeSurface(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
@@ -2514,6 +2526,7 @@ class _HomeScreen extends StatelessWidget {
     required this.hasCompletedFirstStage,
     required this.advancedActivitiesUnlocked,
     required this.telemetry,
+    required this.onCoreExperience,
     required this.onStart,
     required this.onStageSelect,
     required this.onRewardInventory,
@@ -2528,6 +2541,7 @@ class _HomeScreen extends StatelessWidget {
   final bool hasCompletedFirstStage;
   final bool advancedActivitiesUnlocked;
   final LocalPlayTelemetry telemetry;
+  final VoidCallback onCoreExperience;
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onRewardInventory;
@@ -2561,6 +2575,7 @@ class _HomeScreen extends StatelessWidget {
                     appFontFamily: appFontFamily,
                     hasCompletedFirstStage: hasCompletedFirstStage,
                     advancedActivitiesUnlocked: advancedActivitiesUnlocked,
+                    onCoreExperience: onCoreExperience,
                     onStart: onStart,
                     onExpedition: onExpedition,
                     onStageSelect: onStageSelect,
@@ -2712,6 +2727,7 @@ class _HomeActions extends StatelessWidget {
     required this.appFontFamily,
     required this.hasCompletedFirstStage,
     required this.advancedActivitiesUnlocked,
+    required this.onCoreExperience,
     required this.onStart,
     required this.onExpedition,
     required this.onStageSelect,
@@ -2723,6 +2739,7 @@ class _HomeActions extends StatelessWidget {
   final String? appFontFamily;
   final bool hasCompletedFirstStage;
   final bool advancedActivitiesUnlocked;
+  final VoidCallback onCoreExperience;
   final VoidCallback onStart;
   final VoidCallback onExpedition;
   final VoidCallback onStageSelect;
@@ -2762,6 +2779,26 @@ class _HomeActions extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         FilledButton.icon(
+          key: const Key('core_experience_button'),
+          onPressed: onCoreExperience,
+          icon: const _MenuAssetImage(
+            key: Key('core_experience_art'),
+            path: 'assets/generated/stage-icon-property-transfer-v1.png',
+            size: 42,
+          ),
+          label: const Text('60초 핵심 체험'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(60),
+            backgroundColor: const Color(0xFF176B78),
+            foregroundColor: Colors.white,
+            textStyle: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ).copyWith(fontFamily: appFontFamily),
+          ),
+        ),
+        const SizedBox(height: 10),
+        FilledButton.icon(
           key: const Key('start_game_button'),
           onPressed: onStart,
           icon: const _MenuAssetImage(
@@ -2781,53 +2818,6 @@ class _HomeActions extends StatelessWidget {
           ),
         ),
         if (!hasCompletedFirstStage) ...[
-          const SizedBox(height: 10),
-          Semantics(
-            container: true,
-            label: '첫 임무. 주변의 무거움을 공에 옮겨 상자를 밀어 보세요.',
-            child: Container(
-              key: const Key('first_mission_card'),
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3D2),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFC78B45)),
-              ),
-              child: Row(
-                children: [
-                  const _MenuAssetImage(
-                    key: Key('first_mission_stage_art'),
-                    path: 'assets/generated/stage-icon-heavy-v1.png',
-                    size: 74,
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '첫 임무 · 무거움 관찰',
-                          style: TextStyle(
-                            color: Color(0xFF603B1B),
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          '무거움을 공에 옮겨 상자를 밀어 보세요.',
-                          style: TextStyle(
-                            color: Color(0xFF74542F),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
           const SizedBox(height: 10),
           _secondary(
             key: const Key('stage_select_button'),

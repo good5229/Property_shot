@@ -117,6 +117,9 @@ class GameScreen extends StatefulWidget {
     this.objectiveOverride,
     this.showDiscoveryHud = true,
     this.exitTooltipOverride,
+    this.sequencePosition,
+    this.sequenceLength,
+    this.nextActionLabel,
   });
 
   final GameState? initialState;
@@ -188,6 +191,9 @@ class GameScreen extends StatefulWidget {
   final String? objectiveOverride;
   final bool showDiscoveryHud;
   final String? exitTooltipOverride;
+  final int? sequencePosition;
+  final int? sequenceLength;
+  final String? nextActionLabel;
 
   /// 오늘의 도전처럼 일반 섬 진행을 오염시키면 안 되는 흐름은 disabled로 둔다.
   final GameProgressPersistencePolicy progressPersistencePolicy;
@@ -4842,7 +4848,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           unawaited(_selectRunReward(rewardId)),
                       onNext: () => unawaited(_goNextLevel()),
                       onRetry: () => unawaited(_retryAfterClear()),
-                      isFinal: _state.levelIndex >= levels.length - 1,
+                      isFinal:
+                          widget.sequencePosition != null &&
+                              widget.sequenceLength != null
+                          ? widget.sequencePosition! >=
+                                widget.sequenceLength! - 1
+                          : _state.levelIndex >= levels.length - 1,
+                      sequencePosition: widget.sequencePosition,
+                      sequenceLength: widget.sequenceLength,
+                      nextActionLabel: widget.nextActionLabel,
                     ),
                 ],
               );
@@ -5556,6 +5570,9 @@ class ClearResultPopup extends StatelessWidget {
     this.solutionTargetCount = 1,
     this.newSolutionStamp = false,
     this.onShareSolution,
+    this.sequencePosition,
+    this.sequenceLength,
+    this.nextActionLabel,
   });
 
   final GameState state;
@@ -5576,6 +5593,9 @@ class ClearResultPopup extends StatelessWidget {
   final int solutionTargetCount;
   final bool newSolutionStamp;
   final VoidCallback? onShareSolution;
+  final int? sequencePosition;
+  final int? sequenceLength;
+  final String? nextActionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -6072,7 +6092,26 @@ class ClearResultPopup extends StatelessWidget {
                                                   collapsibleDetails: true,
                                                 ),
                                               ],
-                                              if (!isFinal) ...[
+                                              if (sequencePosition != null &&
+                                                  sequenceLength != null) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '핵심 체험 ${sequencePosition! + 1}/$sequenceLength 완료',
+                                                  key: const Key(
+                                                    'sequence_progress_label',
+                                                  ),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleSmall
+                                                      ?.copyWith(
+                                                        color: const Color(
+                                                          0xFF236B4A,
+                                                        ),
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                      ),
+                                                ),
+                                              ] else if (!isFinal) ...[
                                                 const SizedBox(height: 4),
                                                 Text(
                                                   '${state.levelIndex + 2}단계가 열렸습니다.',
@@ -6141,7 +6180,10 @@ class ClearResultPopup extends StatelessWidget {
                                             ? null
                                             : onNext,
                                         icon: const Icon(Icons.arrow_forward),
-                                        label: Text(isFinal ? '런 결과 보기' : '다음'),
+                                        label: Text(
+                                          nextActionLabel ??
+                                              (isFinal ? '런 결과 보기' : '다음'),
+                                        ),
                                       ),
                                       const SizedBox(height: 8),
                                       OutlinedButton.icon(

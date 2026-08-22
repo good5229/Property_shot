@@ -45,6 +45,7 @@ void main() {
           'assets/generated/stone-v3.png',
           'assets/generated/crate-v3.png',
           'assets/generated/stage-icon-heavy-v1.png',
+          'assets/generated/stage-icon-property-transfer-v1.png',
           'assets/generated/nav-helm-v1.png',
           'assets/generated/nav-stage-map-v1.png',
         ]) {
@@ -55,6 +56,7 @@ void main() {
 
       expect(find.text('속성 한방'), findsOneWidget);
       expect(find.byKey(const Key('start_game_button')), findsOneWidget);
+      expect(find.byKey(const Key('core_experience_button')), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const Key('start_voyage_art'))),
         const Size.square(40),
@@ -64,8 +66,8 @@ void main() {
         const Size.square(38),
       );
       expect(
-        tester.getSize(find.byKey(const Key('first_mission_stage_art'))),
-        const Size.square(74),
+        tester.getSize(find.byKey(const Key('core_experience_art'))),
+        const Size.square(42),
       );
       await expectLater(
         find.byKey(const Key('home_screen_golden')),
@@ -74,7 +76,7 @@ void main() {
     });
   }
 
-  testWidgets('320 초행 홈은 첫 임무와 시작 행동만 우선한다', (tester) async {
+  testWidgets('320 초행 홈은 핵심 체험과 전체 탐사 진입을 첫 화면에 둔다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -85,7 +87,11 @@ void main() {
       find.byKey(const Key('start_game_button')).hitTestable(),
       findsOneWidget,
     );
-    expect(find.byKey(const Key('first_mission_card')), findsOneWidget);
+    expect(
+      find.byKey(const Key('core_experience_button')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('first_mission_card')), findsNothing);
     expect(find.text('첫 스테이지 시작'), findsOneWidget);
     expect(find.byKey(const Key('stage_select_button')), findsOneWidget);
     expect(find.byKey(const Key('daily_challenge_entry_button')), findsNothing);

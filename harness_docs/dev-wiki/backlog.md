@@ -14,6 +14,21 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [ ] OpenAI Game Builders Seoul Track 1 대응
+  - branch: main (사용자 요청으로 별도 브랜치 없음)
+  - issue: 없음
+  - summary: 60초 핵심 체험, 양면 속성 변화, 점진적 홈 공개, Codex Puzzle Forge, 챌린지 신규 개발 설명, 검증된 반복 변주, 한·영 UI와 반응형 시연 구성을 기능별로 구현한다.
+  - notes: 3분 영상 제작은 사용자 요청으로 보류한다. 각 기능은 관련 테스트와 정적 분석을 통과한 뒤 독립 커밋하고 즉시 push한다. 기존 게임소개서 PPT/PDF 미커밋 변경은 소유 범위 밖이므로 스테이징하지 않고 보존한다.
+  - progress:
+    - [x] 캠페인 저장과 분리된 60초 핵심 체험과 대표 3장면
+    - [ ] 속성 강탈의 양면 효과 강화
+    - [ ] 첫 화면·설명 단순화와 점진적 공개
+    - [ ] Codex Puzzle Forge와 역할·반려 증거 시각화
+    - [ ] 챌린지 기간 신규 개발 내역과 제출용 자료
+    - [ ] 검증된 일일 변주와 Hive 확장 경계
+    - [ ] 핵심 체험 한·영 UI와 PC·모바일 반응형 구성
+    - [ ] 비정상 입력·저장 손상·브라우저 회귀와 최종 감사
+
 - [ ] 상용 수직 슬라이스 고도화
   - branch: commercial/wall-physics-qa
   - issue: 없음

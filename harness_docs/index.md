@@ -45,6 +45,7 @@ copied here.
 - [Collaboration Protocol](agents/collaboration_protocol.md)
 - [Design Records](design/fun_hypotheses.md)
 - [Current Iteration](plans/current_iteration.md)
+- [OpenAI Game Builders Track 1 Plan](design/openai_game_builders_track1_plan.md)
 - [Plans](plans/improvement_backlog.md)
 - [QA Records](qa/validation_results.md)
 - [Commercial Visual QA](qa/commercial_visual_baseline.md)
