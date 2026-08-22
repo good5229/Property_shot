@@ -63,6 +63,7 @@ void main() {
         final drained = transferred.entityById(source.id)!;
 
         expect(drained.traits, isEmpty, reason: source.id);
+        expect(drained.drainedTraits, {trait}, reason: source.id);
         expect(drained.solid, originalSolid, reason: source.id);
         expect(source.movableWhenDrained, isTrue, reason: source.id);
         expect(drained.movable, isTrue, reason: source.id);

@@ -33,6 +33,7 @@ class TraitResolver {
           entity.copyWith(
             traits: nextTraits,
             visualState: 'drained',
+            drainedTraits: {...entity.drainedTraits, trait},
             movable:
                 entity.movable ||
                 (nextTraits.isEmpty && entity.movableWhenDrained),

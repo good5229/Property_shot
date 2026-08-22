@@ -21,7 +21,7 @@ GitHub Issues own task status. This file owns planning context.
   - notes: 3분 영상 제작은 사용자 요청으로 보류한다. 각 기능은 관련 테스트와 정적 분석을 통과한 뒤 독립 커밋하고 즉시 push한다. 기존 게임소개서 PPT/PDF 미커밋 변경은 소유 범위 밖이므로 스테이징하지 않고 보존한다.
   - progress:
     - [x] 캠페인 저장과 분리된 60초 핵심 체험과 대표 3장면
-    - [ ] 속성 강탈의 양면 효과 강화
+    - [x] 속성 강탈의 양면 효과 강화
     - [ ] 첫 화면·설명 단순화와 점진적 공개
     - [ ] Codex Puzzle Forge와 역할·반려 증거 시각화
     - [ ] 챌린지 기간 신규 개발 내역과 제출용 자료

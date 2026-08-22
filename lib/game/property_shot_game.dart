@@ -2945,6 +2945,74 @@ class PropertyShotGame extends FlameGame {
       _drawJellySpriteImpact(canvas, center, target, motion.impact);
     }
     _drawSpriteGleam(canvas, entity, target, motion);
+    if (entity.visualState == 'drained' && entity.drainedTraits.isNotEmpty) {
+      _drawDrainedTraitBadge(canvas, entity, target, motion);
+    }
+  }
+
+  void _drawDrainedTraitBadge(
+    Canvas canvas,
+    EntityState entity,
+    Rect target,
+    _MotionVisual motion,
+  ) {
+    final trait = entity.drainedTraits.first;
+    final center = _project(
+      entity.position,
+    ).translate(target.width * 0.31, -target.height * 0.31 + motion.bob);
+    final radius = (target.shortestSide * 0.2).clamp(8.0, 12.0);
+    canvas.drawCircle(center, radius, Paint()..color = const Color(0xFFFDF3D0));
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFF503C2E)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6,
+    );
+    final symbol = Paint()
+      ..color = _traitColor(trait)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    switch (trait) {
+      case TraitType.heavy:
+        for (var offset = -3.5; offset <= 3.5; offset += 3.5) {
+          canvas.drawLine(
+            center.translate(-4.5, offset),
+            center.translate(4.5, offset),
+            symbol,
+          );
+        }
+      case TraitType.bouncy:
+        canvas.drawArc(
+          Rect.fromCircle(center: center, radius: 5),
+          -math.pi * 0.9,
+          math.pi * 1.35,
+          false,
+          symbol,
+        );
+      case TraitType.sticky:
+        final fill = Paint()..color = _traitColor(trait);
+        canvas.drawCircle(center.translate(-3.5, -2.5), 1.8, fill);
+        canvas.drawCircle(center.translate(3.5, -2.5), 1.8, fill);
+        canvas.drawCircle(center.translate(0, 3.5), 1.8, fill);
+      case TraitType.sharp:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - 5.5)
+          ..lineTo(center.dx + 5, center.dy + 4.5)
+          ..lineTo(center.dx - 5, center.dy + 4.5)
+          ..close();
+        canvas.drawPath(path, symbol);
+    }
+    canvas.drawLine(
+      center.translate(-radius * 0.72, radius * 0.72),
+      center.translate(radius * 0.72, -radius * 0.72),
+      Paint()
+        ..color = const Color(0xFF9B3F32)
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   void _drawRasterSurfaceFinish(

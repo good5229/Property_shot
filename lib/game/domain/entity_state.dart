@@ -41,6 +41,7 @@ class EntityState {
     this.reflectorOrientation = 0,
     this.reflectorRotationCount = 0,
     this.movableWhenDrained = false,
+    this.drainedTraits = const {},
   });
 
   final String id;
@@ -72,6 +73,11 @@ class EntityState {
 
   /// 속성 이전으로 마지막 속성을 잃었을 때 이동 가능한 물체가 되는지 나타낸다.
   final bool movableWhenDrained;
+
+  /// 원본에서 공으로 옮겨져 현재 이 물체가 잃은 속성이다.
+  /// `visualState` 문자열과 달리 UI·접근성·재개 화면이 어떤 속성이
+  /// 사라졌는지 명확하게 설명할 수 있는 상태 계약이다.
+  final Set<TraitType> drainedTraits;
 
   bool get isCircle =>
       type == EntityType.ball ||
@@ -110,6 +116,7 @@ class EntityState {
     int? reflectorOrientation,
     int? reflectorRotationCount,
     bool? movableWhenDrained,
+    Set<TraitType>? drainedTraits,
   }) {
     return EntityState(
       id: id ?? this.id,
@@ -133,6 +140,7 @@ class EntityState {
       reflectorRotationCount:
           reflectorRotationCount ?? this.reflectorRotationCount,
       movableWhenDrained: movableWhenDrained ?? this.movableWhenDrained,
+      drainedTraits: drainedTraits ?? this.drainedTraits,
     );
   }
 }

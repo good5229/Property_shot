@@ -46,6 +46,7 @@ import 'tutorial_experiment.dart';
 import 'tutorial_failure_hint.dart';
 import 'failure_replay_dialog.dart';
 import 'frame_performance_tracker.dart';
+import 'trait_transfer_ribbon.dart';
 
 enum GameProgressPersistencePolicy { enabled, disabled }
 
@@ -289,6 +290,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _recordGuardAppliedForClear = false;
   PlayTelemetryShotPayload? _lastTypedShot;
   String? _traitEffectFeedback;
+  TraitTransferFeedback? _traitTransferFeedback;
+  Timer? _traitTransferFeedbackTimer;
   late PatternHintEntry? _patternHintEntry;
   RunHintEntitlement? _hintEntitlement;
   late Set<String> _collectedHintKeyIds;
@@ -1353,6 +1356,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _rewardSelectionError = null;
     _guidedImpactLabel = null;
     _traitEffectFeedback = null;
+    _traitTransferFeedbackTimer?.cancel();
+    _traitTransferFeedback = null;
     _challengeGuardAppliedForClear = false;
     _recordGuardAppliedForClear = false;
     if (sameStage && _state.shotCount > 0) {
@@ -1749,6 +1754,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               : '${sourceTrait.label} 능력은 공으로 옮겨지고 원본에서는 사라졌습니다. '
                     '${source.movableWhenDrained ? '원본은 이제 움직일 수 있습니다.' : '원본의 위치와 형태는 남습니다.'}',
         );
+    _traitTransferFeedbackTimer?.cancel();
+    _traitTransferFeedback = TraitTransferFeedback(
+      sourceName: _entityName(source),
+      sourceType: source.type,
+      trait: sourceTrait,
+      sourceEffect: traitLossConsequence(source, sourceTrait),
+    );
     _telemetry.record(
       '속성 이전',
       stage: _state.levelIndex,
@@ -1763,6 +1775,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _recordTyped(PlayTelemetryEventType.propertyTransferred);
     _isCommittingTraitAction = false;
     _setState(next);
+    _traitTransferFeedbackTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      setState(() => _traitTransferFeedback = null);
+    });
   }
 
   void _copyTrait() {
@@ -1798,6 +1814,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _feedback.traitCopied();
     _traitEffectFeedback = null;
+    _traitTransferFeedbackTimer?.cancel();
+    _traitTransferFeedback = null;
     _showBallInfo = false;
     _inspectedEntityId = null;
     final next = _traitResolver.copySelectedTrait(_state);
@@ -2994,7 +3012,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         entities: [
           for (final entity in _state.entities)
             entity.id == sourceId
-                ? entity.copyWith(traits: const {}, visualState: 'drained')
+                ? entity.copyWith(
+                    drainedTraits: {...entity.drainedTraits, ...entity.traits},
+                    traits: const {},
+                    visualState: 'drained',
+                  )
                 : entity,
         ],
         clearSelection: true,
@@ -3020,6 +3042,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             entity.id == sourceId
                 ? entity.copyWith(
                     traits: base.traits,
+                    drainedTraits: const {},
                     visualState: base.visualState,
                   )
                 : entity,
@@ -3976,6 +3999,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _pressActivationTimer?.cancel();
     _chargeFeedbackTimer?.cancel();
     _keyCollectionVfxTimer?.cancel();
+    _traitTransferFeedbackTimer?.cancel();
     _launchInputSession.reset();
     _aimFocusNode.dispose();
     super.dispose();
@@ -4187,6 +4211,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 if (persistentTutorialHint != null)
                                   PersistentTutorialHintCard(
                                     text: persistentTutorialHint,
+                                  ),
+                                if (_traitTransferFeedback != null)
+                                  TraitTransferRibbon(
+                                    feedback: _traitTransferFeedback!,
                                   ),
                                 Expanded(
                                   child: AbsorbPointer(
@@ -8757,6 +8785,28 @@ class _EntityInfoPanel extends StatelessWidget {
                       ? _entityDescription(entity)
                       : '${trait.label}: ${trait.description}',
                 ),
+                if (entity.drainedTraits.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    key: const Key('drained_trait_status'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2E5D4),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF9B6B4B)),
+                    ),
+                    child: Text(
+                      '잃은 속성 · ${entity.drainedTraits.map((item) => item.label).join(' · ')}',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: const Color(0xFF6C3F2B),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
                 if (entity.type == EntityType.ball) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -9279,12 +9329,14 @@ String _ballStatusDescription(EntityState entity) {
 
 String _entityDescription(EntityState entity) {
   if (entity.visualState == 'drained') {
-    return switch (entity.type) {
-      EntityType.weight => '무거움을 잃어 가벼워졌지만 돌 모양과 충돌 판정은 남아 있습니다.',
-      EntityType.bumper => '탄성을 잃어 더는 젤리처럼 튕기지 않는 이동 물체입니다.',
-      EntityType.stickySurface => '점착을 잃어 더는 공을 붙잡지 않는 이동 물체입니다.',
-      _ => '속성을 잃었지만 움직일 수 있는 고체 물체로 남아 있습니다.',
-    };
+    final lostTrait = entity.drainedTraits.isEmpty
+        ? null
+        : entity.drainedTraits.first;
+    if (lostTrait != null) {
+      return '${lostTrait.label}을 잃었습니다. '
+          '${traitLossConsequence(entity, lostTrait)}. 물체 형태와 충돌 판정은 남습니다.';
+    }
+    return '속성을 잃었지만 물체 형태와 충돌 판정은 남아 있습니다.';
   }
   switch (entity.type) {
     case EntityType.ball:
