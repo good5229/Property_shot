@@ -1,5 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+typedef AppLanguageReader = Future<String?> Function();
+typedef AppLanguageWriter = Future<bool> Function(String value);
+
 enum AppLanguage { korean, english }
 
 extension AppLanguageText on AppLanguage {
@@ -11,22 +14,41 @@ extension AppLanguageText on AppLanguage {
 }
 
 class AppLanguageStore {
-  const AppLanguageStore();
+  const AppLanguageStore({this.reader, this.writer});
 
   static const key = 'property_shot_app_language_v1';
 
+  final AppLanguageReader? reader;
+  final AppLanguageWriter? writer;
+
   Future<AppLanguage> load({AppLanguage fallback = AppLanguage.korean}) async {
-    final preferences = await SharedPreferences.getInstance();
-    return switch (preferences.getString(key)) {
-      'ko' => AppLanguage.korean,
-      'en' => AppLanguage.english,
-      _ => fallback,
-    };
+    try {
+      final stored = reader != null
+          ? await reader!()
+          : (await SharedPreferences.getInstance()).getString(key);
+      return switch (stored) {
+        'ko' => AppLanguage.korean,
+        'en' => AppLanguage.english,
+        _ => fallback,
+      };
+    } on Object {
+      return fallback;
+    }
   }
 
   Future<void> save(AppLanguage language) async {
-    final preferences = await SharedPreferences.getInstance();
-    final saved = await preferences.setString(key, language.code);
-    if (!saved) throw StateError('언어 설정을 저장하지 못했습니다.');
+    try {
+      final saved = writer != null
+          ? await writer!(language.code)
+          : await (await SharedPreferences.getInstance()).setString(
+              key,
+              language.code,
+            );
+      if (!saved) throw StateError('언어 설정을 저장하지 못했습니다.');
+    } on StateError {
+      rethrow;
+    } on Object {
+      throw StateError('언어 설정을 저장하지 못했습니다.');
+    }
   }
 }

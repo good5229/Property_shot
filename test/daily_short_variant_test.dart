@@ -117,6 +117,54 @@ void main() {
       ),
       throwsArgumentError,
     );
+    for (final invalidDate in <String>[
+      '2026-02-29',
+      '2026-13-01',
+      '1999-12-31',
+      '2101-01-01',
+    ]) {
+      expect(
+        () => DailyPlatformResult(
+          dateKey: invalidDate,
+          variantId: 'trait_foundations',
+          totalScore: 1,
+          totalShots: 1,
+          official: true,
+        ),
+        throwsArgumentError,
+        reason: invalidDate,
+      );
+    }
+    expect(
+      () => DailyPlatformResult(
+        dateKey: '2026-08-23',
+        variantId: 'trait_foundations',
+        totalScore: DailyPlatformResult.maxTotalScore + 1,
+        totalShots: 1,
+        official: true,
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => DailyPlatformResult(
+        dateKey: '2026-08-23',
+        variantId: 'trait_foundations',
+        totalScore: 1,
+        totalShots: DailyPlatformResult.maxTotalShots + 1,
+        official: true,
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => DailyPlatformResult(
+        dateKey: '2028-02-29',
+        variantId: 'trait_foundations',
+        totalScore: DailyPlatformResult.maxTotalScore,
+        totalShots: DailyPlatformResult.maxTotalShots,
+        official: true,
+      ),
+      returnsNormally,
+    );
   });
 
   testWidgets('세 장면의 마지막 결과 버튼은 네 번째 장면 대신 런을 완료한다', (tester) async {

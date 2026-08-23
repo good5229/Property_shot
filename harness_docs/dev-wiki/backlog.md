@@ -14,7 +14,7 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
-- [ ] OpenAI Game Builders Seoul Track 1 대응
+- [x] OpenAI Game Builders Seoul Track 1 대응
   - branch: main (사용자 요청으로 별도 브랜치 없음)
   - issue: 없음
   - summary: 60초 핵심 체험, 양면 속성 변화, 점진적 홈 공개, Codex Puzzle Forge, 챌린지 신규 개발 설명, 검증된 반복 변주, 한·영 UI와 반응형 시연 구성을 기능별로 구현한다.
@@ -27,7 +27,7 @@ GitHub Issues own task status. This file owns planning context.
     - [x] 챌린지 기간 신규 개발 내역과 제출용 자료
     - [x] 검증된 일일 변주와 Hive 확장 경계
     - [x] 핵심 체험 한·영 UI와 PC·모바일 반응형 구성
-    - [ ] 비정상 입력·저장 손상·브라우저 회귀와 최종 감사
+    - [x] 비정상 입력·저장 손상·브라우저 회귀와 최종 감사
 
 - [ ] 상용 수직 슬라이스 고도화
   - branch: commercial/wall-physics-qa

@@ -88,6 +88,7 @@ class PropertyShotApp extends StatelessWidget {
     this.progressStore,
     this.demoPlanId,
     this.initialLanguage = AppLanguage.korean,
+    this.languageStore,
   });
 
   final GameState? initialState;
@@ -101,6 +102,7 @@ class PropertyShotApp extends StatelessWidget {
   final ProgressStore? progressStore;
   final String? demoPlanId;
   final AppLanguage initialLanguage;
+  final AppLanguageStore? languageStore;
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +139,7 @@ class PropertyShotApp extends StatelessWidget {
               progressStore: progressStore,
               telemetry: telemetry,
               initialLanguage: initialLanguage,
+              languageStore: languageStore,
             )
           : GameScreen(
               initialState: initialState,
@@ -284,6 +287,7 @@ class _PropertyShotRouter extends StatefulWidget {
     this.progressStore,
     this.telemetry,
     required this.initialLanguage,
+    this.languageStore,
   });
 
   final bool showDebugControls;
@@ -291,6 +295,7 @@ class _PropertyShotRouter extends StatefulWidget {
   final ProgressStore? progressStore;
   final LocalPlayTelemetry? telemetry;
   final AppLanguage initialLanguage;
+  final AppLanguageStore? languageStore;
 
   @override
   State<_PropertyShotRouter> createState() => _PropertyShotRouterState();
@@ -357,7 +362,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   late final LocalPlayTelemetry _telemetry;
   bool _runStartedRecorded = false;
   late AppLanguage _language = widget.initialLanguage;
-  final AppLanguageStore _languageStore = const AppLanguageStore();
+  bool _languageChangedByUser = false;
+  late final AppLanguageStore _languageStore =
+      widget.languageStore ?? const AppLanguageStore();
 
   @override
   void initState() {
@@ -378,13 +385,31 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
 
   Future<void> _loadLanguage() async {
     final loaded = await _languageStore.load(fallback: widget.initialLanguage);
-    if (mounted && loaded != _language) setState(() => _language = loaded);
+    if (mounted && !_languageChangedByUser && loaded != _language) {
+      setState(() => _language = loaded);
+    }
   }
 
   void _changeLanguage(AppLanguage language) {
     if (language == _language) return;
+    _languageChangedByUser = true;
     setState(() => _language = language);
-    unawaited(_languageStore.save(language));
+    unawaited(_persistLanguage(language));
+  }
+
+  Future<void> _persistLanguage(AppLanguage language) async {
+    try {
+      await _languageStore.save(language);
+    } on Object {
+      if (!mounted) return;
+      final message = language.pick(
+        '언어 선택을 저장하지 못했습니다. 현재 화면에는 계속 적용됩니다.',
+        'Could not save the language choice. It remains active for this session.',
+      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Future<StagePatternSession> _createPatternSession({String? namespace}) async {
@@ -2790,6 +2815,7 @@ class _HomeHero extends StatelessWidget {
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   color: const Color(0xFF173F43),
                   fontWeight: FontWeight.w900,
+                  fontSize: language.isEnglish && compact ? 30 : null,
                   letterSpacing: 0,
                 ),
               ),
@@ -3782,6 +3808,7 @@ class _StageSelectScreen extends StatelessWidget {
         final compact =
             constraints.maxWidth <= 360 || constraints.maxHeight < 700;
         final wide = constraints.maxWidth >= 600;
+        final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
         final navigationArtSize = wide ? 52.0 : 44.0;
         final recommendation = const NextGoalRecommendationEngine().recommend(
           stageCount: levels.length,
@@ -3848,17 +3875,30 @@ class _StageSelectScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        SizedBox(
-                          height: 48,
-                          child: _NextGoalCard(
-                            recommendation: recommendation,
-                            detailed:
-                                _totalDiscoveryCount(discoveriesByStageId) >=
-                                IslandLandmark.lighthouse.upgradeDiscoveries,
-                            onTap: () =>
-                                onSelectStage(recommendation.stageIndex),
+                        if (largeText)
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(minHeight: 48),
+                            child: _NextGoalCard(
+                              recommendation: recommendation,
+                              detailed:
+                                  _totalDiscoveryCount(discoveriesByStageId) >=
+                                  IslandLandmark.lighthouse.upgradeDiscoveries,
+                              onTap: () =>
+                                  onSelectStage(recommendation.stageIndex),
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            height: 48,
+                            child: _NextGoalCard(
+                              recommendation: recommendation,
+                              detailed:
+                                  _totalDiscoveryCount(discoveriesByStageId) >=
+                                  IslandLandmark.lighthouse.upgradeDiscoveries,
+                              onTap: () =>
+                                  onSelectStage(recommendation.stageIndex),
+                            ),
                           ),
-                        ),
                         Material(
                           key: const Key('map_hint_card'),
                           color: const Color(0xD9E8F4D9),
@@ -4025,17 +4065,40 @@ class _StageSelectScreen extends StatelessWidget {
                                           size: 28,
                                         ),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          '첫 항해 진행',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelLarge
-                                              ?.copyWith(
-                                                color: const Color(0xFF397372),
-                                                fontWeight: FontWeight.w900,
-                                              ),
-                                        ),
-                                        const Spacer(),
+                                        if (largeText)
+                                          Expanded(
+                                            child: Text(
+                                              '첫 항해 진행',
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelLarge
+                                                  ?.copyWith(
+                                                    color: const Color(
+                                                      0xFF397372,
+                                                    ),
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                            ),
+                                          )
+                                        else
+                                          Text(
+                                            '첫 항해 진행',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelLarge
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFF397372,
+                                                  ),
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                          ),
+                                        if (largeText)
+                                          const SizedBox(width: 4)
+                                        else
+                                          const Spacer(),
                                         Text(
                                           '${(unlockedLevel + 1).clamp(1, levels.length)} / ${levels.length}',
                                           style: Theme.of(context)

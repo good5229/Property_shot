@@ -67,6 +67,13 @@
       "completedOn": "2026-08-23",
       "summary": "저장되는 언어 전환으로 홈, 60초 핵심 체험, Puzzle Forge, 일일 변주의 핵심 문안을 한국어·영어로 제공하고 모바일과 PC 레이아웃을 시각 회귀로 고정한다.",
       "criteria": ["Presentation", "Playability", "Release Potential"]
+    },
+    {
+      "id": "submission_resilience_gate",
+      "name": "제출 경로 복원력과 브라우저 품질 게이트",
+      "completedOn": "2026-08-23",
+      "summary": "저장 실패와 지연 복원, 비정상 날짜·점수 입력, 200% 글자와 320px 영문 화면을 방어하고 실제 Web Release와 전체 회귀를 제출 전 품질 게이트로 사용한다.",
+      "criteria": ["Playability", "Release Potential", "Presentation"]
     }
   ],
   "officialCriteria": [

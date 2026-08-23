@@ -137,6 +137,10 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pump();
     expect(find.byKey(const Key('advanced_activities_menu')), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('advanced_activities_menu')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('advanced_activities_menu')));
     await tester.pumpAndSettle();
     expect(

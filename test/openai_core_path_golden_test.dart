@@ -20,6 +20,7 @@ void main() {
   });
 
   for (final fixture in const [
+    (name: 'narrow', size: Size(320, 568)),
     (name: 'mobile', size: Size(390, 844)),
     (name: 'pc', size: Size(1440, 900)),
   ]) {
@@ -35,7 +36,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final context = tester.element(find.byKey(const Key('home_screen_golden')));
+      final context = tester.element(
+        find.byKey(const Key('home_screen_golden')),
+      );
       await tester.runAsync(() async {
         for (final asset in const [
           'assets/generated/stone-v3.png',
@@ -87,31 +90,33 @@ void main() {
       });
     }
 
-    testWidgets('영어 일일 도전 반응형 Golden ${fixture.name}', (tester) async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      await tester.binding.setSurfaceSize(fixture.size);
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
-          home: RepaintBoundary(
-            key: const Key('openai_daily_golden'),
-            child: DailyChallengeScreen(
-              language: AppLanguage.english,
-              now: () => DateTime.utc(2026, 8, 8, 12),
+    if (fixture.name != 'narrow') {
+      testWidgets('영어 일일 도전 반응형 Golden ${fixture.name}', (tester) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        await tester.binding.setSurfaceSize(fixture.size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
+            home: RepaintBoundary(
+              key: const Key('openai_daily_golden'),
+              child: DailyChallengeScreen(
+                language: AppLanguage.english,
+                now: () => DateTime.utc(2026, 8, 8, 12),
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      expect(tester.takeException(), isNull);
-      await expectLater(
-        find.byKey(const Key('openai_daily_golden')),
-        matchesGoldenFile('goldens/openai_daily_en_${fixture.name}.png'),
-      );
-    });
+        expect(tester.takeException(), isNull);
+        await expectLater(
+          find.byKey(const Key('openai_daily_golden')),
+          matchesGoldenFile('goldens/openai_daily_en_${fixture.name}.png'),
+        );
+      });
+    }
   }
 }

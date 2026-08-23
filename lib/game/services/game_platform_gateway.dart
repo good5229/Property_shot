@@ -25,6 +25,9 @@ class GamePlatformCapabilities {
 }
 
 class DailyPlatformResult {
+  static const maxTotalScore = 1000000;
+  static const maxTotalShots = 10000;
+
   DailyPlatformResult({
     required this.dateKey,
     required this.variantId,
@@ -32,7 +35,7 @@ class DailyPlatformResult {
     required this.totalShots,
     required this.official,
   }) {
-    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateKey)) {
+    if (!_isCalendarDate(dateKey)) {
       throw ArgumentError.value(dateKey, 'dateKey', 'YYYY-MM-DD 형식이어야 합니다.');
     }
     if (!RegExp(r'^[a-z0-9_]{1,64}$').hasMatch(variantId)) {
@@ -42,9 +45,33 @@ class DailyPlatformResult {
         '영문 소문자, 숫자, 밑줄로 된 1~64자여야 합니다.',
       );
     }
-    if (totalScore < 0 || totalShots <= 0) {
-      throw ArgumentError('점수는 0 이상, 발사 수는 1 이상이어야 합니다.');
+    if (totalScore < 0 || totalScore > maxTotalScore) {
+      throw ArgumentError.value(
+        totalScore,
+        'totalScore',
+        '0~$maxTotalScore 범위여야 합니다.',
+      );
     }
+    if (totalShots <= 0 || totalShots > maxTotalShots) {
+      throw ArgumentError.value(
+        totalShots,
+        'totalShots',
+        '1~$maxTotalShots 범위여야 합니다.',
+      );
+    }
+  }
+
+  static bool _isCalendarDate(String value) {
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
+    if (match == null) return false;
+    final year = int.parse(match.group(1)!);
+    final month = int.parse(match.group(2)!);
+    final day = int.parse(match.group(3)!);
+    if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1) {
+      return false;
+    }
+    final parsed = DateTime.utc(year, month, day);
+    return parsed.year == year && parsed.month == month && parsed.day == day;
   }
 
   final String dateKey;
