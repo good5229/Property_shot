@@ -23,6 +23,7 @@ import '../game/services/game_platform_gateway.dart';
 import '../game/simulation/trait_resolver.dart';
 import '../game/simulation/shot_resolver.dart';
 import 'game_screen.dart';
+import 'app_language.dart';
 import 'game_feedback.dart';
 import 'play_telemetry.dart';
 import 'tutorial_experiment.dart';
@@ -95,6 +96,7 @@ class DailyChallengeScreen extends StatefulWidget {
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.telemetry,
     this.platformGateway = const DeviceOnlyGamePlatformGateway(),
+    this.language = AppLanguage.korean,
   });
 
   final VoidCallback? onExit;
@@ -104,6 +106,7 @@ class DailyChallengeScreen extends StatefulWidget {
   final TutorialExperimentVariant tutorialVariant;
   final LocalPlayTelemetry? telemetry;
   final GamePlatformGateway platformGateway;
+  final AppLanguage language;
 
   @override
   State<DailyChallengeScreen> createState() => _DailyChallengeScreenState();
@@ -907,8 +910,15 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         sequencePosition: _activeStage,
         sequenceLength: _dailyCatalog.stages.length,
         nextActionLabel: _activeStage == _dailyCatalog.stages.length - 1
-            ? '도전 결과 보기'
-            : '다음 장면',
+            ? widget.language.pick('도전 결과 보기', 'VIEW RESULTS')
+            : widget.language.pick('다음 장면', 'NEXT SCENE'),
+        objectiveOverride: widget.language.isEnglish
+            ? 'DAILY ROUTE ${_activeStage! + 1}/${_dailyCatalog.stages.length} · ${_variantTitle(_definition.variant, widget.language)}'
+            : null,
+        exitTooltipOverride: widget.language.pick(
+          '오늘의 도전 나가기',
+          'Exit daily route',
+        ),
         progressPersistencePolicy: GameProgressPersistencePolicy.disabled,
         tutorialVariant: widget.tutorialVariant,
         difficulty: _activeDifficulty,
@@ -924,6 +934,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         mode: _completedMode,
         record: _record,
         platformMessage: _platformMessage,
+        language: widget.language,
         onNewAttempt: _newAttemptFromResult,
         onBack: _returnToOverview,
       );
@@ -940,6 +951,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
       onPractice: _beginPractice,
       onBack: widget.onExit,
       onRefresh: () => _refreshDate(force: true),
+      language: widget.language,
     );
   }
 
@@ -990,6 +1002,7 @@ class _DailyOverviewView extends StatelessWidget {
     required this.onPractice,
     required this.onBack,
     required this.onRefresh,
+    required this.language,
   });
 
   final DailyChallengeDefinition definition;
@@ -1001,6 +1014,7 @@ class _DailyOverviewView extends StatelessWidget {
   final VoidCallback onPractice;
   final VoidCallback? onBack;
   final VoidCallback onRefresh;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -1018,13 +1032,13 @@ class _DailyOverviewView extends StatelessWidget {
                   children: [
                     IconButton(
                       key: const Key('daily_back_button'),
-                      tooltip: '메인 메뉴',
+                      tooltip: language.pick('메인 메뉴', 'Main menu'),
                       onPressed: onBack,
                       icon: const Icon(Icons.arrow_back_rounded),
                     ),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '오늘의 도전',
+                        language.pick('오늘의 도전', 'DAILY ROUTE'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 24,
@@ -1034,16 +1048,19 @@ class _DailyOverviewView extends StatelessWidget {
                     ),
                     IconButton(
                       key: const Key('daily_refresh_button'),
-                      tooltip: '오늘 날짜 다시 확인',
+                      tooltip: language.pick(
+                        '오늘 날짜 다시 확인',
+                        'Refresh today’s route',
+                      ),
                       onPressed: onRefresh,
                       icon: const Icon(Icons.refresh_rounded),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                _DailyHeader(definition: definition),
+                _DailyHeader(definition: definition, language: language),
                 const SizedBox(height: 12),
-                _DailyRecordPanel(record: record),
+                _DailyRecordPanel(record: record, language: language),
                 if (error != null) ...[
                   const SizedBox(height: 12),
                   Text(
@@ -1057,7 +1074,11 @@ class _DailyOverviewView extends StatelessWidget {
                   key: const Key('daily_official_button'),
                   onPressed: busy ? null : onOfficial,
                   icon: const Icon(Icons.flag_rounded),
-                  label: Text(hasActiveOfficialRun ? '정식 도전 이어하기' : '정식 도전'),
+                  label: Text(
+                    hasActiveOfficialRun
+                        ? language.pick('정식 도전 이어하기', 'CONTINUE OFFICIAL RUN')
+                        : language.pick('정식 도전', 'START OFFICIAL RUN'),
+                  ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(54),
                   ),
@@ -1067,14 +1088,17 @@ class _DailyOverviewView extends StatelessWidget {
                   key: const Key('daily_practice_button'),
                   onPressed: busy ? null : onPractice,
                   icon: const Icon(Icons.school_rounded),
-                  label: const Text('연습'),
+                  label: Text(language.pick('연습', 'PRACTICE')),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                   ),
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  '정식 도전은 오늘의 기록에 반영되고, 연습은 앱을 닫으면 사라집니다.',
+                  language.pick(
+                    '정식 도전은 오늘의 기록에 반영되고, 연습은 앱을 닫으면 사라집니다.',
+                    'Official runs update today’s device record. Practice disappears when you close the app.',
+                  ),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: const Color(0xFF37655E),
@@ -1091,9 +1115,10 @@ class _DailyOverviewView extends StatelessWidget {
 }
 
 class _DailyHeader extends StatelessWidget {
-  const _DailyHeader({required this.definition});
+  const _DailyHeader({required this.definition, required this.language});
 
   final DailyChallengeDefinition definition;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -1109,7 +1134,9 @@ class _DailyHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            definition.displayDate,
+            language.isEnglish
+                ? '${definition.date.year}-${definition.date.month.toString().padLeft(2, '0')}-${definition.date.day.toString().padLeft(2, '0')}'
+                : definition.displayDate,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
@@ -1123,7 +1150,9 @@ class _DailyHeader extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '시드 코드 ${definition.seedCode}',
+                  language.isEnglish
+                      ? 'SEED ${definition.seedCode}'
+                      : '시드 코드 ${definition.seedCode}',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -1131,13 +1160,15 @@ class _DailyHeader extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(
-            definition.variant.title,
+            _variantTitle(definition.variant, language),
             key: const Key('daily_variant_title'),
             style: const TextStyle(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
           Text(
-            '3개 장면 · ${definition.variant.summary}',
+            language.isEnglish
+                ? '3 SCENES · ${_variantSummary(definition.variant, language)}'
+                : '3개 장면 · ${_variantSummary(definition.variant, language)}',
             key: const Key('daily_variant_summary'),
             style: const TextStyle(height: 1.3),
           ),
@@ -1148,9 +1179,10 @@ class _DailyHeader extends StatelessWidget {
 }
 
 class _DailyRecordPanel extends StatelessWidget {
-  const _DailyRecordPanel({required this.record});
+  const _DailyRecordPanel({required this.record, required this.language});
 
   final DailyChallengeRecord record;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -1165,20 +1197,27 @@ class _DailyRecordPanel extends StatelessWidget {
       child: Column(
         children: [
           _DailyMetric(
-            label: '정식 시도 수',
-            value: '${record.officialAttemptCount}회',
+            label: language.pick('정식 시도 수', 'Official attempts'),
+            value: language.isEnglish
+                ? '${record.officialAttemptCount}'
+                : '${record.officialAttemptCount}회',
           ),
-          _DailyMetric(label: '완료', value: record.completed ? '완료' : '진행 전'),
           _DailyMetric(
-            label: '최고 총점',
+            label: language.pick('완료', 'Status'),
+            value: record.completed
+                ? language.pick('완료', 'Completed')
+                : language.pick('진행 전', 'Not started'),
+          ),
+          _DailyMetric(
+            label: language.pick('최고 총점', 'Best score'),
             value: record.bestTotalScore > 0
                 ? '${record.bestTotalScore}점'
-                : '기록 없음',
+                : language.pick('기록 없음', 'No record'),
           ),
           _DailyMetric(
-            label: '최소 발사 합계',
+            label: language.pick('최소 발사 합계', 'Fewest shots'),
             value: record.bestShotSum == null
-                ? '기록 없음'
+                ? language.pick('기록 없음', 'No record')
                 : '${record.bestShotSum}회',
           ),
         ],
@@ -1218,6 +1257,7 @@ class DailyChallengeResultView extends StatelessWidget {
     required this.onNewAttempt,
     required this.onBack,
     this.platformMessage = '기기 기록만 사용합니다. 온라인 순위는 아직 연결하지 않았습니다.',
+    this.language = AppLanguage.korean,
   });
 
   final int score;
@@ -1228,6 +1268,7 @@ class DailyChallengeResultView extends StatelessWidget {
   final VoidCallback onNewAttempt;
   final VoidCallback onBack;
   final String platformMessage;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -1258,24 +1299,37 @@ class DailyChallengeResultView extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      isOfficial ? '오늘의 도전 완료!' : '연습 완료!',
+                      isOfficial
+                          ? language.pick('오늘의 도전 완료!', 'DAILY ROUTE COMPLETE!')
+                          : language.pick('연습 완료!', 'PRACTICE COMPLETE!'),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _DailyMetric(label: '총점', value: '$score점'),
-                    _DailyMetric(label: '발사 합계', value: '$shots회'),
-                    _DailyMetric(label: '선택 보상', value: '$rewards개'),
+                    _DailyMetric(
+                      label: language.pick('총점', 'Score'),
+                      value: language.isEnglish ? '$score' : '$score점',
+                    ),
+                    _DailyMetric(
+                      label: language.pick('발사 합계', 'Total shots'),
+                      value: language.isEnglish ? '$shots' : '$shots회',
+                    ),
+                    _DailyMetric(
+                      label: language.pick('선택 보상', 'Rewards chosen'),
+                      value: language.isEnglish ? '$rewards' : '$rewards개',
+                    ),
                     if (isOfficial)
                       _DailyMetric(
-                        label: '오늘의 최고 총점',
+                        label: language.pick('오늘의 최고 총점', 'Today’s best'),
                         value: '${record.bestTotalScore}점',
                       ),
                     const SizedBox(height: 10),
                     Text(
-                      platformMessage,
+                      language.isEnglish
+                          ? 'Saved on this device. Online ranking is not connected yet.'
+                          : platformMessage,
                       key: const Key('daily_platform_status'),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1288,7 +1342,11 @@ class DailyChallengeResultView extends StatelessWidget {
                       key: const Key('daily_new_attempt_button'),
                       onPressed: onNewAttempt,
                       icon: const Icon(Icons.refresh_rounded),
-                      label: Text(isOfficial ? '새 정식 시도' : '다시 연습'),
+                      label: Text(
+                        isOfficial
+                            ? language.pick('새 정식 시도', 'NEW OFFICIAL RUN')
+                            : language.pick('다시 연습', 'PRACTICE AGAIN'),
+                      ),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(50),
                       ),
@@ -1298,7 +1356,9 @@ class DailyChallengeResultView extends StatelessWidget {
                       key: const Key('daily_result_back_button'),
                       onPressed: onBack,
                       icon: const Icon(Icons.arrow_back_rounded),
-                      label: const Text('오늘의 도전 개요'),
+                      label: Text(
+                        language.pick('오늘의 도전 개요', 'DAILY ROUTE OVERVIEW'),
+                      ),
                     ),
                   ],
                 ),
@@ -1310,3 +1370,33 @@ class DailyChallengeResultView extends StatelessWidget {
     );
   }
 }
+
+String _variantTitle(DailyChallengeVariant variant, AppLanguage language) =>
+    switch (variant.id) {
+      'trait_foundations' => language.pick(variant.title, 'TRAIT FOUNDATIONS'),
+      'causal_devices' => language.pick(variant.title, 'CAUSAL DEVICES'),
+      'momentum_routes' => language.pick(variant.title, 'MOMENTUM ROUTES'),
+      'property_mastery' => language.pick(variant.title, 'PROPERTY MASTERY'),
+      _ => variant.title,
+    };
+
+String _variantSummary(DailyChallengeVariant variant, AppLanguage language) =>
+    switch (variant.id) {
+      'trait_foundations' => language.pick(
+        variant.summary,
+        'Move Weight and Bounce, then reuse the drained source.',
+      ),
+      'causal_devices' => language.pick(
+        variant.summary,
+        'Link gates, balloons, and persistent balls to open a route.',
+      ),
+      'momentum_routes' => language.pick(
+        variant.summary,
+        'Combine acceleration, rotating reflection, and chain impacts.',
+      ),
+      'property_mastery' => language.pick(
+        variant.summary,
+        'Combine stolen traits, drained sources, and past balls.',
+      ),
+      _ => variant.summary,
+    };

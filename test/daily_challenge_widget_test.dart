@@ -128,7 +128,7 @@ void main() {
     await tester.tap(find.byKey(const Key('daily_official_button')));
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.byKey(const Key('home_button')), findsOneWidget);
-    expect(find.byTooltip('스테이지 포기'), findsOneWidget);
+    expect(find.byTooltip('오늘의 도전 나가기'), findsOneWidget);
     expect(find.byTooltip('현재 점수 0'), findsOneWidget);
     expect(
       telemetry.events.map((event) => event['event_code']),

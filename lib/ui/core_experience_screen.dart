@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../game/domain/level_definition.dart';
 import '../game/levels/generated_stage_catalog.dart';
+import 'app_language.dart';
 import 'game_feedback.dart';
 import 'game_screen.dart';
 
@@ -23,12 +24,49 @@ class CoreExperienceScene {
   final String objective;
   final String startMessage;
 
-  LevelDefinition createLevel() {
+  LevelDefinition createLevel({AppLanguage language = AppLanguage.korean}) {
     final stage = generatedStageCatalog.stageById(stageId);
     return stage
         .patternById(patternId)
-        .toLevelDefinition(stageId: stageId, stageTitle: title);
+        .toLevelDefinition(
+          stageId: stageId,
+          stageTitle: _sceneCopy(id: patternId, language: language).title,
+        );
   }
+}
+
+({String title, String objective, String startMessage}) _sceneCopy({
+  required String id,
+  required AppLanguage language,
+}) {
+  if (!language.isEnglish) {
+    final scene = coreExperienceScenes.singleWhere(
+      (candidate) => candidate.patternId == id,
+    );
+    return (
+      title: scene.title,
+      objective: scene.objective,
+      startMessage: scene.startMessage,
+    );
+  }
+  return switch (id) {
+    'stage_heavy_01' => (
+      title: 'Scene 1 · Steal Weight',
+      objective: 'Move weight into the ball and push the crate aside',
+      startMessage: 'Tap the stone, transfer Weight, then launch the ball.',
+    ),
+    'stage_drained_01' => (
+      title: 'Scene 2 · The Drained Source',
+      objective: 'Use both the powered ball and the changed source object',
+      startMessage: 'Watch how both the ball and the drained object change.',
+    ),
+    'stage_persistent_01' => (
+      title: 'Scene 3 · Turn Failure into a Tool',
+      objective: 'Use the first ball as a bumper or stopper for the next shot',
+      startMessage: 'A missed ball stays. Use it to reshape the next route.',
+    ),
+    _ => throw ArgumentError.value(id, 'id', 'Unknown core experience scene'),
+  };
 }
 
 const coreExperienceScenes = <CoreExperienceScene>[
@@ -65,12 +103,14 @@ class CoreExperienceScreen extends StatefulWidget {
     required this.onContinueCampaign,
     this.loadGameAssets = true,
     this.initialSceneIndex = 0,
+    this.language = AppLanguage.korean,
   }) : assert(initialSceneIndex >= 0),
        assert(initialSceneIndex < coreExperienceScenes.length);
 
   final VoidCallback onExit;
   final VoidCallback onContinueCampaign;
   final bool loadGameAssets;
+  final AppLanguage language;
 
   @visibleForTesting
   final int initialSceneIndex;
@@ -101,14 +141,16 @@ class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
           _sceneIndex = 0;
           _completed = false;
         }),
+        language: widget.language,
       );
     }
 
     final scene = coreExperienceScenes[_sceneIndex];
-    final level = scene.createLevel();
+    final copy = _sceneCopy(id: scene.patternId, language: widget.language);
+    final level = scene.createLevel(language: widget.language);
     final initialState = level
         .createState(scene.levelIndex, productRules: true)
-        .copyWith(message: scene.startMessage);
+        .copyWith(message: copy.startMessage);
     final isLast = _sceneIndex == coreExperienceScenes.length - 1;
 
     return GameScreen(
@@ -123,12 +165,15 @@ class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
       loadGameAssets: widget.loadGameAssets,
       showTutorialFailureHints: true,
       showDiscoveryHud: false,
-      objectiveOverride:
-          '핵심 체험 ${_sceneIndex + 1}/${coreExperienceScenes.length} · ${scene.objective}',
-      exitTooltipOverride: '핵심 체험 나가기',
+      objectiveOverride: widget.language.isEnglish
+          ? 'CORE PLAY ${_sceneIndex + 1}/${coreExperienceScenes.length} · ${copy.objective}'
+          : '핵심 체험 ${_sceneIndex + 1}/${coreExperienceScenes.length} · ${copy.objective}',
+      exitTooltipOverride: widget.language.pick('핵심 체험 나가기', 'Exit core play'),
       sequencePosition: _sceneIndex,
       sequenceLength: coreExperienceScenes.length,
-      nextActionLabel: isLast ? '체험 마치기' : '다음 장면',
+      nextActionLabel: isLast
+          ? widget.language.pick('체험 마치기', 'FINISH CORE PLAY')
+          : widget.language.pick('다음 장면', 'NEXT SCENE'),
       onStageRequested: (_) async => _advance(),
     );
   }
@@ -139,11 +184,13 @@ class _CoreExperienceComplete extends StatelessWidget {
     required this.onExit,
     required this.onContinueCampaign,
     required this.onReplay,
+    required this.language,
   });
 
   final VoidCallback onExit;
   final VoidCallback onContinueCampaign;
   final VoidCallback onReplay;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +216,10 @@ class _CoreExperienceComplete extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '핵심 규칙을 모두 발견했습니다',
+                        language.pick(
+                          '핵심 규칙을 모두 발견했습니다',
+                          'YOU DISCOVERED THE CORE RULES',
+                        ),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
@@ -178,8 +228,11 @@ class _CoreExperienceComplete extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        '속성을 옮기면 공과 원본이 함께 달라지고, 한 번 바뀐 장면은 다음 해법으로 남습니다.',
+                      Text(
+                        language.pick(
+                          '속성을 옮기면 공과 원본이 함께 달라지고, 한 번 바뀐 장면은 다음 해법으로 남습니다.',
+                          'Moving a trait changes both the ball and its source. Every changed object remains part of the next solution.',
+                        ),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Color(0xFF285C5D),
@@ -190,14 +243,17 @@ class _CoreExperienceComplete extends StatelessWidget {
                       ),
                       const SizedBox(height: 22),
                       if (wide)
-                        const Row(
+                        Row(
                           children: [
                             Expanded(
                               child: _ExperienceSummaryCard(
                                 asset:
                                     'assets/generated/stage-icon-heavy-v1.png',
-                                title: '속성 강탈',
-                                body: '사물의 성질을 공에 옮겨 새로운 물리 역할을 만듭니다.',
+                                title: language.pick('속성 강탈', 'STEAL A TRAIT'),
+                                body: language.pick(
+                                  '사물의 성질을 공에 옮겨 새로운 물리 역할을 만듭니다.',
+                                  'Move an object’s trait into the ball to create a new physics role.',
+                                ),
                               ),
                             ),
                             SizedBox(width: 12),
@@ -205,8 +261,14 @@ class _CoreExperienceComplete extends StatelessWidget {
                               child: _ExperienceSummaryCard(
                                 asset:
                                     'assets/generated/stage-icon-property-transfer-v1.png',
-                                title: '양면 변화',
-                                body: '공이 얻은 속성과 원본이 잃은 속성을 함께 이용합니다.',
+                                title: language.pick(
+                                  '양면 변화',
+                                  'TWO-SIDED CHANGE',
+                                ),
+                                body: language.pick(
+                                  '공이 얻은 속성과 원본이 잃은 속성을 함께 이용합니다.',
+                                  'Use what the ball gains and what the source loses.',
+                                ),
                               ),
                             ),
                             SizedBox(width: 12),
@@ -214,33 +276,48 @@ class _CoreExperienceComplete extends StatelessWidget {
                               child: _ExperienceSummaryCard(
                                 asset:
                                     'assets/generated/stage-icon-persistent-ball-v1.png',
-                                title: '상태 재사용',
-                                body: '빗나간 공과 바뀐 장면도 다음 샷의 도구로 남습니다.',
+                                title: language.pick(
+                                  '상태 재사용',
+                                  'REUSE THE STATE',
+                                ),
+                                body: language.pick(
+                                  '빗나간 공과 바뀐 장면도 다음 샷의 도구로 남습니다.',
+                                  'Missed balls and changed objects remain tools for the next shot.',
+                                ),
                               ),
                             ),
                           ],
                         )
                       else
-                        const Column(
+                        Column(
                           children: [
                             _ExperienceSummaryCard(
                               asset: 'assets/generated/stage-icon-heavy-v1.png',
-                              title: '속성 강탈',
-                              body: '사물의 성질을 공에 옮겨 새로운 물리 역할을 만듭니다.',
+                              title: language.pick('속성 강탈', 'STEAL A TRAIT'),
+                              body: language.pick(
+                                '사물의 성질을 공에 옮겨 새로운 물리 역할을 만듭니다.',
+                                'Move an object’s trait into the ball to create a new physics role.',
+                              ),
                             ),
                             SizedBox(height: 12),
                             _ExperienceSummaryCard(
                               asset:
                                   'assets/generated/stage-icon-property-transfer-v1.png',
-                              title: '양면 변화',
-                              body: '공이 얻은 속성과 원본이 잃은 속성을 함께 이용합니다.',
+                              title: language.pick('양면 변화', 'TWO-SIDED CHANGE'),
+                              body: language.pick(
+                                '공이 얻은 속성과 원본이 잃은 속성을 함께 이용합니다.',
+                                'Use what the ball gains and what the source loses.',
+                              ),
                             ),
                             SizedBox(height: 12),
                             _ExperienceSummaryCard(
                               asset:
                                   'assets/generated/stage-icon-persistent-ball-v1.png',
-                              title: '상태 재사용',
-                              body: '빗나간 공과 바뀐 장면도 다음 샷의 도구로 남습니다.',
+                              title: language.pick('상태 재사용', 'REUSE THE STATE'),
+                              body: language.pick(
+                                '빗나간 공과 바뀐 장면도 다음 샷의 도구로 남습니다.',
+                                'Missed balls and changed objects remain tools for the next shot.',
+                              ),
                             ),
                           ],
                         ),
@@ -253,18 +330,25 @@ class _CoreExperienceComplete extends StatelessWidget {
                             FilledButton(
                               key: const Key('core_continue_campaign_button'),
                               onPressed: onContinueCampaign,
-                              child: const Text('전체 탐사 시작'),
+                              child: Text(
+                                language.pick('전체 탐사 시작', 'START FULL VOYAGE'),
+                              ),
                             ),
                             const SizedBox(height: 8),
                             OutlinedButton(
                               key: const Key('core_replay_button'),
                               onPressed: onReplay,
-                              child: const Text('핵심 체험 다시 하기'),
+                              child: Text(
+                                language.pick(
+                                  '핵심 체험 다시 하기',
+                                  'REPLAY CORE PLAY',
+                                ),
+                              ),
                             ),
                             TextButton(
                               key: const Key('core_home_button'),
                               onPressed: onExit,
-                              child: const Text('홈으로'),
+                              child: Text(language.pick('홈으로', 'BACK HOME')),
                             ),
                           ],
                         ),

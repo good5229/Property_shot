@@ -35,6 +35,7 @@ import 'game/run/run_hint_state.dart';
 import 'game/simulation/shot_resolver.dart';
 import 'game/simulation/trait_resolver.dart';
 import 'ui/game_feedback.dart';
+import 'ui/app_language.dart';
 import 'ui/game_screen.dart';
 import 'ui/daily_challenge_screen.dart';
 import 'ui/game_ball_painter.dart';
@@ -86,6 +87,7 @@ class PropertyShotApp extends StatelessWidget {
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.progressStore,
     this.demoPlanId,
+    this.initialLanguage = AppLanguage.korean,
   });
 
   final GameState? initialState;
@@ -98,6 +100,7 @@ class PropertyShotApp extends StatelessWidget {
   final TutorialExperimentVariant tutorialVariant;
   final ProgressStore? progressStore;
   final String? demoPlanId;
+  final AppLanguage initialLanguage;
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +136,7 @@ class PropertyShotApp extends StatelessWidget {
               tutorialVariant: tutorialVariant,
               progressStore: progressStore,
               telemetry: telemetry,
+              initialLanguage: initialLanguage,
             )
           : GameScreen(
               initialState: initialState,
@@ -279,12 +283,14 @@ class _PropertyShotRouter extends StatefulWidget {
     required this.tutorialVariant,
     this.progressStore,
     this.telemetry,
+    required this.initialLanguage,
   });
 
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
   final ProgressStore? progressStore;
   final LocalPlayTelemetry? telemetry;
+  final AppLanguage initialLanguage;
 
   @override
   State<_PropertyShotRouter> createState() => _PropertyShotRouterState();
@@ -350,6 +356,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   late final Future<void> _progressLoadFuture;
   late final LocalPlayTelemetry _telemetry;
   bool _runStartedRecorded = false;
+  late AppLanguage _language = widget.initialLanguage;
+  final AppLanguageStore _languageStore = const AppLanguageStore();
 
   @override
   void initState() {
@@ -365,6 +373,18 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     _solutionMasteryStoreFuture = _createSolutionMasteryStore();
     _progressLoadFuture = _loadCopyCore();
     unawaited(_loadExpedition());
+    unawaited(_loadLanguage());
+  }
+
+  Future<void> _loadLanguage() async {
+    final loaded = await _languageStore.load(fallback: widget.initialLanguage);
+    if (mounted && loaded != _language) setState(() => _language = loaded);
+  }
+
+  void _changeLanguage(AppLanguage language) {
+    if (language == _language) return;
+    setState(() => _language = language);
+    unawaited(_languageStore.save(language));
   }
 
   Future<StagePatternSession> _createPatternSession({String? namespace}) async {
@@ -1684,6 +1704,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         showDebugControls: widget.showDebugControls,
         tutorialVariant: _tutorialVariant,
         telemetry: _telemetry,
+        language: _language,
       );
     }
     if (_showPhysicsLab) {
@@ -1697,6 +1718,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     if (_showPuzzleForge) {
       return PuzzleForgeScreen(
         onBack: () => _changeSurface(() => _showPuzzleForge = false),
+        language: _language,
       );
     }
     if (_showCoreExperience) {
@@ -1706,6 +1728,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           _changeSurface(() => _showCoreExperience = false);
           unawaited(_startOrResume());
         },
+        language: _language,
       );
     }
     final activeStage = _activeStage;
@@ -1808,6 +1831,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       onTutorialVariantChanged: (variant) {
         setState(() => _tutorialVariant = variant);
       },
+      language: _language,
+      onLanguageChanged: _changeLanguage,
     );
   }
 }
@@ -2545,6 +2570,8 @@ class _HomeScreen extends StatelessWidget {
     required this.showDebugControls,
     required this.tutorialVariant,
     required this.onTutorialVariantChanged,
+    required this.language,
+    required this.onLanguageChanged,
   });
 
   final bool hasCompletedFirstStage;
@@ -2561,6 +2588,8 @@ class _HomeScreen extends StatelessWidget {
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
   final ValueChanged<TutorialExperimentVariant> onTutorialVariantChanged;
+  final AppLanguage language;
+  final ValueChanged<AppLanguage> onLanguageChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -2580,6 +2609,7 @@ class _HomeScreen extends StatelessWidget {
                   final hero = _HomeHero(
                     compact: compact,
                     emphasizeCopy: tablet,
+                    language: language,
                   );
                   final actions = _HomeActions(
                     appFontFamily: appFontFamily,
@@ -2592,6 +2622,7 @@ class _HomeScreen extends StatelessWidget {
                     onRewardInventory: onRewardInventory,
                     onReplayLibrary: onReplayLibrary,
                     onDailyChallenge: onDailyChallenge,
+                    language: language,
                   );
                   return SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
@@ -2657,10 +2688,10 @@ class _HomeScreen extends StatelessWidget {
                 children: [
                   Semantics(
                     key: const Key('puzzle_forge_entry_button'),
-                    label: 'AI 제작 과정',
+                    label: language.pick('AI 제작 과정', 'AI creation process'),
                     button: true,
                     child: IconButton.filledTonal(
-                      tooltip: 'AI 제작 과정',
+                      tooltip: language.pick('AI 제작 과정', 'AI creation process'),
                       onPressed: onPuzzleForge,
                       icon: Image.asset(
                         'assets/generated/stage-icon-property-transfer-v1.png',
@@ -2673,9 +2704,30 @@ class _HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
+                  TextButton(
+                    key: const Key('language_toggle_button'),
+                    onPressed: () => onLanguageChanged(
+                      language.isEnglish
+                          ? AppLanguage.korean
+                          : AppLanguage.english,
+                    ),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      backgroundColor: const Color(0xCCF5F3DA),
+                    ),
+                    child: Text(
+                      language.isEnglish ? '한국어' : 'EN',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   IconButton.filledTonal(
                     key: const Key('feedback_settings_button'),
-                    tooltip: '소리와 진동 설정',
+                    tooltip: language.pick(
+                      '소리와 진동 설정',
+                      'Sound and vibration settings',
+                    ),
                     onPressed: () => showDialog<void>(
                       context: context,
                       builder: (_) =>
@@ -2694,10 +2746,15 @@ class _HomeScreen extends StatelessWidget {
 }
 
 class _HomeHero extends StatelessWidget {
-  const _HomeHero({required this.compact, required this.emphasizeCopy});
+  const _HomeHero({
+    required this.compact,
+    required this.emphasizeCopy,
+    required this.language,
+  });
 
   final bool compact;
   final bool emphasizeCopy;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -2729,7 +2786,7 @@ class _HomeHero extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '속성 한방',
+                language.pick('속성 한방', 'PROPERTY SHOT'),
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   color: const Color(0xFF173F43),
                   fontWeight: FontWeight.w900,
@@ -2738,7 +2795,11 @@ class _HomeHero extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                compact
+                language.isEnglish
+                    ? compact
+                          ? 'Discover the island’s physics\nand wake its landmarks.'
+                          : 'Move traits from objects into the ball, make a route,\nand restore the observatory, lighthouse, and bridge.'
+                    : compact
                     ? '섬의 물리 규칙을 발견해\n멈춘 시설을 다시 깨우세요.'
                     : '주변 물체의 성질을 공에 담아 길을 만들고\n섬의 관측소·등대·다리를 다시 깨우세요.',
                 textAlign: TextAlign.center,
@@ -2768,6 +2829,7 @@ class _HomeActions extends StatelessWidget {
     required this.onRewardInventory,
     required this.onReplayLibrary,
     required this.onDailyChallenge,
+    required this.language,
   });
 
   final String? appFontFamily;
@@ -2780,6 +2842,7 @@ class _HomeActions extends StatelessWidget {
   final VoidCallback onRewardInventory;
   final VoidCallback onReplayLibrary;
   final VoidCallback onDailyChallenge;
+  final AppLanguage language;
 
   Widget _secondary({
     required Key key,
@@ -2820,7 +2883,7 @@ class _HomeActions extends StatelessWidget {
             path: 'assets/generated/stage-icon-property-transfer-v1.png',
             size: 42,
           ),
-          label: const Text('60초 핵심 체험'),
+          label: Text(language.pick('60초 핵심 체험', '60-SECOND CORE PLAY')),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(60),
             backgroundColor: const Color(0xFF176B78),
@@ -2840,7 +2903,11 @@ class _HomeActions extends StatelessWidget {
             path: 'assets/generated/nav-helm-v1.png',
             size: 40,
           ),
-          label: Text(hasCompletedFirstStage ? '항해 시작·이어가기' : '첫 스테이지 시작'),
+          label: Text(
+            hasCompletedFirstStage
+                ? language.pick('항해 시작·이어가기', 'START / CONTINUE VOYAGE')
+                : language.pick('첫 스테이지 시작', 'START FIRST STAGE'),
+          ),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(56),
             backgroundColor: const Color(0xFFEF765E),
@@ -2859,7 +2926,7 @@ class _HomeActions extends StatelessWidget {
             icon: Icons.map_outlined,
             imageAsset: 'assets/generated/nav-stage-map-v1.png',
             imageKey: const Key('stage_navigation_art'),
-            label: '섬 지도 둘러보기',
+            label: language.pick('섬 지도 둘러보기', 'EXPLORE ISLAND MAP'),
             foreground: const Color(0xFF245B60),
             border: const Color(0xFF3E7773),
           ),
@@ -2874,7 +2941,7 @@ class _HomeActions extends StatelessWidget {
                   onPressed: onExpedition,
                   icon: Icons.explore_outlined,
                   imageAsset: 'assets/generated/nav-expedition-v1.png',
-                  label: '3단계 탐사',
+                  label: language.pick('3단계 탐사', '3-STAGE EXPEDITION'),
                   foreground: const Color(0xFF704315),
                   border: const Color(0xFF9F6529),
                 ),
@@ -2887,7 +2954,7 @@ class _HomeActions extends StatelessWidget {
                   icon: Icons.map_outlined,
                   imageAsset: 'assets/generated/nav-stage-map-v1.png',
                   imageKey: const Key('stage_navigation_art'),
-                  label: '스테이지',
+                  label: language.pick('스테이지', 'STAGES'),
                   foreground: const Color(0xFF245B60),
                   border: const Color(0xFF3E7773),
                 ),
@@ -2914,14 +2981,20 @@ class _HomeActions extends StatelessWidget {
               path: 'assets/generated/nav-activities-v1.png',
               size: 38,
             ),
-            title: const Text(
-              '다른 활동',
+            title: Text(
+              language.pick('다른 활동', 'MORE ACTIVITIES'),
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
             subtitle: Text(
               advancedActivitiesUnlocked
-                  ? '보상 · 리플레이 · 오늘의 도전'
-                  : '내 런 보상 · 다음 활동은 3단계 후',
+                  ? language.pick(
+                      '보상 · 리플레이 · 오늘의 도전',
+                      'Rewards · Replays · Daily Route',
+                    )
+                  : language.pick(
+                      '내 런 보상 · 다음 활동은 3단계 후',
+                      'Run rewards · More after stage 3',
+                    ),
             ),
             children: [
               if (!advancedActivitiesUnlocked) ...[
@@ -2930,7 +3003,7 @@ class _HomeActions extends StatelessWidget {
                   onPressed: onRewardInventory,
                   icon: Icons.backpack_outlined,
                   imageAsset: 'assets/generated/nav-reward-satchel-v1.png',
-                  label: '내 런 보상',
+                  label: language.pick('내 런 보상', 'MY RUN REWARDS'),
                   foreground: const Color(0xFF6B4B20),
                   border: const Color(0xFF946B35),
                 ),
@@ -2943,14 +3016,17 @@ class _HomeActions extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFC49A55)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.lock_clock_outlined, size: 20),
-                      SizedBox(width: 8),
+                      const Icon(Icons.lock_clock_outlined, size: 20),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '3개 스테이지를 익히면 리플레이와 오늘의 도전이 열립니다.',
-                          style: TextStyle(
+                          language.pick(
+                            '3개 스테이지를 익히면 리플레이와 오늘의 도전이 열립니다.',
+                            'Learn three stages to unlock replays and the daily route.',
+                          ),
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -2969,7 +3045,7 @@ class _HomeActions extends StatelessWidget {
                         icon: Icons.backpack_outlined,
                         imageAsset:
                             'assets/generated/nav-reward-satchel-v1.png',
-                        label: '보상',
+                        label: language.pick('보상', 'REWARDS'),
                         foreground: const Color(0xFF6B4B20),
                         border: const Color(0xFF946B35),
                       ),
@@ -2982,7 +3058,7 @@ class _HomeActions extends StatelessWidget {
                         icon: Icons.movie_filter_outlined,
                         imageAsset: 'assets/generated/nav-replay-v1.png',
                         imageKey: const Key('replay_navigation_art'),
-                        label: '리플레이',
+                        label: language.pick('리플레이', 'REPLAYS'),
                         foreground: const Color(0xFF514B66),
                         border: const Color(0xFF70678A),
                       ),
@@ -2996,7 +3072,7 @@ class _HomeActions extends StatelessWidget {
                         imageAsset:
                             'assets/generated/nav-daily-challenge-v1.png',
                         imageKey: const Key('daily_navigation_art'),
-                        label: '오늘',
+                        label: language.pick('오늘', 'DAILY'),
                         foreground: const Color(0xFF874D2B),
                         border: const Color(0xFFB06E45),
                       ),

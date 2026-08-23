@@ -26,7 +26,7 @@ GitHub Issues own task status. This file owns planning context.
     - [x] Codex Puzzle Forge와 역할·반려 증거 시각화
     - [x] 챌린지 기간 신규 개발 내역과 제출용 자료
     - [x] 검증된 일일 변주와 Hive 확장 경계
-    - [ ] 핵심 체험 한·영 UI와 PC·모바일 반응형 구성
+    - [x] 핵심 체험 한·영 UI와 PC·모바일 반응형 구성
     - [ ] 비정상 입력·저장 손상·브라우저 회귀와 최종 감사
 
 - [ ] 상용 수직 슬라이스 고도화

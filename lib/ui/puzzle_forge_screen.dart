@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'app_language.dart';
+
 const puzzleForgeSummaryAsset = 'assets/forge/puzzle_forge_summary.json';
 
 @immutable
@@ -133,16 +135,26 @@ Future<PuzzleForgeSummary> loadPuzzleForgeSummary({AssetBundle? bundle}) async {
 }
 
 class PuzzleForgeScreen extends StatelessWidget {
-  const PuzzleForgeScreen({super.key, required this.onBack, this.summary});
+  const PuzzleForgeScreen({
+    super.key,
+    required this.onBack,
+    this.summary,
+    this.language = AppLanguage.korean,
+  });
 
   final VoidCallback onBack;
   final PuzzleForgeSummary? summary;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
     final provided = summary;
     if (provided != null) {
-      return _PuzzleForgeView(summary: provided, onBack: onBack);
+      return _PuzzleForgeView(
+        summary: provided,
+        onBack: onBack,
+        language: language,
+      );
     }
     return FutureBuilder<PuzzleForgeSummary>(
       future: loadPuzzleForgeSummary(),
@@ -151,7 +163,14 @@ class PuzzleForgeScreen extends StatelessWidget {
           return Scaffold(
             key: const Key('puzzle_forge_error'),
             appBar: AppBar(leading: BackButton(onPressed: onBack)),
-            body: const Center(child: Text('제작 과정 자료를 불러오지 못했습니다.')),
+            body: Center(
+              child: Text(
+                language.pick(
+                  '제작 과정 자료를 불러오지 못했습니다.',
+                  'Could not load the creation evidence.',
+                ),
+              ),
+            ),
           );
         }
         if (!snapshot.hasData) {
@@ -159,17 +178,26 @@ class PuzzleForgeScreen extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        return _PuzzleForgeView(summary: snapshot.requireData, onBack: onBack);
+        return _PuzzleForgeView(
+          summary: snapshot.requireData,
+          onBack: onBack,
+          language: language,
+        );
       },
     );
   }
 }
 
 class _PuzzleForgeView extends StatelessWidget {
-  const _PuzzleForgeView({required this.summary, required this.onBack});
+  const _PuzzleForgeView({
+    required this.summary,
+    required this.onBack,
+    required this.language,
+  });
 
   final PuzzleForgeSummary summary;
   final VoidCallback onBack;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +211,7 @@ class _PuzzleForgeView extends StatelessWidget {
           onPressed: onBack,
         ),
         title: Text(
-          summary.title,
+          language.pick(summary.title, 'CODEX PUZZLE FORGE'),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
@@ -202,7 +230,10 @@ class _PuzzleForgeView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'AI가 만든 후보를 바로 게임에 넣지 않습니다',
+                      language.pick(
+                        'AI가 만든 후보를 바로 게임에 넣지 않습니다',
+                        'AI CANDIDATES DO NOT SHIP UNREVIEWED',
+                      ),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
@@ -211,8 +242,11 @@ class _PuzzleForgeView extends StatelessWidget {
                           ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '사람이 재미의 목표를 정하고, Codex가 후보를 만들고, 자동 검증이 결함을 반려한 뒤 사람이 최종 채택합니다.',
+                    Text(
+                      language.pick(
+                        '사람이 재미의 목표를 정하고, Codex가 후보를 만들고, 자동 검증이 결함을 반려한 뒤 사람이 최종 채택합니다.',
+                        'A human sets the fun target. Codex builds candidates. Automated checks reject defects, and the human makes the final call.',
+                      ),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Color(0xFF285C5D),
@@ -235,7 +269,9 @@ class _PuzzleForgeView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(
-                          '생산 패턴 ${summary.productionPatternCount}개 · 정적 배치 + 실제 물리 실행 통과',
+                          language.isEnglish
+                              ? '${summary.productionPatternCount} PRODUCTION PATTERNS · STATIC + PHYSICS CHECKS PASSED'
+                              : '생산 패턴 ${summary.productionPatternCount}개 · 정적 배치 + 실제 물리 실행 통과',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Color(0xFF345A32),
@@ -245,10 +281,14 @@ class _PuzzleForgeView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _RoleFlow(roles: summary.roles, horizontal: wide),
+                    _RoleFlow(
+                      roles: summary.roles,
+                      horizontal: wide,
+                      language: language,
+                    ),
                     const SizedBox(height: 28),
                     Text(
-                      '실제 후보 판정',
+                      language.pick('실제 후보 판정', 'REAL CANDIDATE DECISIONS'),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: const Color(0xFF173F43),
                         fontWeight: FontWeight.w900,
@@ -260,7 +300,10 @@ class _PuzzleForgeView extends StatelessWidget {
                       index < summary.candidates.length;
                       index++
                     ) ...[
-                      _CandidateCard(candidate: summary.candidates[index]),
+                      _CandidateCard(
+                        candidate: summary.candidates[index],
+                        language: language,
+                      ),
                       if (index < summary.candidates.length - 1)
                         const SizedBox(height: 10),
                     ],
@@ -276,10 +319,15 @@ class _PuzzleForgeView extends StatelessWidget {
 }
 
 class _RoleFlow extends StatelessWidget {
-  const _RoleFlow({required this.roles, required this.horizontal});
+  const _RoleFlow({
+    required this.roles,
+    required this.horizontal,
+    required this.language,
+  });
 
   final List<PuzzleForgeRole> roles;
   final bool horizontal;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
@@ -299,17 +347,21 @@ class _RoleFlow extends StatelessWidget {
       children.add(
         horizontal
             ? Expanded(
-                child: _RoleCard(role: roles[index], index: index),
+                child: _RoleCard(
+                  role: roles[index],
+                  index: index,
+                  language: language,
+                ),
               )
-            : _RoleCard(role: roles[index], index: index),
+            : _RoleCard(role: roles[index], index: index, language: language),
       );
     }
     return Semantics(
       key: const Key('forge_role_flow'),
       container: true,
       label: roles
-          .map((role) => '${role.actor}, ${role.title}. ${role.body}')
-          .join(' 다음, '),
+          .map((role) => _roleCopy(role, language).semantics)
+          .join(language.pick(' 다음, ', ' then ')),
       excludeSemantics: true,
       child: horizontal
           ? Row(
@@ -325,10 +377,15 @@ class _RoleFlow extends StatelessWidget {
 }
 
 class _RoleCard extends StatelessWidget {
-  const _RoleCard({required this.role, required this.index});
+  const _RoleCard({
+    required this.role,
+    required this.index,
+    required this.language,
+  });
 
   final PuzzleForgeRole role;
   final int index;
+  final AppLanguage language;
 
   static const _assets = [
     'assets/generated/nav-helm-v1.png',
@@ -339,6 +396,7 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _roleCopy(role, language);
     return Container(
       key: Key('forge_role_${role.id}'),
       constraints: const BoxConstraints(minHeight: 168),
@@ -360,7 +418,7 @@ class _RoleCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            role.actor,
+            copy.actor,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Color(0xFF6E5B2A),
@@ -369,13 +427,13 @@ class _RoleCard extends StatelessWidget {
             ),
           ),
           Text(
-            role.title,
+            copy.title,
             textAlign: TextAlign.center,
             style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
           ),
           const SizedBox(height: 5),
           Text(
-            role.body,
+            copy.body,
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
@@ -388,18 +446,20 @@ class _RoleCard extends StatelessWidget {
 }
 
 class _CandidateCard extends StatelessWidget {
-  const _CandidateCard({required this.candidate});
+  const _CandidateCard({required this.candidate, required this.language});
 
   final PuzzleForgeCandidate candidate;
+  final AppLanguage language;
 
   @override
   Widget build(BuildContext context) {
     final adopted = candidate.status == PuzzleForgeCandidateStatus.adopted;
+    final copy = _candidateCopy(candidate, language);
     final accent = adopted ? const Color(0xFF39704B) : const Color(0xFF9B483A);
     return Semantics(
       container: true,
       label:
-          '${adopted ? '채택' : '반려'}. ${candidate.proposal}. ${_validationReason(candidate)}. ${candidate.humanDecision}',
+          '${adopted ? language.pick('채택', 'Adopted') : language.pick('반려', 'Rejected')}. ${copy.proposal}. ${_validationReason(candidate, language)}. ${copy.humanDecision}',
       child: Container(
         key: Key('forge_candidate_${candidate.id}'),
         padding: const EdgeInsets.all(14),
@@ -418,7 +478,9 @@ class _CandidateCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(99),
               ),
               child: Text(
-                adopted ? '채택' : '반려',
+                adopted
+                    ? language.pick('채택', 'ADOPTED')
+                    : language.pick('반려', 'REJECTED'),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -431,19 +493,19 @@ class _CandidateCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    candidate.proposal,
+                    copy.proposal,
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _validationReason(candidate),
+                    _validationReason(candidate, language),
                     style: TextStyle(
                       color: accent,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(candidate.humanDecision),
+                  Text(copy.humanDecision),
                 ],
               ),
             ),
@@ -454,18 +516,103 @@ class _CandidateCard extends StatelessWidget {
   }
 }
 
-String _validationReason(PuzzleForgeCandidate candidate) {
+String _validationReason(PuzzleForgeCandidate candidate, AppLanguage language) {
   if (candidate.validatorCodes.isEmpty) {
-    return 'Validator: 정적 배치와 실제 물리 실행 통과';
+    return language.pick(
+      'Validator: 정적 배치와 실제 물리 실행 통과',
+      'Validator: static layout and real physics passed',
+    );
   }
   final labels = candidate.validatorCodes.map(
     (code) => switch (code) {
-      'ball_spawn_overlaps_hole' => '시작 공과 홀이 겹침',
-      'missing_linked_target' => '스위치의 문 연결 대상 없음',
-      _ => '검증 규칙 위반',
+      'ball_spawn_overlaps_hole' => language.pick(
+        '시작 공과 홀이 겹침',
+        'ball spawn overlaps goal',
+      ),
+      'missing_linked_target' => language.pick(
+        '스위치의 문 연결 대상 없음',
+        'switch has no linked gate',
+      ),
+      _ => language.pick('검증 규칙 위반', 'validation rule violated'),
     },
   );
   return 'Validator: ${labels.join(' · ')}';
+}
+
+({String actor, String title, String body, String semantics}) _roleCopy(
+  PuzzleForgeRole role,
+  AppLanguage language,
+) {
+  if (!language.isEnglish) {
+    return (
+      actor: role.actor,
+      title: role.title,
+      body: role.body,
+      semantics: '${role.actor}, ${role.title}. ${role.body}',
+    );
+  }
+  final copy = switch (role.id) {
+    'human_goal' => (
+      actor: 'HUMAN',
+      title: 'Set the fun target',
+      body:
+          'Make trait transfer change both objects, and turn a missed ball into the next solution.',
+    ),
+    'codex_candidate' => (
+      actor: 'CODEX',
+      title: 'Build candidates',
+      body:
+          'Turn the human target into layouts, hints, and testable pattern data.',
+    ),
+    'validator_gate' => (
+      actor: 'STAGEPATTERNVALIDATOR',
+      title: 'Reject or pass',
+      body:
+          'Check layouts and real ShotResolver evidence, then return stable defect codes.',
+    ),
+    'human_adoption' => (
+      actor: 'HUMAN',
+      title: 'Make the final call',
+      body:
+          'Review validation evidence and play intent, then adopt or request another candidate.',
+    ),
+    _ => (actor: role.actor, title: role.title, body: role.body),
+  };
+  return (
+    actor: copy.actor,
+    title: copy.title,
+    body: copy.body,
+    semantics: '${copy.actor}, ${copy.title}. ${copy.body}',
+  );
+}
+
+({String proposal, String humanDecision}) _candidateCopy(
+  PuzzleForgeCandidate candidate,
+  AppLanguage language,
+) {
+  if (!language.isEnglish) {
+    return (
+      proposal: candidate.proposal,
+      humanDecision: candidate.humanDecision,
+    );
+  }
+  return switch (candidate.id) {
+    'auto_clear_spawn' => (
+      proposal: 'Move the ball near the goal to reduce first-entry friction',
+      humanDecision: 'Rejected: the stage could end without player input.',
+    ),
+    'broken_causal_link' => (
+      proposal: 'Expand the balloon-to-gate chain with an incorrect target',
+      humanDecision:
+          'Rejected: performing the cause would never open the result.',
+    ),
+    'persistent_ball_adopted' => (
+      proposal: 'Keep the first ball as a bumper or stopper for the next shot',
+      humanDecision:
+          'Adopted into the 60-second core play after intent and checks passed.',
+    ),
+    _ => (proposal: candidate.proposal, humanDecision: candidate.humanDecision),
+  };
 }
 
 Map<String, dynamic> _requiredMap(Object? value, String label) {
