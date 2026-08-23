@@ -218,7 +218,7 @@ void main() {
     expect(find.text('2026년 8월 9일'), findsOneWidget);
   });
 
-  testWidgets('열 단계 완료 뒤 runCompleted와 공식 기록을 복구한다', (tester) async {
+  testWidgets('세 장면 완료 뒤 runCompleted와 공식 기록을 복구한다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final preferences = await SharedPreferences.getInstance();
     final definition = DailyChallengeDefinition.fromDateKey('2026-08-08');
@@ -235,15 +235,16 @@ void main() {
       definition: definition,
       attemptId: 'attempt_1',
     );
-    final session = storage.createSession(catalog: generatedStageCatalog);
-    for (var index = 0; index < generatedStageCatalog.stages.length; index++) {
-      final stageId = generatedStageCatalog.stages[index].stageId;
+    final dailyCatalog = definition.selectCatalog(generatedStageCatalog);
+    final session = storage.createSession(catalog: dailyCatalog);
+    for (var index = 0; index < dailyCatalog.stages.length; index++) {
+      final stageId = dailyCatalog.stages[index].stageId;
       await session.selectStage(stageId);
       await session.completeCurrentStage(
         stageId: stageId,
         shotCount: 1,
-        nextStageId: index + 1 < generatedStageCatalog.stages.length
-            ? generatedStageCatalog.stages[index + 1].stageId
+        nextStageId: index + 1 < dailyCatalog.stages.length
+            ? dailyCatalog.stages[index + 1].stageId
             : null,
       );
       final rewards = await session.prepareRewardSelection(stageId: stageId);
@@ -265,7 +266,7 @@ void main() {
     final restored = await recordStore.load();
     expect(restored.completed, isTrue);
     expect(restored.activeAttemptId, isNull);
-    expect(restored.bestShotSum, 10);
+    expect(restored.bestShotSum, 3);
   });
 
   testWidgets('완료된 이전 시도보다 활성 재시도를 우선해 이어간다', (tester) async {
@@ -340,21 +341,27 @@ void main() {
   });
 
   test('제품 경계는 카탈로그 재배열과 단일 단계 완료를 거부한다', () async {
-    final reordered = StageCatalog(
-      schemaVersion: generatedStageCatalog.schemaVersion,
-      stages: generatedStageCatalog.stages.reversed.toList(),
-    );
-    expect(() => validateDailyChallengeStageOrder(reordered), throwsStateError);
-
     final definition = DailyChallengeDefinition.fromDateKey('2026-08-08');
+    final dailyCatalog = definition.selectCatalog(generatedStageCatalog);
+    final reordered = StageCatalog(
+      schemaVersion: dailyCatalog.schemaVersion,
+      stages: dailyCatalog.stages.reversed.toList(),
+    );
+    expect(
+      () => validateDailyChallengeVariantCatalog(definition, reordered),
+      throwsStateError,
+    );
     final storage = DailyChallengeRunStateStorage.practice(
       definition: definition,
     );
-    final session = storage.createSession(catalog: generatedStageCatalog);
-    await session.selectStage(generatedStageCatalog.stages.first.stageId);
+    final session = storage.createSession(catalog: dailyCatalog);
+    await session.selectStage(dailyCatalog.stages.first.stageId);
     final state = await session.loadState();
     expect(
-      () => validateDailyChallengeRunCompletable(state!),
+      () => validateDailyChallengeRunCompletableForStages(
+        state!,
+        definition.variant.stageIds,
+      ),
       throwsStateError,
     );
   });
@@ -399,15 +406,16 @@ Future<void> _completeOfficialRun(
     definition: definition,
     attemptId: attemptId,
   );
-  final session = storage.createSession(catalog: generatedStageCatalog);
-  for (var index = 0; index < generatedStageCatalog.stages.length; index++) {
-    final stageId = generatedStageCatalog.stages[index].stageId;
+  final dailyCatalog = definition.selectCatalog(generatedStageCatalog);
+  final session = storage.createSession(catalog: dailyCatalog);
+  for (var index = 0; index < dailyCatalog.stages.length; index++) {
+    final stageId = dailyCatalog.stages[index].stageId;
     await session.selectStage(stageId);
     await session.completeCurrentStage(
       stageId: stageId,
       shotCount: 1,
-      nextStageId: index + 1 < generatedStageCatalog.stages.length
-          ? generatedStageCatalog.stages[index + 1].stageId
+      nextStageId: index + 1 < dailyCatalog.stages.length
+          ? dailyCatalog.stages[index + 1].stageId
           : null,
     );
     final rewards = await session.prepareRewardSelection(stageId: stageId);

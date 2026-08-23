@@ -1406,6 +1406,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         result: '다음 단계 선택',
         eventCode: 'stage_exit',
       );
+      final sequenceFinished =
+          widget.sequencePosition != null &&
+          widget.sequenceLength != null &&
+          widget.sequencePosition! >= widget.sequenceLength! - 1;
+      if (sequenceFinished && widget.onRunCompleted != null) {
+        _recordTyped(
+          PlayTelemetryEventType.runCompleted,
+          result: PlayTelemetryResult.cleared,
+        );
+        await widget.onRunCompleted!();
+        return;
+      }
       if (_state.levelIndex >= levels.length - 1) {
         if (widget.onRunCompleted != null) {
           _recordTyped(

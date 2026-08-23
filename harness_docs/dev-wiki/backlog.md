@@ -25,7 +25,7 @@ GitHub Issues own task status. This file owns planning context.
     - [x] 첫 화면·설명 단순화와 점진적 공개
     - [x] Codex Puzzle Forge와 역할·반려 증거 시각화
     - [x] 챌린지 기간 신규 개발 내역과 제출용 자료
-    - [ ] 검증된 일일 변주와 Hive 확장 경계
+    - [x] 검증된 일일 변주와 Hive 확장 경계
     - [ ] 핵심 체험 한·영 UI와 PC·모바일 반응형 구성
     - [ ] 비정상 입력·저장 손상·브라우저 회귀와 최종 감사
 

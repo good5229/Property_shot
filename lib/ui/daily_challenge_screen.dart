@@ -19,6 +19,7 @@ import '../game/run/run_reward.dart';
 import '../game/run/run_state.dart';
 import '../game/run/stage_pattern_session.dart';
 import '../game/run/stage_shuffle_bag.dart';
+import '../game/services/game_platform_gateway.dart';
 import '../game/simulation/trait_resolver.dart';
 import '../game/simulation/shot_resolver.dart';
 import 'game_screen.dart';
@@ -52,16 +53,34 @@ void validateDailyChallengeStageOrder(StageCatalog catalog) {
   }
 }
 
+void validateDailyChallengeVariantCatalog(
+  DailyChallengeDefinition definition,
+  StageCatalog catalog,
+) {
+  final actual = catalog.stages.map((stage) => stage.stageId).toList();
+  if (!listEquals(actual, definition.variant.stageIds)) {
+    throw StateError('오늘의 짧은 변주 순서가 제품 계약과 다릅니다.');
+  }
+}
+
 void validateDailyChallengeRunCompletable(RunState state) {
-  final hasEveryShot = dailyChallengeExpectedStageOrder.every(
-    state.shotsPerStage.containsKey,
+  validateDailyChallengeRunCompletableForStages(
+    state,
+    dailyChallengeExpectedStageOrder,
   );
-  final hasEveryDraw = dailyChallengeExpectedStageOrder.every(
+}
+
+void validateDailyChallengeRunCompletableForStages(
+  RunState state,
+  List<String> stageOrder,
+) {
+  final hasEveryShot = stageOrder.every(state.shotsPerStage.containsKey);
+  final hasEveryDraw = stageOrder.every(
     (stageId) =>
         state.patternDrawHistory.any((draw) => draw.stageId == stageId),
   );
   if (!hasEveryShot || !hasEveryDraw) {
-    throw StateError('열 단계가 모두 완료된 오늘의 도전만 결과로 확정할 수 있습니다.');
+    throw StateError('${stageOrder.length}개 장면이 모두 완료되어야 결과를 확정할 수 있습니다.');
   }
 }
 
@@ -75,6 +94,7 @@ class DailyChallengeScreen extends StatefulWidget {
     this.showDebugControls = false,
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.telemetry,
+    this.platformGateway = const DeviceOnlyGamePlatformGateway(),
   });
 
   final VoidCallback? onExit;
@@ -83,6 +103,7 @@ class DailyChallengeScreen extends StatefulWidget {
   final bool showDebugControls;
   final TutorialExperimentVariant tutorialVariant;
   final LocalPlayTelemetry? telemetry;
+  final GamePlatformGateway platformGateway;
 
   @override
   State<DailyChallengeScreen> createState() => _DailyChallengeScreenState();
@@ -122,6 +143,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   String? _error;
   late final LocalPlayTelemetry _telemetry;
   bool _runStartedRecorded = false;
+  String _platformMessage = '기기 기록만 사용합니다. 온라인 순위는 아직 연결하지 않았습니다.';
+
+  StageCatalog get _dailyCatalog =>
+      _definition.selectCatalog(generatedStageCatalog);
 
   @override
   void initState() {
@@ -218,6 +243,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
 
   void _validateStageCatalogOrder() {
     validateDailyChallengeStageOrder(generatedStageCatalog);
+    final catalog = _dailyCatalog;
+    validateDailyChallengeVariantCatalog(_definition, catalog);
   }
 
   Future<void> _restoreSavedOfficialRun(DailyChallengeRecord record) async {
@@ -225,10 +252,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     if (attemptId == null) return;
     final mode = DailyChallengeMode.official;
     final storage = await _createStorage(mode, attemptId: attemptId);
-    final session = storage.createSession(
-      catalog: generatedStageCatalog,
-      now: _now,
-    );
+    final session = storage.createSession(catalog: _dailyCatalog, now: _now);
     try {
       final state = await session.loadState();
       if (state?.phase == RunPhase.runCompleted) {
@@ -331,10 +355,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         ? PlayerDifficulty.normal
         : GameFeedback.playerDifficulty;
     final storage = await _createStorage(mode, attemptId: attemptId);
-    final session = storage.createSession(
-      catalog: generatedStageCatalog,
-      now: _now,
-    );
+    final session = storage.createSession(catalog: _dailyCatalog, now: _now);
     _activeMode = mode;
     await session.loadState();
     if (session.state?.phase == RunPhase.runCompleted) {
@@ -373,7 +394,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   int? _stageIndexForState(RunState? state) {
     final stageId = state?.currentStageId;
     if (stageId == null) return null;
-    final index = generatedStageCatalog.stages.indexWhere(
+    final index = _dailyCatalog.stages.indexWhere(
       (stage) => stage.stageId == stageId,
     );
     return index < 0 ? null : index;
@@ -385,12 +406,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   Future<void> _openStageUnqueued(int index) async {
     _validateStageCatalogOrder();
     final session = _session;
-    if (session == null ||
-        index < 0 ||
-        index >= generatedStageCatalog.stages.length) {
+    if (session == null || index < 0 || index >= _dailyCatalog.stages.length) {
       return;
     }
-    final stageId = generatedStageCatalog.stages[index].stageId;
+    final stageId = _dailyCatalog.stages[index].stageId;
     var state = await session.loadState();
     if (state == null && index != 0) {
       throw StateError('오늘의 도전은 첫 단계부터 시작해야 합니다.');
@@ -413,7 +432,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     } else {
       throw StateError('오늘의 도전 단계 순서를 복원할 수 없습니다.');
     }
-    final stage = generatedStageCatalog.stageById(draw.stageId);
+    final stage = _dailyCatalog.stageById(draw.stageId);
     final level = draw.pattern.toLevelDefinition(
       stageId: draw.stageId,
       stageTitle: stage.title,
@@ -498,8 +517,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     final state = _session?.state;
     return PlayTelemetryContext(
       stageIndex: stageIndex,
-      stageId:
-          level?.stageId ?? generatedStageCatalog.stages[stageIndex].stageId,
+      stageId: level?.stageId ?? _dailyCatalog.stages[stageIndex].stageId,
       patternId: level?.patternId ?? state?.currentPatternId ?? '패턴_미정',
       seed: state?.currentPatternSeed ?? 0,
       resolverVersion:
@@ -563,21 +581,20 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     }
     _validateStageCatalogOrder();
     if (levelIndex < 0 ||
-        levelIndex >= dailyChallengeExpectedStageOrder.length ||
+        levelIndex >= _dailyCatalog.stages.length ||
         levelIndex != _activeStage) {
       throw StateError('현재 단계와 다른 단계는 완료할 수 없습니다.');
     }
     final current = await session.loadState();
-    if (current?.currentStageId !=
-        dailyChallengeExpectedStageOrder[levelIndex]) {
+    if (current?.currentStageId != _dailyCatalog.stages[levelIndex].stageId) {
       throw StateError('오늘의 도전 현재 단계와 완료 요청이 일치하지 않습니다.');
     }
-    final stageId = generatedStageCatalog.stages[levelIndex].stageId;
+    final stageId = _dailyCatalog.stages[levelIndex].stageId;
     final completion = await session.completeCurrentStage(
       stageId: stageId,
       shotCount: shotCount,
-      nextStageId: levelIndex + 1 < generatedStageCatalog.stages.length
-          ? generatedStageCatalog.stages[levelIndex + 1].stageId
+      nextStageId: levelIndex + 1 < _dailyCatalog.stages.length
+          ? _dailyCatalog.stages[levelIndex + 1].stageId
           : null,
       chainScore: analysis?.totalScore,
       optionalChallengeAchieved: optionalChallengeAchieved,
@@ -605,7 +622,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     try {
       final document = const ReplayCaptureService().capture(
         runState: state,
-        catalog: generatedStageCatalog,
+        catalog: _dailyCatalog,
         mode: mode == DailyChallengeMode.official
             ? ReplayMode.dailyOfficial
             : ReplayMode.dailyPractice,
@@ -630,11 +647,11 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         final session = _session;
         if (session == null ||
             levelIndex < 0 ||
-            levelIndex >= dailyChallengeExpectedStageOrder.length) {
+            levelIndex >= _dailyCatalog.stages.length) {
           return false;
         }
         final awarded = await session.awardStageCloneCores(
-          stageId: dailyChallengeExpectedStageOrder[levelIndex],
+          stageId: _dailyCatalog.stages[levelIndex].stageId,
           amount: amount,
         );
         if (mounted) {
@@ -652,7 +669,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
   Future<List<RunReward>> _prepareRewardsUnqueued(int levelIndex) async {
     final session = _session;
     if (session == null) return const [];
-    final stageId = generatedStageCatalog.stages[levelIndex].stageId;
+    final stageId = _dailyCatalog.stages[levelIndex].stageId;
     final rewards = await session.prepareRewardSelection(
       stageId: stageId,
       includeNextStageHint: false,
@@ -721,8 +738,28 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
     if (current == null) {
       throw StateError('완료할 오늘의 도전 런이 없습니다.');
     }
-    validateDailyChallengeRunCompletable(current);
+    validateDailyChallengeRunCompletableForStages(
+      current,
+      _definition.variant.stageIds,
+    );
     await session.completeRun();
+    final completed = session.state;
+    if (completed == null) {
+      throw StateError('완료된 오늘의 도전 상태를 읽을 수 없습니다.');
+    }
+    final platformReceipt = await widget.platformGateway.publishDailyResult(
+      DailyPlatformResult(
+        dateKey: _definition.dateKey,
+        variantId: _definition.variant.id,
+        totalScore: completed.totalScore,
+        totalShots: completed.shotsPerStage.values.fold<int>(
+          0,
+          (sum, value) => sum + value,
+        ),
+        official: _activeMode == DailyChallengeMode.official,
+      ),
+    );
+    _platformMessage = platformReceipt.playerMessage;
     final store = _recordStore;
     final storage = _runStorage;
     if (store != null &&
@@ -867,6 +904,11 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         onTraitActionCommitted: _recordTraitAction,
         onStageRestarted: _restartStage,
         onShotRewound: _rewindShot,
+        sequencePosition: _activeStage,
+        sequenceLength: _dailyCatalog.stages.length,
+        nextActionLabel: _activeStage == _dailyCatalog.stages.length - 1
+            ? '도전 결과 보기'
+            : '다음 장면',
         progressPersistencePolicy: GameProgressPersistencePolicy.disabled,
         tutorialVariant: widget.tutorialVariant,
         difficulty: _activeDifficulty,
@@ -881,6 +923,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         rewards: _completedRewardCount,
         mode: _completedMode,
         record: _record,
+        platformMessage: _platformMessage,
         onNewAttempt: _newAttemptFromResult,
         onBack: _returnToOverview,
       );
@@ -1087,7 +1130,17 @@ class _DailyHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 7),
-          const Text('오늘은 열 단계가 같은 순서로 열립니다.', style: TextStyle(height: 1.3)),
+          Text(
+            definition.variant.title,
+            key: const Key('daily_variant_title'),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '3개 장면 · ${definition.variant.summary}',
+            key: const Key('daily_variant_summary'),
+            style: const TextStyle(height: 1.3),
+          ),
         ],
       ),
     );
@@ -1164,6 +1217,7 @@ class DailyChallengeResultView extends StatelessWidget {
     required this.record,
     required this.onNewAttempt,
     required this.onBack,
+    this.platformMessage = '기기 기록만 사용합니다. 온라인 순위는 아직 연결하지 않았습니다.',
   });
 
   final int score;
@@ -1173,6 +1227,7 @@ class DailyChallengeResultView extends StatelessWidget {
   final DailyChallengeRecord record;
   final VoidCallback onNewAttempt;
   final VoidCallback onBack;
+  final String platformMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -1218,6 +1273,16 @@ class DailyChallengeResultView extends StatelessWidget {
                         label: '오늘의 최고 총점',
                         value: '${record.bestTotalScore}점',
                       ),
+                    const SizedBox(height: 10),
+                    Text(
+                      platformMessage,
+                      key: const Key('daily_platform_status'),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF37655E),
+                        height: 1.35,
+                      ),
+                    ),
                     const SizedBox(height: 18),
                     FilledButton.icon(
                       key: const Key('daily_new_attempt_button'),

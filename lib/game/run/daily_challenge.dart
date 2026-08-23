@@ -1,13 +1,14 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/stage_catalog.dart';
+import '../domain/stage_pattern.dart';
 import '../persistence/run_state_store.dart';
 import 'run_state.dart';
 import 'stable_seed.dart';
 import 'stage_pattern_session.dart';
 
 /// 오늘의 도전 날짜·패턴·보상 정의를 고정하는 버전이다.
-const String dailyChallengeVersion = 'daily-challenge-v1';
+const String dailyChallengeVersion = 'daily-challenge-v2-short';
 
 /// 실제 물리 판정에 사용하는 해석기 버전이다.
 const String dailyChallengePhysicsResolverVersion = 'shot-resolver-v1';
@@ -23,6 +24,59 @@ enum DailyChallengeMode {
 
   final String schemaName;
 }
+
+/// 한 번에 완주 가능한 세 장면짜리 일일 변주다.
+class DailyChallengeVariant {
+  const DailyChallengeVariant({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.stageIds,
+  });
+
+  final String id;
+  final String title;
+  final String summary;
+  final List<String> stageIds;
+
+  StageCatalog selectFrom(StageCatalog source) {
+    if (stageIds.length != 3 || stageIds.toSet().length != 3) {
+      throw StateError('일일 변주는 서로 다른 세 장면이어야 합니다: $id');
+    }
+    final selected = <StageDefinition>[];
+    for (final stageId in stageIds) {
+      selected.add(source.stageById(stageId));
+    }
+    return StageCatalog(schemaVersion: source.schemaVersion, stages: selected);
+  }
+}
+
+const List<DailyChallengeVariant> dailyChallengeVariants = [
+  DailyChallengeVariant(
+    id: 'trait_foundations',
+    title: '속성 입문 항로',
+    summary: '무거움과 탄성을 옮기고, 비워진 원본까지 다시 활용합니다.',
+    stageIds: ['stage_heavy', 'stage_bouncy', 'stage_drained'],
+  ),
+  DailyChallengeVariant(
+    id: 'causal_devices',
+    title: '장치 연쇄 항로',
+    summary: '문과 풍선, 남은 공을 차례로 연결해 길을 엽니다.',
+    stageIds: ['stage_chain_gate', 'stage_balloon', 'stage_persistent'],
+  ),
+  DailyChallengeVariant(
+    id: 'momentum_routes',
+    title: '속도와 반사 항로',
+    summary: '가속과 회전 반사, 연쇄 충돌로 짧은 고득점 경로를 만듭니다.',
+    stageIds: ['stage_speed', 'stage_rotating_reflector', 'stage_chain_score'],
+  ),
+  DailyChallengeVariant(
+    id: 'property_mastery',
+    title: '속성 종합 항로',
+    summary: '속성 강탈과 비워진 원본, 과거 공을 한 항해에서 조합합니다.',
+    stageIds: ['stage_property_shot', 'stage_drained', 'stage_persistent'],
+  ),
+];
 
 /// 기기 현지 시간대와 무관한 한국 표준시 날짜다.
 class DailyChallengeDate {
@@ -134,6 +188,11 @@ class DailyChallengeDefinition {
   final String resolverVersion;
   final int rootSeed;
   final String seedCode;
+
+  DailyChallengeVariant get variant =>
+      dailyChallengeVariants[date.day % dailyChallengeVariants.length];
+
+  StageCatalog selectCatalog(StageCatalog source) => variant.selectFrom(source);
 
   String get dateKey => date.key;
   String get displayDate => date.displayText;
