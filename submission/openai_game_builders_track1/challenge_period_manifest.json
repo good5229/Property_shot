@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "competition": {
+    "name": "OpenAI Game Builders Seoul",
+    "track": "Track 1",
+    "officialUrl": "https://openaigame2026.com/#apply:track-1"
+  },
+  "challengeWindow": {
+    "startsOn": "2026-08-04",
+    "endsOn": "2026-08-26"
+  },
+  "submission": {
+    "teamName": "김종백",
+    "gameTitle": "속성 한방",
+    "gameIntro": "주변 사물의 무거움·탄성·점착·뾰족함을 공으로 옮기는 물리 퍼즐입니다. 속성을 잃은 원본과 빗나간 공도 다음 샷의 기물로 남습니다. 60초 핵심 체험으로 규칙을 익히고, 섬의 관측소·등대·다리를 복구하며 다양한 해법을 발견하세요.",
+    "playUrl": "https://good5229.github.io/Property_shot/",
+    "thumbnail": "submission/openai_game_builders_track1/track1_thumbnail_1920x1080.png",
+    "demoVideo": "deferred_by_user"
+  },
+  "baseline": {
+    "description": "챌린지 시작 전부터 브라우저용 물리 퍼즐의 캠페인, 속성 이전, 섬 복구, 보상과 접근성 기반이 존재했다.",
+    "excludedExistingFeatures": [
+      "40개 생산 스테이지 패턴과 기본 물리 해석기",
+      "섬 복구 진행과 런 보상",
+      "키보드·터치 조작 및 기본 접근성"
+    ]
+  },
+  "newDuringChallenge": [
+    {
+      "id": "core_experience_60s",
+      "name": "60초 핵심 체험",
+      "completedOn": "2026-08-23",
+      "summary": "저장과 메뉴 탐색 없이 실제 생산 패턴 세 장면으로 핵심 규칙을 체험한다.",
+      "criteria": ["Playability", "Presentation"]
+    },
+    {
+      "id": "bidirectional_property_feedback",
+      "name": "양면 속성 변화",
+      "completedOn": "2026-08-23",
+      "summary": "공이 얻은 속성과 원본이 잃은 속성 및 물리 변화를 동시에 표현한다.",
+      "criteria": ["Originality", "Playability"]
+    },
+    {
+      "id": "progressive_home_disclosure",
+      "name": "진행도 기반 홈 공개",
+      "completedOn": "2026-08-23",
+      "summary": "처음에는 세 가지 핵심 행동만 보이고 진행에 맞춰 반복 콘텐츠를 연다.",
+      "criteria": ["Playability", "Release Potential", "Presentation"]
+    },
+    {
+      "id": "codex_puzzle_forge",
+      "name": "Codex Puzzle Forge",
+      "completedOn": "2026-08-23",
+      "summary": "사람의 목표, Codex 후보, Validator 반려·통과, 사람의 채택을 실제 증거와 함께 시각화한다.",
+      "criteria": ["Codex Collaboration", "Originality", "Presentation"]
+    }
+  ],
+  "officialCriteria": [
+    "Playability",
+    "Originality",
+    "Codex Collaboration",
+    "Release Potential",
+    "Presentation"
+  ]
+}
