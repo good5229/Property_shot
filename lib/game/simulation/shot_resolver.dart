@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../domain/entity_state.dart';
 import '../domain/game_state.dart';
 import '../domain/geometry.dart';
+import '../domain/hidden_mechanic_state.dart';
 import '../domain/shot_input.dart';
 import '../domain/trait.dart';
 import '../levels/levels.dart';
@@ -1130,7 +1131,7 @@ class ShotResolver {
             entities,
             hit.copyWith(active: false, solid: false, visualState: 'popped'),
           );
-          final balloonSwitch = _entityById(entities, 'balloon_switch');
+          final balloonSwitch = _hiddenMechanicLinkedFrom(entities, hit);
           stateTransitions.add(
             PhysicsStateTransition(
               sourceEntityId: hit.id,
@@ -1146,7 +1147,10 @@ class ShotResolver {
           if (balloonSwitch != null) {
             entities = _replace(
               entities,
-              balloonSwitch.copyWith(solid: true, visualState: 'revealed'),
+              balloonSwitch.copyWith(
+                solid: true,
+                visualState: HiddenMechanicState.revealed,
+              ),
             );
             stateTransitions.add(
               PhysicsStateTransition(
@@ -1155,7 +1159,7 @@ class ShotResolver {
                 targetType: balloonSwitch.type,
                 pathIndex: path.length - 1,
                 previousState: balloonSwitch.visualState,
-                nextState: 'revealed',
+                nextState: HiddenMechanicState.revealed,
                 position: balloonSwitch.position,
                 normal: collision.normal,
               ),
@@ -1166,7 +1170,18 @@ class ShotResolver {
                 from: balloonSwitch.position,
                 to: balloonSwitch.position,
                 triggerPathIndex: path.length,
-                visualState: 'revealed',
+                visualState: HiddenMechanicState.opening,
+                impactPosition: contactPosition,
+                impactNormal: collision.normal,
+              ),
+            );
+            moves.add(
+              ShotAnimationMove(
+                entityId: balloonSwitch.id,
+                from: balloonSwitch.position,
+                to: balloonSwitch.position,
+                triggerPathIndex: path.length + 6,
+                visualState: HiddenMechanicState.revealed,
                 impactPosition: contactPosition,
                 impactNormal: collision.normal,
               ),
@@ -1266,7 +1281,9 @@ class ShotResolver {
       if (hit.type == EntityType.switchPad) {
         final isBalloonSwitch = hit.id == 'balloon_switch';
         final acceptsAnyBall =
-            isBalloonSwitch || hit.id.startsWith('sequence_switch_');
+            isBalloonSwitch ||
+            hit.visualState == HiddenMechanicState.revealed ||
+            hit.id.startsWith('sequence_switch_');
         if (!acceptsAnyBall && !ball.traits.contains(TraitType.heavy)) {
           position = _separateFromCollision(
             hit,
@@ -3104,6 +3121,31 @@ class ShotResolver {
     return null;
   }
 
+  /// 공개 트리거가 자신의 [EntityState.linkId]로 숨은 기믹을 지정한다.
+  /// 이전 스테이지 데이터도 안전하게 재생할 수 있도록 숨은 대상이 정확히 하나인
+  /// 경우에만 제한적으로 추론한다. ID 이름에는 의존하지 않는다.
+  EntityState? _hiddenMechanicLinkedFrom(
+    List<EntityState> entities,
+    EntityState trigger,
+  ) {
+    final linkedId = trigger.linkId;
+    if (linkedId != null) {
+      final linked = _entityById(entities, linkedId);
+      if (linked != null &&
+          HiddenMechanicState.masksIdentity(linked.visualState)) {
+        return linked;
+      }
+    }
+    final concealed = entities
+        .where(
+          (entity) =>
+              entity.active &&
+              HiddenMechanicState.masksIdentity(entity.visualState),
+        )
+        .toList(growable: false);
+    return concealed.length == 1 ? concealed.single : null;
+  }
+
   List<EntityState> _openGates(List<EntityState> entities) {
     return [
       for (final entity in entities)
@@ -3630,11 +3672,14 @@ class ShotResolver {
               normal: normal,
             ),
           );
-          final balloonSwitch = _entityById(entities, 'balloon_switch');
+          final balloonSwitch = _hiddenMechanicLinkedFrom(entities, hit);
           if (balloonSwitch != null) {
             entities = _replace(
               entities,
-              balloonSwitch.copyWith(solid: true, visualState: 'revealed'),
+              balloonSwitch.copyWith(
+                solid: true,
+                visualState: HiddenMechanicState.revealed,
+              ),
             );
             stateTransitions?.add(
               PhysicsStateTransition(
@@ -3643,7 +3688,7 @@ class ShotResolver {
                 targetType: balloonSwitch.type,
                 pathIndex: collisionTrigger,
                 previousState: balloonSwitch.visualState,
-                nextState: 'revealed',
+                nextState: HiddenMechanicState.revealed,
                 position: balloonSwitch.position,
                 normal: normal,
               ),
@@ -3654,7 +3699,18 @@ class ShotResolver {
                 from: balloonSwitch.position,
                 to: balloonSwitch.position,
                 triggerPathIndex: collisionTrigger + 1,
-                visualState: 'revealed',
+                visualState: HiddenMechanicState.opening,
+                impactPosition: collision.position,
+                impactNormal: normal,
+              ),
+            );
+            moves?.add(
+              ShotAnimationMove(
+                entityId: balloonSwitch.id,
+                from: balloonSwitch.position,
+                to: balloonSwitch.position,
+                triggerPathIndex: collisionTrigger + 7,
+                visualState: HiddenMechanicState.revealed,
                 impactPosition: collision.position,
                 impactNormal: normal,
               ),
@@ -3761,7 +3817,9 @@ class ShotResolver {
       if (hit.type == EntityType.switchPad) {
         final isBalloonSwitch = hit.id == 'balloon_switch';
         final acceptsAnyBall =
-            isBalloonSwitch || hit.id.startsWith('sequence_switch_');
+            isBalloonSwitch ||
+            hit.visualState == HiddenMechanicState.revealed ||
+            hit.id.startsWith('sequence_switch_');
         if (!acceptsAnyBall &&
             !carriesHeavy &&
             !current.traits.contains(TraitType.heavy)) {

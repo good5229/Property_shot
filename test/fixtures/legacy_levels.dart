@@ -259,6 +259,7 @@ final legacyLevels = <LevelDefinition>[
         movable: false,
         restitution: 0.91,
         hitboxScale: 0.86,
+        linkId: 'balloon_switch',
       ),
       EntityState(
         id: 'spike_source',

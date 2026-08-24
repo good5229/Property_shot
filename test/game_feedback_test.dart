@@ -39,6 +39,19 @@ void main() {
     expect(cues, [SystemSoundType.alert]);
   });
 
+  test('미스터리 상자 공개는 충돌·스위치와 구분된 전용 큐를 낸다', () async {
+    final cues = <FeedbackCue>[];
+    final feedback = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+
+    feedback.mysteryRevealed();
+    await _flushFeedback();
+
+    expect(cues, [FeedbackCue.mysteryReveal]);
+  });
+
   test('젤리와 홀은 전용 합성 피드백 큐를 낸다', () async {
     final cues = <FeedbackCue>[];
     final feedback = GameFeedback(

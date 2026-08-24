@@ -2752,7 +2752,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null,
+              "linkId": "balloon_switch",
               "movableWhenDrained": false
             },
             {
@@ -2992,7 +2992,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null,
+              "linkId": "balloon_switch",
               "movableWhenDrained": false
             },
             {
@@ -3254,7 +3254,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null,
+              "linkId": "balloon_switch",
               "movableWhenDrained": false
             },
             {
@@ -3632,7 +3632,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null,
+              "linkId": "balloon_switch",
               "movableWhenDrained": false
             }
           ],

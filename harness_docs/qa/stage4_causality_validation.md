@@ -17,7 +17,7 @@
 5. `balloon_gate`가 `open: true`, `solid: false`
 6. 홀 진입 또는 이후의 허용된 물리 경로로 성공
 
-풍선 팝만 발생한 샷에서는 문을 열지 않는다. 스위치는 팝 전 `solid: false`, `visualState: hidden`이고 팝 후 `solid: true`, `visualState: revealed`가 된다.
+풍선 팝만 발생한 샷에서는 문을 열지 않는다. 공개 트리거인 풍선은 `linkId`로 숨은 기믹을 가리킨다. 대상은 팝 전 `solid: false`, `visualState: hidden`이고 물리 판정에서는 `solid: true`, `visualState: revealed`가 된다. 화면 재생은 그 사이에 최소 6 cursor unit의 `mystery_opening` 상태를 두어 `풍선 파열 → ? 상자 개방 → 스위치 공개 → 스위치 충돌 → 문 열림`을 읽을 수 있게 한다.
 
 ### 일반 공·우회 경로
 
@@ -32,23 +32,25 @@
 | 일반 공 풍선 반사 | `test/balloon_physics_test.dart` | 통과 |
 | 고파워 충돌 충격 증가 | `test/balloon_physics_test.dart` | 통과 |
 | 팝 후 스위치 노출, 문 직접 개방 금지 | `test/balloon_physics_test.dart` | 통과 |
+| 임의 ID 연결 대상 공개·개방/공개 순서 | `test/balloon_physics_test.dart` | 통과 |
 | 팝→스위치→문 이벤트 순서 | `test/puzzle_solution_audit_test.dart` | 통과 |
 | 물리 상태 전이 이벤트 순서 | `PhysicsStateTransition`·`PhysicsEventKind.stateChange` | 통과 |
 | 팝→문→홀 종단간 최종 상태 | 같은 테스트의 실제 `levels[3]` 탐색 | 통과 |
 | 실제 홀 포획·포획 후 충돌 없음 | `test/stage4_end_to_end_test.dart` | 통과 |
 | 뾰족함 없는 우회 성공 | `test/puzzle_solution_audit_test.dart` | 통과 |
 | 기본 플레이 화면 20개(4단계×5해상도) | `test/game_screen_golden_test.dart` | 통과 |
-| 시작·팝·스위치/문·홀·결과 25개(5상태×5해상도) | `test/stage4_causality_golden_test.dart` | 통과 |
+| 시작·? 상자 개방·팝·스위치/문·홀·결과 30개(6상태×5해상도) | `test/stage4_causality_golden_test.dart` | 통과 |
 
 ## 화면 상태 기준
 
 - 시작: 풍선, 문, 홀, 박스가 식별되고 스위치는 표시하지 않는다.
+- 개방 중: `?` 상자가 흔들리고 금빛 파동 뒤로 실제 기믹이 교차 노출되며 전용 소리·진동이 한 번 발생한다. 공개 전 HUD·접근성 레이블은 스위치라는 정체를 말하지 않는다.
 - 팝 직후: 풍선 팝 이펙트와 드러난 스위치가 보이고, 안내는 스위치 충돌을 다음 행동으로 제시한다.
 - 스위치 충돌: 스위치가 점멸·눌림 상태가 되고 문 열림 애니메이션이 시작된다.
 - 홀 진입: 홀 표면·테두리·어두운 내부·깃발이 겹치지 않고 공 포획 애니메이션이 우선한다.
 
 ## 남은 검증
 
-- 5개 상태·5개 해상도 Golden fixture 25개는 추가·통과했다. 상태별 실제 기기 캡처만 남아 있다.
+- 6개 상태·5개 해상도 Golden fixture 30개는 추가·통과했다. 상태별 실제 기기 캡처만 남아 있다.
 - 실제 iOS·Android 장치에서 접근성 트리와 reduced motion 상태를 확인한다.
 - 긴 연쇄와 고속 진입에서 `chain_safety_stop`이 정상 성공으로 은닉되지 않는지 스트레스 테스트한다.

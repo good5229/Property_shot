@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/hidden_mechanic_state.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/levels/levels.dart';
@@ -84,6 +85,66 @@ void main() {
     expect(result.state.entityById('balloon_switch')!.visualState, 'revealed');
     expect(result.state.entityById('balloon_switch')!.solid, isTrue);
     expect(result.state.entityById('balloon_gate')!.open, isFalse);
+    final revealMoves = result.moves
+        .where((move) => move.entityId == 'balloon_switch')
+        .toList(growable: false);
+    expect(
+      revealMoves.map((move) => move.visualState),
+      containsAllInOrder([
+        HiddenMechanicState.opening,
+        HiddenMechanicState.revealed,
+      ]),
+    );
+    final openingIndex = revealMoves.indexWhere(
+      (move) => move.visualState == HiddenMechanicState.opening,
+    );
+    final revealedIndex = revealMoves.indexWhere(
+      (move) => move.visualState == HiddenMechanicState.revealed,
+    );
+    expect(openingIndex, greaterThanOrEqualTo(0));
+    expect(revealedIndex, greaterThan(openingIndex));
+    expect(
+      revealMoves[revealedIndex].triggerPathIndex -
+          revealMoves[openingIndex].triggerPathIndex,
+      greaterThanOrEqualTo(6),
+    );
+  });
+
+  test('풍선 linkId가 가리키는 임의 ID의 숨은 기믹을 공개한다', () {
+    final base = stateWithBalloon(trait: TraitType.sharp);
+    final linked = base.copyWith(
+      entities: [
+        for (final entity in base.entities)
+          if (entity.id == 'balloon')
+            entity.copyWith(linkId: 'secret_pad')
+          else if (entity.id == 'balloon_switch')
+            entity.copyWith(id: 'secret_pad', position: const Vec2(300, 90))
+          else
+            entity,
+      ],
+    );
+
+    final result = resolver.resolve(
+      linked,
+      const ShotInput(
+        direction: Vec2(1, 0),
+        power: 0.75,
+        equippedTrait: TraitType.sharp,
+      ),
+    );
+
+    final secret = result.state.entityById('secret_pad')!;
+    expect(secret.visualState, HiddenMechanicState.revealed);
+    expect(secret.solid, isTrue);
+    expect(
+      result.moves
+          .where((move) => move.entityId == 'secret_pad')
+          .map((move) => move.visualState),
+      containsAllInOrder([
+        HiddenMechanicState.opening,
+        HiddenMechanicState.revealed,
+      ]),
+    );
   });
 
   test('이전에 발사된 뾰족함 공도 풍선을 터뜨린다', () {

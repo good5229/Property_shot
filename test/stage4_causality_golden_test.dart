@@ -6,6 +6,7 @@ import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/property_shot_game.dart';
+import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,6 +32,7 @@ void main() {
 
   for (final variant in const [
     'start',
+    'mystery_opening',
     'popped',
     'switch_opening',
     'hole',
@@ -64,9 +66,47 @@ void main() {
         );
         await gameWidgetState.currentGame.toBeLoaded();
         await tester.pump(const Duration(seconds: 1));
+        if (variant == 'mystery_opening') {
+          final start = _stage4State('start');
+          final next = _stage4State('popped');
+          gameWidgetState.currentGame.setStateSnapshot(
+            next,
+            path: const [
+              Vec2(56, 466),
+              Vec2(80, 430),
+              Vec2(110, 390),
+              Vec2(140, 350),
+              Vec2(170, 310),
+              Vec2(184, 270),
+              Vec2(184, 260),
+              Vec2(190, 250),
+              Vec2(200, 240),
+              Vec2(210, 230),
+            ],
+            transitionStart: start,
+            moves: const [
+              ShotAnimationMove(
+                entityId: 'balloon_switch',
+                from: Vec2(214, 214),
+                to: Vec2(214, 214),
+                triggerPathIndex: 3,
+                visualState: 'mystery_opening',
+              ),
+              ShotAnimationMove(
+                entityId: 'balloon_switch',
+                from: Vec2(214, 214),
+                to: Vec2(214, 214),
+                triggerPathIndex: 9,
+                visualState: 'revealed',
+              ),
+            ],
+          );
+          gameWidgetState.currentGame.setAnimationCursorForTest(6.8);
+          await tester.pump();
+        }
 
         expect(find.byKey(const Key('aim_area')), findsOneWidget);
-        if (variant == 'start') {
+        if (variant == 'start' || variant == 'mystery_opening') {
           expect(find.bySemanticsLabel('미스터리 상자, 조건 달성 전'), findsOneWidget);
           expect(find.bySemanticsLabel('스위치, 누르기 전'), findsNothing);
         } else if (variant == 'popped') {
@@ -129,6 +169,7 @@ GameState _stage4State(String variant) {
       .copyWith(
         message: switch (variant) {
           'start' => '풍선 확인 · 여러 경로로 도전',
+          'mystery_opening' => '풍선 확인 · 여러 경로로 도전',
           'popped' => '풍선이 터졌어요. 드러난 스위치를 맞혀 문을 열어 보세요.',
           'switch_opening' => '풍선 뒤 스위치가 눌려 문이 열렸습니다.',
           'hole' => '공이 홀에 들어갔어요!',

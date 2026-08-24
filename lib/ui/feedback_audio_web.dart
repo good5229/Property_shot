@@ -89,6 +89,12 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
         volume: 0.06,
         wave: 'sine',
       ),
+      FeedbackCue.mysteryReveal => (
+        frequency: 880.0,
+        duration: 0.19,
+        volume: 0.065,
+        wave: 'triangle',
+      ),
       FeedbackCue.switchPressed => (
         frequency: 420.0,
         duration: 0.12,

@@ -75,6 +75,11 @@ Uint8List feedbackCueBytesForTesting(FeedbackCue cue) =>
     milliseconds: 130,
     volume: 0.2,
   ),
+  FeedbackCue.mysteryReveal => (
+    frequency: 880,
+    milliseconds: 190,
+    volume: 0.22,
+  ),
   FeedbackCue.switchPressed => (
     frequency: 420,
     milliseconds: 120,

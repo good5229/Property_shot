@@ -70,7 +70,7 @@ Map<String, String> stageDiscoveryMilestoneLabels(int levelIndex) =>
         2 => const [('switch_pressed', '스위치 작동'), ('gate_opened', '문 열림')],
         3 => const [
           ('sharp_equipped', '뾰족함 장착'),
-          ('balloon_popped', '풍선 파열·스위치 공개'),
+          ('balloon_popped', '풍선 파열·? 상자 개방'),
         ],
         4 => const [
           ('source_drained', '원본 비우기'),
@@ -152,7 +152,7 @@ List<StageDiscoveryMilestone> stageDiscoveryMilestones({
       item('sharp_equipped', '뾰족함 장착', usedTraits.contains(TraitType.sharp)),
       item(
         'balloon_popped',
-        '풍선 파열·스위치 공개',
+        '풍선 파열·? 상자 개방',
         events.contains('balloon_switch_revealed') ||
             state.entities.any(
               (entity) =>

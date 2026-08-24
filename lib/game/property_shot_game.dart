@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'domain/entity_state.dart';
 import 'domain/game_state.dart';
 import 'domain/geometry.dart';
+import 'domain/hidden_mechanic_state.dart';
 import 'domain/shot_input.dart';
 import 'domain/trait.dart';
 import 'levels/levels.dart';
@@ -397,6 +398,8 @@ class PropertyShotGame extends FlameGame {
     _holeImage = null;
     _wallImage?.dispose();
     _wallImage = null;
+    _hiddenMechanicImage?.dispose();
+    _hiddenMechanicImage = null;
     for (final cached in _staticEntityPictures.values) {
       cached.picture.dispose();
     }
@@ -706,7 +709,9 @@ class PropertyShotGame extends FlameGame {
     if (balloon == null || balloonSwitch == null || gate == null) {
       return;
     }
-    final switchIsHidden = balloonSwitch.visualState == 'hidden';
+    final switchIsHidden = HiddenMechanicState.masksIdentity(
+      balloonSwitch.visualState,
+    );
     if (!switchIsHidden &&
         balloonSwitch.visualState != 'revealed' &&
         balloonSwitch.visualState != 'pressed') {
@@ -1041,9 +1046,14 @@ class PropertyShotGame extends FlameGame {
       final duration = _moveDuration(move);
       final local = (elapsed / duration).clamp(0.0, 1.0);
       final position = _sampleMovePath(move, elapsed);
+      final preservePressedReveal =
+          animated.visualState == 'pressed' &&
+          move.visualState == HiddenMechanicState.revealed;
       animated = animated.copyWith(
         position: position,
-        visualState: local > 0 ? move.visualState : entity.visualState,
+        visualState: local > 0 && !preservePressedReveal
+            ? move.visualState
+            : animated.visualState,
       );
     }
     for (final step in _animationReflectorSchedule.where(
@@ -1726,7 +1736,7 @@ class PropertyShotGame extends FlameGame {
     if (!entity.active) {
       return;
     }
-    if (entity.visualState == 'hidden') {
+    if (HiddenMechanicState.masksIdentity(entity.visualState)) {
       _drawHiddenMechanicPreview(canvas, entity);
       return;
     }
@@ -1923,12 +1933,86 @@ class PropertyShotGame extends FlameGame {
 
   void _drawHiddenMechanicPreview(Canvas canvas, EntityState entity) {
     final center = _project(entity.position);
+    final opening = entity.visualState == HiddenMechanicState.opening;
+    final progress = opening ? _hiddenMechanicOpeningProgress(entity) : 0.0;
     final side = math.max(
       48.0,
       math.min(56.0, math.max(entity.size.x, entity.size.y) * 0.86),
     );
+    if (opening) {
+      final burstOpacity = (1 - progress).clamp(0.0, 1.0);
+      canvas.drawCircle(
+        center,
+        reducedMotion ? side * 0.62 : side * (0.42 + progress * 0.48),
+        Paint()
+          ..color = const Color(
+            0xFFFFD969,
+          ).withValues(alpha: (strongFlash ? 0.28 : 0.12) * burstOpacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = reducedMotion ? 3 : 5,
+      );
+      if (!reducedMotion && strongFlash) {
+        final rayPaint = Paint()
+          ..color = const Color(
+            0xFFFFE9A6,
+          ).withValues(alpha: 0.8 * burstOpacity)
+          ..strokeWidth = 2.4
+          ..strokeCap = StrokeCap.round;
+        for (var index = 0; index < 8; index++) {
+          final angle = index * math.pi / 4;
+          final direction = Offset(math.cos(angle), math.sin(angle));
+          canvas.drawLine(
+            center + direction * (side * (0.45 + progress * 0.08)),
+            center + direction * (side * (0.58 + progress * 0.24)),
+            rayPaint,
+          );
+        }
+      }
+      final revealedImage =
+          _gimmickImages[entity.type] ?? _objectImages[entity.type];
+      if (revealedImage != null && progress > 0.34) {
+        final reveal = ((progress - 0.34) / 0.66).clamp(0.0, 1.0);
+        final source = Rect.fromLTWH(
+          0,
+          0,
+          revealedImage.width.toDouble(),
+          revealedImage.height.toDouble(),
+        );
+        canvas.save();
+        canvas.translate(center.dx, center.dy);
+        canvas.scale(0.74 + reveal * 0.26);
+        canvas.drawImageRect(
+          revealedImage,
+          source,
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: side * 0.9,
+            height: side * 0.9,
+          ),
+          Paint()
+            ..filterQuality = _runtimeFilterQuality
+            ..color = Colors.white.withValues(alpha: reveal),
+        );
+        canvas.restore();
+      }
+    }
+    final shake = opening && !reducedMotion
+        ? math.sin(progress * math.pi * 8) * (1 - progress) * 3.2
+        : 0.0;
+    final crateOpacity = opening
+        ? (1 - ((progress - 0.46) / 0.54).clamp(0.0, 1.0))
+        : 1.0;
+    final crateScale = opening && !reducedMotion
+        ? 1 + math.sin(progress * math.pi) * 0.1
+        : 1.0;
+    canvas.save();
+    canvas.translate(
+      center.dx + shake,
+      center.dy - (reducedMotion ? 0 : progress * 3),
+    );
+    canvas.scale(crateScale);
     final previewRect = Rect.fromCenter(
-      center: center,
+      center: Offset.zero,
       width: side,
       height: side,
     );
@@ -1938,7 +2022,7 @@ class PropertyShotGame extends FlameGame {
         Radius.circular(side * 0.18),
       ),
       Paint()
-        ..color = const Color(0x5224352D)
+        ..color = const Color(0x5224352D).withValues(alpha: 0.32 * crateOpacity)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
     );
     final mysteryImage = _hiddenMechanicImage;
@@ -1953,8 +2037,11 @@ class PropertyShotGame extends FlameGame {
         mysteryImage,
         source,
         previewRect,
-        Paint()..filterQuality = _runtimeFilterQuality,
+        Paint()
+          ..filterQuality = _runtimeFilterQuality
+          ..color = Colors.white.withValues(alpha: crateOpacity),
       );
+      canvas.restore();
       return;
     }
 
@@ -1970,7 +2057,7 @@ class PropertyShotGame extends FlameGame {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4,
     );
-    final badgeCenter = center.translate(0, -1);
+    final badgeCenter = const Offset(0, -1);
     final questionPaint = Paint()
       ..color = const Color(0xFFFFC43D)
       ..style = PaintingStyle.stroke
@@ -1999,6 +2086,35 @@ class PropertyShotGame extends FlameGame {
       badgeCenter.translate(0, side * 0.3),
       math.max(2, side * 0.045),
       Paint()..color = const Color(0xFFFFC43D),
+    );
+    canvas.restore();
+  }
+
+  double _hiddenMechanicOpeningProgress(EntityState entity) {
+    final moves = _animationMovesByEntity[entity.id] ?? const [];
+    ShotAnimationMove? openingMove;
+    ShotAnimationMove? revealMove;
+    for (final move in moves) {
+      if (move.visualState == HiddenMechanicState.opening &&
+          move.triggerPathIndex <= _animationCursor) {
+        openingMove = move;
+      } else if (move.visualState == HiddenMechanicState.revealed &&
+          openingMove != null &&
+          move.triggerPathIndex >= openingMove.triggerPathIndex) {
+        revealMove = move;
+        break;
+      }
+    }
+    if (openingMove == null) return 0;
+    final duration = math.max(
+      1.0,
+      (revealMove?.triggerPathIndex ??
+              openingMove.triggerPathIndex + _moveDuration(openingMove)) -
+          openingMove.triggerPathIndex,
+    );
+    return ((_animationCursor - openingMove.triggerPathIndex) / duration).clamp(
+      0.0,
+      1.0,
     );
   }
 

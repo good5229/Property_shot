@@ -19,6 +19,7 @@ import '../game/analysis/stage_chain_challenge.dart';
 import '../game/domain/entity_state.dart';
 import '../game/domain/game_state.dart';
 import '../game/domain/geometry.dart';
+import '../game/domain/hidden_mechanic_state.dart';
 import '../game/domain/level_definition.dart';
 import '../game/domain/shot_input.dart';
 import '../game/domain/trait.dart';
@@ -252,6 +253,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Duration? _lastPointerTimeStamp;
   Duration? _frameTimeStampAtLastPointer;
   bool _isAnimatingShot = false;
+  GameState? _semanticAnimationStartState;
   bool _isCommittingShot = false;
   bool _isCommittingTraitAction = false;
   bool _isCommittingRewardAction = false;
@@ -1349,6 +1351,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _inspectedEntityId = null;
     _showClearPopup = false;
     _showFailurePopup = false;
+    _semanticAnimationStartState = null;
     _failureReplay = null;
     _successAimGhostActive = false;
     _setPreviousAimInput(null);
@@ -2100,6 +2103,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         );
     _aimStartedForShot = false;
     _pendingLaunchDirection = null;
+    _semanticAnimationStartState = shotStartState;
     _isAnimatingShot = true;
     final assistedState = _stateWithIntentAssistFeedback(
       result.state,
@@ -2445,6 +2449,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final persistence = retry();
     _clearPersistenceFuture = persistence;
     setState(() {
+      _semanticAnimationStartState = null;
       _showClearPersistenceError = false;
       _isAnimatingShot = true;
     });
@@ -2620,6 +2625,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     setState(() {
       _isAnimatingShot = false;
+      _semanticAnimationStartState = null;
       _showClearPopup = false;
       _showFailurePopup = !cleared;
     });
@@ -2720,6 +2726,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     if (move.visualState == 'pressed') {
       _feedback.switchOpened();
+    } else if (move.visualState == HiddenMechanicState.opening) {
+      _feedback.mysteryRevealed();
     } else if (move.visualState == 'opening') {
       _feedback.gateOpened();
     } else if (move.visualState == 'popped') {
@@ -2727,7 +2735,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     final entity = _state.entityById(move.entityId);
     final objectType = entity?.type.name;
-    if (move.visualState == 'pressed' && entity?.type == EntityType.switchPad) {
+    if (move.visualState == HiddenMechanicState.opening) {
+      _telemetry.record(
+        '미스터리 상자 개방',
+        stage: _state.levelIndex,
+        target: move.entityId,
+        result: HiddenMechanicState.revealed,
+        eventCode: 'hidden_mechanic_revealed',
+        objectId: move.entityId,
+        objectType: objectType,
+        position: move.impactPosition,
+        collisionNormal: move.impactNormal,
+      );
+    } else if (move.visualState == 'pressed' &&
+        entity?.type == EntityType.switchPad) {
       _telemetry.record(
         '스위치 작동',
         stage: _state.levelIndex,
@@ -3530,6 +3551,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return '$name, $state';
   }
 
+  List<EntityState> get _semanticEntities {
+    return _playerVisibleState.entities;
+  }
+
+  GameState get _playerVisibleState =>
+      _isAnimatingShot && _semanticAnimationStartState != null
+      ? _semanticAnimationStartState!
+      : _state;
+
   Vec2 _toLogicalPosition(Offset localPosition, Size fieldSize) {
     final scale =
         (fieldSize.width / logicalSize.x < fieldSize.height / logicalSize.y)
@@ -4169,6 +4199,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final playerVisibleState = _playerVisibleState;
     final inspectedEntity = _inspectedEntityId == null
         ? null
         : _state.entityById(_inspectedEntityId!);
@@ -4256,7 +4287,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 if (!compactLayout)
                                   _Hud(
                                     tutorialActive: tutorialTarget != null,
-                                    state: _state,
+                                    state: playerVisibleState,
                                     discoveryMilestones: _discoveryMilestones,
                                     rewardGuide: _stageRewardGuide,
                                     unlockedLevel: _unlockedLevel,
@@ -4300,7 +4331,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       compact: true,
                                       dense: denseCompact,
                                       tutorialActive: tutorialTarget != null,
-                                      state: _state,
+                                      state: playerVisibleState,
                                       discoveryMilestones: _discoveryMilestones,
                                       rewardGuide: _stageRewardGuide,
                                       unlockedLevel: _unlockedLevel,
@@ -4675,7 +4706,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                       ),
                                                     ),
                                                   for (final entity
-                                                      in _state.entities)
+                                                      in _semanticEntities)
                                                     if (entity.active)
                                                       Positioned(
                                                         left:
@@ -9503,7 +9534,8 @@ String _entityDescription(EntityState entity) {
   }
 }
 
-bool _isHiddenMechanic(EntityState entity) => entity.visualState == 'hidden';
+bool _isHiddenMechanic(EntityState entity) =>
+    HiddenMechanicState.masksIdentity(entity.visualState);
 
 String _reflectorDirectionLabel(int orientation) {
   return switch (orientation % 4) {

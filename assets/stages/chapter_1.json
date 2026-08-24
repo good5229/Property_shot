@@ -2652,7 +2652,7 @@
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": "balloon_switch"
             },
             {
               "id": "spike_source",
@@ -2882,7 +2882,7 @@
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": "balloon_switch"
             },
             {
               "id": "spike_source",
@@ -3127,7 +3127,7 @@
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": "balloon_switch"
             },
             {
               "id": "spike_source",
@@ -3473,7 +3473,7 @@
               "visualState": "",
               "hitboxScale": 0.86,
               "restitution": 0.91,
-              "linkId": null
+              "linkId": "balloon_switch"
             }
           ]
         }

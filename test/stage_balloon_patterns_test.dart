@@ -92,6 +92,31 @@ void main() {
     }
   });
 
+  test('모든 숨은 기믹은 정확한 풍선 공개 트리거와 연결된다', () {
+    for (final pattern in stage.patterns) {
+      final hiddenIds = pattern.objects
+          .where((object) => object.visualState == 'hidden')
+          .map((object) => object.id)
+          .toSet();
+      expect(hiddenIds, isNotEmpty, reason: pattern.patternId);
+      final revealLinks = pattern.objects
+          .where((object) => object.type == EntityType.balloon)
+          .map((object) => object.linkId)
+          .whereType<String>()
+          .toList(growable: false);
+      expect(
+        revealLinks.toSet(),
+        hiddenIds,
+        reason: '${pattern.patternId}: $revealLinks → $hiddenIds',
+      );
+      expect(
+        revealLinks.length,
+        hiddenIds.length,
+        reason: '${pattern.patternId}: 하나의 숨은 기믹에 공개 트리거를 중복 연결하지 않습니다.',
+      );
+    }
+  });
+
   test('대표 sharp·none 경로가 선언한 실제 family를 증명한다', () {
     const resolver = ShotResolver();
     final results = <String, ShotResult>{};

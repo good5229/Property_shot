@@ -47,6 +47,17 @@ void main() {
     expect(questions.every((question) => question.endsWith('?')), isTrue);
   });
 
+  test('4단계 공개 전 발견 문구는 미스터리 상자의 정체를 누설하지 않는다', () {
+    final publicCopy = [
+      stageDiscoveryQuestion(3),
+      stageDiscoveryCompactPath(3),
+      ...stageDiscoveryMilestoneLabels(3).values,
+    ].join(' ');
+
+    expect(publicCopy, contains('? 상자'));
+    expect(publicCopy, isNot(contains('스위치')));
+  });
+
   test('10개 스테이지는 지도 저장에 사용할 안정 발견 ID를 각 3개 제공한다', () {
     for (var index = 0; index < 10; index++) {
       final ids = stageDiscoveryMilestoneIds(index);

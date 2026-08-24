@@ -588,6 +588,16 @@ class GameFeedback {
     );
   }
 
+  void mysteryRevealed() {
+    _emit(
+      'mystery_revealed',
+      minimumInterval: const Duration(milliseconds: 100),
+      haptic: HapticFeedback.mediumImpact,
+      cue: FeedbackCue.mysteryReveal,
+      alert: true,
+    );
+  }
+
   void switchOpened() {
     _emit(
       'switch_opened',
