@@ -425,6 +425,44 @@ void main() {
     );
   });
 
+  test('10단계 A/C는 선언된 정규·대체 풀이 계열을 실제 물리로 모두 증명한다', () {
+    final manifest = buildRuntimeValidationManifest();
+    const targetPatternIds = {'stage_property_shot_a', 'stage_property_shot_c'};
+    final stage = sourceCatalog.stages.singleWhere(
+      (item) => item.stageId == 'stage_property_shot',
+    );
+
+    for (final patternId in targetPatternIds) {
+      final pattern = stage.patterns.singleWhere(
+        (item) => item.patternId == patternId,
+      );
+      final scenarios = manifest[patternId]!;
+      expect(
+        scenarios.map((scenario) => scenario.familyId).toSet(),
+        pattern.solutionFamilies.toSet(),
+        reason: '$patternId의 선언된 모든 풀이 계열은 독립 시나리오여야 한다.',
+      );
+
+      final evidence = ShotResolverPatternRuntimeProbe(
+        representativeScenarios: scenarios,
+        requireSolutionContract: true,
+        maxProbeCount: scenarios.length,
+        maxShots: scenarios.fold<int>(
+          0,
+          (sum, scenario) => sum + scenario.inputs.length * 2,
+        ),
+      ).probe(stage: stage, pattern: pattern);
+
+      expect(evidence.routeObserved, isTrue, reason: patternId);
+      expect(
+        evidence.observedSolutionFamilies,
+        containsAll(pattern.solutionFamilies),
+        reason: '$patternId의 정규·대체 해법 모두 성공 증거가 필요하다.',
+      );
+      expect(evidence.rewardFreeRouteObserved, isTrue, reason: patternId);
+    }
+  });
+
   test('대표 fixture 누락과 무보상 성공 누락을 카탈로그 게이트가 거부한다', () {
     final manifest = buildRuntimeValidationManifest();
     final firstPattern = sourceCatalog.stages.first.patterns.first;

@@ -4,6 +4,13 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-25] tuning | difficulty-learning-loop start
+
+- 브랜치는 `codex/difficulty-learning-loop`, GitHub Issue는 없고 `harness_docs/dev-wiki/backlog.md`에 활성 항목을 등록했다.
+- 포함 범위는 Stage 10 런타임 증거, 과난도 패턴 조정, 파동형 캠페인 곡선, 시각적 실패 학습, 복구 시설·개인 기록 반복 동기다. 새 모드·화폐·외부 자산은 범위에서 제외한다.
+- 프로젝트 페이지로 `README.md`, `harness_docs/index.md`, `harness_docs/plans/current_iteration.md`, `harness_docs/qa/stage_pattern_validator_validation.md`, 입력 보정 가상 플레이 QA를 사용한다. 웹 근거는 Juul의 실패·난도 연구, MDA, Game Accessibility Guidelines와 역할 색인의 공식 문서를 재확인한다.
+- 동료 검토는 퍼즐·레벨 설계, 실패 학습 UX·접근성, 시스템·QA 관점으로 분리하고 통합 전 P0/P1을 교차 검토한다.
+
 ## [2026-08-16] contest-readiness | 경기게임오디션 일반부문 경쟁력 보강
 
 - 동일 팀명·대표자명으로 경기게임오디션 수상 이력이 없음을 사용자에게 확인받아 최초 참가 가점 3점의 전제로 기록했다. 실제 인정 여부는 접수 정보와 주최 측 판정에 따른다.

@@ -14,6 +14,19 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [ ] 난도·학습·반복 루프 튜닝
+  - branch: codex/difficulty-learning-loop
+  - issue: 없음
+  - summary: Stage 10 런타임 증거 공백을 닫고, 가상 플레이에서 과도한 난도로 분류된 패턴을 조정하며, 캠페인 난도 곡선·시각적 실패 학습·복구 시설과 개인 기록의 반복 동기를 순차적으로 강화한다.
+  - notes: 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 범위 밖으로 보존한다. 새 모드·화폐·외부 자산은 추가하지 않고, 결정론적 물리·기믹 우위·보정 선택권을 유지한다.
+  - progress:
+    - [x] Stage 10 런타임 대표 해법·무보상 경로 증거 동기화
+    - [ ] 과도한 난도 패턴 조정과 가상 플레이 임계 검증
+    - [ ] 학습→확인→응용→숙9련 캠페인 난도 곡선
+    - [ ] 보드 위 첫 이탈·첫/마지막 충돌 실패 학습 피드백
+    - [ ] 복구 시설·개인 기록 주간 목표와 상태 가시화
+    - [ ] 전체 검증·커밋·푸시·배포
+
 - [x] OpenAI Game Builders Seoul Track 1 대응
   - branch: main (사용자 요청으로 별도 브랜치 없음)
   - issue: 없음

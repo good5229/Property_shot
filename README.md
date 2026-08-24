@@ -217,7 +217,7 @@ dart run tool/generate_stage_catalog.dart --check --validate-runtime
 - Web release·Android release APK 생성 및 Android ARM64 에뮬레이터 실행 확인
 - 최신 Web release의 390×844·768×1024 샷 구간은 Chromium 3회 측정에서 p95 17.5ms 이하, 50ms 이상 Long Task 0건, 콘솔 오류 0건
 
-현재 production 런타임 프로브에는 `stage_property_shot_a`와 `stage_property_shot_c`의 보상 없는 대체 경로·해법군 대표 증거가 런타임 매니페스트와 동기화되지 않은 공백이 있습니다. 실제 `ShotResolver` 기반 10단계 집중 테스트와 40패턴 기믹 우위 테스트는 통과하지만, 이 증거 목록이 보강되기 전까지 런타임 프로브 통과로 표기하지 않습니다.
+production 런타임 프로브는 `stage_property_shot_a`와 `stage_property_shot_c`의 정규 기믹 해법과 문 개방 뒤 뱅크 샷 대체 해법을 각각 독립 시나리오로 실행합니다. 실제 `ShotResolver` 기반 10단계 집중 테스트와 40패턴 기믹 우위 테스트뿐 아니라, 두 패턴이 선언한 모든 해법군의 성공·무보상 증거까지 카탈로그 회귀 테스트에서 확인합니다.
 
 상세 근거는 [통합 검증 기록](harness_docs/qa/validation_results.md), [기믹 우위 검증](harness_docs/qa/gimmick_advantage_validation.md), [StagePatternValidator 검증](harness_docs/qa/stage_pattern_validator_validation.md)에 있습니다.
 

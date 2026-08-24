@@ -128,18 +128,40 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
   }
   for (final fixture in stage10PropertyShotSolutions) {
     final directFamilyId = fixture.directFamilyId;
-    final openedGateBankInput = fixture.openedGateBankInput;
-    final familyId = directFamilyId ?? 'opened_gate_bank';
+    if (directFamilyId != null) {
+      add(
+        fixture.patternId,
+        PatternRuntimeScenario(
+          id: '${fixture.patternId}_$directFamilyId',
+          familyId: directFamilyId,
+          inputs: [fixture.directInput],
+        ),
+      );
+      continue;
+    }
+
+    // A/C 계약은 기믹을 직접 완성하는 정규 해법과, 같은 첫 발로 문을 연 뒤
+    // 뱅크 샷으로 끝내는 대체 해법을 모두 갖는다. 이전 manifest는 후자만
+    // 실행하면서 정규 해법의 family 증거가 있는 것처럼 보이게 했다.
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_$familyId',
-        familyId: familyId,
-        inputs: directFamilyId != null
-            ? [fixture.directInput]
-            : [fixture.firstInput, openedGateBankInput!],
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [fixture.firstInput, fixture.secondInput],
       ),
     );
+    final openedGateBankInput = fixture.openedGateBankInput;
+    if (openedGateBankInput != null) {
+      add(
+        fixture.patternId,
+        PatternRuntimeScenario(
+          id: '${fixture.patternId}_opened_gate_bank',
+          familyId: 'opened_gate_bank',
+          inputs: [fixture.firstInput, openedGateBankInput],
+        ),
+      );
+    }
   }
 
   return {
