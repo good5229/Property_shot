@@ -1653,11 +1653,21 @@ void main() {
     expect(game.previousAimInput, isNotNull);
     expect(game.previousAimInput!.direction, const Vec2(1, 0));
     expect(game.previousShotPath.length, greaterThanOrEqualTo(2));
+    expect(game.failureReviewMarkers, isNotEmpty);
+    expect(game.failureReviewMarkers.length, lessThanOrEqualTo(3));
+    expect(
+      tester
+          .widget<Focus>(find.byKey(const Key('aim_keyboard_focus')))
+          .focusNode
+          ?.hasFocus,
+      isTrue,
+    );
 
     await tester.tap(find.byKey(const Key('rewind_button')).first);
     await tester.pump();
     expect(game.previousAimInput, isNull);
     expect(game.previousShotPath, isEmpty);
+    expect(game.failureReviewMarkers, isEmpty);
     expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
   });
 
@@ -1690,6 +1700,39 @@ void main() {
     expect(game.previousAimInput, isNull);
     expect(find.byKey(const Key('previous_aim_semantics')), findsNothing);
     expect(find.bySemanticsLabel(RegExp('각도나 힘 한 가지만')), findsWidgets);
+  });
+
+  testWidgets('실패 팝업의 시스템 뒤로가기도 동일한 재조준 복원 경로를 쓴다', (tester) async {
+    await tester.pumpWidget(const PropertyShotApp());
+    await tester.pump();
+
+    final gesture = await _startTimedGesture(
+      tester,
+      _logicalOffset(tester, 56, 456),
+    );
+    await tester.pump(const Duration(milliseconds: 760));
+    await _releaseTimedGesture(gesture, const Duration(milliseconds: 760));
+    await tester.pump(const Duration(milliseconds: 6500));
+    expect(find.byKey(const Key('failure_popup')), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(find.byKey(const Key('failure_popup')), findsNothing);
+    expect(game.previousShotPath, isNotEmpty);
+    expect(game.failureReviewMarkers, isNotEmpty);
+    expect(
+      tester
+          .widget<Focus>(find.byKey(const Key('aim_keyboard_focus')))
+          .focusNode
+          ?.hasFocus,
+      isTrue,
+    );
   });
 
   testWidgets('인과를 만든 다중 샷 실패는 준비 상태 연습과 기록 분리를 제공한다', (tester) async {

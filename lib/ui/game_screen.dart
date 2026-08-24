@@ -286,6 +286,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _assistRecommendationFeedback;
   final Set<String> _handledAssistRecommendationIds = <String>{};
   FailureReplayData? _failureReplay;
+  String? _failureReviewSemantics;
   bool _bestShotsLoaded = false;
   Future<void>? _bestShotsLoadFuture;
   final Map<int, int> _bestShots = {};
@@ -1356,6 +1357,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _previousAimInput = input;
     _game.setPreviousAimInput(input);
     _game.setPreviousShotPath(input == null ? const [] : path ?? const []);
+    if (input == null) {
+      _failureReviewSemantics = null;
+      _game.setFailureReviewMarkers(const []);
+    }
   }
 
   void _selectLevel(int index) {
@@ -3675,9 +3680,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     if (_showFailurePopup) {
-      setState(() {
-        _showFailurePopup = false;
-      });
+      _resumeAfterFailure();
     }
   }
 
@@ -4599,6 +4602,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                                 : [
                                                                     '힘 ${(_state.aimPower * 100).round()}퍼센트',
                                                                     ?_firstArrivalSemanticsValue,
+                                                                    ?_failureReviewSemantics,
                                                                   ].join(', '),
                                                             increasedValue:
                                                                 _chargeGaugeActive
@@ -5098,6 +5102,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final replay = _failureReplay;
     if (replay == null || !mounted || _isAnimatingShot) return;
     final showPreviousAim = GameFeedback.previousAimComparisonEnabled;
+    final analysis = const FailureReplayAnalyzer().analyze(replay);
+    final showReviewMarkers =
+        showPreviousAim && GameFeedback.collisionPathIconsEnabled;
     setState(() {
       _showFailurePopup = false;
       _successAimGhostActive = false;
@@ -5105,6 +5112,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         showPreviousAim ? replay.input : null,
         path: showPreviousAim ? replay.result.path : null,
       );
+      _game.setFailureReviewMarkers(
+        showReviewMarkers ? analysis.reviewMarkers : const [],
+      );
+      _failureReviewSemantics =
+          showReviewMarkers && analysis.semanticSummary.isNotEmpty
+          ? analysis.semanticSummary
+          : null;
       _state = _state.copyWith(
         message: showPreviousAim
             ? '직전 조준이 회색으로 남아 있습니다. 한 가지만 바꿔 다시 시도해 보세요.'
@@ -5121,10 +5135,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     SemanticsService.sendAnnouncement(
       View.of(context),
       showPreviousAim
-          ? '직전 조준이 회색으로 표시됩니다. 각도나 힘 한 가지만 바꿔 다시 시도해 보세요.'
+          ? '${analysis.semanticSummary.isEmpty ? '직전 조준이 회색으로 표시됩니다.' : analysis.semanticSummary} 각도나 힘 한 가지만 바꿔 다시 시도해 보세요.'
           : '각도나 힘 한 가지만 바꿔 다시 시도해 보세요.',
       TextDirection.ltr,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _aimFocusNode.requestFocus();
+    });
   }
 
   bool get _canRetryFromPreparedState {

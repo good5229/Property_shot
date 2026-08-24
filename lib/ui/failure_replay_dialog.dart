@@ -24,7 +24,7 @@ class FailureReplayDialog extends StatefulWidget {
 class _FailureReplayDialogState extends State<FailureReplayDialog> {
   late final FailureReplayAnalysis _analysis;
   late final PropertyShotGame _game;
-  bool _playing = true;
+  bool _playing = false;
   bool _finished = false;
 
   @override
@@ -69,7 +69,15 @@ class _FailureReplayDialogState extends State<FailureReplayDialog> {
         });
       },
     );
-    _startReplay(playing: widget.autoplay);
+    _startReplay(
+      playing: widget.autoplay && !GameFeedback.reducedMotionEnabled,
+    );
+  }
+
+  @override
+  void dispose() {
+    _game.setPlaybackSpeed(0);
+    super.dispose();
   }
 
   double get _replaySpeed => GameFeedback.lastShotSlowMotionEnabled ? 0.5 : 1.0;

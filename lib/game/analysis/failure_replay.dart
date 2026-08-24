@@ -30,6 +30,27 @@ enum FailureCauseKind {
 
 enum FailureReplayMarkerKind { collision, trait, gimmick }
 
+enum FailureReviewMarkerKind {
+  firstDirectionChange,
+  firstContact,
+  lastContact,
+  combinedContact,
+}
+
+class FailureReviewMarker {
+  const FailureReviewMarker({
+    required this.kind,
+    required this.pathIndex,
+    required this.position,
+    required this.label,
+  });
+
+  final FailureReviewMarkerKind kind;
+  final int pathIndex;
+  final Vec2 position;
+  final String label;
+}
+
 class FailureReplayMarker {
   const FailureReplayMarker({
     required this.pathIndex,
@@ -54,6 +75,10 @@ class FailureReplayAnalysis {
     required this.title,
     required this.detail,
     required this.markers,
+    required this.reviewMarkers,
+    required this.semanticSummary,
+    this.firstDirectionChange,
+    this.firstContact,
     this.lastContact,
     this.nearestHole,
   });
@@ -62,6 +87,10 @@ class FailureReplayAnalysis {
   final String title;
   final String detail;
   final List<FailureReplayMarker> markers;
+  final List<FailureReviewMarker> reviewMarkers;
+  final String semanticSummary;
+  final FailureReviewMarker? firstDirectionChange;
+  final FailureReplayMarker? firstContact;
   final FailureReplayMarker? lastContact;
   final Vec2? nearestHole;
 }
@@ -219,9 +248,25 @@ class FailureReplayAnalyzer {
       }
     }
     markers.sort((a, b) => a.pathIndex.compareTo(b.pathIndex));
-    final lastContact = impacts.isEmpty
+    final validImpacts =
+        impacts.indexed
+            .where(
+              (entry) =>
+                  entry.$2.pathIndex >= 0 &&
+                  entry.$2.pathIndex < path.length &&
+                  _isFinite(entry.$2.position),
+            )
+            .toList()
+          ..sort((left, right) {
+            final byPath = left.$2.pathIndex.compareTo(right.$2.pathIndex);
+            return byPath != 0 ? byPath : left.$1.compareTo(right.$1);
+          });
+    final firstContact = validImpacts.isEmpty
         ? null
-        : _markerForImpact(impacts.last, highlight: true);
+        : _markerForImpact(validImpacts.first.$2);
+    final lastContact = validImpacts.isEmpty
+        ? null
+        : _markerForImpact(validImpacts.last.$2, highlight: true);
     if (lastContact != null && markers.isNotEmpty) {
       final index = markers.lastIndexWhere(
         (marker) =>
@@ -246,15 +291,113 @@ class FailureReplayAnalyzer {
                 : b,
           );
     final kind = _kindFor(events);
+    final firstDirectionChange = _firstDirectionChange(data, validImpacts);
+    final reviewMarkers = _reviewMarkers(
+      firstDirectionChange: firstDirectionChange,
+      firstContact: firstContact,
+      lastContact: lastContact,
+    );
+    final semanticLabels = reviewMarkers.map((marker) => marker.label).toList();
     return FailureReplayAnalysis(
       kind: kind,
       title: _titleFor(kind),
       detail: _detailFor(kind, events),
       markers: List.unmodifiable(markers),
+      reviewMarkers: List.unmodifiable(reviewMarkers),
+      semanticSummary: semanticLabels.isEmpty
+          ? ''
+          : '직전 발사: ${semanticLabels.join(', ')}',
+      firstDirectionChange: firstDirectionChange,
+      firstContact: firstContact,
       lastContact: lastContact,
       nearestHole: nearestHole,
     );
   }
+
+  FailureReviewMarker? _firstDirectionChange(
+    FailureReplayData data,
+    List<(int, ShotImpact)> validImpacts,
+  ) {
+    final path = data.result.path.where(_isFinite).toList(growable: false);
+    if (path.length < 2) return null;
+    final initial = data.input.direction.normalized();
+    if (initial.length <= 0.001) return null;
+    final cosineThreshold = math.cos(8 * math.pi / 180);
+    var travelled = 0.0;
+    for (var index = 1; index < path.length; index++) {
+      final delta = path[index] - path[index - 1];
+      final length = delta.length;
+      if (!length.isFinite || length < 0.5) continue;
+      travelled += length;
+      if (travelled < 6) continue;
+      final direction = delta * (1 / length);
+      if (direction.dot(initial) >= cosineThreshold) continue;
+      final nearbyImpact = validImpacts.cast<(int, ShotImpact)?>().firstWhere(
+        (entry) => (entry!.$2.pathIndex - index).abs() <= 1,
+        orElse: () => null,
+      );
+      return FailureReviewMarker(
+        kind: FailureReviewMarkerKind.firstDirectionChange,
+        pathIndex: index,
+        position: nearbyImpact?.$2.position ?? path[index - 1],
+        label: '첫 방향 변화',
+      );
+    }
+    return null;
+  }
+
+  List<FailureReviewMarker> _reviewMarkers({
+    required FailureReviewMarker? firstDirectionChange,
+    required FailureReplayMarker? firstContact,
+    required FailureReplayMarker? lastContact,
+  }) {
+    final result = <FailureReviewMarker>[?firstDirectionChange];
+    if (firstContact != null && lastContact != null) {
+      final sameContact =
+          firstContact.pathIndex == lastContact.pathIndex ||
+          firstContact.position.distanceTo(lastContact.position) <= 1;
+      if (sameContact) {
+        result.add(
+          FailureReviewMarker(
+            kind: FailureReviewMarkerKind.combinedContact,
+            pathIndex: firstContact.pathIndex,
+            position: firstContact.position,
+            label: '첫·마지막 충돌 ${firstContact.label}',
+          ),
+        );
+      } else {
+        result
+          ..add(
+            FailureReviewMarker(
+              kind: FailureReviewMarkerKind.firstContact,
+              pathIndex: firstContact.pathIndex,
+              position: firstContact.position,
+              label: '첫 충돌 ${firstContact.label}',
+            ),
+          )
+          ..add(
+            FailureReviewMarker(
+              kind: FailureReviewMarkerKind.lastContact,
+              pathIndex: lastContact.pathIndex,
+              position: lastContact.position,
+              label: '마지막 충돌 ${lastContact.label}',
+            ),
+          );
+      }
+    } else if (firstContact != null) {
+      result.add(
+        FailureReviewMarker(
+          kind: FailureReviewMarkerKind.combinedContact,
+          pathIndex: firstContact.pathIndex,
+          position: firstContact.position,
+          label: '충돌 ${firstContact.label}',
+        ),
+      );
+    }
+    return result.take(3).toList(growable: false);
+  }
+
+  bool _isFinite(Vec2 point) => point.x.isFinite && point.y.isFinite;
 
   FailureReplayMarker _markerForImpact(
     ShotImpact impact, {

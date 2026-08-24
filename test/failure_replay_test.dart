@@ -63,6 +63,96 @@ void main() {
     expect(result.state.shotCount, greaterThanOrEqualTo(1));
   });
 
+  test('첫 방향 변화와 시간순 첫·마지막 충돌을 최대 세 표식으로 만든다', () {
+    final before = levels.first.createState(0, productRules: true);
+    const path = [
+      Vec2(20, 500),
+      Vec2(30, 500),
+      Vec2(40, 500),
+      Vec2(40, 485),
+      Vec2(55, 485),
+    ];
+    final last = ShotImpact(
+      entityId: 'crate',
+      entityType: EntityType.crate,
+      position: const Vec2(55, 485),
+      normal: const Vec2(-1, 0),
+      pathIndex: 4,
+      strength: 0.4,
+    );
+    final first = ShotImpact(
+      entityId: 'wall',
+      entityType: EntityType.wall,
+      position: const Vec2(40, 485),
+      normal: const Vec2(0, 1),
+      pathIndex: 3,
+      strength: 0.6,
+    );
+    final analysis = const FailureReplayAnalyzer().analyze(
+      FailureReplayData(
+        beforeState: before,
+        input: const ShotInput(direction: Vec2(1, 0), power: 0.6),
+        result: ShotResult(
+          state: before.copyWith(shotCount: 1),
+          path: path,
+          impacts: [last, first],
+          events: const ['bounced'],
+        ),
+      ),
+    );
+
+    expect(analysis.firstDirectionChange?.position, first.position);
+    expect(analysis.firstContact?.label, '벽');
+    expect(analysis.lastContact?.label, '상자');
+    expect(analysis.reviewMarkers.map((marker) => marker.kind), [
+      FailureReviewMarkerKind.firstDirectionChange,
+      FailureReviewMarkerKind.firstContact,
+      FailureReviewMarkerKind.lastContact,
+    ]);
+    expect(analysis.semanticSummary, contains('첫 방향 변화'));
+    expect(analysis.semanticSummary, contains('마지막 충돌 상자'));
+  });
+
+  test('직선·중복·비정상 충돌 입력은 예외 없이 축약한다', () {
+    final before = levels.first.createState(0, productRules: true);
+    final contact = ShotImpact(
+      entityId: 'wall',
+      entityType: EntityType.wall,
+      position: const Vec2(40, 500),
+      normal: const Vec2(-1, 0),
+      pathIndex: 2,
+      strength: 0.4,
+    );
+    final invalid = ShotImpact(
+      entityId: 'invalid',
+      entityType: EntityType.wall,
+      position: const Vec2(double.nan, double.infinity),
+      normal: const Vec2(0, 1),
+      pathIndex: 99,
+      strength: 0.4,
+    );
+    final data = FailureReplayData(
+      beforeState: before,
+      input: const ShotInput(direction: Vec2(1, 0), power: 0.6),
+      result: ShotResult(
+        state: before.copyWith(shotCount: 1),
+        path: const [Vec2(20, 500), Vec2(30, 500), Vec2(40, 500)],
+        events: const [],
+        impacts: [invalid, contact, contact],
+      ),
+    );
+
+    final analysis = const FailureReplayAnalyzer().analyze(data);
+
+    expect(analysis.firstDirectionChange, isNull);
+    expect(analysis.reviewMarkers, hasLength(1));
+    expect(
+      analysis.reviewMarkers.single.kind,
+      FailureReviewMarkerKind.combinedContact,
+    );
+    expect(analysis.reviewMarkers.single.label, '첫·마지막 충돌 벽');
+  });
+
   test('근소한 홀 빗나감은 첫 실패와 반복 실패의 정보량을 다르게 만든다', () {
     final before = levels.first.createState(0, productRules: true);
     final hole = before.entities.firstWhere(

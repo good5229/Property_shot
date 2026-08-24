@@ -14,6 +14,7 @@ import 'domain/shot_input.dart';
 import 'domain/trait.dart';
 import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
+import 'analysis/failure_replay.dart';
 import '../ui/game_ball_painter.dart';
 import '../ui/debug_labels.dart';
 
@@ -74,6 +75,7 @@ class PropertyShotGame extends FlameGame {
   FirstArrivalPreview? firstArrivalPreview;
   ShotInput? previousAimInput;
   List<Vec2> previousShotPath = const [];
+  List<FailureReviewMarker> failureReviewMarkers = const [];
 
   void setDebugOptions({
     bool? hitboxes,
@@ -101,6 +103,12 @@ class PropertyShotGame extends FlameGame {
 
   void setPreviousShotPath(Iterable<Vec2> path) {
     previousShotPath = List<Vec2>.unmodifiable(path);
+  }
+
+  void setFailureReviewMarkers(Iterable<FailureReviewMarker> markers) {
+    failureReviewMarkers = List<FailureReviewMarker>.unmodifiable(
+      markers.take(3),
+    );
   }
 
   /// Golden·렌더 계약에서 물리 사건 시점을 재현하기 위한 결정론 cursor다.
@@ -465,6 +473,7 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawReplayOverlay(Canvas canvas) {
+    _drawFailureReviewMarkers(canvas);
     for (var index = 0; index < replayCollisionMarkers.length; index++) {
       final center = _project(replayCollisionMarkers[index]);
       canvas.drawCircle(center, 9, Paint()..color = const Color(0xE6395D6F));
@@ -528,6 +537,91 @@ class PropertyShotGame extends FlameGame {
           ..strokeWidth = 2,
       );
     }
+  }
+
+  void _drawFailureReviewMarkers(Canvas canvas) {
+    if (failureReviewMarkers.isEmpty || _animationPath.isNotEmpty) return;
+    for (final marker in failureReviewMarkers) {
+      final center = _project(marker.position);
+      final outline = Paint()
+        ..color = const Color(0xFFF7FAF3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5;
+      final stroke = Paint()
+        ..color = switch (marker.kind) {
+          FailureReviewMarkerKind.firstDirectionChange => const Color(
+            0xFF284E78,
+          ),
+          FailureReviewMarkerKind.firstContact => const Color(0xFF8A3E2F),
+          FailureReviewMarkerKind.lastContact => const Color(0xFF6B4B00),
+          FailureReviewMarkerKind.combinedContact => const Color(0xFF6D356B),
+        }
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round;
+      switch (marker.kind) {
+        case FailureReviewMarkerKind.firstDirectionChange:
+          final path = Path()
+            ..moveTo(center.dx - 11, center.dy + 6)
+            ..quadraticBezierTo(
+              center.dx - 3,
+              center.dy - 9,
+              center.dx + 10,
+              center.dy - 4,
+            )
+            ..moveTo(center.dx + 4, center.dy - 9)
+            ..lineTo(center.dx + 10, center.dy - 4)
+            ..lineTo(center.dx + 4, center.dy + 1);
+          canvas.drawPath(path, outline);
+          canvas.drawPath(path, stroke);
+        case FailureReviewMarkerKind.firstContact:
+          canvas.drawCircle(center, 12, outline);
+          canvas.drawCircle(center, 12, stroke);
+          _drawReviewGlyph(canvas, center, '1', stroke.color);
+        case FailureReviewMarkerKind.lastContact:
+          canvas.drawCircle(center, 14, outline);
+          canvas.drawCircle(center, 14, stroke);
+          canvas.drawCircle(center, 8, stroke);
+          canvas.drawLine(
+            center.translate(10, 10),
+            center.translate(16, 16),
+            outline,
+          );
+          canvas.drawLine(
+            center.translate(10, 10),
+            center.translate(16, 16),
+            stroke,
+          );
+        case FailureReviewMarkerKind.combinedContact:
+          canvas.drawCircle(center, 14, outline);
+          canvas.drawCircle(center, 14, stroke);
+          canvas.drawCircle(center, 8, stroke);
+          _drawReviewGlyph(canvas, center, '1', stroke.color);
+      }
+    }
+  }
+
+  void _drawReviewGlyph(
+    Canvas canvas,
+    Offset center,
+    String glyph,
+    Color color,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: glyph,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      center - Offset(painter.width / 2, painter.height / 2),
+    );
   }
 
   void _drawDebugOverlay(Canvas canvas, List<EntityState> entities) {

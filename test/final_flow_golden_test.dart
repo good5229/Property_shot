@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flame/game.dart';
 import 'package:property_shot/game/analysis/failure_replay.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
@@ -8,6 +9,7 @@ import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
+import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/run/stage_pattern_session.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/main.dart';
@@ -30,6 +32,34 @@ void main() {
   setUp(GameFeedback.resetForTesting);
   tearDown(GameFeedback.resetForTesting);
 
+  testWidgets('저모션 실패 재생은 사용자가 누르기 전 정지 상태다', (tester) async {
+    GameFeedback.reducedMotionEnabled = true;
+    final before = levels.first.createState(0, productRules: true);
+    const input = ShotInput(direction: Vec2(-1, 0), power: 0.2);
+    final result = const ShotResolver().resolve(before, input);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FailureReplayDialog(
+          data: FailureReplayData(
+            beforeState: before,
+            input: input,
+            result: result,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final game = tester
+        .widget<GameWidget<PropertyShotGame>>(
+          find.byType(GameWidget<PropertyShotGame>),
+        )
+        .game!;
+    expect(game.playbackSpeed, 0);
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+  });
+
   for (final fixture in const [
     (name: '390x844', width: 390.0, height: 844.0),
     (name: '768x1024', width: 768.0, height: 1024.0),
@@ -49,9 +79,7 @@ void main() {
           debugShowCheckedModeBanner: false,
           theme: ThemeData(fontFamily: 'GoldenNanumGothic'),
           home: MediaQuery(
-            data: MediaQueryData(
-              size: Size(fixture.width, fixture.height),
-            ),
+            data: MediaQueryData(size: Size(fixture.width, fixture.height)),
             child: Scaffold(
               body: FailureReplayDialog(
                 data: FailureReplayData(
@@ -78,9 +106,7 @@ void main() {
       );
       await expectLater(
         find.byKey(const Key('failure_replay_dialog')),
-        matchesGoldenFile(
-          'goldens/failure_replay_${fixture.name}.png',
-        ),
+        matchesGoldenFile('goldens/failure_replay_${fixture.name}.png'),
       );
     });
 
