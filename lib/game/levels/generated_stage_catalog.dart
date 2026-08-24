@@ -1102,7 +1102,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 1.2,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -1463,7 +1463,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 0.96,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false

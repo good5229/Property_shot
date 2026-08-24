@@ -72,6 +72,30 @@ void main() {
     }
   });
 
+  test('과난도 패턴의 홀 여유는 보이는 크기와 대표 풀이 계약 안에서만 넓어진다', () {
+    final second = stage.patternById('stage_bouncy_02');
+    final fourth = stage.patternById('stage_bouncy_04');
+    final secondHole = second.objects.singleWhere(
+      (object) => object.type == EntityType.hole,
+    );
+    final fourthHole = fourth.objects.singleWhere(
+      (object) => object.type == EntityType.hole,
+    );
+
+    expect(secondHole.size, const Vec2(60, 60));
+    expect(secondHole.hitboxScale, 1.2);
+    expect(fourthHole.size, const Vec2(52, 52));
+    expect(fourthHole.hitboxScale, 0.96);
+    expect(
+      (secondHole.size.x / 2 * (secondHole.hitboxScale - 1)).abs(),
+      lessThanOrEqualTo(6.1),
+    );
+    expect(
+      (fourthHole.size.x / 2 * (fourthHole.hitboxScale - 1)).abs(),
+      lessThanOrEqualTo(2.1),
+    );
+  });
+
   test('네 패턴의 모든 쌍은 최소 두 범주의 배치가 다르다', () {
     for (var leftIndex = 0; leftIndex < stage.patterns.length; leftIndex++) {
       for (

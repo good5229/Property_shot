@@ -1067,7 +1067,7 @@
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 1.20,
               "restitution": 0.72,
               "linkId": null
             },
@@ -1415,7 +1415,7 @@
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 0.96,
               "restitution": 0.72,
               "linkId": null
             },
