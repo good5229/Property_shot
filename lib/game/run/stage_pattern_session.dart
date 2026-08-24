@@ -47,6 +47,16 @@ const String restorationMasteryCancelMarker =
 const String restorationMasteryCoreMarker =
     'island_restoration_mastery_core_v1';
 
+/// 시설을 복구해 소유한 것과 이번 런에서 집중 지원을 선택한 것을 구분한다.
+bool islandRestorationSupportWasUsed(Iterable<String> acquiredRewards) {
+  final rewards = acquiredRewards is Set<String>
+      ? acquiredRewards
+      : acquiredRewards.toSet();
+  return rewards.contains(restorationObservatoryFocusMarker) ||
+      rewards.contains(restorationLighthouseFocusMarker) ||
+      rewards.contains(restorationBridgeFocusMarker);
+}
+
 /// 스테이지 선택 화면과 결정론 패턴 런 상태를 연결한다.
 class StagePatternSession {
   StagePatternSession({

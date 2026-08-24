@@ -9,9 +9,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'game/analysis/creative_chain_score.dart';
 import 'game/analysis/island_restoration.dart';
 import 'game/analysis/next_goal_recommendation.dart';
+import 'game/analysis/personal_record_qualification.dart';
 import 'game/analysis/solution_mastery.dart';
 import 'game/analysis/stage_chain_challenge.dart';
 import 'game/analysis/stage_discovery.dart';
+import 'game/analysis/weekly_research_goal.dart';
 import 'game/domain/game_state.dart';
 import 'game/domain/geometry.dart';
 import 'game/domain/level_definition.dart';
@@ -23,6 +25,7 @@ import 'game/hint/pattern_hint.dart';
 import 'game/input/intent_assist_resolver.dart';
 import 'game/levels/generated_stage_catalog.dart';
 import 'game/levels/levels.dart';
+import 'game/lab/weekly_lab.dart';
 import 'game/persistence/progress_store.dart';
 import 'game/persistence/replay_library_store.dart';
 import 'game/persistence/run_state_store.dart';
@@ -89,6 +92,7 @@ class PropertyShotApp extends StatelessWidget {
     this.demoPlanId,
     this.initialLanguage = AppLanguage.korean,
     this.languageStore,
+    this.weeklyReferenceDate,
   });
 
   final GameState? initialState;
@@ -103,6 +107,7 @@ class PropertyShotApp extends StatelessWidget {
   final String? demoPlanId;
   final AppLanguage initialLanguage;
   final AppLanguageStore? languageStore;
+  final DateTime? weeklyReferenceDate;
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +145,7 @@ class PropertyShotApp extends StatelessWidget {
               telemetry: telemetry,
               initialLanguage: initialLanguage,
               languageStore: languageStore,
+              weeklyReferenceDate: weeklyReferenceDate,
             )
           : GameScreen(
               initialState: initialState,
@@ -288,6 +294,7 @@ class _PropertyShotRouter extends StatefulWidget {
     this.telemetry,
     required this.initialLanguage,
     this.languageStore,
+    this.weeklyReferenceDate,
   });
 
   final bool showDebugControls;
@@ -296,6 +303,7 @@ class _PropertyShotRouter extends StatefulWidget {
   final LocalPlayTelemetry? telemetry;
   final AppLanguage initialLanguage;
   final AppLanguageStore? languageStore;
+  final DateTime? weeklyReferenceDate;
 
   @override
   State<_PropertyShotRouter> createState() => _PropertyShotRouterState();
@@ -1013,11 +1021,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
     final session = await _activePatternSessionFuture;
     final completionInputs = session.currentShotInputs;
-    final usedIslandSupport =
-        session.state?.acquiredRewards.any(
-          (reward) => reward.startsWith('island_restoration_'),
-        ) ??
-        false;
+    final completionRewards =
+        session.state?.acquiredRewards ?? const <String>{};
     var newlyRecordedPersonalRecords = <PersonalRecordKind>{};
     final attributionState = session.state;
     final completionDifficulty = attributionState == null
@@ -1062,16 +1067,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         if (completion.optionalChallengeAchieved) {
           await _progressStore.recordBonusGoal(levelIndex);
         }
-        newlyRecordedPersonalRecords = <PersonalRecordKind>{
-          if (completion.optionalChallengeAchieved)
-            PersonalRecordKind.gimmickMastery,
-          if (completionInputs.isNotEmpty &&
-              completionInputs.every(
-                (input) => input.assistKind == ShotAssistKind.none,
-              ))
-            PersonalRecordKind.noAssistClear,
-          if (!usedIslandSupport) PersonalRecordKind.noIslandSupportClear,
-        };
+        newlyRecordedPersonalRecords = personalRecordsForClear(
+          // 선택 도전 보호 보상은 보너스 목표를 지켜 주지만, 실제 기믹
+          // 숙련 기록까지 대신 달성한 것으로 취급하지 않는다.
+          optionalChallengeAchievedWithoutGuard: optionalChallengeAchieved,
+          assistKinds: completionInputs.map((input) => input.assistKind),
+          islandSupportUsed: islandRestorationSupportWasUsed(completionRewards),
+        );
         await _progressStore.recordPersonalRecords(
           levelIndex,
           newlyRecordedPersonalRecords,
@@ -1275,6 +1277,27 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       if (state.optionalChallenges[challengeKey] == true) {
         await _progressStore.recordBonusGoal(levelIndex);
       }
+      final inventory = RunRewardInventory(state.acquiredRewards);
+      final protectedByGuard = inventory
+          .useKeys(runRewardOptionalChallengeGuardId)
+          .any((key) => key.startsWith('$stageId:'));
+      final recoveredRecords = personalRecordsForClear(
+        optionalChallengeAchievedWithoutGuard:
+            state.optionalChallenges[challengeKey] == true && !protectedByGuard,
+        assistKinds: session.currentShotInputs.map((input) => input.assistKind),
+        islandSupportUsed: islandRestorationSupportWasUsed(
+          state.acquiredRewards,
+        ),
+      );
+      await _progressStore.recordPersonalRecords(levelIndex, recoveredRecords);
+      if (mounted && recoveredRecords.isNotEmpty) {
+        setState(() {
+          _personalRecords = {
+            ..._personalRecords,
+            levelIndex: {...?_personalRecords[levelIndex], ...recoveredRecords},
+          };
+        });
+      }
     }
     _applyClearedLevelInMemory(levelIndex);
     await (await _difficultyAttributionStoreFuture).clearFor(state);
@@ -1316,6 +1339,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         : (await _difficultyAttributionStoreFuture)
               .loadFor(attributionState)
               ?.difficulty;
+    final completionInputs = session.currentShotInputs;
+    final completionRewards =
+        session.state?.acquiredRewards ?? const <String>{};
     CreativeChainScoreAnalysis? analysis;
     var optionalChallengeAchieved = false;
     if (levelIndex == 7 && results.isNotEmpty) {
@@ -1381,6 +1407,26 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         await _progressStore.recordBestShot(levelIndex, completion.shotCount);
         if (completion.optionalChallengeAchieved) {
           await _progressStore.recordBonusGoal(levelIndex);
+        }
+        final recoveredRecords = personalRecordsForClear(
+          optionalChallengeAchievedWithoutGuard: optionalChallengeAchieved,
+          assistKinds: completionInputs.map((input) => input.assistKind),
+          islandSupportUsed: islandRestorationSupportWasUsed(completionRewards),
+        );
+        await _progressStore.recordPersonalRecords(
+          levelIndex,
+          recoveredRecords,
+        );
+        if (mounted && recoveredRecords.isNotEmpty) {
+          setState(() {
+            _personalRecords = {
+              ..._personalRecords,
+              levelIndex: {
+                ...?_personalRecords[levelIndex],
+                ...recoveredRecords,
+              },
+            };
+          });
         }
       }
       await _recoverPendingCopyCoreReward(session);
@@ -1675,6 +1721,17 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       stageIds: levels.map((level) => level.id).toList(growable: false),
       optionalMasteryCount: _bonusGoals.length,
     );
+    final weeklyChallenge = WeeklyLabChallenge.forDate(
+      widget.weeklyReferenceDate ?? DateTime.now(),
+    );
+    final weeklyResearchGoal = WeeklyResearchGoal.forWeek(
+      weekKey: weeklyChallenge.weekKey,
+      cycleWeek: weeklyChallenge.cycleWeek,
+      stageCount: levels.length,
+      unlockedLevel: _unlockedLevel,
+      discoveryCount: restorationProgress.discoveryCount,
+      personalRecords: _personalRecords,
+    );
     if (_showRewardInventory) {
       return FutureBuilder<Set<String>>(
         future: _rewardInventoryFuture,
@@ -1758,6 +1815,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         showWeeklyHistory: restorationProgress.isUpgraded(
           IslandLandmark.observatory,
         ),
+        weeklyResearchGoal: weeklyResearchGoal,
+        weeklyResearchStageName: levels[weeklyResearchGoal.stageIndex].name,
+        referenceDate: widget.weeklyReferenceDate,
         onBack: () => _changeSurface(() => _showPhysicsLab = false),
       );
     }
@@ -1855,6 +1915,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         bestShots: _bestShots,
         bonusGoals: _bonusGoals,
         personalRecords: _personalRecords,
+        weeklyResearchGoal: weeklyResearchGoal,
         islandSupportFocus: _islandSupportFocus,
         onIslandSupportSelected: (landmark) =>
             unawaited(_selectIslandSupport(landmark)),
@@ -3862,6 +3923,7 @@ class _StageSelectScreen extends StatelessWidget {
     required this.bestShots,
     required this.bonusGoals,
     required this.personalRecords,
+    required this.weeklyResearchGoal,
     required this.islandSupportFocus,
     required this.onIslandSupportSelected,
     this.onPhysicsLab,
@@ -3876,6 +3938,7 @@ class _StageSelectScreen extends StatelessWidget {
   final Map<int, int> bestShots;
   final Set<int> bonusGoals;
   final Map<int, Set<PersonalRecordKind>> personalRecords;
+  final WeeklyResearchGoal weeklyResearchGoal;
   final IslandLandmark? islandSupportFocus;
   final ValueChanged<IslandLandmark> onIslandSupportSelected;
   final VoidCallback? onPhysicsLab;
@@ -4097,6 +4160,9 @@ class _StageSelectScreen extends StatelessWidget {
                           ),
                           selectedFocus: islandSupportFocus,
                           onFocusSelected: onIslandSupportSelected,
+                          weeklyResearchGoal: weeklyResearchGoal,
+                          weeklyResearchStageName:
+                              levels[weeklyResearchGoal.stageIndex].name,
                           compact: compact,
                           wide: wide,
                         ),
@@ -4699,6 +4765,8 @@ class _IslandRestorationCard extends StatelessWidget {
     required this.progress,
     required this.selectedFocus,
     required this.onFocusSelected,
+    required this.weeklyResearchGoal,
+    required this.weeklyResearchStageName,
     this.compact = false,
     this.wide = false,
   });
@@ -4706,6 +4774,8 @@ class _IslandRestorationCard extends StatelessWidget {
   final IslandRestorationProgress progress;
   final IslandLandmark? selectedFocus;
   final ValueChanged<IslandLandmark> onFocusSelected;
+  final WeeklyResearchGoal weeklyResearchGoal;
+  final String weeklyResearchStageName;
   final bool compact;
   final bool wide;
 
@@ -4716,7 +4786,9 @@ class _IslandRestorationCard extends StatelessWidget {
         container: true,
         button: true,
         label:
-            '섬 복구 ${progress.restoredCount}/3. ${progress.statusText}. 자세히 보기',
+            '섬 복구 ${progress.restoredCount}/3. ${progress.statusText}. '
+            '${weeklyResearchGoal.title}, ${weeklyResearchGoal.stageTask(weeklyResearchStageName)}, '
+            '${weeklyResearchGoal.statusLabel}. 자세히 보기',
         child: Material(
           key: const Key('island_restoration_card'),
           color: Colors.transparent,
@@ -4803,15 +4875,16 @@ class _IslandRestorationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '선택 도전 ${progress.optionalMasteryCount}/10 · '
-                    '${progress.masteryStatusText}',
-                    key: const Key('island_mastery_status'),
+                    '이번 주 ${weeklyResearchGoal.stageIndex + 1}단계 · '
+                    '${weeklyResearchGoal.recordKind.label} · '
+                    '${weeklyResearchGoal.statusLabel}',
+                    key: const Key('weekly_research_goal_compact'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF52645A),
+                      color: Color(0xFF315C46),
                       fontSize: 10,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],
@@ -4829,6 +4902,8 @@ class _IslandRestorationCard extends StatelessWidget {
           '섬 복구 ${progress.restoredCount}/3. ${progress.statusText}. '
           '발견 ${progress.discoveryCount}/${progress.total}. '
           '선택 도전 ${progress.optionalMasteryCount}/10. ${progress.masteryStatusText}. '
+          '${weeklyResearchGoal.title}. ${weeklyResearchGoal.stageTask(weeklyResearchStageName)}. '
+          '${weeklyResearchGoal.statusLabel}. '
           '${progress.restoredLandmarks.map((landmark) => '${landmark.label}: ${landmark.benefitDescription}').join(' ')}',
       child: Container(
         key: const Key('island_restoration_card'),
@@ -4965,6 +5040,74 @@ class _IslandRestorationCard extends StatelessWidget {
                 fontWeight: FontWeight.w900,
               ),
             ),
+            const SizedBox(height: 10),
+            Container(
+              key: const Key('weekly_research_goal'),
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xCCFFFDF3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFB6A96C)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.travel_explore_rounded,
+                    color: Color(0xFF496E56),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '이번 주 · ${weeklyResearchGoal.title}',
+                          style: const TextStyle(
+                            color: Color(0xFF315C46),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          wide
+                              ? weeklyResearchGoal.stageTask(
+                                  weeklyResearchStageName,
+                                )
+                              : '${weeklyResearchGoal.stageTask(weeklyResearchStageName)} · '
+                                    '${weeklyResearchGoal.statusLabel}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF3F6653),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (wide) ...[
+                          Text(
+                            weeklyResearchGoal.guidance,
+                            style: const TextStyle(
+                              color: Color(0xFF52645A),
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Chip(
+                              visualDensity: VisualDensity.compact,
+                              label: Text(weeklyResearchGoal.statusLabel),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             for (final landmark in progress.restoredLandmarks) ...[
               const SizedBox(height: 5),
               Text(
@@ -5069,6 +5212,8 @@ class _IslandRestorationCard extends StatelessWidget {
               progress: progress,
               selectedFocus: selectedFocus,
               onFocusSelected: onFocusSelected,
+              weeklyResearchGoal: weeklyResearchGoal,
+              weeklyResearchStageName: weeklyResearchStageName,
               wide: wide,
             ),
           ],

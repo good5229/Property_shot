@@ -23,6 +23,24 @@ void main() {
   });
   tearDown(GameFeedback.resetForTesting);
 
+  test('시설 보유와 이번 런의 집중 지원 사용을 구분한다', () {
+    expect(
+      islandRestorationSupportWasUsed(const [
+        restorationBridgeSupplyMarker,
+        restorationLighthouseAccessMarker,
+        restorationObservatorySupportMarker,
+      ]),
+      isFalse,
+    );
+    for (final focus in const [
+      restorationObservatoryFocusMarker,
+      restorationLighthouseFocusMarker,
+      restorationBridgeFocusMarker,
+    ]) {
+      expect(islandRestorationSupportWasUsed([focus]), isTrue);
+    }
+  });
+
   test('세 복구 시설은 분석·즉시 L1·런당 복사 코어를 중복 없이 지급한다', () async {
     final backend = MemoryRunStateBackend();
     final session = _session(backend);

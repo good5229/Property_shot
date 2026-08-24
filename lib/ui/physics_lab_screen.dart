@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/game_state.dart';
+import '../game/analysis/weekly_research_goal.dart';
 import '../game/lab/physics_lab.dart';
 import '../game/lab/physics_lab_creator.dart';
 import '../game/lab/weekly_lab.dart';
@@ -18,11 +19,15 @@ class PhysicsLabScreen extends StatefulWidget {
     this.loadGameAssets = true,
     this.showWeeklyHistory = true,
     this.referenceDate,
+    this.weeklyResearchGoal,
+    this.weeklyResearchStageName,
   });
   final VoidCallback onBack;
   final bool loadGameAssets;
   final bool showWeeklyHistory;
   final DateTime? referenceDate;
+  final WeeklyResearchGoal? weeklyResearchGoal;
+  final String? weeklyResearchStageName;
 
   @override
   State<PhysicsLabScreen> createState() => _PhysicsLabScreenState();
@@ -254,37 +259,89 @@ class _PhysicsLabScreenState extends State<PhysicsLabScreen> {
                     const SizedBox(height: 8),
                     if (widget.showWeeklyHistory)
                       Semantics(
-                      label:
-                          '최근 4주 완료 ${_weeklyCycle.where((item) => _completedWeeks.contains(item.weekKey)).length}개',
-                      child: Row(
-                        key: const Key('weekly_lab_four_week_cycle'),
-                        children: [
-                          for (final item in _weeklyCycle)
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: Container(
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: _completedWeeks.contains(item.weekKey)
-                                        ? const Color(0xFF3F7C58)
-                                        : item.weekKey == _weekly.weekKey
-                                        ? const Color(0xFFE59B38)
-                                        : const Color(0xFFD6CDAF),
-                                    borderRadius: BorderRadius.circular(8),
+                        label:
+                            '최근 4주 완료 ${_weeklyCycle.where((item) => _completedWeeks.contains(item.weekKey)).length}개',
+                        child: Row(
+                          key: const Key('weekly_lab_four_week_cycle'),
+                          children: [
+                            for (final item in _weeklyCycle)
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Container(
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          _completedWeeks.contains(item.weekKey)
+                                          ? const Color(0xFF3F7C58)
+                                          : item.weekKey == _weekly.weekKey
+                                          ? const Color(0xFFE59B38)
+                                          : const Color(0xFFD6CDAF),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
+                          ],
+                        ),
                       )
                     else
                       const Text(
                         '관측소를 성장시키면 최근 4주 완료 기록을 볼 수 있습니다.',
                         key: Key('weekly_history_locked_message'),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
+                    if (widget.weeklyResearchGoal case final goal?) ...[
+                      const SizedBox(height: 10),
+                      const Divider(height: 1),
+                      const SizedBox(height: 10),
+                      Semantics(
+                        container: true,
+                        label:
+                            '${goal.title}. ${goal.stageTask(widget.weeklyResearchStageName ?? '캠페인')}. ${goal.statusLabel}. ${goal.guidance}',
+                        child: Row(
+                          key: const Key('weekly_research_goal_lab'),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.travel_explore_rounded, size: 22),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    goal.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  Text(
+                                    goal.stageTask(
+                                      widget.weeklyResearchStageName ?? '캠페인',
+                                    ),
+                                  ),
+                                  Text(
+                                    goal.guidance,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Chip(
+                                      visualDensity: VisualDensity.compact,
+                                      label: Text(goal.statusLabel),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,

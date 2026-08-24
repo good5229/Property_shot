@@ -4,6 +4,14 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-25] progression | restoration weekly research goals
+
+- 별도 화폐나 저장 키를 늘리지 않고 기존 개인 기록을 활용해, KST 주차마다 관측소·등대·다리가 한 캠페인 스테이지의 숙련 목표를 제안하도록 연결했다. 같은 주에는 진행 상태가 바뀌어도 목표가 바뀌지 않는다.
+- 시설 미복구, 스테이지 미해금, 도전 가능, 기록 달성을 서로 다른 상태 문구로 표시하고 섬 지도와 물리 실험실에 같은 목표를 노출한다. 320×568은 축약 카드, 390×844 이상은 화면 폭에 맞춘 상세 카드로 검증했다.
+- 시설을 단순 보유한 경우와 집중 지원을 선택한 경우를 분리해 `시설 지원 없이` 기록이 영구 차단되던 오류를 고쳤다. 선택 도전 보호 보상은 보너스 목표만 보전하고 `기믹 완수` 개인 기록은 주지 않는다.
+- 정상 완료와 중단 복구 완료가 같은 기록 자격 판정을 사용한다. 빈 발사 기록, 조준 보정 혼합, 시설 지원 선택, 선택 도전 보호 사용을 각각 회귀 테스트로 고정했다.
+- 집중 검증은 모델·기록 판정·물리 실험실·섬 복구 21개 테스트, 섬 지도 6개 화면 Golden, `flutter analyze`를 통과했다. 전체 회귀와 Web release는 통합 단계에서 별도로 기록한다.
+
 ## [2026-08-25] tuning | difficulty-learning-loop start
 
 - 브랜치는 `codex/difficulty-learning-loop`, GitHub Issue는 없고 `harness_docs/dev-wiki/backlog.md`에 활성 항목을 등록했다.

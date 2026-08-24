@@ -44,15 +44,16 @@ void main() {
       await tester.pumpWidget(
         RepaintBoundary(
           key: const Key('stage_select_golden'),
-          child: const PropertyShotApp(
+          child: PropertyShotApp(
             showHome: true,
             fontFamilyOverride: 'GoldenNanumGothic',
+            weeklyReferenceDate: DateTime.utc(2026, 8, 24),
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('stage_select_button')));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       final context = tester.element(
         find.byKey(const Key('stage_select_screen')),
@@ -111,6 +112,14 @@ void main() {
       await tester.tap(find.byKey(const Key('discovery_atlas_close')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('island_restoration_card')), findsOneWidget);
+      expect(
+        find.byKey(const Key('weekly_research_goal_compact')),
+        fixture.name == '320x568' ? findsOneWidget : findsNothing,
+      );
+      expect(
+        find.byKey(const Key('weekly_research_goal')),
+        fixture.name == '320x568' ? findsNothing : findsOneWidget,
+      );
       for (final landmark in const ['observatory', 'lighthouse', 'bridge']) {
         expect(
           find.byKey(Key('island_landmark_art_$landmark')),

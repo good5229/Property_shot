@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/lab/physics_lab.dart';
 import 'package:property_shot/game/lab/physics_lab_creator.dart';
 import 'package:property_shot/game/lab/weekly_lab.dart';
+import 'package:property_shot/game/analysis/weekly_research_goal.dart';
 import 'package:property_shot/ui/physics_lab_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -79,13 +80,29 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      MaterialApp(home: PhysicsLabScreen(onBack: () {}, loadGameAssets: false)),
+      MaterialApp(
+        home: PhysicsLabScreen(
+          onBack: () {},
+          loadGameAssets: false,
+          weeklyResearchGoal: WeeklyResearchGoal.forWeek(
+            weekKey: '2026-08-24',
+            cycleWeek: 4,
+            stageCount: 10,
+            unlockedLevel: 9,
+            discoveryCount: 30,
+            personalRecords: const {},
+          ),
+          weeklyResearchStageName: '최종 항해',
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('weekly_lab_card')), findsOneWidget);
     expect(find.textContaining('이번 주 실험 ·'), findsOneWidget);
     expect(find.byKey(const Key('weekly_lab_copy_button')), findsOneWidget);
+    expect(find.byKey(const Key('weekly_research_goal_lab')), findsOneWidget);
+    expect(find.textContaining('시설 지원 없이'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('weekly_lab_play_button')));
     await tester.pump();

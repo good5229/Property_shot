@@ -24,7 +24,7 @@ GitHub Issues own task status. This file owns planning context.
     - [x] 과도한 난도 패턴 조정과 가상 플레이 임계 검증
     - [x] 학습→확인→응용→숙련 캠페인 난도 곡선
     - [x] 보드 위 첫 방향 변화·첫/마지막 충돌 실패 학습 피드백
-    - [ ] 복구 시설·개인 기록 주간 목표와 상태 가시화
+    - [x] 복구 시설·개인 기록 주간 목표와 상태 가시화
     - [ ] 전체 검증·커밋·푸시·배포
 
 - [x] OpenAI Game Builders Seoul Track 1 대응
