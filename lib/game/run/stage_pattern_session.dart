@@ -30,8 +30,12 @@ const String restorationLighthouseAccessMarker =
     'island_restoration_lighthouse_access_v1';
 const String restorationObservatoryFocusMarker =
     'island_restoration_focus_observatory_v1';
+const String restorationObservatorySupportMarker =
+    'island_restoration_observatory_support_v1';
 const String restorationLighthouseFocusMarker =
     'island_restoration_focus_lighthouse_v1';
+const String restorationLighthouseAimMarker =
+    'island_restoration_lighthouse_aim_v1';
 const String restorationBridgeFocusMarker =
     'island_restoration_focus_bridge_v1';
 const String restorationBridgeFocusSupplyMarker =
@@ -186,6 +190,10 @@ class StagePatternSession {
     }
 
     if (observatoryRestored &&
+        acquiredRewards.add(restorationObservatorySupportMarker)) {
+      changed = true;
+    }
+    if (observatoryRestored &&
         acquiredRewards.add(runRewardFailureCauseBoostId)) {
       changed = true;
     }
@@ -257,6 +265,9 @@ class StagePatternSession {
         changed = true;
       }
       if (effectiveFocus == restorationLighthouseFocusMarker) {
+        if (acquiredRewards.add(restorationLighthouseAimMarker)) {
+          changed = true;
+        }
         hintEntitlements = [
           for (final entitlement in hintEntitlements)
             entitlement.identity.storageKey == identity.storageKey

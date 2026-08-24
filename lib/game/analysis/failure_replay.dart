@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../domain/game_state.dart';
 import '../domain/geometry.dart';
 import '../domain/shot_input.dart';
@@ -62,6 +64,105 @@ class FailureReplayAnalysis {
   final List<FailureReplayMarker> markers;
   final FailureReplayMarker? lastContact;
   final Vec2? nearestHole;
+}
+
+class FailureActionAdvice {
+  const FailureActionAdvice({
+    required this.causeKey,
+    required this.headline,
+    required this.detail,
+  });
+
+  final String causeKey;
+  final String headline;
+  final String detail;
+
+  String messageForAttempt(int repeatedCount) =>
+      repeatedCount >= 2 ? '$headline $detail' : headline;
+}
+
+/// 실패 팝업의 첫 문장을 짧게 유지하면서 같은 실패가 반복됐을 때만
+/// 실제로 바꿀 입력을 덧붙인다. 판정은 문자열 이벤트와 경로 기하를 함께
+/// 사용하며 게임 상태는 변경하지 않는다.
+class FailureActionAdvisor {
+  const FailureActionAdvisor();
+
+  FailureActionAdvice analyze(FailureReplayData data) {
+    final events = data.result.events;
+    if (events.contains('switch_rejected') ||
+        events.contains('switch_rejected_sticky') ||
+        events.contains('hole_rejected_trait') ||
+        events.contains('hole_rejected_crate')) {
+      return const FailureActionAdvice(
+        causeKey: 'mechanic_required',
+        headline: '기믹을 먼저 작동해야 해요.',
+        detail: '속성과 작동 조건을 확인한 뒤 홀로 향하는 경로를 만드세요.',
+      );
+    }
+    if (events.contains('crate_blocked')) {
+      return const FailureActionAdvice(
+        causeKey: 'blocked',
+        headline: '움직일 공간이 부족해요.',
+        detail: '상자의 다른 면을 노리거나 힘을 한 칸 높여 보세요.',
+      );
+    }
+    if (_isNearHoleMiss(data)) {
+      return const FailureActionAdvice(
+        causeKey: 'near_hole',
+        headline: '목표를 근소하게 지나쳤어요.',
+        detail: '이전 조준선에서 각도를 한 칸만 홀 쪽으로 옮겨 보세요.',
+      );
+    }
+    if (events.contains('power_low')) {
+      return const FailureActionAdvice(
+        causeKey: 'power_low',
+        headline: '힘이 부족했어요.',
+        detail: '충전 게이지를 한 칸 더 채운 뒤 같은 각도로 시도해 보세요.',
+      );
+    }
+    if (events.contains('power_high')) {
+      return const FailureActionAdvice(
+        causeKey: 'power_high',
+        headline: '힘이 너무 강했어요.',
+        detail: '충전 게이지를 한 칸 낮추고 마지막 충돌 면을 확인하세요.',
+      );
+    }
+    if (events.contains('bounced') ||
+        events.any((event) => event.startsWith('chain_collision_'))) {
+      return const FailureActionAdvice(
+        causeKey: 'reflection',
+        headline: '반사 각도가 예상과 달랐어요.',
+        detail: '이전 궤적의 마지막 접촉점을 조금 옆으로 옮겨 보세요.',
+      );
+    }
+    if (events.contains('sticky_attached')) {
+      return const FailureActionAdvice(
+        causeKey: 'stopped',
+        headline: '공이 충돌 지점에 멈췄어요.',
+        detail: '붙은 공을 다음 발사의 발판으로 사용할 수 있는지 살펴보세요.',
+      );
+    }
+    return const FailureActionAdvice(
+      causeKey: 'route',
+      headline: '아직 홀까지 경로가 이어지지 않았어요.',
+      detail: '이전 궤적에서 홀과 가장 가까웠던 지점을 기준으로 각도를 조정하세요.',
+    );
+  }
+
+  bool _isNearHoleMiss(FailureReplayData data) {
+    final hole = data.beforeState.entities.cast<EntityState?>().firstWhere(
+      (entity) => entity?.type == EntityType.hole,
+      orElse: () => null,
+    );
+    final ball = data.beforeState.entityById('active_ball');
+    if (hole == null || ball == null || data.result.path.isEmpty) return false;
+    var nearest = double.infinity;
+    for (final point in data.result.path) {
+      nearest = math.min(nearest, point.distanceTo(hole.position));
+    }
+    final edgeMiss = nearest - hole.hitRadius - ball.hitRadius;
+    return edgeMiss > 0 && edgeMiss <= 24;
+  }
 }
 
 class FailureReplayAnalyzer {

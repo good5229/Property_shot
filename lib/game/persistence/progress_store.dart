@@ -6,6 +6,16 @@ void requireSuccessfulProgressWrite(bool succeeded, String key) {
   }
 }
 
+enum PersonalRecordKind { gimmickMastery, noAssistClear, noIslandSupportClear }
+
+extension PersonalRecordKindLabel on PersonalRecordKind {
+  String get label => switch (this) {
+    PersonalRecordKind.gimmickMastery => '기믹 완수',
+    PersonalRecordKind.noAssistClear => '보정 없이',
+    PersonalRecordKind.noIslandSupportClear => '시설 지원 없이',
+  };
+}
+
 class ProgressSnapshot {
   const ProgressSnapshot({
     required this.clearedLevels,
@@ -16,6 +26,7 @@ class ProgressSnapshot {
     required this.copyCoreRewarded,
     required this.copyCoreRewardedStageIds,
     required this.discoveriesByStageId,
+    this.personalRecords = const {},
   });
 
   final Set<int> clearedLevels;
@@ -26,6 +37,7 @@ class ProgressSnapshot {
   final bool copyCoreRewarded;
   final Set<String> copyCoreRewardedStageIds;
   final Map<String, Set<String>> discoveriesByStageId;
+  final Map<int, Set<PersonalRecordKind>> personalRecords;
 }
 
 class ProgressStore {
@@ -36,7 +48,7 @@ class ProgressStore {
             : stageIds,
       );
 
-  static const saveVersion = 4;
+  static const saveVersion = 5;
   static const clearedLevelsKey = 'property_shot_cleared_levels';
   static const clearedStageIdsKey = 'property_shot_cleared_stage_ids';
   static const unlockedLevelKey = 'property_shot_unlocked_level';
@@ -47,6 +59,7 @@ class ProgressStore {
   static const copyCoreRewardedStageIdsKey =
       'property_shot_copy_core_rewarded_stage_ids';
   static const discoveryRecordsKey = 'property_shot_discovery_records';
+  static const personalRecordsKey = 'property_shot_personal_records_v1';
   static const _discoverySeparator = '::';
 
   final int stageCount;
@@ -116,6 +129,9 @@ class ProgressStore {
     final discoveriesByStageId = _readDiscoveryRecords(
       _safeStringList(preferences, discoveryRecordsKey),
     );
+    final personalRecords = _readPersonalRecords(
+      _safeStringList(preferences, personalRecordsKey),
+    );
 
     return ProgressSnapshot(
       clearedLevels: clearedLevels,
@@ -131,6 +147,7 @@ class ProgressStore {
           copyCoreRewardedStageIds.isNotEmpty,
       copyCoreRewardedStageIds: copyCoreRewardedStageIds,
       discoveriesByStageId: discoveriesByStageId,
+      personalRecords: personalRecords,
     );
   }
 
@@ -259,6 +276,34 @@ class ProgressStore {
     });
   }
 
+  Future<void> recordPersonalRecords(
+    int levelIndex,
+    Iterable<PersonalRecordKind> records,
+  ) {
+    if (levelIndex < 0 || levelIndex >= stageCount) {
+      return Future<void>.value();
+    }
+    final normalized = records.toSet();
+    if (normalized.isEmpty) return Future<void>.value();
+    return _enqueue(() async {
+      final preferences = await SharedPreferences.getInstance();
+      final current = read(preferences);
+      final merged = <int, Set<PersonalRecordKind>>{
+        for (final entry in current.personalRecords.entries)
+          entry.key: {...entry.value},
+      };
+      merged
+          .putIfAbsent(levelIndex, () => <PersonalRecordKind>{})
+          .addAll(normalized);
+      await _writeVersion(preferences);
+      await _setStringList(
+        preferences,
+        personalRecordsKey,
+        _encodePersonalRecords(merged),
+      );
+    });
+  }
+
   Future<void> reset() {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
@@ -271,6 +316,7 @@ class ProgressStore {
       await _remove(preferences, copyCoreRewardedKey);
       await _remove(preferences, copyCoreRewardedStageIdsKey);
       await _remove(preferences, discoveryRecordsKey);
+      await _remove(preferences, personalRecordsKey);
       for (var index = 0; index < stageCount; index++) {
         await _remove(preferences, bestShotKey(index));
         await _remove(preferences, bestShotStageKey(stageIds[index]));
@@ -352,6 +398,11 @@ class ProgressStore {
       preferences,
       discoveryRecordsKey,
       _encodeDiscoveryRecords(snapshot.discoveriesByStageId),
+    );
+    await _setStringList(
+      preferences,
+      personalRecordsKey,
+      _encodePersonalRecords(snapshot.personalRecords),
     );
     for (var index = 0; index < stageCount; index++) {
       final best = snapshot.bestShots[index];
@@ -436,6 +487,43 @@ class ProgressStore {
       }
     }
     return records;
+  }
+
+  Map<int, Set<PersonalRecordKind>> _readPersonalRecords(List<String>? values) {
+    final records = <int, Set<PersonalRecordKind>>{};
+    for (final value in values ?? const <String>[]) {
+      final separator = value.indexOf(_discoverySeparator);
+      if (separator <= 0 || separator >= value.length - 2) continue;
+      final stageId = value.substring(0, separator);
+      final index = stageIds.indexOf(stageId);
+      if (index < 0) continue;
+      try {
+        final kind = PersonalRecordKind.values.byName(
+          value.substring(separator + _discoverySeparator.length),
+        );
+        records.putIfAbsent(index, () => <PersonalRecordKind>{}).add(kind);
+      } on ArgumentError {
+        continue;
+      }
+    }
+    return Map.unmodifiable({
+      for (final entry in records.entries)
+        entry.key: Set<PersonalRecordKind>.unmodifiable(entry.value),
+    });
+  }
+
+  List<String> _encodePersonalRecords(
+    Map<int, Set<PersonalRecordKind>> records,
+  ) {
+    final encoded = <String>[];
+    for (var index = 0; index < stageIds.length; index++) {
+      final kinds = records[index]?.toList() ?? <PersonalRecordKind>[];
+      kinds.sort((left, right) => left.index.compareTo(right.index));
+      for (final kind in kinds) {
+        encoded.add('${stageIds[index]}$_discoverySeparator${kind.name}');
+      }
+    }
+    return encoded;
   }
 
   Set<int> _readIntSet(List<String>? values) {

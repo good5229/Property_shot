@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 
+import 'dart:io';
+
 import 'package:property_shot/game/analysis/virtual_player_simulator.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
@@ -20,7 +22,7 @@ import '../test/fixtures/stage_heavy_patterns.dart';
 import '../test/fixtures/stage_persistent_patterns.dart';
 import '../test/fixtures/stage_speed_patterns.dart';
 
-const _trials = 80;
+const _trials = 100;
 const _seed = 20260824;
 
 void main() {
@@ -111,7 +113,8 @@ void main() {
       '${_signedPoints(row.standard.clearRate - row.direct.clearRate)} | '
       '${_percent(row.standard.mechanicClearRate)} | '
       '${_percent(row.standard.assistActivationRate)} | '
-      '${_percent(row.standard.localRescueRate)} | '
+      '${_percent(row.standard.localRescueRate)} '
+      '(${_attempts(row.standard.estimatedAttemptsForClear)}회) | '
       '${row.direct.safetyStops}→${row.standard.safetyStops} |',
     );
   }
@@ -130,6 +133,22 @@ void main() {
         (row) => row.direct.safetyStops > 0 || row.standard.safetyStops > 0,
       )
       .toList();
+  final punishingRows = rows
+      .where(
+        (row) =>
+            (row.persona.id == 'mobile_novice' ||
+                row.persona.id == 'impatient_player') &&
+            row.standard.clearRate < 0.25,
+      )
+      .toList();
+  final trivialScenarios = specs.where((spec) {
+    final selected = rows.where((row) => row.spec == spec);
+    return selected.every(
+      (row) =>
+          row.standard.clearRate >= 0.9 &&
+          row.standard.mechanicClearRate >= 0.9,
+    );
+  }).toList();
   output
     ..writeln()
     ..writeln('## 자동 판정')
@@ -146,6 +165,14 @@ void main() {
       '${rows.fold<int>(0, (sum, row) => sum + row.standard.safetyStops)}건'
       '${safetyStopRows.isEmpty ? '' : ' (${safetyStopRows.map((row) => '${row.spec.label}/${row.persona.label} ${row.direct.safetyStops}→${row.standard.safetyStops}건').join(', ')})'}',
     )
+    ..writeln(
+      '- 과도한 난이도 후보(모바일·성급한 조작 25% 미만): '
+      '${punishingRows.isEmpty ? '없음' : punishingRows.map((row) => '${row.spec.label}/${row.persona.label}').join(', ')}',
+    )
+    ..writeln(
+      '- 지나치게 쉬운 후보(모든 프로필 90% 이상): '
+      '${trivialScenarios.isEmpty ? '없음' : trivialScenarios.map((spec) => spec.label).join(', ')}',
+    )
     ..writeln()
     ..writeln('## 적용 기준')
     ..writeln()
@@ -155,7 +182,10 @@ void main() {
     ..writeln('4. 모바일 초보 40% 미만 스테이지는 보정 상향보다 먼저 판독성·충돌 여유·대표 경로를 재검토한다.')
     ..writeln('5. 기믹 준수율이 클리어율보다 크게 낮으면 홀 보정이 아닌 기믹 목표 보정 정책을 별도로 설계한다.');
 
-  print(output.toString());
+  final report = output.toString();
+  const outputPath = 'harness_docs/qa/intent_assist_virtual_player_report.md';
+  File(outputPath).writeAsStringSync(report);
+  print('가상 플레이어 QA 보고서 갱신: $outputPath (${specs.length}패턴)');
   if (regressions.isNotEmpty) {
     throw StateError(
       'STANDARD가 OFF보다 낮은 조합이 있습니다: '
@@ -186,129 +216,137 @@ List<_ScenarioSpec> _scenarioSpecs() {
     stageIndex++
   ) {
     final stage = generatedStageCatalog.stages[stageIndex];
-    final pattern = generatedStageCatalog.baselinePatternFor(stage);
-    var state = pattern
-        .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
-        .createState(stageIndex, productRules: true);
-    late final List<ShotInput> shots;
-    late final VirtualPlayerMechanicCheck mechanicCheck;
+    for (final pattern in stage.patterns) {
+      var state = pattern
+          .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+          .createState(stageIndex, productRules: true);
+      late final List<ShotInput> shots;
+      late final VirtualPlayerMechanicCheck mechanicCheck;
 
-    switch (stage.stageId) {
-      case 'stage_heavy':
-        final fixture = stageHeavyRepresentatives.firstWhere(
-          (item) =>
-              item.patternId == pattern.patternId && item.strategyId == 'anvil',
-        );
-        state = _transfer(state, 'anvil');
-        shots = [_equipped(fixture.direction, fixture.power, state)];
-        mechanicCheck = (results) => _events(results).contains('crate_pushed');
-      case 'stage_bouncy':
-        final fixture = stageBouncyRepresentatives.firstWhere(
-          (item) =>
-              item.patternId == pattern.patternId && item.strategyId == 'jelly',
-        );
-        state = _transfer(state, 'jelly');
-        shots = [_equipped(fixture.direction, fixture.power, state)];
-        mechanicCheck = (results) => _events(results).contains('bounced');
-      case 'stage_chain_gate':
-        final fixture = stageChainGateRepresentatives.firstWhere(
-          (item) =>
-              item.patternId == pattern.patternId && item.strategyId == 'steel',
-        );
-        state = _transfer(state, 'steel');
-        shots = [_equipped(fixture.direction, fixture.power, state)];
-        mechanicCheck = (results) =>
-            _events(results).contains('switch_pressed');
-      case 'stage_balloon':
-        final fixture = stageBalloonRepresentatives.firstWhere(
-          (item) =>
-              item.patternId == pattern.patternId && item.strategyId == 'sharp',
-        );
-        state = _transfer(state, 'spike_source');
-        shots = [_equipped(fixture.direction, fixture.power, state)];
-        mechanicCheck = (results) =>
-            _events(results).contains('balloon_popped');
-      case 'stage_drained':
-        final fixture = stageDrainedRepresentativeSolutions.firstWhere(
-          (item) => item.patternId == pattern.patternId,
-        );
-        state = _transfer(state, fixture.strategyId);
-        shots = [_equipped(fixture.direction, fixture.power, state)];
-        mechanicCheck = (results) => results
-            .expand((result) => result.moves)
-            .any(
-              (move) =>
-                  move.entityId == fixture.strategyId && move.from != move.to,
-            );
-      case 'stage_speed':
-        final fixture = stageSpeedRepresentativeSolutions.firstWhere(
-          (item) => item.patternId == pattern.patternId,
-        );
-        shots = [ShotInput(direction: fixture.direction, power: fixture.power)];
-        mechanicCheck = (results) =>
-            results.any((result) => result.powerSliderActivations.isNotEmpty);
-      case 'stage_persistent':
-        final fixture = stagePersistentRepresentativeSolutions.firstWhere(
-          (item) => item.patternId == pattern.patternId,
-        );
-        shots = [fixture.firstInput, fixture.secondInput];
-        mechanicCheck = (results) => results
-            .expand((result) => result.impacts)
-            .any(
-              (impact) =>
-                  impact.entityId == 'spent_ball_1' ||
-                  impact.sourceEntityId == 'spent_ball_1',
-            );
-      case 'stage_chain_score':
-        final fixture = stageChainScoreSolutions.firstWhere(
-          (item) => item.patternId == pattern.patternId,
-        );
-        shots = [fixture.firstInput, fixture.secondInput];
-        mechanicCheck = (results) =>
-            results
-                .expand((result) => result.impacts)
-                .map((impact) => impact.entityId)
-                .toSet()
-                .length >=
-            3;
-      case 'stage_rotating_reflector':
-        final fixture = stage9RotatingReflectorSolutions.firstWhere(
-          (item) => item.patternId == pattern.patternId,
-        );
-        shots = [fixture.firstInput, fixture.secondInput];
-        mechanicCheck = (results) =>
-            results.any((result) => result.reflectorRotations.isNotEmpty);
-      case 'stage_property_shot':
-        final fixture = stage10PropertyShotSolutions.firstWhere(
-          (item) => item.patternId == pattern.patternId,
-        );
-        if (fixture.transferTrait != null) {
-          final source = state.entities.firstWhere(
-            (entity) => entity.traits.contains(fixture.transferTrait),
+      switch (stage.stageId) {
+        case 'stage_heavy':
+          final fixture = stageHeavyRepresentatives.firstWhere(
+            (item) =>
+                item.patternId == pattern.patternId &&
+                item.strategyId == 'anvil',
           );
-          state = _transfer(state, source.id);
-        }
-        shots = [fixture.firstInput, fixture.secondInput];
-        mechanicCheck = (results) {
-          final events = _events(results);
-          return fixture.expectedEvents.every(events.contains);
-        };
-      default:
-        throw StateError('가상 플레이 시나리오가 없는 스테이지: ${stage.stageId}');
-    }
+          state = _transfer(state, 'anvil');
+          shots = [_equipped(fixture.direction, fixture.power, state)];
+          mechanicCheck = (results) =>
+              _events(results).contains('crate_pushed');
+        case 'stage_bouncy':
+          final fixture = stageBouncyRepresentatives.firstWhere(
+            (item) =>
+                item.patternId == pattern.patternId &&
+                item.strategyId == 'jelly',
+          );
+          state = _transfer(state, 'jelly');
+          shots = [_equipped(fixture.direction, fixture.power, state)];
+          mechanicCheck = (results) => _events(results).contains('bounced');
+        case 'stage_chain_gate':
+          final fixture = stageChainGateRepresentatives.firstWhere(
+            (item) =>
+                item.patternId == pattern.patternId &&
+                item.strategyId == 'steel',
+          );
+          state = _transfer(state, 'steel');
+          shots = [_equipped(fixture.direction, fixture.power, state)];
+          mechanicCheck = (results) =>
+              _events(results).contains('switch_pressed');
+        case 'stage_balloon':
+          final fixture = stageBalloonRepresentatives.firstWhere(
+            (item) =>
+                item.patternId == pattern.patternId &&
+                item.strategyId == 'sharp',
+          );
+          state = _transfer(state, 'spike_source');
+          shots = [_equipped(fixture.direction, fixture.power, state)];
+          mechanicCheck = (results) =>
+              _events(results).contains('balloon_popped');
+        case 'stage_drained':
+          final fixture = stageDrainedRepresentativeSolutions.firstWhere(
+            (item) => item.patternId == pattern.patternId,
+          );
+          state = _transfer(state, fixture.strategyId);
+          shots = [_equipped(fixture.direction, fixture.power, state)];
+          mechanicCheck = (results) => results
+              .expand((result) => result.moves)
+              .any(
+                (move) =>
+                    move.entityId == fixture.strategyId && move.from != move.to,
+              );
+        case 'stage_speed':
+          final fixture = stageSpeedRepresentativeSolutions.firstWhere(
+            (item) => item.patternId == pattern.patternId,
+          );
+          shots = [
+            ShotInput(direction: fixture.direction, power: fixture.power),
+          ];
+          mechanicCheck = (results) =>
+              results.any((result) => result.powerSliderActivations.isNotEmpty);
+        case 'stage_persistent':
+          final fixture = stagePersistentRepresentativeSolutions.firstWhere(
+            (item) => item.patternId == pattern.patternId,
+          );
+          shots = [fixture.firstInput, fixture.secondInput];
+          mechanicCheck = (results) => results
+              .expand((result) => result.impacts)
+              .any(
+                (impact) =>
+                    impact.entityId == 'spent_ball_1' ||
+                    impact.sourceEntityId == 'spent_ball_1',
+              );
+        case 'stage_chain_score':
+          final fixture = stageChainScoreSolutions.firstWhere(
+            (item) => item.patternId == pattern.patternId,
+          );
+          shots = [fixture.firstInput, fixture.secondInput];
+          mechanicCheck = (results) =>
+              results
+                  .expand((result) => result.impacts)
+                  .map((impact) => impact.entityId)
+                  .toSet()
+                  .length >=
+              3;
+        case 'stage_rotating_reflector':
+          final fixture = stage9RotatingReflectorSolutions.firstWhere(
+            (item) => item.patternId == pattern.patternId,
+          );
+          shots = [fixture.firstInput, fixture.secondInput];
+          mechanicCheck = (results) =>
+              results.any((result) => result.reflectorRotations.isNotEmpty);
+        case 'stage_property_shot':
+          final fixture = stage10PropertyShotSolutions.firstWhere(
+            (item) => item.patternId == pattern.patternId,
+          );
+          if (fixture.transferTrait != null) {
+            final source = state.entities.firstWhere(
+              (entity) => entity.traits.contains(fixture.transferTrait),
+            );
+            state = _transfer(state, source.id);
+          }
+          shots = [fixture.firstInput, fixture.secondInput];
+          mechanicCheck = (results) {
+            final events = _events(results);
+            return fixture.expectedEvents.every(events.contains);
+          };
+        default:
+          throw StateError('가상 플레이 시나리오가 없는 스테이지: ${stage.stageId}');
+      }
 
-    specs.add(
-      _ScenarioSpec(
-        label: stage.title,
-        scenario: VirtualPlayerScenario(
-          id: '${stage.stageId}/${pattern.patternId}',
-          initialState: state,
-          canonicalShots: shots,
-          mechanicCheck: mechanicCheck,
-          assistPolicy: IntentAssistPolicy.forStage(stage.stageId),
+      specs.add(
+        _ScenarioSpec(
+          label: '${stage.title} · ${pattern.patternId}',
+          scenario: VirtualPlayerScenario(
+            id: '${stage.stageId}/${pattern.patternId}',
+            initialState: state,
+            canonicalShots: shots,
+            mechanicCheck: mechanicCheck,
+            assistPolicy: IntentAssistPolicy.forStage(stage.stageId),
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
   return specs;
 }
@@ -333,6 +371,9 @@ String _signedPoints(double value) {
   final points = value * 100;
   return '${points >= 0 ? '+' : ''}${points.toStringAsFixed(1)}%p';
 }
+
+String _attempts(double value) =>
+    value.isFinite ? value.toStringAsFixed(1) : '∞';
 
 class _ScenarioSpec {
   const _ScenarioSpec({required this.label, required this.scenario});

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/analysis/stage_discovery.dart';
 import 'package:property_shot/game/analysis/island_restoration.dart';
 import 'package:property_shot/game/hint/generated_hint_catalog.dart';
+import 'package:property_shot/game/input/intent_assist_resolver.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/persistence/progress_store.dart';
@@ -104,6 +105,25 @@ void main() {
     expect(
       restored.currentHintEntitlement!.sources,
       contains(HintEntitlementSource.restorationLighthouse),
+    );
+  });
+
+  test('등대 집중은 사용자 OFF를 존중하면서 표준 조준 보정만 강화한다', () {
+    expect(
+      effectiveIntentAssistStrength(
+        configured: IntentAssistStrength.standard,
+        difficulty: PlayerDifficulty.normal,
+        acquiredRewards: const [restorationLighthouseAimMarker],
+      ),
+      IntentAssistStrength.comfortable,
+    );
+    expect(
+      effectiveIntentAssistStrength(
+        configured: IntentAssistStrength.off,
+        difficulty: PlayerDifficulty.normal,
+        acquiredRewards: const [restorationLighthouseAimMarker],
+      ),
+      IntentAssistStrength.off,
     );
   });
 
@@ -216,6 +236,10 @@ void main() {
       lighthouseFocused: true,
     );
     expect(lighthouse.currentHintEntitlement!.unlockedHintLevel, 2);
+    expect(
+      lighthouse.state!.acquiredRewards,
+      contains(restorationLighthouseAimMarker),
+    );
     expect(
       lighthouse.currentHintEntitlement!.sources,
       contains(HintEntitlementSource.restorationLighthouse),

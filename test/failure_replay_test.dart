@@ -62,4 +62,48 @@ void main() {
     expect(identical(result.state.entities, originalEntities), isTrue);
     expect(result.state.shotCount, greaterThanOrEqualTo(1));
   });
+
+  test('근소한 홀 빗나감은 첫 실패와 반복 실패의 정보량을 다르게 만든다', () {
+    final before = levels.first.createState(0, productRules: true);
+    final hole = before.entities.firstWhere(
+      (entity) => entity.type == EntityType.hole,
+    );
+    final ball = before.activeBall;
+    final edge = hole.hitRadius + ball.hitRadius + 8;
+    final result = ShotResult(
+      state: before.copyWith(shotCount: 1),
+      path: [before.ballSpawn, hole.position + Vec2(edge, 0)],
+      events: const [],
+    );
+    final data = FailureReplayData(
+      beforeState: before,
+      input: const ShotInput(direction: Vec2(1, 0), power: 0.6),
+      result: result,
+    );
+
+    final advice = const FailureActionAdvisor().analyze(data);
+
+    expect(advice.causeKey, 'near_hole');
+    expect(advice.messageForAttempt(1), '목표를 근소하게 지나쳤어요.');
+    expect(advice.messageForAttempt(2), contains('각도를 한 칸'));
+  });
+
+  test('기믹 거부는 힘 피드백보다 먼저 분류한다', () {
+    final before = levels.first.createState(0, productRules: true);
+    final result = ShotResult(
+      state: before.copyWith(shotCount: 1),
+      path: [before.ballSpawn],
+      events: const ['switch_rejected', 'power_low'],
+    );
+    final advice = const FailureActionAdvisor().analyze(
+      FailureReplayData(
+        beforeState: before,
+        input: const ShotInput(direction: Vec2(1, 0), power: 0.2),
+        result: result,
+      ),
+    );
+
+    expect(advice.causeKey, 'mechanic_required');
+    expect(advice.headline, '기믹을 먼저 작동해야 해요.');
+  });
 }

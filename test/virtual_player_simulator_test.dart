@@ -69,6 +69,28 @@ void main() {
     expect(assisted.assistedShots, greaterThan(0));
     expect(assisted.localRescues, greaterThan(0));
     expect(assisted.safe, isTrue);
+    expect(assisted.meanShotsPerTrial, greaterThan(0));
+    expect(assisted.estimatedAttemptsForClear, greaterThanOrEqualTo(1));
+  });
+
+  test('조기 성공 여부가 달라도 다음 시험의 원시 입력 표본은 바뀌지 않는다', () {
+    final direct = simulator.run(
+      scenario: scenario,
+      persona: noisyPointer,
+      assistStrength: IntentAssistStrength.off,
+      trials: 40,
+      seed: 19,
+    );
+    final assisted = simulator.run(
+      scenario: scenario,
+      persona: noisyPointer,
+      assistStrength: IntentAssistStrength.comfortable,
+      trials: 40,
+      seed: 19,
+    );
+
+    expect(assisted.clearRate, greaterThanOrEqualTo(direct.clearRate));
+    expect(assisted.totalShots, lessThanOrEqualTo(direct.totalShots));
   });
 
   test('기믹 판정은 단순 클리어와 별도로 집계한다', () {
@@ -117,6 +139,42 @@ void main() {
       ),
       throwsArgumentError,
     );
+    expect(
+      () => simulator.run(
+        scenario: scenario,
+        persona: const VirtualPlayerPersona(
+          id: 'biased',
+          label: '과도한 편향',
+          angleSigmaDegrees: 1,
+          powerSigma: 0,
+          powerBias: 0.4,
+        ),
+        assistStrength: IntentAssistStrength.standard,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('성공 표본이 없으면 기대 시도 횟수는 무한대로 표시한다', () {
+    final impossible = VirtualPlayerScenario(
+      id: 'impossible_contract',
+      initialState: _state(),
+      canonicalShots: const [ShotInput(direction: Vec2(-1, 0), power: 0.2)],
+    );
+    final result = simulator.run(
+      scenario: impossible,
+      persona: const VirtualPlayerPersona(
+        id: 'exact',
+        label: '정확',
+        angleSigmaDegrees: 0,
+        powerSigma: 0,
+      ),
+      assistStrength: IntentAssistStrength.off,
+      trials: 3,
+    );
+
+    expect(result.clearRate, 0);
+    expect(result.estimatedAttemptsForClear, double.infinity);
   });
 }
 

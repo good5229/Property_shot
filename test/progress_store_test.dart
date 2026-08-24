@@ -149,6 +149,52 @@ void main() {
     });
   });
 
+  test('개인 기록은 안정 스테이지 ID별로 합쳐 재실행 뒤에도 복원한다', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final firstRun = ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_a', 'stage_b'],
+    );
+
+    await firstRun.recordPersonalRecords(0, const [
+      PersonalRecordKind.gimmickMastery,
+      PersonalRecordKind.noAssistClear,
+    ]);
+    await firstRun.recordPersonalRecords(0, const [
+      PersonalRecordKind.gimmickMastery,
+      PersonalRecordKind.noIslandSupportClear,
+    ]);
+
+    final restored = await ProgressStore(
+      stageCount: 2,
+      stageIds: const ['stage_b', 'stage_a'],
+    ).load();
+    expect(restored.personalRecords[1], PersonalRecordKind.values.toSet());
+    expect(restored.personalRecords[0], isNull);
+  });
+
+  test('손상된 개인 기록과 폐기된 단계는 무시하고 초기화에서 제거한다', () async {
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.personalRecordsKey: [
+        'stage_a::gimmickMastery',
+        'stage_a::unknown_record',
+        '삭제된_단계::noAssistClear',
+        'separator_missing',
+      ],
+    });
+    final stableStore = ProgressStore(
+      stageCount: 1,
+      stageIds: const ['stage_a'],
+    );
+
+    final restored = await stableStore.load();
+    expect(restored.personalRecords, {
+      0: {PersonalRecordKind.gimmickMastery},
+    });
+    await stableStore.reset();
+    expect((await stableStore.load()).personalRecords, isEmpty);
+  });
+
   test('앱 재실행 뒤 클리어·기록·보너스·복제 코어를 복원한다', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final firstRun = ProgressStore(stageCount: 4);

@@ -52,6 +52,20 @@ import 'trait_transfer_ribbon.dart';
 
 enum GameProgressPersistencePolicy { enabled, disabled }
 
+@visibleForTesting
+IntentAssistStrength effectiveIntentAssistStrength({
+  required IntentAssistStrength configured,
+  required PlayerDifficulty difficulty,
+  required Iterable<String> acquiredRewards,
+}) {
+  if (configured == IntentAssistStrength.off) return configured;
+  if (difficulty == PlayerDifficulty.easy ||
+      acquiredRewards.contains(restorationLighthouseAimMarker)) {
+    return IntentAssistStrength.comfortable;
+  }
+  return configured;
+}
+
 CreativeChainScoreAnalysis? _analyzeSuccessfulStage({
   required GameState state,
   required List<ShotResult> shotResults,
@@ -266,6 +280,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String _clearPersistenceErrorBody = '기록 저장이 끝나야 보상과 다음 단계로 이동할 수 있습니다.';
   bool _hintWasVisible = false;
   String _failureAdvice = '';
+  String? _lastFailureCauseKey;
+  int _repeatedFailureCauseCount = 0;
   AssistRecommendation? _assistRecommendation;
   String? _assistRecommendationFeedback;
   final Set<String> _handledAssistRecommendationIds = <String>{};
@@ -382,11 +398,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _difficulty = widget.difficulty ?? GameFeedback.playerDifficulty;
     final configuredAssist =
         widget.intentAssistStrength ?? GameFeedback.intentAssistStrength;
-    _intentAssistStrength =
-        _difficulty == PlayerDifficulty.easy &&
-            configuredAssist == IntentAssistStrength.standard
-        ? IntentAssistStrength.comfortable
-        : configuredAssist;
+    _intentAssistStrength = effectiveIntentAssistStrength(
+      configured: configuredAssist,
+      difficulty: _difficulty,
+      acquiredRewards: widget.initialAcquiredRewards,
+    );
     _state =
         widget.initialState ??
         levels.first
@@ -1353,6 +1369,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showFailurePopup = false;
     _semanticAnimationStartState = null;
     _failureReplay = null;
+    _lastFailureCauseKey = null;
+    _repeatedFailureCauseCount = 0;
     _successAimGhostActive = false;
     _setPreviousAimInput(null);
     _aimStartedForShot = false;
@@ -2027,6 +2045,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
     } else {
       _failureReplay = null;
+      _lastFailureCauseKey = null;
+      _repeatedFailureCauseCount = 0;
       _setPreviousAimInput(null);
     }
     _stageShotResults.add(result);
@@ -2074,9 +2094,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _showBallInfo = false;
     _inspectedEntityId = null;
     _showFailurePopup = false;
-    _failureAdvice = widget.showTutorialFailureHints
-        ? _failureAdviceFor(result.events, levelIndex: result.state.levelIndex)
-        : _baseFailureAdviceFor(result.events);
+    final replay = _failureReplay;
+    if (replay != null) {
+      final advice = const FailureActionAdvisor().analyze(replay);
+      _repeatedFailureCauseCount = _lastFailureCauseKey == advice.causeKey
+          ? (_repeatedFailureCauseCount + 1).clamp(0, 9).toInt()
+          : 1;
+      _lastFailureCauseKey = advice.causeKey;
+      _failureAdvice = advice.messageForAttempt(_repeatedFailureCauseCount);
+      final causal = widget.showTutorialFailureHints
+          ? tutorialCausalHintForStage(result.state.levelIndex)
+          : null;
+      if (causal != null) _failureAdvice = '$_failureAdvice $causal';
+    } else {
+      _failureAdvice = '';
+    }
     if (_rewardInventory.failureCauseBoostEnabled &&
         result.state.phase != GamePhase.success &&
         result.impacts.isNotEmpty) {
@@ -3990,7 +4022,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           target: decision.targetEntityId,
           result:
               '각도 ${decision.angleDeltaDegrees.toStringAsFixed(2)}도 · '
-              '힘 ${(decision.powerDelta * 100).toStringAsFixed(1)}%',
+              '힘 ${(decision.powerDelta * 100).toStringAsFixed(1)}% · '
+              '${decision.targetKind?.name ?? 'stabilized'} '
+              '${(decision.confidence * 100).toStringAsFixed(0)}%',
         );
       }
       if (_difficulty == PlayerDifficulty.easy) {
@@ -7127,51 +7161,6 @@ String _levelIntroMessage(int levelIndex) {
     9 => '배운 속성 · 기물 상태 · 나만의 경로',
     _ => '기물 상태 살피기 · 여러 경로로 도전',
   };
-}
-
-String _failureAdviceFor(List<String> events, {required int levelIndex}) {
-  final causalHint = tutorialCausalHintForStage(levelIndex);
-  final advice = _baseFailureAdviceFor(events);
-  return causalHint == null ? advice : '$advice $causalHint';
-}
-
-String _baseFailureAdviceFor(List<String> events) {
-  if (events.contains('hole_rejected_trait')) {
-    return '홀에 닿지 못했어요. 속성을 활용하거나 다른 각도와 충돌 경로를 시도해 보세요.';
-  }
-  if (events.contains('hole_rejected_crate')) {
-    return '홀에 닿지 못했어요. 상자와의 충돌을 활용하거나 다른 경로를 시도해 보세요.';
-  }
-  if (events.contains('crate_blocked')) {
-    return '상자가 움직이지 않았습니다. 더 강한 힘이나 다른 면을 노려 보세요.';
-  }
-  if (events.contains('power_low')) {
-    return '힘이 부족했어요. 화면 가장자리 충전 게이지를 조금 더 채워 다시 시도해 보세요.';
-  }
-  if (events.contains('power_high')) {
-    return '힘이 너무 셌어요. 게이지를 한 칸 낮추고 충돌 면을 바꿔 보세요.';
-  }
-  if (events.contains('switch_rejected_sticky')) {
-    return '점착판 없이도 다른 경로를 시도할 수 있어요. 스위치는 무거운 공에 반응합니다.';
-  }
-  if (events.contains('switch_rejected')) {
-    return '스위치에는 무거움이 필요합니다. 속성을 다시 확인하세요.';
-  }
-  if (events.contains('sticky_attached')) {
-    return '붙은 공을 다음 충돌의 발판으로 활용해 보세요.';
-  }
-  if (events.contains('crate_pushed')) {
-    return '상자의 이동 방향을 보고 다음 각도를 조금 바꿔 보세요.';
-  }
-  if (events.any(
-    (event) => event == 'bounced' || event.startsWith('chain_collision_'),
-  )) {
-    return '맞은 면이 달라지면 반사 방향도 달라집니다. 조준점을 조금 옮겨 보세요.';
-  }
-  if (events.contains('momentum_transfer')) {
-    return '남은 공도 다음 발사의 충돌 재료로 활용할 수 있습니다.';
-  }
-  return '남은 공의 위치를 살펴보고 힘과 방향을 다시 정해 보세요.';
 }
 
 String _chargeGaugeStateLabel(ChargeGaugeState state) {

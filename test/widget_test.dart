@@ -551,6 +551,28 @@ void main() {
     expect(find.text('앞 섬을 먼저 클리어하세요'), findsNWidgets(levels.length - 1));
   });
 
+  testWidgets('개인 기록은 재시작 뒤 섬 지도에서 달성 내용으로 보인다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({
+      ProgressStore.personalRecordsKey: [
+        '${levels[0].id}::gimmickMastery',
+        '${levels[0].id}::noAssistClear',
+      ],
+      'best_shots_stage_${levels[0].id}': 2,
+      'bonus_goal_level_0': true,
+    });
+    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    await _pumpForAsyncWork(tester);
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+
+    expect(find.byKey(const Key('stage_personal_records_0')), findsOneWidget);
+    expect(find.text('최고 2회 · 선택 도전 ✓ · 기록 기믹 완수·보정 없이'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('클리어 진행 상태가 섬 지도에서 4단계를 연다', (tester) async {
     SharedPreferences.setMockInitialValues({'property_shot_unlocked_level': 3});
     await tester.pumpWidget(const PropertyShotApp(showHome: true));

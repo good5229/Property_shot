@@ -14,6 +14,8 @@ class VirtualPlayerPersona {
     required this.label,
     required this.angleSigmaDegrees,
     required this.powerSigma,
+    this.angleBiasDegrees = 0,
+    this.powerBias = 0,
     this.compactPointer = false,
     this.repeatedNearMisses = 0,
   });
@@ -22,6 +24,8 @@ class VirtualPlayerPersona {
   final String label;
   final double angleSigmaDegrees;
   final double powerSigma;
+  final double angleBiasDegrees;
+  final double powerBias;
   final bool compactPointer;
   final int repeatedNearMisses;
 
@@ -43,6 +47,20 @@ class VirtualPlayerPersona {
         powerSigma,
         'powerSigma',
         '0~0.5 범위의 유한한 값이어야 합니다.',
+      );
+    }
+    if (!angleBiasDegrees.isFinite || angleBiasDegrees.abs() > 30) {
+      throw ArgumentError.value(
+        angleBiasDegrees,
+        'angleBiasDegrees',
+        '-30~30 범위의 유한한 값이어야 합니다.',
+      );
+    }
+    if (!powerBias.isFinite || powerBias.abs() > 0.3) {
+      throw ArgumentError.value(
+        powerBias,
+        'powerBias',
+        '-0.3~0.3 범위의 유한한 값이어야 합니다.',
       );
     }
     if (repeatedNearMisses < 0 || repeatedNearMisses > 20) {
@@ -75,6 +93,14 @@ const virtualPlayerPersonas = <VirtualPlayerPersona>[
     label: '정밀 조작',
     angleSigmaDegrees: 1.2,
     powerSigma: 0.015,
+  ),
+  VirtualPlayerPersona(
+    id: 'impatient_player',
+    label: '성급한 조작',
+    angleSigmaDegrees: 4.5,
+    powerSigma: 0.075,
+    angleBiasDegrees: 1.2,
+    powerBias: 0.045,
   ),
   VirtualPlayerPersona(
     id: 'keyboard_accessibility',
@@ -151,6 +177,12 @@ class VirtualPlayerSimulationResult {
       totalShots == 0 ? 0 : assistedShots / totalShots;
   double get targetSnapRate => totalShots == 0 ? 0 : targetSnaps / totalShots;
   double get localRescueRate => totalShots == 0 ? 0 : localRescues / totalShots;
+  double get meanShotsPerTrial => totalShots / trials;
+
+  /// 독립 시도를 반복한다고 가정했을 때 첫 클리어까지 필요한 기대 시도다.
+  /// 성공 표본이 없으면 무한대로 두어 불가능 후보로 분리한다.
+  double get estimatedAttemptsForClear =>
+      clearRate == 0 ? double.infinity : 1 / clearRate;
   double get meanAbsoluteAngleCorrection =>
       assistedShots == 0 ? 0 : totalAbsoluteAngleCorrection / assistedShots;
   double get meanAbsolutePowerCorrection =>
@@ -178,7 +210,6 @@ class VirtualPlayerSimulator {
     if (trials < 1 || trials > 100000) {
       throw ArgumentError.value(trials, 'trials', '1~100000 범위여야 합니다.');
     }
-    final random = math.Random(seed);
     var clears = 0;
     var mechanicClears = 0;
     var totalShots = 0;
@@ -190,6 +221,9 @@ class VirtualPlayerSimulator {
     var totalPowerCorrection = 0.0;
 
     for (var trial = 0; trial < trials; trial++) {
+      // 조기 성공으로 소비되는 난수 개수가 달라져도 보정 OFF/ON이 같은 원시
+      // 입력을 비교하도록 시험마다 독립된 결정론 시드를 사용한다.
+      final random = math.Random(seed + trial * 7919);
       var state = scenario.initialState;
       final results = <ShotResult>[];
       for (final canonical in scenario.canonicalShots) {
@@ -253,8 +287,11 @@ class VirtualPlayerSimulator {
     math.Random random,
   ) {
     final normalized = canonical.normalized();
-    final angleNoise = _nextGaussian(random) * persona.angleSigmaDegrees;
-    final powerNoise = _nextGaussian(random) * persona.powerSigma;
+    final angleNoise =
+        _nextGaussian(random) * persona.angleSigmaDegrees +
+        persona.angleBiasDegrees;
+    final powerNoise =
+        _nextGaussian(random) * persona.powerSigma + persona.powerBias;
     final baseAngle = math.atan2(
       normalized.direction.y,
       normalized.direction.x,

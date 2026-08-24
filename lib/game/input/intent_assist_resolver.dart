@@ -9,6 +9,8 @@ import 'aim_direction_quantizer.dart';
 
 enum IntentAssistStrength { off, standard, comfortable }
 
+enum IntentAssistTargetKind { hole, mechanic, physical }
+
 class IntentAssistPolicy {
   const IntentAssistPolicy({
     this.preserveBoundaryIntent = false,
@@ -21,6 +23,11 @@ class IntentAssistPolicy {
     'stage_drained' ||
     'stage_persistent' ||
     'stage_chain_score' => const IntentAssistPolicy(
+      preserveBoundaryIntent: true,
+      preserveRawTrajectory: true,
+    ),
+    'stage_rotating_reflector' ||
+    'stage_property_shot' => const IntentAssistPolicy(
       preserveBoundaryIntent: true,
       preserveRawTrajectory: true,
     ),
@@ -38,6 +45,8 @@ class IntentAssistDecision {
     required this.angleDeltaDegrees,
     required this.powerDelta,
     this.targetEntityId,
+    this.targetKind,
+    this.confidence = 0,
   });
 
   final ShotInput rawInput;
@@ -45,6 +54,11 @@ class IntentAssistDecision {
   final double angleDeltaDegrees;
   final double powerDelta;
   final String? targetEntityId;
+  final IntentAssistTargetKind? targetKind;
+
+  /// 0은 단순 입력 안정화, 0보다 크면 후보군 안에서 목표가 얼마나
+  /// 명확했는지를 뜻한다. 물리 결과나 성공 확률을 의미하지 않는다.
+  final double confidence;
 
   bool get adjusted => appliedInput.assistKind != ShotAssistKind.none;
   bool get targetSnapped =>
@@ -121,6 +135,12 @@ class IntentAssistResolver {
     final rawArrival = shotResolver.firstArrivalFromResult(rawResult);
     final stableResult = shotResolver.resolve(state, stable);
     final stableArrival = shotResolver.firstArrivalFromResult(stableResult);
+    if (rawResult.state.phase == GamePhase.success &&
+        stableResult.state.phase != GamePhase.success) {
+      // 이미 성공하는 입력은 보정이 손상시키지 않는다. 단일 발 성공뿐 아니라
+      // 가상 플레이 회귀 비교에서도 원시 물리 결과가 항상 하한이 된다.
+      return _decision(raw, _preserveRawIntent(raw, holeForgiveness));
+    }
     if (_isRealTarget(state, rawArrival.entityId)) {
       // 이미 기물을 향한 입력은 그 기물 자체가 플레이어 의도의 가장 강한
       // 증거다. 양자화가 첫 접촉을 바꾸면 원시 방향·힘을 보존한다.
@@ -138,6 +158,8 @@ class IntentAssistResolver {
     }
     if (_isRealTarget(state, stableArrival.entityId) &&
         rawArrival.entityId != stableArrival.entityId) {
+      final target = state.entityById(stableArrival.entityId!);
+      final targetKind = target == null ? null : _targetKind(target);
       stable = ShotInput(
         direction: stable.direction,
         power: stable.power,
@@ -150,7 +172,13 @@ class IntentAssistResolver {
         assistTargetId: stableArrival.entityId,
         holeForgivenessRadius: stable.holeForgivenessRadius,
       ).normalized();
-      return _decision(raw, stable, targetEntityId: stableArrival.entityId);
+      return _decision(
+        raw,
+        stable,
+        targetEntityId: stableArrival.entityId,
+        targetKind: targetKind,
+        confidence: 1,
+      );
     }
     if (stableResult.state.phase == GamePhase.success) {
       return _decision(raw, stable);
@@ -190,6 +218,16 @@ class IntentAssistResolver {
         if (!_isRealTarget(state, targetId)) continue;
         final target = state.entityById(targetId!);
         if (target == null || !_isEligibleTarget(target)) continue;
+        final targetKind = _targetKind(target);
+        final limits = _limitsFor(
+          targetKind,
+          maxAngle: maxAngle,
+          maxPowerSteps: maxPowerSteps,
+        );
+        if (angleStep.abs() > limits.maxAngleDegrees ||
+            powerStep.abs() > limits.maxPowerSteps) {
+          continue;
+        }
         final appliedCandidate = ShotInput(
           direction: candidateInput.direction,
           power: candidateInput.power,
@@ -206,6 +244,12 @@ class IntentAssistResolver {
           angleStep: angleStep,
           powerStep: powerStep,
           priority: _targetPriority(target),
+          targetKind: targetKind,
+          confidence: _candidateConfidence(
+            angleStep: angleStep,
+            powerStep: powerStep,
+            limits: limits,
+          ),
         );
         candidates.add(candidate);
       }
@@ -223,13 +267,21 @@ class IntentAssistResolver {
       // 같은 거리의 서로 다른 목표가 있으면 시스템이 의도를 추측하지 않는다.
       return _decision(raw, stable);
     }
-    return _decision(raw, best.input, targetEntityId: best.targetId);
+    return _decision(
+      raw,
+      best.input,
+      targetEntityId: best.targetId,
+      targetKind: best.targetKind,
+      confidence: best.confidence,
+    );
   }
 
   IntentAssistDecision _decision(
     ShotInput raw,
     ShotInput applied, {
     String? targetEntityId,
+    IntentAssistTargetKind? targetKind,
+    double confidence = 0,
   }) {
     return IntentAssistDecision(
       rawInput: raw,
@@ -237,6 +289,8 @@ class IntentAssistResolver {
       angleDeltaDegrees: _signedAngleDegrees(raw.direction, applied.direction),
       powerDelta: applied.power - raw.power,
       targetEntityId: targetEntityId,
+      targetKind: targetKind,
+      confidence: confidence.clamp(0, 1).toDouble(),
     );
   }
 
@@ -264,7 +318,57 @@ class IntentAssistResolver {
   bool _isEligibleTarget(EntityState entity) {
     if (!entity.active || entity.id == 'active_ball') return false;
     if (entity.type == EntityType.gate && entity.open) return false;
+    if (entity.type == EntityType.wall || entity.type == EntityType.gate) {
+      return false;
+    }
     return entity.type != EntityType.hole || entity.hitRadius > 0;
+  }
+
+  IntentAssistTargetKind _targetKind(EntityState entity) =>
+      switch (entity.type) {
+        EntityType.hole => IntentAssistTargetKind.hole,
+        EntityType.switchPad ||
+        EntityType.powerSlider ||
+        EntityType.rotatingReflector ||
+        EntityType.balloon => IntentAssistTargetKind.mechanic,
+        _ => IntentAssistTargetKind.physical,
+      };
+
+  _TargetCorrectionLimits _limitsFor(
+    IntentAssistTargetKind kind, {
+    required int maxAngle,
+    required int maxPowerSteps,
+  }) => switch (kind) {
+    // 홀은 최종 정답이므로 기믹보다 좁게 잡는다. 가장자리 여유가 별도로
+    // 작동하기 때문에 큰 방향·힘 변경으로 자동 해결할 필요가 없다.
+    IntentAssistTargetKind.hole => _TargetCorrectionLimits(
+      maxAngleDegrees: math.min(maxAngle, 2),
+      maxPowerSteps: math.min(maxPowerSteps, 1),
+    ),
+    // 스위치·발판·반사판은 플레이어가 실제로 가리킨 중간 목표이므로
+    // 설정 상한 전체를 쓰되 첫 접촉 검증을 반드시 통과해야 한다.
+    IntentAssistTargetKind.mechanic => _TargetCorrectionLimits(
+      maxAngleDegrees: maxAngle,
+      maxPowerSteps: maxPowerSteps,
+    ),
+    IntentAssistTargetKind.physical => _TargetCorrectionLimits(
+      maxAngleDegrees: maxAngle,
+      maxPowerSteps: math.min(maxPowerSteps, 2),
+    ),
+  };
+
+  double _candidateConfidence({
+    required int angleStep,
+    required int powerStep,
+    required _TargetCorrectionLimits limits,
+  }) {
+    final angleCost = limits.maxAngleDegrees == 0
+        ? 0.0
+        : angleStep.abs() / limits.maxAngleDegrees;
+    final powerCost = limits.maxPowerSteps == 0
+        ? 0.0
+        : powerStep.abs() / limits.maxPowerSteps;
+    return (1 - angleCost * 0.7 - powerCost * 0.3).clamp(0.05, 1);
   }
 
   int _targetPriority(EntityState entity) => switch (entity.type) {
@@ -316,6 +420,8 @@ class _Candidate {
     required this.angleStep,
     required this.powerStep,
     required this.priority,
+    required this.targetKind,
+    required this.confidence,
   });
 
   final ShotInput input;
@@ -323,6 +429,8 @@ class _Candidate {
   final int angleStep;
   final int powerStep;
   final int priority;
+  final IntentAssistTargetKind targetKind;
+  final double confidence;
 
   int compareTo(_Candidate other) {
     final angle = angleStep.abs().compareTo(other.angleStep.abs());
@@ -341,4 +449,14 @@ class _Candidate {
   bool hasSameIntentRank(_Candidate other) =>
       angleStep.abs() == other.angleStep.abs() &&
       powerStep.abs() == other.powerStep.abs();
+}
+
+class _TargetCorrectionLimits {
+  const _TargetCorrectionLimits({
+    required this.maxAngleDegrees,
+    required this.maxPowerSteps,
+  });
+
+  final int maxAngleDegrees;
+  final int maxPowerSteps;
 }

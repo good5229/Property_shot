@@ -338,6 +338,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   Set<int> _clearedLevels = <int>{};
   Map<int, int> _bestShots = <int, int>{};
   Set<int> _bonusGoals = <int>{};
+  Map<int, Set<PersonalRecordKind>> _personalRecords =
+      <int, Set<PersonalRecordKind>>{};
   Map<String, Set<String>> _discoveriesByStageId = <String, Set<String>>{};
   Map<String, int> _solutionCountsByStageId = const {};
   IslandLandmark? _islandSupportFocus;
@@ -534,6 +536,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _clearedLevels = progress.clearedLevels;
         _bestShots = progress.bestShots;
         _bonusGoals = progress.bonusGoals;
+        _personalRecords = {
+          for (final entry in progress.personalRecords.entries)
+            entry.key: {...entry.value},
+        };
         _unlockedLevel = progress.unlockedLevel;
         _discoveriesByStageId = {
           for (final entry in progress.discoveriesByStageId.entries)
@@ -1011,6 +1017,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       );
     }
     final session = await _activePatternSessionFuture;
+    final completionInputs = session.currentShotInputs;
+    final usedIslandSupport =
+        session.state?.acquiredRewards.any(
+          (reward) => reward.startsWith('island_restoration_'),
+        ) ??
+        false;
+    var newlyRecordedPersonalRecords = <PersonalRecordKind>{};
     final attributionState = session.state;
     final completionDifficulty = attributionState == null
         ? null
@@ -1061,6 +1074,20 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         if (completion.optionalChallengeAchieved) {
           await _progressStore.recordBonusGoal(levelIndex);
         }
+        newlyRecordedPersonalRecords = <PersonalRecordKind>{
+          if (completion.optionalChallengeAchieved)
+            PersonalRecordKind.gimmickMastery,
+          if (completionInputs.isNotEmpty &&
+              completionInputs.every(
+                (input) => input.assistKind == ShotAssistKind.none,
+              ))
+            PersonalRecordKind.noAssistClear,
+          if (!usedIslandSupport) PersonalRecordKind.noIslandSupportClear,
+        };
+        await _progressStore.recordPersonalRecords(
+          levelIndex,
+          newlyRecordedPersonalRecords,
+        );
       }
       _applyClearedLevelInMemory(levelIndex);
       if (completionDifficulty == PlayerDifficulty.normal && mounted) {
@@ -1074,6 +1101,15 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           };
           if (completion.optionalChallengeAchieved) {
             _bonusGoals = {..._bonusGoals, levelIndex};
+          }
+          if (newlyRecordedPersonalRecords.isNotEmpty) {
+            _personalRecords = {
+              ..._personalRecords,
+              levelIndex: {
+                ...?_personalRecords[levelIndex],
+                ...newlyRecordedPersonalRecords,
+              },
+            };
           }
         });
       }
@@ -1837,6 +1873,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         solutionCountsByStageId: _solutionCountsByStageId,
         bestShots: _bestShots,
         bonusGoals: _bonusGoals,
+        personalRecords: _personalRecords,
         islandSupportFocus: _islandSupportFocus,
         onIslandSupportSelected: (landmark) =>
             unawaited(_selectIslandSupport(landmark)),
@@ -3843,6 +3880,7 @@ class _StageSelectScreen extends StatelessWidget {
     required this.solutionCountsByStageId,
     required this.bestShots,
     required this.bonusGoals,
+    required this.personalRecords,
     required this.islandSupportFocus,
     required this.onIslandSupportSelected,
     this.onPhysicsLab,
@@ -3856,6 +3894,7 @@ class _StageSelectScreen extends StatelessWidget {
   final Map<String, int> solutionCountsByStageId;
   final Map<int, int> bestShots;
   final Set<int> bonusGoals;
+  final Map<int, Set<PersonalRecordKind>> personalRecords;
   final IslandLandmark? islandSupportFocus;
   final ValueChanged<IslandLandmark> onIslandSupportSelected;
   final VoidCallback? onPhysicsLab;
@@ -4207,6 +4246,12 @@ class _StageSelectScreen extends StatelessWidget {
                                                   solutionCountsByStageId[levels[index]
                                                       .id] ??
                                                   0,
+                                              bestShot: bestShots[index],
+                                              bonusAchieved: bonusGoals
+                                                  .contains(index),
+                                              personalRecords:
+                                                  personalRecords[index] ??
+                                                  const {},
                                               thumbnailSize: thumbnailSize,
                                               onTap: () => onSelectStage(index),
                                             ),
@@ -4995,7 +5040,7 @@ class _IslandRestorationCard extends StatelessWidget {
                       ),
                       label: Text(switch (landmark) {
                         IslandLandmark.observatory => '정밀 충전',
-                        IslandLandmark.lighthouse => 'L2까지',
+                        IslandLandmark.lighthouse => '조준 보정 강화',
                         IslandLandmark.bridge => '코어 +1 추가',
                       }),
                     ),
@@ -5058,6 +5103,9 @@ class _StageTile extends StatelessWidget {
     required this.onTap,
     this.discoveredMilestoneIds = const {},
     this.solutionStampCount = 0,
+    this.bestShot,
+    this.bonusAchieved = false,
+    this.personalRecords = const {},
     this.locked = false,
     this.thumbnailSize = 80,
   });
@@ -5067,6 +5115,9 @@ class _StageTile extends StatelessWidget {
   final bool locked;
   final Set<String> discoveredMilestoneIds;
   final int solutionStampCount;
+  final int? bestShot;
+  final bool bonusAchieved;
+  final Set<PersonalRecordKind> personalRecords;
   final double thumbnailSize;
 
   @override
@@ -5211,6 +5262,25 @@ class _StageTile extends StatelessWidget {
                             key: Key('stage_solution_stamps_$index'),
                             style: const TextStyle(
                               color: Color(0xFF8A5B19),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        if (bestShot != null || personalRecords.isNotEmpty) ...[
+                          Text(
+                            [
+                              if (bestShot != null) '최고 $bestShot회',
+                              if (bonusAchieved) '선택 도전 ✓',
+                              if (personalRecords.isNotEmpty)
+                                '기록 ${PersonalRecordKind.values.where(personalRecords.contains).map((record) => record.label).join('·')}',
+                            ].join(' · '),
+                            key: Key('stage_personal_records_$index'),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF315C46),
                               fontSize: 11,
                               fontWeight: FontWeight.w900,
                             ),

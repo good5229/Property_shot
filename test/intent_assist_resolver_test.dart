@@ -23,6 +23,8 @@ void main() {
     expect(before.entityId, isNot('target'));
     expect(decision.targetSnapped, isTrue);
     expect(decision.targetEntityId, 'target');
+    expect(decision.targetKind, IntentAssistTargetKind.physical);
+    expect(decision.confidence, inInclusiveRange(0.05, 1));
     expect(decision.angleDeltaDegrees.abs(), lessThanOrEqualTo(3.0001));
     expect(decision.powerDelta.abs(), lessThanOrEqualTo(0.0201));
     expect(after.entityId, 'target');
@@ -134,6 +136,44 @@ void main() {
     expect(decision.targetSnapped, isFalse);
     expect(decision.targetEntityId, isNull);
     expect(decision.appliedInput.direction, const Vec2(1, 0));
+  });
+
+  test('홀은 기믹보다 좁은 각도 범위에서만 자동 목표로 인정한다', () {
+    final state = _state([
+      const EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(300, 305),
+        size: Vec2(20, 20),
+        solid: false,
+        hitboxScale: 1,
+      ),
+    ]);
+    final raw = _input(0, 0.6);
+
+    final decision = assist.resolve(state: state, rawInput: raw);
+
+    expect(decision.targetEntityId, 'hole', reason: '2도 안쪽의 홀은 근소한 오차로 인정합니다.');
+    expect(decision.targetKind, IntentAssistTargetKind.hole);
+    expect(decision.angleDeltaDegrees.abs(), lessThanOrEqualTo(2.0001));
+  });
+
+  test('벽과 문은 가까워도 자동 보정 목표로 선택하지 않는다', () {
+    final state = _state([
+      const EntityState(
+        id: 'wall',
+        type: EntityType.wall,
+        position: Vec2(260, 280),
+        size: Vec2(10, 70),
+        hitboxScale: 1,
+      ),
+    ]);
+    final raw = _input(8, 0.6);
+
+    final decision = assist.resolve(state: state, rawInput: raw);
+
+    expect(decision.targetSnapped, isFalse);
+    expect(decision.targetEntityId, isNull);
   });
 
   test('홀과 일반 기물이 같은 오차에 있어도 정답처럼 홀을 우선하지 않는다', () {
