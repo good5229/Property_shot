@@ -8,6 +8,7 @@ import '../game/domain/game_state.dart';
 import '../game/domain/level_definition.dart';
 import '../game/domain/shot_input.dart';
 import '../game/domain/stage_catalog.dart';
+import '../game/input/intent_assist_resolver.dart';
 import '../game/levels/generated_stage_catalog.dart';
 import '../game/persistence/daily_challenge_record_store.dart';
 import '../game/persistence/replay_library_store.dart';
@@ -44,6 +45,17 @@ const List<String> dailyChallengeExpectedStageOrder = [
   'stage_rotating_reflector',
   'stage_property_shot',
 ];
+
+/// 정식 기록은 개인 설정과 무관하게 같은 입력 판정으로 비교한다.
+const IntentAssistStrength officialDailyIntentAssistStrength =
+    IntentAssistStrength.standard;
+
+IntentAssistStrength intentAssistStrengthForDailyMode(
+  DailyChallengeMode mode,
+) =>
+    mode == DailyChallengeMode.official
+    ? officialDailyIntentAssistStrength
+    : GameFeedback.intentAssistStrength;
 
 void validateDailyChallengeStageOrder(StageCatalog catalog) {
   final actual = catalog.stages
@@ -927,6 +939,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         progressPersistencePolicy: GameProgressPersistencePolicy.disabled,
         tutorialVariant: widget.tutorialVariant,
         difficulty: _activeDifficulty,
+        intentAssistStrength: intentAssistStrengthForDailyMode(
+          _activeMode ?? DailyChallengeMode.official,
+        ),
         showTutorialFailureHints: false,
         showDebugControls: false,
       );
@@ -1101,8 +1116,8 @@ class _DailyOverviewView extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   language.pick(
-                    '정식 도전은 오늘의 기록에 반영되고, 연습은 앱을 닫으면 사라집니다.',
-                    'Official runs update today’s device record. Practice disappears when you close the app.',
+                    '정식 도전은 보통 난이도·표준 조준 보정으로 기록됩니다. 연습은 내 설정을 사용하며 앱을 닫으면 사라집니다.',
+                    'Official runs use Normal difficulty and Standard aim assist. Practice uses your settings and disappears when you close the app.',
                   ),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(

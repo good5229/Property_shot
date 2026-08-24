@@ -6,6 +6,7 @@ import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/input/intent_assist_resolver.dart';
 import 'package:property_shot/game/run/daily_challenge.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/daily_challenge_screen.dart';
@@ -83,6 +84,37 @@ void main() {
     expect(
       tester.widget<GameScreen>(find.byType(GameScreen)).difficulty,
       PlayerDifficulty.normal,
+    );
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).intentAssistStrength,
+      IntentAssistStrength.standard,
+    );
+  });
+
+  testWidgets('정식 도전은 개인 보정 설정을 무시하고 연습은 그대로 사용한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    GameFeedback.intentAssistStrength = IntentAssistStrength.comfortable;
+    addTearDown(GameFeedback.resetForTesting);
+    await tester.pumpWidget(const MaterialApp(home: DailyChallengeScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('표준 조준 보정'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('daily_official_button')));
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).intentAssistStrength,
+      IntentAssistStrength.standard,
+    );
+
+    await tester.tap(find.byKey(const Key('home_button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('stage_abandon_confirm_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('daily_practice_button')));
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(
+      tester.widget<GameScreen>(find.byType(GameScreen)).intentAssistStrength,
+      IntentAssistStrength.comfortable,
     );
   });
 
