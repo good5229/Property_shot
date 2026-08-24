@@ -28,8 +28,12 @@ void main() {
       expect(screen.levelOverride?.patternId, 'stage_heavy_01');
     });
 
-    test('최초 미클리어 1~4단계만 baseline 우선 대상이다', () {
-      for (var index = 0; index < 4; index++) {
+    test('최초 미클리어 1~10단계는 학습 파형 대상이다', () {
+      for (
+        var index = 0;
+        index < generatedStageCatalog.stages.length;
+        index++
+      ) {
         expect(
           CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
             stageIndex: index,
@@ -45,27 +49,32 @@ void main() {
           isFalse,
         );
       }
-      expect(
-        CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
-          stageIndex: 4,
-          alreadyCleared: false,
-        ),
-        isFalse,
-      );
     });
 
-    test('1~4단계 fresh bag의 첫 draw는 각 _01 baseline이다', () {
-      for (final stage in generatedStageCatalog.stages.take(4)) {
-        final draw = CampaignStageSelectionPolicy.drawTutorialBaselineFirst(
-          stage: stage,
-          state: StageShuffleBagState.initial(stage.stageId),
-          rootSeed: 0x10203040,
+    test('10단계 fresh cycle은 learn→confirm→apply→mastery 순서를 따른다', () {
+      for (final stage in generatedStageCatalog.stages) {
+        var bag = StageShuffleBagState.initial(stage.stageId);
+        final draws = <String>[];
+        for (var index = 0; index < stage.patterns.length; index++) {
+          final draw = CampaignStageSelectionPolicy.drawLearningWave(
+            stage: stage,
+            state: bag,
+            rootSeed: 0x10203040,
+          );
+          draws.add(draw.patternId);
+          expect(
+            CampaignStageSelectionPolicy.roleFor(
+              stageId: stage.stageId,
+              patternId: draw.patternId,
+            ),
+            CampaignPatternRole.values[index],
+          );
+          bag = draw.nextState;
+        }
+        expect(
+          draws,
+          CampaignStageSelectionPolicy.learningWavePatternIds[stage.stageId],
         );
-
-        expect(draw.patternId, '${stage.stageId}_01');
-        expect(draw.drawIndex, 0);
-        expect(draw.nextState.drawIndex, 1);
-        expect(draw.nextState.lastPatternId, draw.patternId);
       }
     });
 
@@ -95,6 +104,53 @@ void main() {
       );
       expect(bag.cycle, 1);
       expect(bag.remainingPatternIds, isEmpty);
+    });
+
+    test('기존 first-cycle 중간 저장은 남은 순서를 다시 배열하지 않는다', () {
+      const rootSeed = 13579;
+      final stage = generatedStageCatalog.stageById('stage_balloon');
+      final legacyFirst = StageShuffleBag.draw(
+        stage: stage,
+        state: StageShuffleBagState.initial(stage.stageId),
+        rootSeed: rootSeed,
+      );
+      final expected = StageShuffleBag.draw(
+        stage: stage,
+        state: legacyFirst.nextState,
+        rootSeed: rootSeed,
+      );
+      final actual = CampaignStageSelectionPolicy.drawLearningWave(
+        stage: stage,
+        state: legacyFirst.nextState,
+        rootSeed: rootSeed,
+      );
+
+      expect(actual.toJson(), expected.toJson());
+    });
+
+    test('두 번째 cycle부터 공용 결정론 셔플과 완전히 동일하다', () {
+      const rootSeed = 24680;
+      final stage = generatedStageCatalog.stageById('stage_rotating_reflector');
+      var bag = StageShuffleBagState.initial(stage.stageId);
+      for (var index = 0; index < stage.patterns.length; index++) {
+        bag = CampaignStageSelectionPolicy.drawLearningWave(
+          stage: stage,
+          state: bag,
+          rootSeed: rootSeed,
+        ).nextState;
+      }
+
+      final expected = StageShuffleBag.draw(
+        stage: stage,
+        state: bag,
+        rootSeed: rootSeed,
+      );
+      final actual = CampaignStageSelectionPolicy.drawLearningWave(
+        stage: stage,
+        state: bag,
+        rootSeed: rootSeed,
+      );
+      expect(actual.toJson(), expected.toJson());
     });
 
     test('재시도와 저장 재개는 이미 기록한 current draw를 유지한다', () async {

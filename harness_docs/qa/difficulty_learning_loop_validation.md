@@ -32,3 +32,13 @@
 - `dart run tool/generate_virtual_player_report.dart`
 
 최종 수치는 `harness_docs/qa/intent_assist_virtual_player_report.md`에 저장한다.
+
+## 캠페인 첫 cycle 학습 파형
+
+- 10개 스테이지마다 패턴을 `learn → confirm → apply → mastery` 역할로 명시했다.
+- 첫 cycle의 네 번만 역할 순서로 노출하고, 두 번째 cycle부터 기존 결정론 셔플을 그대로 사용한다.
+- 기존 first-cycle 중간 저장은 이미 저장된 `remainingPatternIds`를 다시 배열하지 않는다.
+- 일일 도전과 탐사 세션은 공용 셔플 정책을 유지한다.
+- `drained_03`처럼 쉬운 규칙 확인 패턴은 learn, `balloon_04`·`rotating_reflector_03`처럼 정밀도가 높은 패턴은 mastery에 배치했다.
+
+역할 계획은 현지화된 난도 문자열이나 파일명 순서를 파싱하지 않고 typed `CampaignPatternRole`과 안정 패턴 ID 목록으로 관리한다. 카탈로그와 목록이 다르거나 역할이 빠지면 fresh 캠페인 draw가 명시적으로 실패한다.

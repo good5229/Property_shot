@@ -635,11 +635,6 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           session.state?.currentStageId == levels[index].id) {
         await session.prepareRewardSelection(stageId: levels[index].id);
       }
-      final preferBaseline =
-          CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
-            stageIndex: index,
-            alreadyCleared: _clearedLevels.contains(index),
-          );
       final stateBeforeSelection = session.state;
       final draw = await session.selectStage(
         levels[index].id,
@@ -651,9 +646,9 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         initialCloneCoreRewardedStageIds: expedition
             ? const []
             : _copyCoreRewardedStageIds,
-        drawPolicy: preferBaseline
-            ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
-            : null,
+        drawPolicy: expedition
+            ? null
+            : CampaignStageSelectionPolicy.drawLearningWave,
       );
       final restoration = IslandRestorationProgress.fromDiscoveries(
         discoveriesByStageId: _discoveriesByStageId,
@@ -1043,13 +1038,6 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
             expeditionPosition + 1 < expeditionStageIds.length
         ? expeditionStageIds[expeditionPosition + 1]
         : null;
-    final preferNextBaseline =
-        !_activeIsExpedition &&
-        nextIndex < levels.length &&
-        CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
-          stageIndex: nextIndex,
-          alreadyCleared: _clearedLevels.contains(nextIndex),
-        );
     final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
@@ -1062,8 +1050,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       optionalChallengeAchieved: optionalChallengeAchieved,
       applyOptionalChallengeGuard: applyOptionalChallengeGuard,
       applyStageRecordGuard: applyStageRecordGuard,
-      nextStageDrawPolicy: preferNextBaseline
-          ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
+      nextStageDrawPolicy: !_activeIsExpedition && nextIndex < levels.length
+          ? CampaignStageSelectionPolicy.drawLearningWave
           : null,
     );
     await _saveCurrentReplay(session, totalScore: chainScore?.totalScore ?? 0);
@@ -1366,13 +1354,6 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
             expeditionPosition + 1 < expeditionStageIds.length
         ? expeditionStageIds[expeditionPosition + 1]
         : null;
-    final preferNextBaseline =
-        !expedition &&
-        nextIndex < levels.length &&
-        CampaignStageSelectionPolicy.shouldPreferTutorialBaseline(
-          stageIndex: nextIndex,
-          alreadyCleared: _clearedLevels.contains(nextIndex),
-        );
     final completion = await session.completeCurrentStage(
       stageId: levels[levelIndex].id,
       shotCount: shotCount,
@@ -1390,8 +1371,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         runRewardStageRecordGuardId,
         levels[levelIndex].id,
       ),
-      nextStageDrawPolicy: preferNextBaseline
-          ? CampaignStageSelectionPolicy.drawTutorialBaselineFirst
+      nextStageDrawPolicy: !expedition && nextIndex < levels.length
+          ? CampaignStageSelectionPolicy.drawLearningWave
           : null,
     );
     if (!expedition) {
