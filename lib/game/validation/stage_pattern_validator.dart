@@ -5,6 +5,7 @@ import '../domain/level_definition.dart';
 import '../domain/stage_pattern.dart';
 import '../domain/entity_state.dart';
 import '../domain/game_state.dart';
+import '../domain/hidden_mechanic_state.dart';
 import '../domain/shot_input.dart';
 import '../hint/hint_catalog.dart';
 import '../hint/pattern_hint.dart';
@@ -63,8 +64,14 @@ enum ValidationIssueCode {
   existingBallOverlapsHole,
   ballSpawnInsideSolid,
   initialObjectOverlap,
+  visualObjectOverlap,
   missingLinkedTarget,
   linkedStateMismatch,
+  hiddenMechanicMissingTrigger,
+  hiddenMechanicInvalidTrigger,
+  hiddenMechanicAmbiguousTrigger,
+  hiddenMechanicHintSpoiler,
+  gimmickDirectBypass,
   objectCountExceeded,
   requiredReward,
   runtimeAutoClear,
@@ -186,10 +193,22 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'ball_spawn_inside_solid';
       case ValidationIssueCode.initialObjectOverlap:
         return 'initial_object_overlap';
+      case ValidationIssueCode.visualObjectOverlap:
+        return 'visual_object_overlap';
       case ValidationIssueCode.missingLinkedTarget:
         return 'missing_linked_target';
       case ValidationIssueCode.linkedStateMismatch:
         return 'linked_state_mismatch';
+      case ValidationIssueCode.hiddenMechanicMissingTrigger:
+        return 'hidden_mechanic_missing_trigger';
+      case ValidationIssueCode.hiddenMechanicInvalidTrigger:
+        return 'hidden_mechanic_invalid_trigger';
+      case ValidationIssueCode.hiddenMechanicAmbiguousTrigger:
+        return 'hidden_mechanic_ambiguous_trigger';
+      case ValidationIssueCode.hiddenMechanicHintSpoiler:
+        return 'hidden_mechanic_hint_spoiler';
+      case ValidationIssueCode.gimmickDirectBypass:
+        return 'gimmick_direct_bypass';
       case ValidationIssueCode.objectCountExceeded:
         return 'object_count_exceeded';
       case ValidationIssueCode.requiredReward:
@@ -622,6 +641,17 @@ class StagePatternValidator {
     }
     _validateInitialOverlaps(stage, pattern, issues);
     _validateLinks(stage, pattern, issues);
+    _validateHiddenMechanics(stage, pattern, issues);
+    if (pattern.metadata['gimmick_required'] == 'true' &&
+        _hasDirectClear(stage, pattern)) {
+      issues.add(
+        _issue(
+          ValidationIssueCode.gimmickDirectBypass,
+          stageId,
+          patternId: patternId,
+        ),
+      );
+    }
   }
 
   void _validateObject(
@@ -994,6 +1024,41 @@ class StagePatternValidator {
         objects.add(object);
       }
     }
+
+    final visibleObjects = pattern.objects
+        .where(
+          (object) =>
+              object.active &&
+              object.type != EntityType.wall &&
+              !(object.type == EntityType.gate && object.open) &&
+              object.size.x.isFinite &&
+              object.size.y.isFinite &&
+              object.position.x.isFinite &&
+              object.position.y.isFinite,
+        )
+        .toList(growable: false);
+    for (var firstIndex = 0; firstIndex < visibleObjects.length; firstIndex++) {
+      final first = visibleObjects[firstIndex];
+      final firstBounds = _visualBounds(first);
+      for (
+        var secondIndex = firstIndex + 1;
+        secondIndex < visibleObjects.length;
+        secondIndex++
+      ) {
+        final second = visibleObjects[secondIndex];
+        if (_isIntentionalVisualPair(first, second)) continue;
+        final intersection = firstBounds.intersection(_visualBounds(second));
+        if (intersection.width <= 4 || intersection.height <= 4) continue;
+        _addIssueForObjectPair(
+          stage,
+          pattern,
+          issues,
+          ValidationIssueCode.visualObjectOverlap,
+          first,
+          second,
+        );
+      }
+    }
     for (var i = 0; i < objects.length; i++) {
       final first = _shapeFor(objects[i]);
       if (first == null) continue;
@@ -1225,6 +1290,59 @@ class StagePatternValidator {
       } else {
         // gate.linkId는 resolver에서 읽지 않으므로 연결 대상 판단에 사용하지 않는다.
         _addMissingLinkIssue(stage, pattern, issues, [gate.id]);
+      }
+    }
+  }
+
+  void _validateHiddenMechanics(
+    StageDefinition stage,
+    StagePattern pattern,
+    List<ValidationIssue> issues,
+  ) {
+    final hiddenTargets = pattern.objects
+        .where(
+          (object) =>
+              object.active &&
+              HiddenMechanicState.masksIdentity(object.visualState),
+        )
+        .toList(growable: false);
+    for (final target in hiddenTargets) {
+      final triggers = pattern.objects
+          .where((object) => object.active && object.linkId == target.id)
+          .toList(growable: false);
+      if (triggers.isEmpty) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hiddenMechanicMissingTrigger,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: [target.id],
+          ),
+        );
+        continue;
+      }
+      if (triggers.length > 1) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hiddenMechanicAmbiguousTrigger,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: [target.id, ...triggers.map((item) => item.id)]..sort(),
+          ),
+        );
+      }
+      final invalid = triggers
+          .where((trigger) => trigger.type != EntityType.balloon)
+          .toList(growable: false);
+      if (invalid.isNotEmpty) {
+        issues.add(
+          _issue(
+            ValidationIssueCode.hiddenMechanicInvalidTrigger,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: [target.id, ...invalid.map((item) => item.id)]..sort(),
+          ),
+        );
       }
     }
   }
@@ -1580,6 +1698,24 @@ class StagePatternValidator {
           ),
         );
       }
+      final hiddenTargets = pattern.objects.where(
+        (object) => HiddenMechanicState.masksIdentity(object.visualState),
+      );
+      for (final hidden in hiddenTargets) {
+        final normalized = hint.text.toLowerCase();
+        final leaked = _hiddenIdentityTokens(
+          hidden,
+        ).any((token) => normalized.contains(token.toLowerCase()));
+        if (!leaked) continue;
+        issues.add(
+          _issue(
+            ValidationIssueCode.hiddenMechanicHintSpoiler,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: [hidden.id],
+          ),
+        );
+      }
     }
     final key = entry.key;
     if (key != null) _validateHintKey(stage, pattern, key, issues);
@@ -1836,10 +1972,22 @@ String _defaultMessage(ValidationIssueCode code) {
       return '공 시작 히트박스가 고체 기물 안에 있습니다.';
     case ValidationIssueCode.initialObjectOverlap:
       return '초기 기물 히트박스가 겹칩니다.';
+    case ValidationIssueCode.visualObjectOverlap:
+      return '서로 다른 기물의 화면 영역이 겹쳐 정체를 구분하기 어렵습니다.';
     case ValidationIssueCode.missingLinkedTarget:
       return '문과 스위치의 연결 대상이 없습니다.';
     case ValidationIssueCode.linkedStateMismatch:
       return '연결된 문과 스위치의 초기 상태가 맞지 않습니다.';
+    case ValidationIssueCode.hiddenMechanicMissingTrigger:
+      return '숨은 기믹을 공개할 트리거가 없습니다.';
+    case ValidationIssueCode.hiddenMechanicInvalidTrigger:
+      return '숨은 기믹 공개 트리거가 현재 물리 규칙에서 지원되지 않습니다.';
+    case ValidationIssueCode.hiddenMechanicAmbiguousTrigger:
+      return '숨은 기믹에 공개 트리거가 둘 이상 연결되어 인과가 모호합니다.';
+    case ValidationIssueCode.hiddenMechanicHintSpoiler:
+      return '공개 전 힌트가 숨은 기믹의 정체를 누설합니다.';
+    case ValidationIssueCode.gimmickDirectBypass:
+      return '필수 기믹을 사용하지 않는 직선 즉시 클리어 경로가 있습니다.';
     case ValidationIssueCode.objectCountExceeded:
       return '기물 수가 성능 예산을 초과했습니다.';
     case ValidationIssueCode.requiredReward:
@@ -1920,6 +2068,57 @@ bool _sameObjectIds(List<String> first, List<String> second) {
   }
   return true;
 }
+
+class _VisualBounds {
+  const _VisualBounds(this.left, this.top, this.right, this.bottom);
+
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+
+  _VisualBounds intersection(_VisualBounds other) => _VisualBounds(
+    math.max(left, other.left),
+    math.max(top, other.top),
+    math.min(right, other.right),
+    math.min(bottom, other.bottom),
+  );
+
+  double get width => math.max(0, right - left);
+  double get height => math.max(0, bottom - top);
+}
+
+_VisualBounds _visualBounds(PatternObjectDefinition object) => _VisualBounds(
+  object.position.x - object.size.x / 2,
+  object.position.y - object.size.y / 2,
+  object.position.x + object.size.x / 2,
+  object.position.y + object.size.y / 2,
+);
+
+bool _isIntentionalVisualPair(
+  PatternObjectDefinition first,
+  PatternObjectDefinition second,
+) {
+  final types = {first.type, second.type};
+  return types.contains(EntityType.ball) &&
+      types.contains(EntityType.stickySurface);
+}
+
+Set<String> _hiddenIdentityTokens(PatternObjectDefinition object) => {
+  object.id,
+  switch (object.type) {
+    EntityType.switchPad => '스위치',
+    EntityType.powerSlider => '발판',
+    EntityType.rotatingReflector => '반사판',
+    EntityType.gate => '문',
+    EntityType.crate => '상자',
+    EntityType.weight => '돌',
+    EntityType.bumper => '젤리',
+    EntityType.stickySurface => '점착판',
+    _ => object.type.name,
+  },
+  object.type.name,
+};
 
 bool _isSolidForValidation(PatternObjectDefinition object) {
   if (object.type == EntityType.powerSlider) {

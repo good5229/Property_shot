@@ -36,6 +36,12 @@ const String restorationBridgeFocusMarker =
     'island_restoration_focus_bridge_v1';
 const String restorationBridgeFocusSupplyMarker =
     'island_restoration_bridge_focus_supply_v1';
+const String restorationMasteryGuideMarker =
+    'island_restoration_mastery_guide_v1';
+const String restorationMasteryCancelMarker =
+    'island_restoration_mastery_cancel_v1';
+const String restorationMasteryCoreMarker =
+    'island_restoration_mastery_core_v1';
 
 /// 스테이지 선택 화면과 결정론 패턴 런 상태를 연결한다.
 class StagePatternSession {
@@ -144,6 +150,7 @@ class StagePatternSession {
     bool observatoryFocused = false,
     bool lighthouseFocused = false,
     bool bridgeFocused = false,
+    int optionalMasteryCount = 0,
   }) => _enqueueOperation(() async {
     await _loadOnce();
     final current = _state;
@@ -188,6 +195,40 @@ class StagePatternSession {
       changed = true;
     }
     if (bridgeRestored && acquiredRewards.add(restorationBridgeSupplyMarker)) {
+      cloneCoreCount++;
+      changed = true;
+    }
+    if (observatoryRestored &&
+        optionalMasteryCount >= 3 &&
+        acquiredRewards.add(restorationMasteryGuideMarker)) {
+      acquiredRewards
+        ..add(runRewardFirstImpactGuideId)
+        ..add(
+          runRewardSelectionRecordId(
+            stageId: 'island_mastery',
+            patternSeed: 3,
+            rewardId: runRewardFirstImpactGuideId,
+          ),
+        );
+      changed = true;
+    }
+    if (lighthouseRestored &&
+        optionalMasteryCount >= 6 &&
+        acquiredRewards.add(restorationMasteryCancelMarker)) {
+      acquiredRewards
+        ..add(runRewardShotCancelAssistId)
+        ..add(
+          runRewardSelectionRecordId(
+            stageId: 'island_mastery',
+            patternSeed: 6,
+            rewardId: runRewardShotCancelAssistId,
+          ),
+        );
+      changed = true;
+    }
+    if (bridgeRestored &&
+        optionalMasteryCount >= 9 &&
+        acquiredRewards.add(restorationMasteryCoreMarker)) {
       cloneCoreCount++;
       changed = true;
     }

@@ -77,8 +77,16 @@ class IslandSupportStore {
 }
 
 class IslandRestorationProgress {
-  IslandRestorationProgress({required this.discoveryCount, this.total = 30}) {
-    if (discoveryCount < 0 || total < 1 || discoveryCount > total) {
+  IslandRestorationProgress({
+    required this.discoveryCount,
+    this.total = 30,
+    this.optionalMasteryCount = 0,
+  }) {
+    if (discoveryCount < 0 ||
+        total < 1 ||
+        discoveryCount > total ||
+        optionalMasteryCount < 0 ||
+        optionalMasteryCount > 10) {
       throw ArgumentError('섬 복구 발견 수가 올바르지 않습니다.');
     }
   }
@@ -86,6 +94,7 @@ class IslandRestorationProgress {
   factory IslandRestorationProgress.fromDiscoveries({
     required Map<String, Set<String>> discoveriesByStageId,
     required List<String> stageIds,
+    int optionalMasteryCount = 0,
   }) {
     var count = 0;
     for (var index = 0; index < stageIds.length; index++) {
@@ -98,11 +107,20 @@ class IslandRestorationProgress {
     return IslandRestorationProgress(
       discoveryCount: count,
       total: stageIds.length * 3,
+      optionalMasteryCount: optionalMasteryCount,
     );
   }
 
   final int discoveryCount;
   final int total;
+  final int optionalMasteryCount;
+
+  String get masteryStatusText {
+    if (optionalMasteryCount >= 9) return '지원 완료: 코어 +1';
+    if (optionalMasteryCount >= 6) return '9개 달성: 코어 +1';
+    if (optionalMasteryCount >= 3) return '6개 달성: 발사 취소 1회';
+    return '3개 달성: 첫 충돌 안내 1회';
+  }
 
   bool isRestored(IslandLandmark landmark) =>
       discoveryCount >= landmark.requiredDiscoveries;

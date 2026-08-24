@@ -2481,7 +2481,7 @@
             "y": 466
           },
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "풍선을 건드린 뒤 ? 상자와 문까지 이어지는 길을 완성하세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -2497,7 +2497,8 @@
             "sharp_pop_chain"
           ],
           "metadata": {
-            "baseline": "true"
+            "baseline": "true",
+            "gimmick_required": "true"
           },
           "objects": [
             {
@@ -2712,7 +2713,7 @@
             "y": 466
           },
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "풍선을 쿠션으로 쓰거나 ? 상자를 열어 다른 길을 완성하세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -2728,7 +2729,9 @@
             "ordinary_balloon_bounce",
             "sharp_pop_chain"
           ],
-          "metadata": {},
+          "metadata": {
+            "gimmick_required": "true"
+          },
           "objects": [
             {
               "id": "hole",
@@ -2958,7 +2961,7 @@
             "y": 466
           },
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "풍선을 터뜨려 ? 상자의 변화를 확인한 뒤 홀에 도착하세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -2973,7 +2976,9 @@
             "one_shot",
             "sharp_pop_without_switch"
           ],
-          "metadata": {},
+          "metadata": {
+            "gimmick_required": "true"
+          },
           "objects": [
             {
               "id": "hole",
@@ -3235,7 +3240,7 @@
             "y": 466
           },
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "두 풍선 중 하나를 골라 ? 상자와 홀까지 길을 이어 보세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -3251,7 +3256,9 @@
             "ordinary_balloon_bounce",
             "two_balloons_one_sharp"
           ],
-          "metadata": {},
+          "metadata": {
+            "gimmick_required": "true"
+          },
           "objects": [
             {
               "id": "hole",
@@ -4051,7 +4058,7 @@
           "optionalChallenges": ["precise_direct", "bouncy_reflection", "direct_low_score"],
           "metadata": {"contract":"B"},
           "objects": [
-            {"id":"hole","type":"hole","position":{"x":300,"y":120},"size":{"x":56,"y":56},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":0.9},
+            {"id":"hole","type":"hole","position":{"x":309,"y":110},"size":{"x":52,"y":52},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":0.9692307692},
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
@@ -4081,7 +4088,7 @@
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
-            {"id":"c_crate","type":"crate","position":{"x":270,"y":300},"size":{"x":54,"y":54},"traits":[],"movable":true,"solid":true,"hitboxScale":0.9451851852,"restitution":0.66},
+            {"id":"c_crate","type":"crate","position":{"x":270,"y":300},"size":{"x":44,"y":44},"traits":[],"movable":true,"solid":true,"hitboxScale":1.16,"restitution":0.66},
             {"id":"c_bumper","type":"bumper","position":{"x":146.5,"y":180.6},"size":{"x":76,"y":76},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
             {"id":"c_balloon","type":"balloon","position":{"x":220,"y":350},"size":{"x":64,"y":64},"traits":[],"movable":false,"solid":true,"restitution":0.82},
             {"id":"c_slider","type":"power_slider","position":{"x":280,"y":240},"size":{"x":100,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},

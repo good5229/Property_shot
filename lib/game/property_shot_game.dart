@@ -666,7 +666,7 @@ class PropertyShotGame extends FlameGame {
   /// This transform is visual only: the resolver, hitboxes and replay input stay
   /// in logical board coordinates. Reduced-motion users keep a stable camera.
   void _applyCinematicCamera(Canvas canvas) {
-    if (reducedMotion || _animationImpacts.isEmpty) {
+    if (reducedMotion) {
       return;
     }
     ShotImpact? latest;
@@ -676,19 +676,39 @@ class PropertyShotGame extends FlameGame {
         latest = impact;
       }
     }
-    if (latest == null) return;
-    final elapsed = _animationCursor - latest.pathIndex;
+    ShotAnimationMove? latestCausalMove;
+    for (final move in _animationMoves) {
+      if (move.triggerPathIndex > _animationCursor ||
+          !_isCausalRevealState(move.visualState)) {
+        continue;
+      }
+      if (latestCausalMove == null ||
+          move.triggerPathIndex > latestCausalMove.triggerPathIndex) {
+        latestCausalMove = move;
+      }
+    }
+    final useMove =
+        latestCausalMove != null &&
+        (latest == null ||
+            latestCausalMove.triggerPathIndex >= latest.pathIndex);
+    if (latest == null && !useMove) return;
+    final eventIndex = useMove
+        ? latestCausalMove.triggerPathIndex
+        : latest!.pathIndex;
+    final elapsed = _animationCursor - eventIndex;
     if (elapsed < 0 || elapsed > 8) return;
 
-    final importance = switch (latest.entityType) {
-      EntityType.hole => 1.0,
-      EntityType.balloon || EntityType.switchPad => 0.78,
-      EntityType.powerSlider || EntityType.rotatingReflector => 0.68,
-      _ => (0.38 + latest.strength * 0.34).clamp(0.38, 0.72),
-    };
+    final importance = useMove
+        ? 0.86
+        : switch (latest!.entityType) {
+            EntityType.hole => 1.0,
+            EntityType.balloon || EntityType.switchPad => 0.78,
+            EntityType.powerSlider || EntityType.rotatingReflector => 0.68,
+            _ => (0.38 + latest.strength * 0.34).clamp(0.38, 0.72),
+          };
     final envelope = math.sin((elapsed / 8) * math.pi).clamp(0.0, 1.0);
     final zoom = 1 + 0.018 * importance * envelope;
-    final focus = _project(latest.position);
+    final focus = _project(useMove ? latestCausalMove.to : latest!.position);
     canvas.translate(focus.dx, focus.dy);
     canvas.scale(zoom);
     canvas.translate(-focus.dx, -focus.dy);
@@ -698,17 +718,23 @@ class PropertyShotGame extends FlameGame {
     if (state.levelIndex != 3) {
       return;
     }
-    EntityState? balloon;
     EntityState? balloonSwitch;
     EntityState? gate;
     for (final entity in entities) {
-      if (entity.id == 'balloon') balloon = entity;
       if (entity.id == 'balloon_switch') balloonSwitch = entity;
       if (entity.id == 'balloon_gate') gate = entity;
     }
-    if (balloon == null || balloonSwitch == null || gate == null) {
+    if (balloonSwitch == null || gate == null) {
       return;
     }
+    final revealTriggers = entities.where(
+      (entity) =>
+          entity.type == EntityType.balloon &&
+          entity.linkId == balloonSwitch!.id &&
+          entity.active,
+    );
+    if (revealTriggers.length != 1) return;
+    final balloon = revealTriggers.single;
     final switchIsHidden = HiddenMechanicState.masksIdentity(
       balloonSwitch.visualState,
     );
@@ -737,6 +763,18 @@ class PropertyShotGame extends FlameGame {
     );
     _drawDashedRelation(canvas, balloonEdge, switchEdge, paint);
     _drawDashedRelation(canvas, switchEdge, gateEdge, paint);
+    final switchRevealing =
+        balloonSwitch.visualState == HiddenMechanicState.opening;
+    final switchRevealed =
+        balloonSwitch.visualState == HiddenMechanicState.revealed ||
+        balloonSwitch.visualState == 'pressed' ||
+        balloonSwitch.pressed;
+    if (switchRevealing || switchRevealed) {
+      _drawCausalPulse(canvas, balloonEdge, switchEdge, active: true);
+    }
+    if (switchRevealed || gate.open || gate.visualState == 'opening') {
+      _drawCausalPulse(canvas, switchEdge, gateEdge, active: true);
+    }
     canvas.drawCircle(
       switchEdge,
       switchIsHidden ? 3 : 4,
@@ -745,6 +783,34 @@ class PropertyShotGame extends FlameGame {
             ? const Color(0x99FFF2A8)
             : const Color(0xFFFFF2A8),
     );
+  }
+
+  bool _isCausalRevealState(String visualState) =>
+      visualState == HiddenMechanicState.opening ||
+      visualState == HiddenMechanicState.revealed ||
+      visualState == 'pressed' ||
+      visualState == 'opening' ||
+      visualState == 'open';
+
+  void _drawCausalPulse(
+    Canvas canvas,
+    Offset from,
+    Offset to, {
+    required bool active,
+  }) {
+    if (!active) return;
+    final progress = reducedMotion
+        ? 0.62
+        : ((_animationCursor + _pulseClock * 4) / 14) % 1;
+    final center = Offset.lerp(from, to, progress)!;
+    canvas.drawCircle(
+      center,
+      reducedMotion ? 4.5 : 5.5,
+      Paint()
+        ..color = const Color(0xFFFFE06D)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawCircle(center, 2.5, Paint()..color = const Color(0xFFFFFFFF));
   }
 
   void _drawDashedRelation(Canvas canvas, Offset from, Offset to, Paint paint) {

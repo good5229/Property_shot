@@ -214,6 +214,7 @@ void main() {
       );
       expect(actual.patternMetadata, {
         StageCatalog.baselineMetadataKey: StageCatalog.baselineMetadataValue,
+        if (index == 3) 'gimmick_required': 'true',
       }, reason: 'stage $index baseline metadata');
       expect(
         actual.entities.map(_entityJson).toList(),

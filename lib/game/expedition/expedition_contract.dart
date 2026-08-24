@@ -2,7 +2,19 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum ExpeditionContractType { discovery, precision, chain, creative }
+enum ExpeditionContractType {
+  discovery,
+  precision,
+  chain,
+  creative,
+  restoration,
+}
+
+const List<String> restorationFinaleStageIds = [
+  'stage_balloon',
+  'stage_rotating_reflector',
+  'stage_property_shot',
+];
 
 extension ExpeditionContractTypeCopy on ExpeditionContractType {
   String get title => switch (this) {
@@ -10,6 +22,7 @@ extension ExpeditionContractTypeCopy on ExpeditionContractType {
     ExpeditionContractType.precision => '정밀 탐사',
     ExpeditionContractType.chain => '연쇄 탐사',
     ExpeditionContractType.creative => '창의 탐사',
+    ExpeditionContractType.restoration => '섬 복구 최종 탐사',
   };
 
   String get summary => switch (this) {
@@ -17,6 +30,8 @@ extension ExpeditionContractTypeCopy on ExpeditionContractType {
     ExpeditionContractType.precision => '각 단계를 파 횟수 안에 클리어',
     ExpeditionContractType.chain => '각 단계에서 속성·기믹 사건 3종 이상 연결',
     ExpeditionContractType.creative => '각 단계에서 창의 연쇄 점수 1,400점 이상 달성',
+    ExpeditionContractType.restoration =>
+      '관측·항로·연결 지원을 잇고 각 단계에서 발견 2개와 기믹 2종을 완성',
   };
 
   String get iconName => switch (this) {
@@ -24,6 +39,7 @@ extension ExpeditionContractTypeCopy on ExpeditionContractType {
     ExpeditionContractType.precision => 'precision',
     ExpeditionContractType.chain => 'chain',
     ExpeditionContractType.creative => 'creative',
+    ExpeditionContractType.restoration => 'restoration',
   };
 }
 
@@ -85,6 +101,10 @@ class ExpeditionContractProgress {
     ExpeditionContractType.precision => outcome.shotCount <= outcome.parShots,
     ExpeditionContractType.chain => outcome.gimmickCount >= 3,
     ExpeditionContractType.creative => outcome.chainScore >= 1400,
+    ExpeditionContractType.restoration =>
+      outcome.discoveryCount >= 2 &&
+          outcome.gimmickCount >= 2 &&
+          outcome.shotCount <= outcome.parShots + 1,
   };
 
   ExpeditionContractProgress record(ExpeditionStageOutcome outcome) {
@@ -219,9 +239,14 @@ class ExpeditionContractStore {
   }) async {
     if (allStageIds.length < 3) throw ArgumentError('탐사에는 3개 이상 단계가 필요합니다.');
     final normalized = startIndex.clamp(0, allStageIds.length - 3);
-    final stages = allStageIds.sublist(normalized, normalized + 3);
+    final stages = type == ExpeditionContractType.restoration
+        ? restorationFinaleStageIds
+        : allStageIds.sublist(normalized, normalized + 3);
+    if (!allStageIds.toSet().containsAll(stages)) {
+      throw ArgumentError('최종 복구 탐사에 필요한 단계가 없습니다.');
+    }
     final progress = ExpeditionContractProgress(
-      id: 'expedition:${type.name}:$normalized:v1',
+      id: 'expedition:${type.name}:${type == ExpeditionContractType.restoration ? 'finale' : normalized}:v1',
       type: type,
       stageIds: stages,
     );

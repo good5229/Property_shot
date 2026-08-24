@@ -178,6 +178,130 @@ void main() {
   });
 
   group('StagePatternValidator 배치와 연결', () {
+    test('비고체 기물도 화면 영역이 겹치면 가시성 오류로 거부한다', () {
+      final report = StagePatternValidator().validateLegacyStage(
+        _stage(
+          patterns: [
+            _pattern(
+              objects: [
+                _hole(),
+                _object(
+                  'switch',
+                  EntityType.switchPad,
+                  const Vec2(180, 280),
+                  solid: false,
+                ),
+                _object(
+                  'slider',
+                  EntityType.powerSlider,
+                  const Vec2(185, 280),
+                  solid: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(report.hasCode(ValidationIssueCode.visualObjectOverlap), isTrue);
+    });
+
+    test('숨은 기믹은 정확히 하나의 지원되는 공개 트리거가 필요하다', () {
+      StageDefinition fixture(List<PatternObjectDefinition> triggers) => _stage(
+        patterns: [
+          _pattern(
+            objects: [
+              _hole(),
+              _object(
+                'secret',
+                EntityType.switchPad,
+                const Vec2(180, 240),
+                visualState: 'hidden',
+                linkId: 'gate',
+              ),
+              _object('gate', EntityType.gate, const Vec2(260, 240)),
+              ...triggers,
+            ],
+          ),
+        ],
+      );
+
+      final missing = StagePatternValidator().validateLegacyStage(fixture([]));
+      final invalid = StagePatternValidator().validateLegacyStage(
+        fixture([
+          _object(
+            'crate_trigger',
+            EntityType.crate,
+            const Vec2(100, 300),
+            linkId: 'secret',
+          ),
+        ]),
+      );
+      final ambiguous = StagePatternValidator().validateLegacyStage(
+        fixture([
+          _object(
+            'balloon_a',
+            EntityType.balloon,
+            const Vec2(90, 300),
+            linkId: 'secret',
+          ),
+          _object(
+            'balloon_b',
+            EntityType.balloon,
+            const Vec2(130, 300),
+            linkId: 'secret',
+          ),
+        ]),
+      );
+      final valid = StagePatternValidator().validateLegacyStage(
+        fixture([
+          _object(
+            'balloon',
+            EntityType.balloon,
+            const Vec2(100, 300),
+            linkId: 'secret',
+          ),
+        ]),
+      );
+
+      expect(
+        missing.hasCode(ValidationIssueCode.hiddenMechanicMissingTrigger),
+        isTrue,
+      );
+      expect(
+        invalid.hasCode(ValidationIssueCode.hiddenMechanicInvalidTrigger),
+        isTrue,
+      );
+      expect(
+        ambiguous.hasCode(ValidationIssueCode.hiddenMechanicAmbiguousTrigger),
+        isTrue,
+      );
+      expect(
+        valid.codes.intersection({
+          ValidationIssueCode.hiddenMechanicMissingTrigger,
+          ValidationIssueCode.hiddenMechanicInvalidTrigger,
+          ValidationIssueCode.hiddenMechanicAmbiguousTrigger,
+        }),
+        isEmpty,
+      );
+    });
+
+    test('필수 기믹 패턴의 무충돌 직선 클리어를 거부한다', () {
+      final report = StagePatternValidator().validateLegacyStage(
+        _stage(
+          patterns: [
+            _pattern(
+              ballSpawn: const Vec2(60, 280),
+              objects: [_holeAt(const Vec2(300, 280))],
+              metadata: const {'gimmick_required': 'true'},
+            ),
+          ],
+        ),
+      );
+
+      expect(report.hasCode(ValidationIssueCode.gimmickDirectBypass), isTrue);
+    });
+
     test('필드 이탈·홀 상태·벽 이동을 검사한다', () {
       final stage = _stage(
         patterns: [
@@ -821,6 +945,7 @@ PatternObjectDefinition _object(
   double hitboxScale = 0.88,
   double restitution = 0.72,
   String? linkId,
+  String visualState = '',
   Set<TraitType> traits = const {},
   bool movableWhenDrained = false,
 }) {
@@ -837,6 +962,7 @@ PatternObjectDefinition _object(
     hitboxScale: hitboxScale,
     restitution: restitution,
     linkId: linkId,
+    visualState: visualState,
     traits: traits,
     movableWhenDrained: movableWhenDrained,
   );

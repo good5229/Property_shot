@@ -31,7 +31,7 @@ void main() {
     );
   });
 
-  test('발견·정밀·연쇄·창의 목표는 서로 다른 성취를 판정한다', () {
+  test('발견·정밀·연쇄·창의·복구 목표는 서로 다른 성취를 판정한다', () {
     ExpeditionContractProgress progress(ExpeditionContractType type) =>
         ExpeditionContractProgress(
           id: type.name,
@@ -64,6 +64,10 @@ void main() {
       isFalse,
     );
     expect(
+      progress(ExpeditionContractType.restoration).goalAchieved(outcome),
+      isTrue,
+    );
+    expect(
       progress(ExpeditionContractType.creative).goalAchieved(
         const ExpeditionStageOutcome(
           stageId: 'stage_heavy',
@@ -76,6 +80,29 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('최종 복구 탐사는 관측·항로·속성 종합 세 단계를 고정 순서로 잇는다', () async {
+    final preferences = await SharedPreferences.getInstance();
+    final store = ExpeditionContractStore(preferences);
+    final started = await store.start(
+      type: ExpeditionContractType.restoration,
+      startIndex: 0,
+      allStageIds: const [
+        'stage_heavy',
+        'stage_bouncy',
+        'stage_chain_gate',
+        'stage_balloon',
+        'stage_sticky',
+        'stage_speed',
+        'stage_past_ball',
+        'stage_chain_three',
+        'stage_rotating_reflector',
+        'stage_property_shot',
+      ],
+    );
+    expect(started.stageIds, restorationFinaleStageIds);
+    expect(started.id, contains('restoration:finale'));
   });
 
   test('시작·기록·재실행 복원은 별도 저장 키에서 유지된다', () async {

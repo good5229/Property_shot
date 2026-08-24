@@ -12,7 +12,6 @@ import 'game/analysis/next_goal_recommendation.dart';
 import 'game/analysis/solution_mastery.dart';
 import 'game/analysis/stage_chain_challenge.dart';
 import 'game/analysis/stage_discovery.dart';
-import 'game/domain/entity_state.dart';
 import 'game/domain/game_state.dart';
 import 'game/domain/geometry.dart';
 import 'game/domain/level_definition.dart';
@@ -577,6 +576,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     final restoration = IslandRestorationProgress.fromDiscoveries(
       discoveriesByStageId: _discoveriesByStageId,
       stageIds: levels.map((level) => level.id).toList(growable: false),
+      optionalMasteryCount: _bonusGoals.length,
     );
     if (!restoration.isRestored(landmark)) return;
     try {
@@ -652,6 +652,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       final restoration = IslandRestorationProgress.fromDiscoveries(
         discoveriesByStageId: _discoveriesByStageId,
         stageIds: levels.map((level) => level.id).toList(growable: false),
+        optionalMasteryCount: _bonusGoals.length,
       );
       await session.applyIslandRestorationBenefits(
         observatoryRestored: restoration.isRestored(IslandLandmark.observatory),
@@ -660,6 +661,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         observatoryFocused: _islandSupportFocus == IslandLandmark.observatory,
         lighthouseFocused: _islandSupportFocus == IslandLandmark.lighthouse,
         bridgeFocused: _islandSupportFocus == IslandLandmark.bridge,
+        optionalMasteryCount: _bonusGoals.length,
       );
       final selectedRunState = session.state;
       if (selectedRunState != null &&
@@ -1307,17 +1309,10 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
             results: results,
           );
     } else if (results.isNotEmpty) {
-      optionalChallengeAchieved = bonusGoalReached(
+      optionalChallengeAchieved = stageBonusGoalReached(
         levelIndex: levelIndex,
         shotCount: shotCount,
-        bumperHit: results.any(
-          (result) => result.impacts.any(
-            (impact) => impact.entityType == EntityType.bumper,
-          ),
-        ),
-        switchPressed: results.any(
-          (result) => result.events.contains('switch_pressed'),
-        ),
+        results: results,
         drainedSourceMoved: _drainedSourceMoved(results),
       );
     }
@@ -1454,6 +1449,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       final before = IslandRestorationProgress.fromDiscoveries(
         discoveriesByStageId: _discoveriesByStageId,
         stageIds: levels.map((level) => level.id).toList(growable: false),
+        optionalMasteryCount: _bonusGoals.length,
       );
       await _progressStore.recordDiscoveries(activeStage, milestoneIds);
       if (mounted) {
@@ -1465,6 +1461,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         final after = IslandRestorationProgress.fromDiscoveries(
           discoveriesByStageId: updated,
           stageIds: levels.map((level) => level.id).toList(growable: false),
+          optionalMasteryCount: _bonusGoals.length,
         );
         IslandLandmark? restoredLandmark;
         for (final landmark in IslandLandmark.values) {
@@ -1659,6 +1656,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     final restorationProgress = IslandRestorationProgress.fromDiscoveries(
       discoveriesByStageId: _discoveriesByStageId,
       stageIds: levels.map((level) => level.id).toList(growable: false),
+      optionalMasteryCount: _bonusGoals.length,
     );
     if (_showRewardInventory) {
       return FutureBuilder<Set<String>>(
@@ -1894,6 +1892,7 @@ class _ExpeditionContractScreen extends StatelessWidget {
     ExpeditionContractType.precision => Icons.center_focus_strong_rounded,
     ExpeditionContractType.chain => Icons.hub_rounded,
     ExpeditionContractType.creative => Icons.auto_awesome_rounded,
+    ExpeditionContractType.restoration => Icons.account_tree_rounded,
   };
 
   @override
@@ -1945,48 +1944,7 @@ class _ExpeditionContractScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               for (final type in ExpeditionContractType.values) ...[
-                Semantics(
-                  button: true,
-                  label: '${type.title}. ${type.summary}',
-                  child: Card(
-                    key: Key('expedition_contract_${type.name}'),
-                    color: const Color(0xFFFFF9E8),
-                    child: InkWell(
-                      onTap: () => onStart(type),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: const Color(0xFFFFE0A8),
-                              foregroundColor: const Color(0xFF7A4B1F),
-                              child: Icon(_icon(type)),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    type.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(type.summary),
-                                ],
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right_rounded),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildContractCard(context, type),
                 const SizedBox(height: 10),
               ],
             ] else ...[
@@ -2026,8 +1984,11 @@ class _ExpeditionContractScreen extends StatelessWidget {
                     border: Border.all(color: const Color(0xFF4C8A5A)),
                   ),
                   child: Text(
-                    '탐사 완료 · 목표 ${active.achievedCount}/3 달성\n'
-                    '다른 관점의 탐사를 골라 같은 물리를 새로 시험해 보세요.',
+                    active.type == ExpeditionContractType.restoration
+                        ? '최종 복구 탐사 완료 · 목표 ${active.achievedCount}/3 달성\n'
+                              '관측소·등대·다리의 지원을 속성 한방까지 연결했습니다.'
+                        : '탐사 완료 · 목표 ${active.achievedCount}/3 달성\n'
+                              '다른 관점의 탐사를 골라 같은 물리를 새로 시험해 보세요.',
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
@@ -2047,6 +2008,61 @@ class _ExpeditionContractScreen extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContractCard(BuildContext context, ExpeditionContractType type) {
+    final enabled =
+        type != ExpeditionContractType.restoration ||
+        unlockedLevel >= levels.length - 1;
+    final summary = enabled
+        ? type.summary
+        : '${type.summary}\n10단계를 해금하면 시작할 수 있어요.';
+    return Semantics(
+      button: enabled,
+      enabled: enabled,
+      label: '${type.title}. $summary',
+      child: Opacity(
+        opacity: enabled ? 1 : 0.62,
+        child: Card(
+          key: Key('expedition_contract_${type.name}'),
+          color: const Color(0xFFFFF9E8),
+          child: InkWell(
+            onTap: enabled ? () => onStart(type) : null,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: const Color(0xFFFFE0A8),
+                    foregroundColor: const Color(0xFF7A4B1F),
+                    child: Icon(_icon(type)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          type.title,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(summary),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    enabled ? Icons.chevron_right_rounded : Icons.lock_rounded,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -4057,6 +4073,7 @@ class _StageSelectScreen extends StatelessWidget {
                           progress: IslandRestorationProgress.fromDiscoveries(
                             discoveriesByStageId: discoveriesByStageId,
                             stageIds: levels.map((level) => level.id).toList(),
+                            optionalMasteryCount: bonusGoals.length,
                           ),
                           selectedFocus: islandSupportFocus,
                           onFocusSelected: onIslandSupportSelected,
@@ -4758,6 +4775,19 @@ class _IslandRestorationCard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '선택 도전 ${progress.optionalMasteryCount}/10 · '
+                    '${progress.masteryStatusText}',
+                    key: const Key('island_mastery_status'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF52645A),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -4772,6 +4802,7 @@ class _IslandRestorationCard extends StatelessWidget {
       label:
           '섬 복구 ${progress.restoredCount}/3. ${progress.statusText}. '
           '발견 ${progress.discoveryCount}/${progress.total}. '
+          '선택 도전 ${progress.optionalMasteryCount}/10. ${progress.masteryStatusText}. '
           '${progress.restoredLandmarks.map((landmark) => '${landmark.label}: ${landmark.benefitDescription}').join(' ')}',
       child: Container(
         key: const Key('island_restoration_card'),
@@ -4895,6 +4926,17 @@ class _IslandRestorationCard extends StatelessWidget {
                 color: Color(0xFF52706A),
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              '선택 도전 ${progress.optionalMasteryCount}/10 · '
+              '${progress.masteryStatusText}',
+              key: const Key('island_mastery_status'),
+              style: const TextStyle(
+                color: Color(0xFF3F6653),
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
               ),
             ),
             for (final landmark in progress.restoredLandmarks) ...[

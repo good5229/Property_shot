@@ -205,7 +205,7 @@ final legacyLevels = <LevelDefinition>[
     ballSpawn: const Vec2(56, 466),
     copyCharges: 0,
     parShots: 3,
-    bonusGoal: '풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.',
+    bonusGoal: '풍선을 건드린 뒤 ? 상자와 문까지 이어지는 길을 완성하세요.',
     intendedStrategyId: 'spike_source',
     acceptedStrategyIds: {'none', 'spike_source'},
     entities: const [

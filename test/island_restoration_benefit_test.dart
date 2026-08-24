@@ -107,6 +107,44 @@ void main() {
     );
   });
 
+  test('선택 도전 3·6·9개는 복구 시설과 결합해 실전 지원을 한 번씩 보급한다', () async {
+    final session = _session(MemoryRunStateBackend());
+    await session.selectStage('stage_heavy');
+
+    expect(
+      await session.applyIslandRestorationBenefits(
+        observatoryRestored: true,
+        lighthouseRestored: true,
+        bridgeRestored: true,
+        optionalMasteryCount: 9,
+      ),
+      isTrue,
+    );
+    final inventory = RunRewardInventory(session.state!.acquiredRewards);
+    expect(inventory.availableUseCount(runRewardFirstImpactGuideId), 1);
+    expect(inventory.availableUseCount(runRewardShotCancelAssistId), 1);
+    expect(session.state!.cloneCoreCount, 2);
+    expect(
+      session.state!.acquiredRewards,
+      containsAll([
+        restorationMasteryGuideMarker,
+        restorationMasteryCancelMarker,
+        restorationMasteryCoreMarker,
+      ]),
+    );
+
+    expect(
+      await session.applyIslandRestorationBenefits(
+        observatoryRestored: true,
+        lighthouseRestored: true,
+        bridgeRestored: true,
+        optionalMasteryCount: 9,
+      ),
+      isFalse,
+    );
+    expect(session.state!.cloneCoreCount, 2);
+  });
+
   test('집중 지원은 복구 효과를 유지하며 런당 한 번만 강화한다', () async {
     final backend = MemoryRunStateBackend();
 

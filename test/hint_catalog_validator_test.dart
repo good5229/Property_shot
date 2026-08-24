@@ -125,6 +125,86 @@ void main() {
       reason: 'invalid_demo_direct_clear: ${directReport.issues}',
     );
   });
+
+  test('공개 전 힌트가 숨은 기믹의 실제 이름을 누설하면 거부한다', () {
+    const hiddenPattern = StagePattern(
+      patternId: 'hidden',
+      weight: 1,
+      parShots: 2,
+      difficultyBand: 'test',
+      ballSpawn: Vec2(60, 500),
+      objects: [
+        PatternObjectDefinition(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(300, 100),
+          size: Vec2(40, 40),
+          solid: false,
+        ),
+        PatternObjectDefinition(
+          id: 'secret_switch',
+          type: EntityType.switchPad,
+          position: Vec2(180, 220),
+          size: Vec2(36, 20),
+          visualState: 'hidden',
+          linkId: 'gate',
+        ),
+        PatternObjectDefinition(
+          id: 'gate',
+          type: EntityType.gate,
+          position: Vec2(250, 220),
+          size: Vec2(24, 100),
+        ),
+        PatternObjectDefinition(
+          id: 'balloon',
+          type: EntityType.balloon,
+          position: Vec2(100, 300),
+          size: Vec2(40, 50),
+          linkId: 'secret_switch',
+        ),
+      ],
+    );
+    const hiddenStage = StageDefinition(
+      stageId: 'hidden_stage',
+      title: 'hidden',
+      patterns: [hiddenPattern],
+    );
+    final catalog = HintCatalog(
+      version: 1,
+      entries: [
+        PatternHintEntry(
+          stageId: 'hidden_stage',
+          patternId: 'hidden',
+          hintVersion: 1,
+          intentTags: const {'reveal'},
+          directClearPolicy: const DirectClearPolicy(allowed: true),
+          hints: const [
+            PatternHint(
+              level: 1,
+              text: '풍선 뒤 스위치를 찾아보세요.',
+              intentTags: {'reveal'},
+              referencedObjectIds: {'balloon'},
+            ),
+            PatternHint(
+              level: 2,
+              text: '풍선을 터뜨리면 ? 상자의 정체가 드러납니다.',
+              intentTags: {'reveal'},
+              referencedObjectIds: {'balloon', 'secret_switch'},
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final report = StagePatternValidator().validateHintCatalog(const [
+      hiddenStage,
+    ], catalog);
+
+    expect(
+      report.hasCode(ValidationIssueCode.hiddenMechanicHintSpoiler),
+      isTrue,
+    );
+  });
 }
 
 StageDefinition _directStage() {

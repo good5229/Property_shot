@@ -199,6 +199,13 @@ void main() {
             direct.impacts.map((impact) => impact.entityId),
             contains('d_stone'),
           );
+        } else if (solution.contract == 'B') {
+          expect(direct.events, contains('power_slider_activated'));
+          expect(direct.events, contains('slider_gate_opened'));
+          expect(
+            direct.impacts.map((impact) => impact.entityId),
+            isNot(contains('b_reflector')),
+          );
         } else {
           _expectDirectBypass(solution, direct);
         }

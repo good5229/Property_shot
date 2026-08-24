@@ -2805,7 +2805,7 @@ const generatedStageCatalogJson = r'''
             }
           ],
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "풍선을 건드린 뒤 ? 상자와 문까지 이어지는 길을 완성하세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -2821,7 +2821,8 @@ const generatedStageCatalogJson = r'''
             "sharp_pop_chain"
           ],
           "metadata": {
-            "baseline": "true"
+            "baseline": "true",
+            "gimmick_required": "true"
           }
         },
         {
@@ -3068,7 +3069,7 @@ const generatedStageCatalogJson = r'''
             }
           ],
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "풍선을 쿠션으로 쓰거나 ? 상자를 열어 다른 길을 완성하세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -3084,7 +3085,9 @@ const generatedStageCatalogJson = r'''
             "ordinary_balloon_bounce",
             "sharp_pop_chain"
           ],
-          "metadata": {}
+          "metadata": {
+            "gimmick_required": "true"
+          }
         },
         {
           "patternId": "stage_balloon_03",
@@ -3376,7 +3379,7 @@ const generatedStageCatalogJson = r'''
             }
           ],
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "풍선을 터뜨려 ? 상자의 변화를 확인한 뒤 홀에 도착하세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -3391,7 +3394,9 @@ const generatedStageCatalogJson = r'''
             "one_shot",
             "sharp_pop_without_switch"
           ],
-          "metadata": {}
+          "metadata": {
+            "gimmick_required": "true"
+          }
         },
         {
           "patternId": "stage_balloon_04",
@@ -3637,7 +3642,7 @@ const generatedStageCatalogJson = r'''
             }
           ],
           "copyCharges": 0,
-          "bonusGoal": "풍선을 밀어도, 터뜨려도 홀에 도착할 수 있습니다.",
+          "bonusGoal": "두 풍선 중 하나를 골라 ? 상자와 홀까지 길을 이어 보세요.",
           "copyCoreReward": 0,
           "intendedStrategyId": "spike_source",
           "acceptedStrategyIds": [
@@ -3653,7 +3658,9 @@ const generatedStageCatalogJson = r'''
             "ordinary_balloon_bounce",
             "two_balloons_one_sharp"
           ],
-          "metadata": {}
+          "metadata": {
+            "gimmick_required": "true"
+          }
         }
       ]
     },
@@ -8285,12 +8292,12 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 300.0,
-                "y": 120.0
+                "x": 309.0,
+                "y": 110.0
               },
               "size": {
-                "x": 56.0,
-                "y": 56.0
+                "x": 52.0,
+                "y": 52.0
               },
               "traits": [],
               "movable": false,
@@ -8299,7 +8306,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.9,
+              "hitboxScale": 0.9692307692,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -8634,8 +8641,8 @@ const generatedStageCatalogJson = r'''
                 "y": 300.0
               },
               "size": {
-                "x": 54.0,
-                "y": 54.0
+                "x": 44.0,
+                "y": 44.0
               },
               "traits": [],
               "movable": true,
@@ -8644,7 +8651,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.9451851852,
+              "hitboxScale": 1.16,
               "restitution": 0.66,
               "linkId": null,
               "movableWhenDrained": false

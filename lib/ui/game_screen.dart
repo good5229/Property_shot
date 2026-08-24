@@ -2497,14 +2497,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             results: _stageShotResults,
           );
     }
-    return result.state.phase == GamePhase.success &&
-        bonusGoalReached(
-          levelIndex: result.state.levelIndex,
-          shotCount: result.state.shotCount,
-          bumperHit: _bonusBumperHit,
-          switchPressed: _bonusSwitchPressed,
-          drainedSourceMoved: _bonusDrainedSourceMoved,
-        );
+    return stageBonusGoalReached(
+      levelIndex: result.state.levelIndex,
+      shotCount: result.state.shotCount,
+      results: _stageShotResults,
+      drainedSourceMoved: _bonusDrainedSourceMoved,
+    );
   }
 
   void _onAnimationFinished() {

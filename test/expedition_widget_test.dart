@@ -74,7 +74,7 @@ void main() {
     expect(restoredExpedition.state, isNull);
   });
 
-  testWidgets('홈에서 네 가지 탐사 목표를 고르고 첫 단계를 시작할 수 있다', (tester) async {
+  testWidgets('홈에서 다섯 가지 탐사 목표를 고르고 첫 단계를 시작할 수 있다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
@@ -101,8 +101,22 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('창의 탐사'), findsOneWidget);
+    expect(
+      find.byKey(const Key('expedition_contract_restoration')),
+      findsOneWidget,
+    );
+    expect(find.text('섬 복구 최종 탐사'), findsOneWidget);
+    expect(find.textContaining('10단계를 해금하면'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('expedition_contract_discovery')));
+    final discovery = find.byKey(const Key('expedition_contract_discovery'));
+    final scrollAnimation = Scrollable.ensureVisible(
+      tester.element(discovery),
+      alignment: 0.5,
+      duration: const Duration(milliseconds: 150),
+    );
+    await tester.pumpAndSettle();
+    await scrollAnimation;
+    await tester.tap(discovery);
     await _pumpForAsyncWork(tester);
     expect(find.textContaining('진행 0/3 · 달성 0/3'), findsOneWidget);
     expect(find.text('지금 플레이할 수 있어요'), findsOneWidget);
