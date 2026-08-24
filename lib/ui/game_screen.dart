@@ -3447,8 +3447,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _previewResultDirection = normalizedInput.direction;
     _previewResultPower = normalizedInput.power;
     _previewResultTrait = normalizedInput.equippedTrait;
-    _previewResultHoleForgivenessRadius =
-        normalizedInput.holeForgivenessRadius;
+    _previewResultHoleForgivenessRadius = normalizedInput.holeForgivenessRadius;
     _previewResult = result;
     return result;
   }
@@ -3946,6 +3945,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         strength: _intentAssistStrength,
         compactPointer: MediaQuery.sizeOf(context).shortestSide < 600,
         repeatedNearMisses: _repeatedNearMisses,
+        policy: IntentAssistPolicy.forStage(_currentLevel.stageId),
       );
       var launchInput = decision.appliedInput;
       _pendingIntentAssistDecision = decision;

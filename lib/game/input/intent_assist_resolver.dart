@@ -9,6 +9,28 @@ import 'aim_direction_quantizer.dart';
 
 enum IntentAssistStrength { off, standard, comfortable }
 
+class IntentAssistPolicy {
+  const IntentAssistPolicy({
+    this.preserveBoundaryIntent = false,
+    this.preserveRawTrajectory = false,
+  });
+
+  factory IntentAssistPolicy.forStage(String? stageId) => switch (stageId) {
+    'stage_chain_gate' ||
+    'stage_balloon' ||
+    'stage_drained' ||
+    'stage_persistent' ||
+    'stage_chain_score' => const IntentAssistPolicy(
+      preserveBoundaryIntent: true,
+      preserveRawTrajectory: true,
+    ),
+    _ => const IntentAssistPolicy(),
+  };
+
+  final bool preserveBoundaryIntent;
+  final bool preserveRawTrajectory;
+}
+
 class IntentAssistDecision {
   const IntentAssistDecision({
     required this.rawInput,
@@ -44,6 +66,7 @@ class IntentAssistResolver {
     IntentAssistStrength strength = IntentAssistStrength.standard,
     bool compactPointer = false,
     int repeatedNearMisses = 0,
+    IntentAssistPolicy policy = const IntentAssistPolicy(),
   }) {
     final raw = rawInput.normalized();
     if (strength == IntentAssistStrength.off) {
@@ -77,6 +100,9 @@ class IntentAssistResolver {
           IntentAssistStrength.comfortable => compactPointer ? 12.0 : 10.0,
         } +
         (adaptive ? 2.0 : 0.0);
+    if (policy.preserveRawTrajectory) {
+      return _decision(raw, _preserveRawIntent(raw, holeForgiveness));
+    }
 
     final stableDirection = quantizeAimDirection(raw.direction);
     final stablePower = _quantizePower(raw.power);
@@ -95,6 +121,21 @@ class IntentAssistResolver {
     final rawArrival = shotResolver.firstArrivalFromResult(rawResult);
     final stableResult = shotResolver.resolve(state, stable);
     final stableArrival = shotResolver.firstArrivalFromResult(stableResult);
+    if (_isRealTarget(state, rawArrival.entityId)) {
+      // 이미 기물을 향한 입력은 그 기물 자체가 플레이어 의도의 가장 강한
+      // 증거다. 양자화가 첫 접촉을 바꾸면 원시 방향·힘을 보존한다.
+      return rawArrival.entityId == stableArrival.entityId
+          ? _decision(raw, stable)
+          : _decision(raw, _preserveRawIntent(raw, holeForgiveness));
+    }
+    if (policy.preserveBoundaryIntent &&
+        _isFieldBoundary(rawArrival.entityId)) {
+      // 벽 반사는 핵심 퍼즐 입력이다. 경계 도착을 '아무 목표도 없음'으로
+      // 오인해 가까운 기물로 돌리지 않고 미세 안정화까지만 허용한다.
+      return rawArrival.entityId == stableArrival.entityId
+          ? _decision(raw, stable)
+          : _decision(raw, _preserveRawIntent(raw, holeForgiveness));
+    }
     if (_isRealTarget(state, stableArrival.entityId) &&
         rawArrival.entityId != stableArrival.entityId) {
       stable = ShotInput(
@@ -109,11 +150,7 @@ class IntentAssistResolver {
         assistTargetId: stableArrival.entityId,
         holeForgivenessRadius: stable.holeForgivenessRadius,
       ).normalized();
-      return _decision(
-        raw,
-        stable,
-        targetEntityId: stableArrival.entityId,
-      );
+      return _decision(raw, stable, targetEntityId: stableArrival.entityId);
     }
     if (stableResult.state.phase == GamePhase.success) {
       return _decision(raw, stable);
@@ -209,6 +246,20 @@ class IntentAssistResolver {
     }
     return state.entityById(entityId) != null;
   }
+
+  bool _isFieldBoundary(String? entityId) =>
+      entityId?.startsWith('field_boundary_') ?? false;
+
+  ShotInput _preserveRawIntent(ShotInput raw, double holeForgiveness) =>
+      ShotInput(
+        direction: raw.direction,
+        power: raw.power,
+        equippedTrait: raw.equippedTrait,
+        rawDirection: raw.direction,
+        rawPower: raw.power,
+        assistKind: ShotAssistKind.stabilized,
+        holeForgivenessRadius: holeForgiveness.clamp(0, 16).toDouble(),
+      ).normalized();
 
   bool _isEligibleTarget(EntityState entity) {
     if (!entity.active || entity.id == 'active_ball') return false;

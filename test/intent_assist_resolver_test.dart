@@ -5,6 +5,7 @@ import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
+import 'package:property_shot/game/input/aim_direction_quantizer.dart';
 import 'package:property_shot/game/input/intent_assist_resolver.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 
@@ -43,6 +44,82 @@ void main() {
     expect(decision.targetSnapped, isFalse);
     expect(decision.targetEntityId, isNull);
     expect(decision.appliedInput.power, closeTo(0.60, 0.000001));
+  });
+
+  test('양자화가 첫 접촉 기물을 바꾸면 원시 입력을 보존한다', () {
+    ShotInput? raw;
+    GameState? state;
+    for (var yStep = 0; yStep <= 240 && raw == null; yStep++) {
+      final candidateState = _state([
+        _crate('raw_target', Vec2(260, 250 + yStep * 0.25)),
+      ]);
+      for (var angleStep = -200; angleStep <= 200; angleStep++) {
+        final candidate = _input(angleStep * 0.05, 0.603);
+        final rawArrival = physics.firstArrival(candidateState, candidate);
+        final stableArrival = physics.firstArrival(
+          candidateState,
+          ShotInput(
+            direction: quantizeAimDirection(candidate.direction),
+            power: 0.60,
+          ),
+        );
+        if (rawArrival.entityId == 'raw_target' &&
+            stableArrival.entityId != 'raw_target') {
+          raw = candidate;
+          state = candidateState;
+          break;
+        }
+      }
+    }
+    expect(raw, isNotNull, reason: '첫 접촉 보존 회귀 입력을 찾지 못했습니다.');
+    final resolvedState = state!;
+    final resolvedRaw = raw!;
+    final rawArrival = physics.firstArrival(resolvedState, resolvedRaw);
+    final decision = assist.resolve(
+      state: resolvedState,
+      rawInput: resolvedRaw,
+    );
+    final appliedArrival = physics.firstArrival(
+      resolvedState,
+      decision.appliedInput,
+    );
+
+    expect(rawArrival.entityId, isNotNull);
+    expect(appliedArrival.entityId, rawArrival.entityId);
+    expect(decision.targetSnapped, isFalse);
+    expect(decision.appliedInput.direction, resolvedRaw.direction.normalized());
+    expect(decision.appliedInput.power, resolvedRaw.power);
+  });
+
+  test('벽 반사 입력은 가까운 기물 정답으로 재해석하지 않는다', () {
+    final state = _state([_crate('near_bank', const Vec2(490, 315))]);
+    final raw = _input(8, 0.9);
+    final rawArrival = physics.firstArrival(state, raw);
+    final decision = assist.resolve(
+      state: state,
+      rawInput: raw,
+      policy: const IntentAssistPolicy(preserveBoundaryIntent: true),
+    );
+    final appliedArrival = physics.firstArrival(state, decision.appliedInput);
+
+    expect(rawArrival.entityId, startsWith('field_boundary_'));
+    expect(appliedArrival.entityId, rawArrival.entityId);
+    expect(decision.targetSnapped, isFalse);
+  });
+
+  test('정밀 경로 정책은 방향과 힘을 바꾸지 않고 홀 가장자리 여유만 준다', () {
+    final state = _state([_crate('target', const Vec2(260, 280))]);
+    final raw = _input(9.5, 0.603);
+    final decision = assist.resolve(
+      state: state,
+      rawInput: raw,
+      policy: IntentAssistPolicy.forStage('stage_chain_score'),
+    );
+
+    expect(decision.appliedInput.direction, raw.direction.normalized());
+    expect(decision.appliedInput.power, raw.power);
+    expect(decision.appliedInput.holeForgivenessRadius, 6);
+    expect(decision.targetSnapped, isFalse);
   });
 
   test('같은 오차에 서로 다른 목표가 있으면 시스템이 임의로 하나를 고르지 않는다', () {
@@ -143,11 +220,7 @@ void main() {
       const ShotInput(direction: Vec2.zero, power: 0.5),
       const ShotInput(direction: Vec2(double.nan, 1), power: 0.5),
       const ShotInput(direction: Vec2(1, 0), power: double.infinity),
-      const ShotInput(
-        direction: Vec2(1, 0),
-        power: 0.5,
-        rawPower: 1.1,
-      ),
+      const ShotInput(direction: Vec2(1, 0), power: 0.5, rawPower: 1.1),
       const ShotInput(
         direction: Vec2(1, 0),
         power: 0.5,

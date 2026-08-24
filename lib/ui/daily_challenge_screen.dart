@@ -52,8 +52,7 @@ const IntentAssistStrength officialDailyIntentAssistStrength =
 
 IntentAssistStrength intentAssistStrengthForDailyMode(
   DailyChallengeMode mode,
-) =>
-    mode == DailyChallengeMode.official
+) => mode == DailyChallengeMode.official
     ? officialDailyIntentAssistStrength
     : GameFeedback.intentAssistStrength;
 
