@@ -51,12 +51,12 @@ void main() {
       DecorationPosition.foreground,
       reason: '포커스 테두리는 불투명한 게임 캔버스 앞에 그려져야 한다.',
     );
-    expect(tester.getSemantics(board).value, contains('힘 56퍼센트'));
+    expect(tester.getSemantics(board).value, contains('힘 52퍼센트'));
 
     await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowUp);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowUp);
     await tester.pump();
-    expect(tester.getSemantics(board).value, contains('힘 56퍼센트'));
+    expect(tester.getSemantics(board).value, contains('힘 52퍼센트'));
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();

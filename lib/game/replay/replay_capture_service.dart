@@ -248,6 +248,11 @@ class ReplayCaptureService {
           direction: input.direction,
           power: input.power,
           equippedTrait: input.equippedTrait,
+          rawDirection: input.rawDirection,
+          rawPower: input.rawPower,
+          assistKind: input.assistKind,
+          assistTargetId: input.assistTargetId,
+          holeForgivenessRadius: input.holeForgivenessRadius,
         ),
       );
       results.add(result);
@@ -311,6 +316,18 @@ class ReplayCaptureService {
     ),
     power: ReplayFixedPoint.encode(input.power),
     equippedTrait: input.equippedTrait,
+    rawDirection: input.rawDirection == null
+        ? null
+        : ReplayDirection.fromDoubles(
+            input.rawDirection!.x,
+            input.rawDirection!.y,
+          ),
+    rawPower: input.rawPower == null
+        ? null
+        : ReplayFixedPoint.encode(input.rawPower!),
+    assistKind: input.assistKind,
+    assistTargetId: input.assistTargetId,
+    holeForgivenessMilli: (input.holeForgivenessRadius * 1000).round(),
     traitActions: _toReplayActions(input.traitActions),
   );
 
@@ -322,6 +339,13 @@ class ReplayCaptureService {
     direction: Vec2(shot.direction.xValue, shot.direction.yValue),
     power: shot.powerValue,
     equippedTrait: shot.equippedTrait,
+    rawDirection: shot.rawDirection == null
+        ? null
+        : Vec2(shot.rawDirection!.xValue, shot.rawDirection!.yValue),
+    rawPower: shot.rawPowerValue,
+    assistKind: shot.assistKind,
+    assistTargetId: shot.assistTargetId,
+    holeForgivenessRadius: shot.holeForgivenessRadius,
     traitActions: _toRunActions(shot.traitActions),
   );
 

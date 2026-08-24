@@ -32,6 +32,11 @@ void main() {
         direction: const Vec2(1, 0),
         power: 0.7,
         equippedTrait: source.traits.first,
+        rawDirection: const Vec2(0.9998, 0.02),
+        rawPower: 0.693,
+        assistKind: ShotAssistKind.targetSnap,
+        assistTargetId: source.id,
+        holeForgivenessRadius: 6,
       ),
     );
     await session.recordShot(
@@ -53,6 +58,11 @@ void main() {
     expect(document.patternId, session.state!.currentPatternId);
     expect(document.patternSeed, session.state!.currentPatternSeed);
     expect(document.shots, hasLength(2));
+    expect(document.shots.first.rawDirection, isNotNull);
+    expect(document.shots.first.rawPowerValue, closeTo(0.693, 0.000001));
+    expect(document.shots.first.assistKind, ShotAssistKind.targetSnap);
+    expect(document.shots.first.assistTargetId, source.id);
+    expect(document.shots.first.holeForgivenessRadius, 6);
     expect(document.outcomeFingerprints, everyElement(hasLength(64)));
     expect(replayed.shotResults, hasLength(2));
     expect(replayed.fingerprints, document.outcomeFingerprints);

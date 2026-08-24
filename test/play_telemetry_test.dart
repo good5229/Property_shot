@@ -442,6 +442,11 @@ void main() {
           nearestHoleDistance: 0.25,
           frameDurationMs: 16.7,
           inputLatencyMs: 8.3,
+          rawAngle: -1.23,
+          rawPower: 0.843,
+          assistKind: 'targetSnap',
+          assistTargetId: 'wall_1',
+          holeForgivenessRadius: 6,
           result: PlayTelemetryResult.cleared,
         ),
       ),
@@ -463,6 +468,11 @@ void main() {
     expect(event['ball_use_count'], 1);
     expect(event['object_use_count'], 1);
     expect(event['score_damped'], isTrue);
+    expect(event['raw_angle'], -1.23);
+    expect(event['raw_power'], 0.843);
+    expect(event['intent_assist_kind'], 'targetSnap');
+    expect(event['intent_assist_target_id'], 'wall_1');
+    expect(event['hole_forgiveness_radius'], 6);
     expect(event['nearest_hole_distance'], 0.25);
     expect(event['frame_duration_ms'], 16.7);
     expect(event['input_latency_ms'], 8.3);
@@ -557,6 +567,28 @@ void main() {
     expect(() => validShot(inputLatencyMs: double.nan), throwsArgumentError);
     expect(() => validShot(causalDepth: -1), throwsArgumentError);
     expect(() => validShot(effectiveChainLength: -1), throwsArgumentError);
+    expect(
+      () => PlayTelemetryShotPayload(
+        shotId: 1,
+        angle: 0,
+        power: 0.5,
+        causalDepth: 0,
+        effectiveChainLength: 0,
+        distinctObjectTypeCount: 0,
+        distinctObjectCount: 0,
+        wallUseCount: 0,
+        ballUseCount: 0,
+        objectUseCount: 0,
+        scoreDamped: false,
+        nearestHoleDistance: 0,
+        frameDurationMs: 16,
+        inputLatencyMs: 4,
+        rawPower: double.nan,
+        holeForgivenessRadius: 17,
+        result: PlayTelemetryResult.continued,
+      ),
+      throwsArgumentError,
+    );
     expect(
       () => PlayTelemetryContext(
         stageIndex: 0,

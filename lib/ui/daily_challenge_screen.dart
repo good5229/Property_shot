@@ -454,6 +454,11 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen>
         direction: saved.direction,
         power: saved.power,
         equippedTrait: saved.equippedTrait,
+        rawDirection: saved.rawDirection,
+        rawPower: saved.rawPower,
+        assistKind: saved.assistKind,
+        assistTargetId: saved.assistTargetId,
+        holeForgivenessRadius: saved.holeForgivenessRadius,
       ).normalized();
       final result = const ShotResolver().resolve(restored, restoredInput);
       inputs.add(restoredInput);

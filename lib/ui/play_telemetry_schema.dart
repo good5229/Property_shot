@@ -299,6 +299,11 @@ class PlayTelemetryShotPayload {
     required this.frameDurationMs,
     required this.inputLatencyMs,
     required this.result,
+    this.rawAngle,
+    this.rawPower,
+    this.assistKind,
+    this.assistTargetId,
+    this.holeForgivenessRadius = 0,
   }) : ballTraits = List.unmodifiable(ballTraits),
        causalChain = List.unmodifiable(causalChain) {
     _requireNonNegative(shotId, '발사 ID');
@@ -319,6 +324,22 @@ class PlayTelemetryShotPayload {
     _requireFiniteNonNegative(nearestHoleDistance, '홀 최근접 거리');
     _requireFiniteNonNegative(frameDurationMs, '프레임 시간');
     _requireFiniteNonNegative(inputLatencyMs, '입력 지연');
+    if (rawAngle != null) _requireFinite(rawAngle!, '보정 전 각도');
+    if (rawPower != null) {
+      _requireFinite(rawPower!, '보정 전 힘');
+      if (rawPower! < 0 || rawPower! > 1) {
+        throw ArgumentError.value(rawPower, 'rawPower', '힘은 0 이상 1 이하여야 합니다.');
+      }
+    }
+    if (assistTargetId != null) _requireId(assistTargetId!, '보정 대상');
+    _requireFiniteNonNegative(holeForgivenessRadius, '홀 가장자리 허용 반경');
+    if (holeForgivenessRadius > 16) {
+      throw ArgumentError.value(
+        holeForgivenessRadius,
+        'holeForgivenessRadius',
+        '16 이하여야 합니다.',
+      );
+    }
   }
 
   final int shotId;
@@ -338,6 +359,11 @@ class PlayTelemetryShotPayload {
   final double frameDurationMs;
   final double inputLatencyMs;
   final PlayTelemetryResult result;
+  final double? rawAngle;
+  final double? rawPower;
+  final String? assistKind;
+  final String? assistTargetId;
+  final double holeForgivenessRadius;
 
   Map<String, Object?> toJson() => {
     'shot_id': shotId,
@@ -356,6 +382,12 @@ class PlayTelemetryShotPayload {
     'nearest_hole_distance': nearestHoleDistance,
     'frame_duration_ms': frameDurationMs,
     'input_latency_ms': inputLatencyMs,
+    if (rawAngle != null) 'raw_angle': rawAngle,
+    if (rawPower != null) 'raw_power': rawPower,
+    if (assistKind != null) 'intent_assist_kind': assistKind,
+    if (assistTargetId != null) 'intent_assist_target_id': assistTargetId,
+    if (holeForgivenessRadius > 0)
+      'hole_forgiveness_radius': holeForgivenessRadius,
     'telemetry_result': result.code,
   };
 }

@@ -26,6 +26,7 @@ import '../game/expedition/expedition_contract.dart';
 import '../game/hint/deterministic_key_collection_resolver.dart';
 import '../game/hint/pattern_hint.dart';
 import '../game/input/aim_direction_quantizer.dart';
+import '../game/input/intent_assist_resolver.dart';
 import '../game/levels/levels.dart';
 import '../game/persistence/progress_store.dart';
 import '../game/property_shot_game.dart';
@@ -98,6 +99,7 @@ class GameScreen extends StatefulWidget {
     this.tutorialVariant = TutorialExperimentVariant.guided,
     this.showTutorialFailureHints = true,
     this.difficulty,
+    this.intentAssistStrength,
     this.showDebugControls = false,
     this.progressStore,
     this.progressPersistencePolicy = GameProgressPersistencePolicy.enabled,
@@ -162,6 +164,7 @@ class GameScreen extends StatefulWidget {
   final TutorialExperimentVariant tutorialVariant;
   final bool showTutorialFailureHints;
   final PlayerDifficulty? difficulty;
+  final IntentAssistStrength? intentAssistStrength;
   final bool showDebugControls;
   final ProgressStore? progressStore;
 
@@ -205,6 +208,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _shotResolver = const ShotResolver();
+  final _intentAssistResolver = const IntentAssistResolver();
   final _traitResolver = const TraitResolver();
   late final ProgressStore _progressStore;
   final _feedback = GameFeedback();
@@ -215,6 +219,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _framePerformance = FramePerformanceTracker();
   late final LocalPlayTelemetry _telemetry;
   late final PlayerDifficulty _difficulty;
+  late final IntentAssistStrength _intentAssistStrength;
   late GameState _state;
   late LevelDefinition _currentLevel;
   late PropertyShotGame _game;
@@ -237,6 +242,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Vec2? _previewResultDirection;
   double? _previewResultPower;
   TraitType? _previewResultTrait;
+  double? _previewResultHoleForgivenessRadius;
   ShotResult? _previewResult;
   bool _isCharging = false;
   bool _chargeStartRecorded = false;
@@ -317,6 +323,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _debugRecordReplay = false;
   GameState? _debugReplayStartState;
   ShotInput? _debugReplayInput;
+  IntentAssistDecision? _pendingIntentAssistDecision;
+  int _repeatedNearMisses = 0;
+  String? _lastNearMissTargetId;
   List<ShotResult> _debugReplayPriorShotResults = const [];
   bool _debugReplayPriorBumperHit = false;
   bool _debugReplayPriorSwitchPressed = false;
@@ -369,6 +378,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _telemetry = widget.telemetry ?? LocalPlayTelemetry();
     _difficulty = widget.difficulty ?? GameFeedback.playerDifficulty;
+    final configuredAssist =
+        widget.intentAssistStrength ?? GameFeedback.intentAssistStrength;
+    _intentAssistStrength =
+        _difficulty == PlayerDifficulty.easy &&
+            configuredAssist == IntentAssistStrength.standard
+        ? IntentAssistStrength.comfortable
+        : configuredAssist;
     _state =
         widget.initialState ??
         levels.first
@@ -1109,6 +1125,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       nearestHoleDistance: nearestHoleDistance,
       frameDurationMs: _framePerformance.latestProcessingDurationMilliseconds,
       inputLatencyMs: inputLatencyMs,
+      rawAngle: input.rawDirection == null
+          ? null
+          : math.atan2(input.rawDirection!.y, input.rawDirection!.x),
+      rawPower: input.rawPower,
+      assistKind: input.wasAssisted ? input.assistKind.name : null,
+      assistTargetId: input.assistTargetId,
+      holeForgivenessRadius: input.holeForgivenessRadius,
       result: result.state.phase == GamePhase.success
           ? PlayTelemetryResult.cleared
           : PlayTelemetryResult.continued,
@@ -1982,6 +2005,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
     final shotStartState = _state;
     final result = _shotResolver.resolve(shotStartState, normalizedInput);
+    final assistDecision = _pendingIntentAssistDecision;
+    _pendingIntentAssistDecision = null;
+    _updateIntentAssistStreak(
+      shotStartState: shotStartState,
+      result: result,
+      decision: assistDecision,
+    );
     _traitEffectFeedback = _traitEffectFeedbackFor(normalizedInput, result);
     final inputLatencyMs = _launchInputLatency.elapsedMillisecondsSince(
       inputReleasedAt,
@@ -2071,8 +2101,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _aimStartedForShot = false;
     _pendingLaunchDirection = null;
     _isAnimatingShot = true;
-    _setState(
+    final assistedState = _stateWithIntentAssistFeedback(
       result.state,
+      result,
+      assistDecision,
+    );
+    _setState(
+      assistedState,
       path: result.animationPath.isEmpty ? result.path : result.animationPath,
       transitionStart: shotStartState,
       moves: result.moves,
@@ -2089,6 +2124,57 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       unawaited(persistence);
     }
     _isCommittingShot = false;
+  }
+
+  GameState _stateWithIntentAssistFeedback(
+    GameState state,
+    ShotResult result,
+    IntentAssistDecision? decision,
+  ) {
+    if (result.events.contains('hole_lip_in_assist')) {
+      return state.copyWith(message: '홀 가장자리에서 안쪽 흐름을 살려 들어갔습니다.');
+    }
+    if (decision == null || !decision.targetSnapped) return state;
+    final target = decision.targetEntityId == null
+        ? null
+        : _state.entityById(decision.targetEntityId!);
+    final label = target == null ? '가까운 목표' : _entityName(target);
+    return state.copyWith(message: '조준 의도 보정 · $label 쪽 작은 오차를 다듬었습니다.');
+  }
+
+  void _updateIntentAssistStreak({
+    required GameState shotStartState,
+    required ShotResult result,
+    required IntentAssistDecision? decision,
+  }) {
+    if (result.state.phase == GamePhase.success) {
+      _repeatedNearMisses = 0;
+      _lastNearMissTargetId = null;
+      return;
+    }
+    final hole = shotStartState.entities
+        .where((entity) => entity.type == EntityType.hole)
+        .firstOrNull;
+    final ball = shotStartState.entityById('active_ball');
+    var nearHole = false;
+    if (hole != null && ball != null && result.path.isNotEmpty) {
+      var nearest = double.infinity;
+      for (final point in result.path) {
+        nearest = math.min(nearest, point.distanceTo(hole.position));
+      }
+      final edgeMiss = nearest - hole.hitRadius - ball.hitRadius;
+      nearHole = edgeMiss > 0 && edgeMiss <= 24;
+    }
+    final targetId = nearHole ? hole?.id : decision?.targetEntityId;
+    if (targetId == null) {
+      _repeatedNearMisses = 0;
+      _lastNearMissTargetId = null;
+      return;
+    }
+    _repeatedNearMisses = _lastNearMissTargetId == targetId
+        ? (_repeatedNearMisses + 1).clamp(0, 3).toInt()
+        : 1;
+    _lastNearMissTargetId = targetId;
   }
 
   String? _traitEffectFeedbackFor(ShotInput input, ShotResult result) {
@@ -3350,6 +3436,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _previewResultDirection == normalizedInput.direction &&
         _previewResultPower == normalizedInput.power &&
         _previewResultTrait == normalizedInput.equippedTrait &&
+        _previewResultHoleForgivenessRadius ==
+            normalizedInput.holeForgivenessRadius &&
         _previewResult != null) {
       return _previewResult!;
     }
@@ -3359,6 +3447,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _previewResultDirection = normalizedInput.direction;
     _previewResultPower = normalizedInput.power;
     _previewResultTrait = normalizedInput.equippedTrait;
+    _previewResultHoleForgivenessRadius =
+        normalizedInput.holeForgivenessRadius;
     _previewResult = result;
     return result;
   }
@@ -3845,11 +3935,33 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final direction = aim.length == 0
           ? _state.aimDirection
           : aim.normalized();
-      var launchInput = ShotInput(
+      final rawLaunchInput = ShotInput(
         direction: direction,
         power: power,
         equippedTrait: _state.equippedTrait,
       ).normalized();
+      final decision = _intentAssistResolver.resolve(
+        state: _state,
+        rawInput: rawLaunchInput,
+        strength: _intentAssistStrength,
+        compactPointer: MediaQuery.sizeOf(context).shortestSide < 600,
+        repeatedNearMisses: _repeatedNearMisses,
+      );
+      var launchInput = decision.appliedInput;
+      _pendingIntentAssistDecision = decision;
+      if (decision.adjusted) {
+        _telemetry.record(
+          '조준 의도 보정',
+          stage: _state.levelIndex,
+          eventCode: 'intent_assist_applied',
+          angle: math.atan2(launchInput.direction.y, launchInput.direction.x),
+          power: launchInput.power,
+          target: decision.targetEntityId,
+          result:
+              '각도 ${decision.angleDeltaDegrees.toStringAsFixed(2)}도 · '
+              '힘 ${(decision.powerDelta * 100).toStringAsFixed(1)}%',
+        );
+      }
       if (_difficulty == PlayerDifficulty.easy) {
         _syncFirstArrivalPreview(inputOverride: launchInput, force: true);
         launchInput = _firstArrivalInputSnapshot ?? launchInput;
@@ -4310,13 +4422,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                             LogicalKeyboardKey
                                                                 .arrowLeft) {
                                                           _nudgeAim(
-                                                            -math.pi / 18,
+                                                            -math.pi / 180,
                                                           );
                                                         } else if (key ==
                                                             LogicalKeyboardKey
                                                                 .arrowRight) {
                                                           _nudgeAim(
-                                                            math.pi / 18,
+                                                            math.pi / 180,
                                                           );
                                                         } else if (key ==
                                                                 LogicalKeyboardKey
@@ -4327,7 +4439,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                             key ==
                                                                 LogicalKeyboardKey
                                                                     .pageUp) {
-                                                          _adjustPower(0.055);
+                                                          _adjustPower(0.02);
                                                         } else if (key ==
                                                                 LogicalKeyboardKey
                                                                     .arrowDown ||
@@ -4337,7 +4449,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                             key ==
                                                                 LogicalKeyboardKey
                                                                     .pageDown) {
-                                                          _adjustPower(-0.055);
+                                                          _adjustPower(-0.02);
                                                         } else if (key ==
                                                             LogicalKeyboardKey
                                                                 .space) {
@@ -4425,11 +4537,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                             increasedValue:
                                                                 _chargeGaugeActive
                                                                 ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                                : '힘 ${((_state.aimPower + 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                                : '힘 ${((_state.aimPower + 0.02).clamp(0.0, 1.0) * 100).round()}퍼센트',
                                                             decreasedValue:
                                                                 _chargeGaugeActive
                                                                 ? '충전 상태 ${_chargeGaugeStateLabel(_chargeGaugeState)}'
-                                                                : '힘 ${((_state.aimPower - 0.055).clamp(0.0, 1.0) * 100).round()}퍼센트',
+                                                                : '힘 ${((_state.aimPower - 0.02).clamp(0.0, 1.0) * 100).round()}퍼센트',
                                                             hint:
                                                                 _chargeGaugeActive
                                                                 ? '현재 ${_chargeGaugeStateLabel(_chargeGaugeState)}. 손을 떼면 발사하거나 과충전 시 취소됩니다.'
@@ -4440,11 +4552,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                                 : '증감 동작은 힘을 조절하고, 사용자 지정 동작으로 방향을 조절하세요',
                                                             onIncrease: () =>
                                                                 _adjustPower(
-                                                                  0.055,
+                                                                  0.02,
                                                                 ),
                                                             onDecrease: () =>
                                                                 _adjustPower(
-                                                                  -0.055,
+                                                                  -0.02,
                                                                 ),
                                                             customSemanticsActions: {
                                                               semanticLaunch:
@@ -4453,12 +4565,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                                   () =>
                                                                       _nudgeAim(
                                                                         math.pi /
-                                                                            18,
+                                                                            180,
                                                                       ),
                                                               semanticAimLeft:
                                                                   () => _nudgeAim(
                                                                     -math.pi /
-                                                                        18,
+                                                                        180,
                                                                   ),
                                                             },
                                                             child: ClipRRect(
@@ -4743,13 +4855,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       onRewind: _rewind,
                                       onReset: _restartCurrentStage,
                                       onAimCounterClockwise: () =>
-                                          _nudgeAim(-math.pi / 36),
+                                          _nudgeAim(-math.pi / 180),
                                       onAimClockwise: () =>
-                                          _nudgeAim(math.pi / 36),
+                                          _nudgeAim(math.pi / 180),
                                       onPowerDecrease: () =>
-                                          _adjustPower(-0.055),
-                                      onPowerIncrease: () =>
-                                          _adjustPower(0.055),
+                                          _adjustPower(-0.02),
+                                      onPowerIncrease: () => _adjustPower(0.02),
                                       canCancelReward:
                                           _isCharging &&
                                           _rewardInventory.availableUseCount(
@@ -4769,11 +4880,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     onRewind: _rewind,
                                     onReset: _restartCurrentStage,
                                     onAimCounterClockwise: () =>
-                                        _nudgeAim(-math.pi / 36),
+                                        _nudgeAim(-math.pi / 180),
                                     onAimClockwise: () =>
-                                        _nudgeAim(math.pi / 36),
-                                    onPowerDecrease: () => _adjustPower(-0.055),
-                                    onPowerIncrease: () => _adjustPower(0.055),
+                                        _nudgeAim(math.pi / 180),
+                                    onPowerDecrease: () => _adjustPower(-0.02),
+                                    onPowerIncrease: () => _adjustPower(0.02),
                                     canCancelReward:
                                         _isCharging &&
                                         _rewardInventory.availableUseCount(

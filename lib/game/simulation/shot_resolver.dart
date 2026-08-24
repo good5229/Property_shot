@@ -778,7 +778,7 @@ class ShotResolver {
       final holeCaptureRadius = hole == null
           ? 0.0
           : hole.hitRadius + ball.hitRadius;
-      final holeProgress = hole == null
+      final baseHoleProgress = hole == null
           ? double.infinity
           : _segmentCircleEntryProgress(
               previousPosition,
@@ -786,6 +786,26 @@ class ShotResolver {
               hole.position,
               holeCaptureRadius,
             );
+      final assistedHoleProgress =
+          hole == null ||
+              baseHoleProgress.isFinite ||
+              input.holeForgivenessRadius <= 0 ||
+              attemptedSpeed > 15
+          ? double.infinity
+          : _assistedHoleEntryProgress(
+              previousPosition: previousPosition,
+              position: position,
+              direction: direction,
+              hole: hole,
+              captureRadius: holeCaptureRadius + input.holeForgivenessRadius,
+            );
+      final holeLipAssisted = assistedHoleProgress.isFinite;
+      final holeProgress = baseHoleProgress.isFinite
+          ? baseHoleProgress
+          : assistedHoleProgress;
+      final effectiveHoleCaptureRadius = holeLipAssisted
+          ? holeCaptureRadius + input.holeForgivenessRadius
+          : holeCaptureRadius;
       final collisionProgress = collisionSample == null
           ? double.infinity
           : _segmentProgress(
@@ -868,7 +888,7 @@ class ShotResolver {
       if (hole != null &&
           holeProgress.isFinite &&
           _segmentDistance(previousPosition, position, hole.position) <=
-              holeCaptureRadius &&
+              effectiveHoleCaptureRadius &&
           holeProgress <= collisionProgress + _physicsEpsilon &&
           holeProgress <= sliderProgress + _physicsEpsilon) {
         _consumeReflectorSegment(
@@ -911,6 +931,7 @@ class ShotResolver {
           ),
         );
         events.add('hole_entered');
+        if (holeLipAssisted) events.add('hole_lip_in_assist');
         success = true;
         break;
       }
@@ -1891,6 +1912,28 @@ class ShotResolver {
   /// 찾는다. 아무 사건도 없으면 사거리 끝을 반환한다.
   FirstArrivalPreview firstArrival(GameState state, ShotInput rawInput) {
     return firstArrivalFromResult(resolve(state, rawInput));
+  }
+
+  double _assistedHoleEntryProgress({
+    required Vec2 previousPosition,
+    required Vec2 position,
+    required Vec2 direction,
+    required EntityState hole,
+    required double captureRadius,
+  }) {
+    final progress = _segmentCircleEntryProgress(
+      previousPosition,
+      position,
+      hole.position,
+      captureRadius,
+    );
+    if (!progress.isFinite) return double.infinity;
+    final segment = position - previousPosition;
+    final entry = previousPosition + segment * progress;
+    final toHole = hole.position - entry;
+    if (toHole.length <= 0.001) return progress;
+    final inwardAlignment = direction.normalized().dot(toHole.normalized());
+    return inwardAlignment >= 0.28 ? progress : double.infinity;
   }
 
   /// 조준 보조와 첫 충돌 보상이 같은 판정 결과를 공유할 수 있게 한다.

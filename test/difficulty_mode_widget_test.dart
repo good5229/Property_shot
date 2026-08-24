@@ -62,7 +62,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('precision_power_increase')));
     await tester.pump();
-    expect(find.text('56%'), findsOneWidget);
+    expect(find.text('52%'), findsOneWidget);
     expect(
       tester
           .getSemantics(find.byKey(const Key('precision_aim_controls')))

@@ -1132,6 +1132,11 @@ class StagePatternSession {
       direction: normalized.direction,
       power: normalized.power,
       equippedTrait: normalized.equippedTrait,
+      rawDirection: normalized.rawDirection,
+      rawPower: normalized.rawPower,
+      assistKind: normalized.assistKind,
+      assistTargetId: normalized.assistTargetId,
+      holeForgivenessRadius: normalized.holeForgivenessRadius,
       traitActions: current.pendingTraitActions,
     );
     final next = _copyState(
@@ -1348,6 +1353,11 @@ class StagePatternSession {
           direction: input.direction,
           power: input.power,
           equippedTrait: input.equippedTrait,
+          rawDirection: input.rawDirection,
+          rawPower: input.rawPower,
+          assistKind: input.assistKind,
+          assistTargetId: input.assistTargetId,
+          holeForgivenessRadius: input.holeForgivenessRadius,
           traitActions: input.traitActions,
         ),
     ];

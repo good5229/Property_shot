@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../domain/trait.dart';
+import '../domain/shot_input.dart';
 import 'replay_failure.dart';
 
 const int replayDocumentSchemaVersion = 1;
@@ -160,6 +161,11 @@ class ReplayShot {
     required this.direction,
     required this.power,
     this.equippedTrait,
+    this.rawDirection,
+    this.rawPower,
+    this.assistKind = ShotAssistKind.none,
+    this.assistTargetId,
+    this.holeForgivenessMilli = 0,
     Iterable<ReplayTraitAction> traitActions = const [],
   }) : traitActions = List.unmodifiable(traitActions) {
     if (shotIndex < 0 || shotIndex >= replayMaxShots) {
@@ -172,6 +178,17 @@ class ReplayShot {
     if (power < 0 || power > ReplayFixedPoint.scale) {
       throw const ReplayFailure(ReplayFailureCode.invalidFixedPoint);
     }
+    if (rawDirection != null) _validateDirection(rawDirection!);
+    if (rawPower != null &&
+        (rawPower! < 0 || rawPower! > ReplayFixedPoint.scale)) {
+      throw const ReplayFailure(ReplayFailureCode.invalidFixedPoint);
+    }
+    if (assistTargetId != null && !_isSafeToken(assistTargetId!)) {
+      throw const ReplayFailure(ReplayFailureCode.invalidReference);
+    }
+    if (holeForgivenessMilli < 0 || holeForgivenessMilli > 16000) {
+      throw const ReplayFailure(ReplayFailureCode.integerOutOfRange);
+    }
   }
 
   factory ReplayShot.fromJson(Object? value) {
@@ -182,6 +199,11 @@ class ReplayShot {
           'direction',
           'power',
           'equippedTrait',
+          'rawDirection',
+          'rawPower',
+          'assistKind',
+          'assistTargetId',
+          'holeForgivenessMilli',
           'traitActions',
         })) {
       throw const ReplayFailure(ReplayFailureCode.invalidDocument);
@@ -197,6 +219,23 @@ class ReplayShot {
     if (rawActions.length > replayMaxTraitActions) {
       throw const ReplayFailure(ReplayFailureCode.tooManyTraitActions);
     }
+    final assistKindName = value['assistKind'];
+    ShotAssistKind assistKind;
+    try {
+      assistKind = assistKindName == null
+          ? ShotAssistKind.none
+          : ShotAssistKind.values.byName(assistKindName as String);
+    } on Object {
+      throw const ReplayFailure(ReplayFailureCode.invalidDocument);
+    }
+    final rawPower = value['rawPower'];
+    final forgiveness = value['holeForgivenessMilli'];
+    final assistTargetId = value['assistTargetId'];
+    if ((rawPower != null && rawPower is! int) ||
+        (forgiveness != null && forgiveness is! int) ||
+        (assistTargetId != null && assistTargetId is! String)) {
+      throw const ReplayFailure(ReplayFailureCode.invalidDocument);
+    }
     return ReplayShot(
       shotIndex: _requiredInt(
         value,
@@ -209,6 +248,13 @@ class ReplayShot {
       equippedTrait: trait == null
           ? null
           : _traitFromSchemaName(trait as String),
+      rawDirection: value['rawDirection'] == null
+          ? null
+          : ReplayDirection.fromJson(value['rawDirection']),
+      rawPower: rawPower as int?,
+      assistKind: assistKind,
+      assistTargetId: assistTargetId as String?,
+      holeForgivenessMilli: forgiveness as int? ?? 0,
       traitActions: rawActions.map(ReplayTraitAction.fromJson),
     );
   }
@@ -218,6 +264,11 @@ class ReplayShot {
   final ReplayDirection direction;
   final int power;
   final TraitType? equippedTrait;
+  final ReplayDirection? rawDirection;
+  final int? rawPower;
+  final ShotAssistKind assistKind;
+  final String? assistTargetId;
+  final int holeForgivenessMilli;
   final List<ReplayTraitAction> traitActions;
 
   Map<String, Object?> toJson() => {
@@ -228,10 +279,18 @@ class ReplayShot {
     'equippedTrait': equippedTrait == null
         ? null
         : _traitToSchemaName(equippedTrait!),
+    if (rawDirection != null) 'rawDirection': rawDirection!.toJson(),
+    if (rawPower != null) 'rawPower': rawPower,
+    if (assistKind != ShotAssistKind.none) 'assistKind': assistKind.name,
+    if (assistTargetId != null) 'assistTargetId': assistTargetId,
+    if (holeForgivenessMilli > 0) 'holeForgivenessMilli': holeForgivenessMilli,
     'traitActions': traitActions.map((action) => action.toJson()).toList(),
   };
 
   double get powerValue => ReplayFixedPoint.decode(power);
+  double? get rawPowerValue =>
+      rawPower == null ? null : ReplayFixedPoint.decode(rawPower!);
+  double get holeForgivenessRadius => holeForgivenessMilli / 1000;
 }
 
 /// 개인정보 없이 한 단계의 시도를 결정론적으로 기록하는 문서다.

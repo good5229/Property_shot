@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/domain/stage_pattern.dart';
 import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/run/run_state.dart';
@@ -400,6 +401,11 @@ void main() {
       direction: const Vec2(0.3, -0.8),
       power: 0.75,
       equippedTrait: TraitType.heavy,
+      rawDirection: const Vec2(0.32, -0.79),
+      rawPower: 0.743,
+      assistKind: ShotAssistKind.targetSnap,
+      assistTargetId: 'wall_entry',
+      holeForgivenessRadius: 6,
       traitActions: const [
         RunTraitActionRecord(
           sourceId: 'heavy_stone',
@@ -416,6 +422,11 @@ void main() {
     expect(restored.toJson(), input.toJson());
     expect(restored.equippedTrait, TraitType.heavy);
     expect(restored.patternSeed, 913);
+    expect(restored.rawDirection, const Vec2(0.32, -0.79));
+    expect(restored.rawPower, 0.743);
+    expect(restored.assistKind, ShotAssistKind.targetSnap);
+    expect(restored.assistTargetId, 'wall_entry');
+    expect(restored.holeForgivenessRadius, 6);
     expect(restored.traitActions, hasLength(2));
     expect(restored.traitActions.first.sourceId, 'heavy_stone');
     expect(restored.traitActions.first.action, RunTraitAction.copy);
@@ -434,6 +445,11 @@ void main() {
 
     expect(restored.patternSeed, isNull);
     expect(restored.traitActions, isEmpty);
+    expect(restored.rawDirection, isNull);
+    expect(restored.rawPower, isNull);
+    expect(restored.assistKind, ShotAssistKind.none);
+    expect(restored.assistTargetId, isNull);
+    expect(restored.holeForgivenessRadius, 0);
   });
 
   test('속성 원본과 행동 종류가 한쪽만 있으면 샷 입력을 거부한다', () {

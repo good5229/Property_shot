@@ -21,6 +21,7 @@ import 'game/expedition/expedition_contract.dart';
 import 'game/hint/generated_hint_catalog.dart';
 import 'game/hint/demo_playback_plan.dart';
 import 'game/hint/pattern_hint.dart';
+import 'game/input/intent_assist_resolver.dart';
 import 'game/levels/generated_stage_catalog.dart';
 import 'game/levels/levels.dart';
 import 'game/persistence/progress_store.dart';
@@ -707,6 +708,11 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           direction: saved.direction,
           power: saved.power,
           equippedTrait: saved.equippedTrait,
+          rawDirection: saved.rawDirection,
+          rawPower: saved.rawPower,
+          assistKind: saved.assistKind,
+          assistTargetId: saved.assistTargetId,
+          holeForgivenessRadius: saved.holeForgivenessRadius,
         ).normalized();
         final result = const ShotResolver().resolve(
           restoredState,
@@ -3322,6 +3328,11 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
       GameFeedback.setPlayerDifficulty(
         comfortable ? PlayerDifficulty.easy : PlayerDifficulty.normal,
       ),
+      GameFeedback.setIntentAssistStrength(switch (preset) {
+        _SettingsPreset.recommended => IntentAssistStrength.standard,
+        _SettingsPreset.comfortable => IntentAssistStrength.comfortable,
+        _SettingsPreset.direct => IntentAssistStrength.off,
+      }),
       GameFeedback.setPreviousAimComparisonEnabled(enableGuidance),
       GameFeedback.setLastShotSlowMotionEnabled(enableGuidance),
       GameFeedback.setCollisionOrderEnabled(enableGuidance),
@@ -3551,6 +3562,38 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                     if (difficulty == null) return;
                     setState(() => GameFeedback.playerDifficulty = difficulty);
                     unawaited(GameFeedback.setPlayerDifficulty(difficulty));
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<IntentAssistStrength>(
+                  key: const Key('intent_assist_strength_dropdown'),
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: '의도 보정',
+                    helperText: '가까운 목표를 살짝 빗나간 포인터 입력만 실제 물리 판정 안에서 보정합니다.',
+                    helperMaxLines: 3,
+                  ),
+                  initialValue: GameFeedback.intentAssistStrength,
+                  items: const [
+                    DropdownMenuItem(
+                      value: IntentAssistStrength.standard,
+                      child: Text('기본 · 작은 오차만 보정'),
+                    ),
+                    DropdownMenuItem(
+                      value: IntentAssistStrength.comfortable,
+                      child: Text('편안하게 · 터치 오차 확대'),
+                    ),
+                    DropdownMenuItem(
+                      value: IntentAssistStrength.off,
+                      child: Text('끄기 · 입력 그대로'),
+                    ),
+                  ],
+                  onChanged: (strength) {
+                    if (strength == null) return;
+                    setState(
+                      () => GameFeedback.intentAssistStrength = strength,
+                    );
+                    unawaited(GameFeedback.setIntentAssistStrength(strength));
                   },
                 ),
                 _settingSwitch(

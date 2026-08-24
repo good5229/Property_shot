@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/replay/replay.dart';
 import 'package:property_shot/game/run/run_reward.dart';
 
@@ -34,6 +35,11 @@ void main() {
           ballId: 'ball_0',
           direction: const ReplayDirection(x: 707107, y: -707107),
           power: 875000,
+          rawDirection: const ReplayDirection(x: 700000, y: -714143),
+          rawPower: 869000,
+          assistKind: ShotAssistKind.targetSnap,
+          assistTargetId: 'gate_entry',
+          holeForgivenessMilli: 6000,
           equippedTrait: TraitType.bouncy,
           traitActions: const [
             ReplayTraitAction(
@@ -61,10 +67,35 @@ void main() {
     expect(restored.shots.single.ballId, 'ball_0');
     expect(restored.shots.single.equippedTrait, TraitType.bouncy);
     expect(restored.shots.single.powerValue, closeTo(0.875, 0.000001));
+    expect(restored.shots.single.rawPowerValue, closeTo(0.869, 0.000001));
+    expect(restored.shots.single.assistKind, ShotAssistKind.targetSnap);
+    expect(restored.shots.single.assistTargetId, 'gate_entry');
+    expect(restored.shots.single.holeForgivenessRadius, 6);
     expect(canonical, isNot(contains('runId')));
     expect(canonical, isNot(contains('timestamp')));
     expect(canonical, isNot(contains('frame')));
     expect(canonical, isNot(contains('screen')));
+  });
+
+  test('보정 증거의 비정상 값과 알 수 없는 종류는 거부한다', () {
+    final base = _shot(0, 'ball_0').toJson();
+    for (final invalid in [
+      {...base, 'rawPower': -1},
+      {...base, 'rawPower': ReplayFixedPoint.scale + 1},
+      {...base, 'assistKind': 'magic'},
+      {...base, 'assistTargetId': '홀 id'},
+      {...base, 'holeForgivenessMilli': 16001},
+      {
+        ...base,
+        'rawDirection': const {'x': 0, 'y': 0},
+      },
+    ]) {
+      expect(
+        () => ReplayShot.fromJson(invalid),
+        throwsA(isA<ReplayFailure>()),
+        reason: invalid.toString(),
+      );
+    }
   });
 
   test('normal은 dateKey/challengeVersion이 null이고 daily는 둘 다 요구한다', () {

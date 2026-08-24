@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
+import '../game/input/intent_assist_resolver.dart';
 import 'background_music.dart';
 import 'feedback_audio.dart';
 
@@ -52,12 +53,14 @@ class GameFeedback {
   static const chargeGaugeSidePreferenceKey = 'property_shot_charge_gauge_side';
   static const playerDifficultyPreferenceKey =
       'property_shot_player_difficulty';
+  static const intentAssistStrengthPreferenceKey =
+      'property_shot_intent_assist_strength';
   static const helpRevisionPreferenceKey = 'property_shot_help_revision';
   static const helpAcknowledgedRevisionPreferenceKey =
       'property_shot_help_acknowledged_revision';
   static const settingsSchemaVersionKey =
       'property_shot_settings_schema_version';
-  static const settingsSchemaVersion = 5;
+  static const settingsSchemaVersion = 6;
   static bool soundEnabled = true;
   static bool backgroundMusicEnabled = true;
   static bool hapticsEnabled = true;
@@ -75,6 +78,8 @@ class GameFeedback {
   static bool strongFlashEnabled = true;
   static ChargeGaugeSide chargeGaugeSide = ChargeGaugeSide.right;
   static PlayerDifficulty playerDifficulty = PlayerDifficulty.normal;
+  static IntentAssistStrength intentAssistStrength =
+      IntentAssistStrength.standard;
   static int screenShakeStrength = 2;
   static int helpRevision = 0;
   static Future<void>? _preferenceWriteTail;
@@ -98,6 +103,7 @@ class GameFeedback {
     strongFlashEnabled = true;
     chargeGaugeSide = ChargeGaugeSide.right;
     playerDifficulty = PlayerDifficulty.normal;
+    intentAssistStrength = IntentAssistStrength.standard;
     screenShakeStrength = 2;
     helpRevision = 0;
     _preferenceWriteTail = null;
@@ -160,8 +166,14 @@ class GameFeedback {
       final storedPlayerDifficulty = preferences.getString(
         playerDifficultyPreferenceKey,
       );
+      final storedIntentAssistStrength = preferences.getString(
+        intentAssistStrengthPreferenceKey,
+      );
       chargeGaugeSide = _chargeGaugeSideFromStorage(storedChargeGaugeSide);
       playerDifficulty = _playerDifficultyFromStorage(storedPlayerDifficulty);
+      intentAssistStrength = _intentAssistStrengthFromStorage(
+        storedIntentAssistStrength,
+      );
       helpRevision = (preferences.getInt(helpRevisionPreferenceKey) ?? 0)
           .clamp(0, 999999)
           .toInt();
@@ -187,6 +199,12 @@ class GameFeedback {
           await preferences.setString(
             playerDifficultyPreferenceKey,
             playerDifficulty.name,
+          );
+        }
+        if (storedIntentAssistStrength != intentAssistStrength.name) {
+          await preferences.setString(
+            intentAssistStrengthPreferenceKey,
+            intentAssistStrength.name,
           );
         }
       }
@@ -278,6 +296,16 @@ class GameFeedback {
   static Future<void> setPlayerDifficulty(PlayerDifficulty difficulty) async {
     playerDifficulty = difficulty;
     await _savePreferenceString(playerDifficultyPreferenceKey, difficulty.name);
+  }
+
+  static Future<void> setIntentAssistStrength(
+    IntentAssistStrength strength,
+  ) async {
+    intentAssistStrength = strength;
+    await _savePreferenceString(
+      intentAssistStrengthPreferenceKey,
+      strength.name,
+    );
   }
 
   static Future<void> _setBoolean(
@@ -384,6 +412,10 @@ class GameFeedback {
       playerDifficultyPreferenceKey,
       playerDifficulty.name,
     );
+    await preferences.setString(
+      intentAssistStrengthPreferenceKey,
+      intentAssistStrength.name,
+    );
   }
 
   static ChargeGaugeSide _chargeGaugeSideFromStorage(String? stored) {
@@ -399,6 +431,14 @@ class GameFeedback {
       _ => PlayerDifficulty.normal,
     };
   }
+
+  static IntentAssistStrength _intentAssistStrengthFromStorage(
+    String? stored,
+  ) => switch (stored) {
+    'off' => IntentAssistStrength.off,
+    'comfortable' => IntentAssistStrength.comfortable,
+    _ => IntentAssistStrength.standard,
+  };
 
   static Future<void> _enqueuePreferenceWrite(
     Future<void> Function() action,

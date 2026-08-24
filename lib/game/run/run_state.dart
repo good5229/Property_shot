@@ -1,12 +1,13 @@
 import 'dart:convert';
 
 import '../domain/geometry.dart';
+import '../domain/shot_input.dart';
 import '../domain/stage_pattern.dart';
 import '../domain/trait.dart';
 import 'run_hint_state.dart';
 import 'stage_shuffle_bag.dart';
 
-const int currentRunStateSchemaVersion = 3;
+const int currentRunStateSchemaVersion = 4;
 
 enum RunPhase {
   playing,
@@ -157,6 +158,11 @@ class RunShotInput {
     required this.direction,
     required this.power,
     this.equippedTrait,
+    this.rawDirection,
+    this.rawPower,
+    this.assistKind = ShotAssistKind.none,
+    this.assistTargetId,
+    this.holeForgivenessRadius = 0,
     Iterable<RunTraitActionRecord> traitActions = const [],
   }) : traitActions = List.unmodifiable(traitActions) {
     _validateId(stageId, 'stageId');
@@ -168,6 +174,25 @@ class RunShotInput {
     _validateVec2(direction, 'direction');
     if (!power.isFinite || power < 0 || power > 1) {
       throw ArgumentError.value(power, 'power', '0 이상 1 이하의 유한한 수여야 합니다.');
+    }
+    if (rawDirection != null) _validateVec2(rawDirection!, 'rawDirection');
+    if (rawPower != null &&
+        (!rawPower!.isFinite || rawPower! < 0 || rawPower! > 1)) {
+      throw ArgumentError.value(
+        rawPower,
+        'rawPower',
+        '0 이상 1 이하의 유한한 수여야 합니다.',
+      );
+    }
+    if (assistTargetId != null) _validateId(assistTargetId!, 'assistTargetId');
+    if (!holeForgivenessRadius.isFinite ||
+        holeForgivenessRadius < 0 ||
+        holeForgivenessRadius > 16) {
+      throw ArgumentError.value(
+        holeForgivenessRadius,
+        'holeForgivenessRadius',
+        '0 이상 16 이하의 유한한 수여야 합니다.',
+      );
     }
     for (final action in this.traitActions) {
       _validateId(action.sourceId, 'trait action sourceId');
@@ -181,6 +206,11 @@ class RunShotInput {
   final Vec2 direction;
   final double power;
   final TraitType? equippedTrait;
+  final Vec2? rawDirection;
+  final double? rawPower;
+  final ShotAssistKind assistKind;
+  final String? assistTargetId;
+  final double holeForgivenessRadius;
   final List<RunTraitActionRecord> traitActions;
 
   factory RunShotInput.fromJson(Map<String, dynamic> json) {
@@ -189,6 +219,19 @@ class RunShotInput {
       throw const FormatException('shot input: equippedTrait가 문자열이 아닙니다.');
     }
     final actions = _traitActionsFromShotJson(json);
+    final assistKindName = json['assistKind'];
+    ShotAssistKind assistKind;
+    try {
+      assistKind = assistKindName == null
+          ? ShotAssistKind.none
+          : ShotAssistKind.values.byName(
+              _requiredString(json, 'assistKind', 'shot input'),
+            );
+    } on ArgumentError {
+      throw FormatException(
+        'shot input: 알 수 없는 assistKind입니다: $assistKindName',
+      );
+    }
     return RunShotInput(
       stageId: _requiredString(json, 'stageId', 'shot input'),
       patternId: _requiredString(json, 'patternId', 'shot input'),
@@ -199,6 +242,19 @@ class RunShotInput {
       direction: _requiredVec2(json, 'direction', 'shot input'),
       power: _requiredFiniteDouble(json, 'power', 'shot input'),
       equippedTrait: trait == null ? null : traitTypeFromSchemaName(trait),
+      rawDirection: json['rawDirection'] == null
+          ? null
+          : _requiredVec2(json, 'rawDirection', 'shot input'),
+      rawPower: json['rawPower'] == null
+          ? null
+          : _requiredFiniteDouble(json, 'rawPower', 'shot input'),
+      assistKind: assistKind,
+      assistTargetId: json.containsKey('assistTargetId')
+          ? _nullableString(json, 'assistTargetId', 'shot input')
+          : null,
+      holeForgivenessRadius: json['holeForgivenessRadius'] == null
+          ? 0
+          : _requiredFiniteDouble(json, 'holeForgivenessRadius', 'shot input'),
       traitActions: actions,
     );
   }
@@ -214,6 +270,11 @@ class RunShotInput {
       'equippedTrait': equippedTrait == null
           ? null
           : traitTypeToSchemaName(equippedTrait!),
+      'rawDirection': rawDirection?.toJson(),
+      'rawPower': rawPower,
+      'assistKind': assistKind.name,
+      'assistTargetId': assistTargetId,
+      'holeForgivenessRadius': holeForgivenessRadius,
       'traitActions': traitActions.map((action) => action.toJson()).toList(),
     };
   }
@@ -610,6 +671,10 @@ Map<String, dynamic> _migrateRunStateJson(Map<String, dynamic> raw) {
         return migrated;
       }).toList();
     }
+  }
+  if (version < currentRunStateSchemaVersion) {
+    // v4부터 보정 전 입력과 실제 적용 입력을 샷별로 보존한다. 과거 샷은
+    // 선택 필드가 없으므로 보정 없음으로 안전하게 읽힌다.
     json['schemaVersion'] = currentRunStateSchemaVersion;
   }
   return json;

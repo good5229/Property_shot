@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/input/intent_assist_resolver.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 import 'package:property_shot/ui/game_screen.dart';
@@ -35,6 +36,7 @@ void main() {
       '조준 도움',
       '충전 게이지 위치',
       '정밀 조작 도움',
+      '의도 보정',
       '직전 조준 비교',
       '경로 기억',
       '마지막 샷 슬로모션',
@@ -75,6 +77,7 @@ void main() {
     await _pumpForAsyncWork(tester);
 
     expect(GameFeedback.playerDifficulty, PlayerDifficulty.easy);
+    expect(GameFeedback.intentAssistStrength, IntentAssistStrength.comfortable);
     expect(GameFeedback.previousAimComparisonEnabled, isTrue);
     expect(GameFeedback.reducedMotionEnabled, isTrue);
     expect(GameFeedback.screenShakeEnabled, isFalse);
@@ -82,6 +85,10 @@ void main() {
     expect(
       preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
       PlayerDifficulty.easy.name,
+    );
+    expect(
+      preferences.getString(GameFeedback.intentAssistStrengthPreferenceKey),
+      IntentAssistStrength.comfortable.name,
     );
     expect(
       preferences.getBool(GameFeedback.reducedMotionPreferenceKey),
@@ -119,7 +126,7 @@ void main() {
     expect(section.properties.header, isTrue);
   });
 
-  testWidgets('게이지 위치와 난이도 설정을 변경하고 저장한다', (tester) async {
+  testWidgets('게이지 위치·난이도·의도 보정을 변경하고 저장한다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
@@ -144,9 +151,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('켜기 · 미세 조정 포함').last);
     await _pumpForAsyncWork(tester);
+    final intentAssist = find.byKey(
+      const Key('intent_assist_strength_dropdown'),
+    );
+    await tester.ensureVisible(intentAssist);
+    await tester.pump();
+    await tester.tap(intentAssist);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('끄기 · 입력 그대로').last);
+    await _pumpForAsyncWork(tester);
 
     expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.left);
     expect(GameFeedback.playerDifficulty, PlayerDifficulty.easy);
+    expect(GameFeedback.intentAssistStrength, IntentAssistStrength.off);
     final preferences = await SharedPreferences.getInstance();
     expect(
       preferences.getString(GameFeedback.chargeGaugeSidePreferenceKey),
@@ -155,6 +172,10 @@ void main() {
     expect(
       preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
       'easy',
+    );
+    expect(
+      preferences.getString(GameFeedback.intentAssistStrengthPreferenceKey),
+      'off',
     );
   });
 

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
+import 'package:property_shot/game/input/intent_assist_resolver.dart';
 import 'package:property_shot/ui/feedback_cue.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -163,6 +164,7 @@ void main() {
       GameFeedback.reducedMotionPreferenceKey: true,
       GameFeedback.chargeGaugeSidePreferenceKey: 'left',
       GameFeedback.playerDifficultyPreferenceKey: 'easy',
+      GameFeedback.intentAssistStrengthPreferenceKey: 'comfortable',
     });
     GameFeedback.soundEnabled = true;
     GameFeedback.hapticsEnabled = true;
@@ -178,6 +180,7 @@ void main() {
     expect(GameFeedback.reducedMotionEnabled, isTrue);
     expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.left);
     expect(GameFeedback.playerDifficulty, PlayerDifficulty.easy);
+    expect(GameFeedback.intentAssistStrength, IntentAssistStrength.comfortable);
   });
 
   test('소리와 진동 설정 변경을 로컬 저장소에 기록한다', () async {
@@ -246,7 +249,7 @@ void main() {
     GameFeedback.helpRevision = 0;
   });
 
-  test('스키마 4를 5로 올리며 기존 설정과 새 기본값을 함께 보존한다', () async {
+  test('구형 스키마를 6으로 올리며 기존 설정과 의도 보정 기본값을 보존한다', () async {
     SharedPreferences.setMockInitialValues({
       GameFeedback.settingsSchemaVersionKey: 4,
       GameFeedback.lastShotSlowMotionPreferenceKey: false,
@@ -277,6 +280,7 @@ void main() {
     expect(GameFeedback.previousAimComparisonEnabled, isTrue);
     expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.right);
     expect(GameFeedback.playerDifficulty, PlayerDifficulty.normal);
+    expect(GameFeedback.intentAssistStrength, IntentAssistStrength.standard);
     expect(
       preferences.getInt(GameFeedback.settingsSchemaVersionKey),
       GameFeedback.settingsSchemaVersion,
@@ -288,6 +292,10 @@ void main() {
     expect(
       preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
       'normal',
+    );
+    expect(
+      preferences.getString(GameFeedback.intentAssistStrengthPreferenceKey),
+      'standard',
     );
     expect(
       preferences.getBool(GameFeedback.previousAimComparisonPreferenceKey),
@@ -311,6 +319,9 @@ void main() {
     await GameFeedback.setBackgroundMusicEnabled(false);
     await GameFeedback.setChargeGaugeSide(ChargeGaugeSide.left);
     await GameFeedback.setPlayerDifficulty(PlayerDifficulty.easy);
+    await GameFeedback.setIntentAssistStrength(
+      IntentAssistStrength.comfortable,
+    );
     final preferences = await SharedPreferences.getInstance();
 
     for (final key in const [
@@ -339,6 +350,10 @@ void main() {
       'easy',
     );
     expect(
+      preferences.getString(GameFeedback.intentAssistStrengthPreferenceKey),
+      'comfortable',
+    );
+    expect(
       preferences.getBool(GameFeedback.previousAimComparisonPreferenceKey),
       isFalse,
     );
@@ -349,12 +364,14 @@ void main() {
       GameFeedback.settingsSchemaVersionKey: GameFeedback.settingsSchemaVersion,
       GameFeedback.chargeGaugeSidePreferenceKey: 'center',
       GameFeedback.playerDifficultyPreferenceKey: 'expert',
+      GameFeedback.intentAssistStrengthPreferenceKey: 'unlimited',
     });
 
     await GameFeedback.loadPreferences();
 
     expect(GameFeedback.chargeGaugeSide, ChargeGaugeSide.right);
     expect(GameFeedback.playerDifficulty, PlayerDifficulty.normal);
+    expect(GameFeedback.intentAssistStrength, IntentAssistStrength.standard);
     final preferences = await SharedPreferences.getInstance();
     expect(
       preferences.getString(GameFeedback.chargeGaugeSidePreferenceKey),
@@ -363,6 +380,10 @@ void main() {
     expect(
       preferences.getString(GameFeedback.playerDifficultyPreferenceKey),
       'normal',
+    );
+    expect(
+      preferences.getString(GameFeedback.intentAssistStrengthPreferenceKey),
+      'standard',
     );
   });
 
