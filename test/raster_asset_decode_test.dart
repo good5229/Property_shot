@@ -10,6 +10,7 @@ void main() {
     for (final asset in const [
       'assets/generated/stone-v3.png',
       'assets/generated/crate-v3.png',
+      'assets/generated/mystery-crate-v1.png',
       'assets/generated/jelly-bumper-v2.png',
       'assets/generated/ball-base-v1.png',
       'assets/generated/ball-heavy-v1.png',

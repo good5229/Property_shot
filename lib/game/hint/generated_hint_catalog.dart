@@ -514,7 +514,7 @@ const generatedHintCatalogJson = r'''
         },
         {
           "level": 2,
-          "text": "뾰족함을 받은 공이 풍선과 문 사이를 지나면 스위치 쪽 길이 달라집니다.",
+          "text": "뾰족함을 받은 공으로 풍선을 터뜨리면 ? 상자 안의 기믹이 드러납니다.",
           "intentTags": [
             "transfer",
             "pop"
@@ -522,7 +522,7 @@ const generatedHintCatalogJson = r'''
           "referencedObjectIds": [
             "spike_source",
             "balloon",
-            "balloon_gate"
+            "balloon_switch"
           ]
         }
       ]
@@ -579,7 +579,7 @@ const generatedHintCatalogJson = r'''
       "hints": [
         {
           "level": 1,
-          "text": "왼쪽 가까운 홀을 향하기 전 풍선과 스위치의 관계를 확인해 보세요.",
+          "text": "왼쪽 가까운 홀을 향하기 전 풍선과 ? 상자의 관계를 확인해 보세요.",
           "intentTags": [
             "switch",
             "balloon"

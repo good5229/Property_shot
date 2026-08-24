@@ -63,6 +63,7 @@ flutter:
 
   assets:
     - assets/generated/crate-v3.png
+    - assets/generated/mystery-crate-v1.png
     - assets/generated/jelly-bumper-v2.png
     - assets/generated/gate-closed-v1.png
     - assets/generated/switch-pad-v1.png

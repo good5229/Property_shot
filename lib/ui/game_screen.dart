@@ -3503,6 +3503,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   String _semanticEntityLabel(EntityState entity) {
+    if (_isHiddenMechanic(entity)) {
+      return '미스터리 상자, 조건 달성 전';
+    }
     final name = _entityName(entity);
     final state = switch (entity.type) {
       EntityType.ball =>
@@ -6992,9 +6995,9 @@ String? _levelProgressHint(GameState state) {
     }
     final activeBall = state.entityById('active_ball');
     if (activeBall?.traits.contains(TraitType.sharp) == true) {
-      return '뾰족한 공으로 풍선을 터뜨리면 뒤의 스위치가 보여요.';
+      return '뾰족한 공으로 풍선을 터뜨리면 ? 상자 속 기믹이 드러나요.';
     }
-    return '일반 공은 풍선을 튕겨 냅니다. 풍선 뒤 흐린 스위치는 터뜨리면 드러나요.';
+    return '일반 공은 풍선을 튕겨 냅니다. 풍선 뒤 ? 상자는 터뜨리면 정체가 드러나요.';
   }
   if (state.levelIndex != 2) {
     return null;
@@ -7058,8 +7061,8 @@ String? _compactLevelProgressHint(GameState state) {
         ? '풍선 터짐 · 스위치 → 문'
         : state.entityById('active_ball')?.traits.contains(TraitType.sharp) ==
               true
-        ? '뾰족함 장착 · 풍선 → 스위치'
-        : '풍선 뒤 ? · 터뜨리면 스위치 공개';
+        ? '뾰족함 장착 · 풍선 → ? 상자'
+        : '풍선 뒤 ? 상자 · 터뜨리면 기믹 공개';
   }
   if (state.levelIndex != 2) {
     return null;
@@ -9345,6 +9348,9 @@ class _EntityIconPainter extends CustomPainter {
 }
 
 String? _assetPath(EntityState entity) {
+  if (_isHiddenMechanic(entity)) {
+    return 'assets/generated/mystery-crate-v1.png';
+  }
   return switch (entity.type) {
     EntityType.ball => _ballAssetPath(
       entity.traits.isEmpty ? null : entity.traits.first,
@@ -9374,6 +9380,9 @@ String _ballAssetPath(TraitType? trait) => switch (trait) {
 };
 
 String _entityName(EntityState entity) {
+  if (_isHiddenMechanic(entity)) {
+    return '미스터리 상자';
+  }
   switch (entity.type) {
     case EntityType.ball:
       return _ballDisplayName(entity);
@@ -9451,6 +9460,9 @@ String _ballStatusDescription(EntityState entity) {
 }
 
 String _entityDescription(EntityState entity) {
+  if (_isHiddenMechanic(entity)) {
+    return '주변 조건을 달성하면 안에 숨은 기믹이 드러납니다.';
+  }
   if (entity.visualState == 'drained') {
     final lostTrait = entity.drainedTraits.isEmpty
         ? null
@@ -9490,6 +9502,8 @@ String _entityDescription(EntityState entity) {
       return '맞은 방향으로 공을 반사한 뒤 90도 회전합니다. 다음 충돌부터 새 방향을 사용합니다.';
   }
 }
+
+bool _isHiddenMechanic(EntityState entity) => entity.visualState == 'hidden';
 
 String _reflectorDirectionLabel(int orientation) {
   return switch (orientation % 4) {

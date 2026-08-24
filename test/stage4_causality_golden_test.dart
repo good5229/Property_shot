@@ -66,6 +66,13 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         expect(find.byKey(const Key('aim_area')), findsOneWidget);
+        if (variant == 'start') {
+          expect(find.bySemanticsLabel('미스터리 상자, 조건 달성 전'), findsOneWidget);
+          expect(find.bySemanticsLabel('스위치, 누르기 전'), findsNothing);
+        } else if (variant == 'popped') {
+          expect(find.bySemanticsLabel('미스터리 상자, 조건 달성 전'), findsNothing);
+          expect(find.bySemanticsLabel('스위치, 누르기 전'), findsOneWidget);
+        }
         await expectLater(
           find.byKey(const Key('stage4_causality_golden')),
           matchesGoldenFile('goldens/stage4_${variant}_${fixture.name}.png'),
@@ -73,6 +80,47 @@ void main() {
       });
     }
   }
+
+  testWidgets('숨은 기믹 팝업도 미스터리 상자 에셋을 사용한다', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      PropertyShotApp(
+        initialState: _stage4State('start'),
+        showStageSelector: false,
+        fontFamilyOverride: 'GoldenNanumGothic',
+        loadGameAssets: true,
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    final gameWidgetState = tester.state<GameWidgetState<PropertyShotGame>>(
+      find.byType(GameWidget<PropertyShotGame>),
+    );
+    await gameWidgetState.currentGame.toBeLoaded();
+    await tester.pump(const Duration(seconds: 1));
+
+    tester.semantics.tap(find.semantics.byLabel('미스터리 상자, 조건 달성 전'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('미스터리 상자'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/generated/mystery-crate-v1.png',
+      ),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
 }
 
 GameState _stage4State(String variant) {
@@ -104,7 +152,7 @@ GameState _stage4State(String variant) {
           visualState: 'revealed',
         ),
         'switch_opening' when entity.id == 'active_ball' => entity.copyWith(
-            position: const Vec2(214, 214),
+          position: const Vec2(214, 214),
           visualState: 'moving',
         ),
         'switch_opening' when entity.id == 'balloon' => entity.copyWith(
@@ -123,11 +171,11 @@ GameState _stage4State(String variant) {
           visualState: 'opening',
         ),
         'hole' when entity.id == 'active_ball' => entity.copyWith(
-            position: const Vec2(300, 128),
+          position: const Vec2(300, 128),
           visualState: 'hole_captured',
         ),
         'result' when entity.id == 'active_ball' => entity.copyWith(
-            position: const Vec2(300, 128),
+          position: const Vec2(300, 128),
           visualState: 'hole_captured',
         ),
         _ => entity,

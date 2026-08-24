@@ -150,6 +150,7 @@ class PropertyShotGame extends FlameGame {
   final Map<TraitType?, ui.Image> _ballImages = {};
   ui.Image? _holeImage;
   ui.Image? _wallImage;
+  ui.Image? _hiddenMechanicImage;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
   static const int _runtimeAssetDecodeSize = 384;
   static const int _runtimeWallAssetDecodeSize = 768;
@@ -187,6 +188,7 @@ class PropertyShotGame extends FlameGame {
       _loadUiImage('assets/generated/spike-source-v1.png'),
       _loadUiImage('assets/generated/power-slider-v1.png'),
       _loadUiImage('assets/generated/rotating-reflector-v1.png'),
+      _loadUiImage('assets/generated/mystery-crate-v1.png'),
     ]);
     _objectImages[EntityType.crate] = images[0];
     _objectImages[EntityType.weight] = images[1];
@@ -205,6 +207,7 @@ class PropertyShotGame extends FlameGame {
     _gimmickImages[EntityType.spikeSource] = images[14];
     _gimmickImages[EntityType.powerSlider] = images[15];
     _gimmickImages[EntityType.rotatingReflector] = images[16];
+    _hiddenMechanicImage = images[17];
   }
 
   Future<ui.Image> _loadUiImage(
@@ -1723,12 +1726,13 @@ class PropertyShotGame extends FlameGame {
     if (!entity.active) {
       return;
     }
+    if (entity.visualState == 'hidden') {
+      _drawHiddenMechanicPreview(canvas, entity);
+      return;
+    }
     if (entity.id == 'balloon_switch' &&
         !entity.pressed &&
         entity.visualState != 'revealed') {
-      if (entity.visualState == 'hidden') {
-        _drawHiddenBalloonSwitchPreview(canvas, entity);
-      }
       return;
     }
     final stroke = Paint()
@@ -1917,87 +1921,84 @@ class PropertyShotGame extends FlameGame {
     _drawEntityIcon(canvas, entity);
   }
 
-  void _drawHiddenBalloonSwitchPreview(Canvas canvas, EntityState entity) {
+  void _drawHiddenMechanicPreview(Canvas canvas, EntityState entity) {
     final center = _project(entity.position);
+    final side = math.max(
+      48.0,
+      math.min(56.0, math.max(entity.size.x, entity.size.y) * 0.86),
+    );
     final previewRect = Rect.fromCenter(
       center: center,
-      width: math.max(48, entity.size.x * 0.9),
-      height: math.max(36, entity.size.y * 0.95),
+      width: side,
+      height: side,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(previewRect, const Radius.circular(12)),
+      RRect.fromRectAndRadius(
+        previewRect.translate(0, math.max(2, side * 0.07)),
+        Radius.circular(side * 0.18),
+      ),
       Paint()
-        ..color = const Color(0x3DFFF4BE)
-        ..style = PaintingStyle.fill,
+        ..color = const Color(0x5224352D)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
     );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(previewRect, const Radius.circular(12)),
-      Paint()
-        ..color = const Color(0xC9F3D98B)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6,
-    );
-
-    final switchImage = _gimmickImages[EntityType.switchPad];
-    if (switchImage != null) {
+    final mysteryImage = _hiddenMechanicImage;
+    if (mysteryImage != null) {
       final source = Rect.fromLTWH(
         0,
         0,
-        switchImage.width.toDouble(),
-        switchImage.height.toDouble(),
+        mysteryImage.width.toDouble(),
+        mysteryImage.height.toDouble(),
       );
-      final side = math.min(previewRect.width, previewRect.height) * 0.82;
       canvas.drawImageRect(
-        switchImage,
+        mysteryImage,
         source,
-        Rect.fromCenter(center: center, width: side, height: side),
-        Paint()
-          ..filterQuality = _runtimeFilterQuality
-          ..colorFilter = const ColorFilter.mode(
-            Color(0x8892A29A),
-            BlendMode.modulate,
-          ),
+        previewRect,
+        Paint()..filterQuality = _runtimeFilterQuality,
       );
+      return;
     }
 
-    final badgeCenter = previewRect.topRight.translate(-2, 2);
-    canvas.drawCircle(badgeCenter, 9, Paint()..color = const Color(0xFFFFF5C7));
-    canvas.drawCircle(
-      badgeCenter,
-      9,
-      Paint()
-        ..color = const Color(0xFF8B7140)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4,
+    final fallback = RRect.fromRectAndRadius(
+      previewRect,
+      Radius.circular(side * 0.16),
     );
+    canvas.drawRRect(fallback, Paint()..color = const Color(0xFF173F78));
+    canvas.drawRRect(
+      fallback,
+      Paint()
+        ..color = const Color(0xFF2D777A)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+    final badgeCenter = center.translate(0, -1);
     final questionPaint = Paint()
-      ..color = const Color(0xFF5C5032)
+      ..color = const Color(0xFFFFC43D)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.1
+      ..strokeWidth = math.max(3.2, side * 0.08)
       ..strokeCap = StrokeCap.round;
     final questionPath = Path()
-      ..moveTo(badgeCenter.dx - 3.5, badgeCenter.dy - 2.5)
+      ..moveTo(badgeCenter.dx - side * 0.14, badgeCenter.dy - side * 0.12)
       ..cubicTo(
-        badgeCenter.dx - 3,
-        badgeCenter.dy - 6,
-        badgeCenter.dx + 4,
-        badgeCenter.dy - 6,
-        badgeCenter.dx + 4,
-        badgeCenter.dy - 2,
+        badgeCenter.dx - side * 0.12,
+        badgeCenter.dy - side * 0.3,
+        badgeCenter.dx + side * 0.2,
+        badgeCenter.dy - side * 0.3,
+        badgeCenter.dx + side * 0.2,
+        badgeCenter.dy - side * 0.1,
       )
       ..cubicTo(
-        badgeCenter.dx + 4,
-        badgeCenter.dy + 0.5,
+        badgeCenter.dx + side * 0.2,
+        badgeCenter.dy + side * 0.06,
         badgeCenter.dx,
-        badgeCenter.dy + 0.5,
+        badgeCenter.dy + side * 0.02,
         badgeCenter.dx,
-        badgeCenter.dy + 3,
+        badgeCenter.dy + side * 0.16,
       );
     canvas.drawPath(questionPath, questionPaint);
     canvas.drawCircle(
-      badgeCenter.translate(0, 6),
-      1.2,
-      Paint()..color = const Color(0xFF5C5032),
+      badgeCenter.translate(0, side * 0.3),
+      math.max(2, side * 0.045),
+      Paint()..color = const Color(0xFFFFC43D),
     );
   }
 

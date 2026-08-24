@@ -70,6 +70,19 @@ void main() {
                             fit: BoxFit.contain,
                           ),
                         ),
+                        const Align(
+                          alignment: Alignment.center,
+                          child: SizedBox(
+                            width: 66,
+                            height: 66,
+                            child: Image(
+                              image: AssetImage(
+                                'assets/generated/mystery-crate-v1.png',
+                              ),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
                         const Positioned(
                           right: 24,
                           bottom: 44,
@@ -100,6 +113,7 @@ void main() {
         for (final asset in const [
           'assets/generated/stone-v3.png',
           'assets/generated/crate-v3.png',
+          'assets/generated/mystery-crate-v1.png',
           'assets/generated/jelly-bumper-v2.png',
         ]) {
           await precacheImage(AssetImage(asset), context);

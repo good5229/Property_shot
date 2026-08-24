@@ -15,7 +15,7 @@ void main() {
     expect(hints[0], contains('무거움 → 상자'));
     expect(hints[1], contains('탄성 → 벽 반사'));
     expect(hints[2], contains('무거움 → 스위치 → 문'));
-    expect(hints[3], contains('뾰족함 → 풍선 → 스위치'));
+    expect(hints[3], contains('뾰족함 → 풍선 → ? 상자'));
     for (final hint in hints) {
       expect(hint, isNot(contains('도')));
       expect(hint, isNot(contains('%')));
