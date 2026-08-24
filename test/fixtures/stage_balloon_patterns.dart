@@ -76,8 +76,8 @@ const stageBalloonRepresentatives = <StageBalloonRepresentative>[
   StageBalloonRepresentative(
     patternId: 'stage_balloon_04',
     strategyId: 'none',
-    degree: 332,
-    power: 0.560,
+    degree: 52,
+    power: 0.890,
     familyId: 'balloon_bounce',
   ),
 ];

@@ -52,7 +52,7 @@ void main() {
       (object) => object.id == 'wall_left',
     );
     expect(leftWall.position, const Vec2(24, 280));
-    expect(leftWall.size, const Vec2(24, 520));
+    expect(leftWall.size, const Vec2(24, 512));
     expect(leftWall.movable, isFalse);
     for (final pattern in stage.patterns) {
       final keyTypes = {
@@ -122,7 +122,9 @@ void main() {
       (object) => object.type == EntityType.hole,
     );
     final hole = holeDefinition.toEntityState();
-    expect(hole.hitboxScale, 0.9);
+    expect(holeDefinition.size, const Vec2(72, 72));
+    expect(hole.hitboxScale, 1.0);
+    expect(hole.hitRadius, 36);
 
     final ballRadius = 12 * 0.88;
     final captureRadius = hole.hitRadius + ballRadius;

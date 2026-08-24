@@ -579,7 +579,7 @@ const generatedStageCatalogJson = r'''
                 "y": 430.0
               },
               "size": {
-                "x": 104.0,
+                "x": 100.0,
                 "y": 20.0
               },
               "traits": [],
@@ -650,7 +650,7 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 292.0,
+                "x": 300.0,
                 "y": 138.0
               },
               "size": {
@@ -871,7 +871,7 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 300.0,
+                "x": 298.0,
                 "y": 130.0
               },
               "size": {
@@ -1395,7 +1395,7 @@ const generatedStageCatalogJson = r'''
               "id": "jelly",
               "type": "bumper",
               "position": {
-                "x": 220.0,
+                "x": 222.0,
                 "y": 360.0
               },
               "size": {
@@ -2602,8 +2602,8 @@ const generatedStageCatalogJson = r'''
                 "y": 128.0
               },
               "size": {
-                "x": 76.0,
-                "y": 76.0
+                "x": 72.0,
+                "y": 72.0
               },
               "traits": [],
               "movable": false,
@@ -2612,7 +2612,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 1.1188888889,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -2691,7 +2691,7 @@ const generatedStageCatalogJson = r'''
               "type": "gate",
               "position": {
                 "x": 270.0,
-                "y": 176.0
+                "y": 220.0
               },
               "size": {
                 "x": 38.0,
@@ -2842,8 +2842,8 @@ const generatedStageCatalogJson = r'''
                 "y": 100.0
               },
               "size": {
-                "x": 76.0,
-                "y": 76.0
+                "x": 72.0,
+                "y": 72.0
               },
               "traits": [],
               "movable": false,
@@ -2852,7 +2852,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 1.1188888889,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -3261,8 +3261,8 @@ const generatedStageCatalogJson = r'''
               "id": "spike_source",
               "type": "spike_source",
               "position": {
-                "x": 78.0,
-                "y": 142.0
+                "x": 150.0,
+                "y": 80.0
               },
               "size": {
                 "x": 58.0,
@@ -3315,6 +3315,29 @@ const generatedStageCatalogJson = r'''
               "size": {
                 "x": 30.0,
                 "y": 120.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.88,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "balloon_03_bypass_filter",
+              "type": "wall",
+              "position": {
+                "x": 125.0,
+                "y": 340.0
+              },
+              "size": {
+                "x": 14.0,
+                "y": 50.0
               },
               "traits": [],
               "movable": false,
@@ -3388,8 +3411,8 @@ const generatedStageCatalogJson = r'''
                 "y": 128.0
               },
               "size": {
-                "x": 76.0,
-                "y": 76.0
+                "x": 72.0,
+                "y": 72.0
               },
               "traits": [],
               "movable": false,
@@ -3398,7 +3421,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 1.06,
+              "hitboxScale": 1.1188888889,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -3477,7 +3500,7 @@ const generatedStageCatalogJson = r'''
               "type": "gate",
               "position": {
                 "x": 270.0,
-                "y": 176.0
+                "y": 220.0
               },
               "size": {
                 "x": 38.0,
@@ -5693,7 +5716,7 @@ const generatedStageCatalogJson = r'''
               },
               "size": {
                 "x": 30.0,
-                "y": 170.0
+                "y": 150.0
               },
               "traits": [],
               "movable": false,
@@ -5931,11 +5954,11 @@ const generatedStageCatalogJson = r'''
               "type": "gate",
               "position": {
                 "x": 282.0,
-                "y": 182.0
+                "y": 199.0
               },
               "size": {
                 "x": 18.0,
-                "y": 190.0
+                "y": 130.0
               },
               "traits": [],
               "movable": false,
@@ -6120,8 +6143,8 @@ const generatedStageCatalogJson = r'''
               "id": "stopper_bumper",
               "type": "bumper",
               "position": {
-                "x": 260.0,
-                "y": 250.0
+                "x": 300.0,
+                "y": 210.0
               },
               "size": {
                 "x": 58.0,
@@ -6145,7 +6168,7 @@ const generatedStageCatalogJson = r'''
               "id": "p4_bypass_blocker_a",
               "type": "wall",
               "position": {
-                "x": 216.0,
+                "x": 230.0,
                 "y": 430.0
               },
               "size": {
@@ -6168,8 +6191,8 @@ const generatedStageCatalogJson = r'''
               "id": "p4_bypass_blocker_b",
               "type": "wall",
               "position": {
-                "x": 260.0,
-                "y": 320.0
+                "x": 292.0,
+                "y": 330.0
               },
               "size": {
                 "x": 22.0,
@@ -6226,7 +6249,7 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 300.0,
+                "x": 290.0,
                 "y": 360.0
               },
               "size": {
@@ -6967,7 +6990,7 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 300.0,
+                "x": 290.0,
                 "y": 100.0
               },
               "size": {
@@ -8042,8 +8065,8 @@ const generatedStageCatalogJson = r'''
                 "y": 132.0
               },
               "size": {
-                "x": 80.0,
-                "y": 80.0
+                "x": 72.0,
+                "y": 72.0
               },
               "traits": [],
               "movable": false,
@@ -8052,7 +8075,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.9,
+              "hitboxScale": 1.0,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -8089,7 +8112,7 @@ const generatedStageCatalogJson = r'''
               },
               "size": {
                 "x": 24.0,
-                "y": 520.0
+                "y": 512.0
               },
               "traits": [],
               "movable": false,
@@ -8207,7 +8230,7 @@ const generatedStageCatalogJson = r'''
                 "y": 185.0
               },
               "size": {
-                "x": 130.0,
+                "x": 128.0,
                 "y": 18.0
               },
               "traits": [],
@@ -8414,8 +8437,8 @@ const generatedStageCatalogJson = r'''
                 "y": 150.0
               },
               "size": {
-                "x": 54.0,
-                "y": 54.0
+                "x": 44.0,
+                "y": 44.0
               },
               "traits": [
                 "bouncy"
@@ -8426,7 +8449,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 1.08,
               "restitution": 0.92,
               "linkId": null,
               "movableWhenDrained": false
@@ -8519,8 +8542,8 @@ const generatedStageCatalogJson = r'''
                 "y": 100.0
               },
               "size": {
-                "x": 88.0,
-                "y": 88.0
+                "x": 72.0,
+                "y": 72.0
               },
               "traits": [],
               "movable": false,
@@ -8529,7 +8552,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.9,
+              "hitboxScale": 1.1,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -8611,8 +8634,8 @@ const generatedStageCatalogJson = r'''
                 "y": 300.0
               },
               "size": {
-                "x": 58.0,
-                "y": 58.0
+                "x": 54.0,
+                "y": 54.0
               },
               "traits": [],
               "movable": true,
@@ -8621,7 +8644,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 0.9451851852,
               "restitution": 0.66,
               "linkId": null,
               "movableWhenDrained": false
@@ -8964,8 +8987,8 @@ const generatedStageCatalogJson = r'''
                 "y": 390.0
               },
               "size": {
-                "x": 70.0,
-                "y": 36.0
+                "x": 50.0,
+                "y": 27.0
               },
               "traits": [],
               "movable": false,
@@ -8974,7 +8997,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "ready",
-              "hitboxScale": 0.9,
+              "hitboxScale": 1.2,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false,

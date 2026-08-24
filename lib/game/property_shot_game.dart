@@ -703,13 +703,17 @@ class PropertyShotGame extends FlameGame {
     if (balloon == null || balloonSwitch == null || gate == null) {
       return;
     }
-    if (balloonSwitch.visualState != 'revealed' &&
+    final switchIsHidden = balloonSwitch.visualState == 'hidden';
+    if (!switchIsHidden &&
+        balloonSwitch.visualState != 'revealed' &&
         balloonSwitch.visualState != 'pressed') {
       return;
     }
     final paint = Paint()
-      ..color = const Color(0xB8FFF0B0)
-      ..strokeWidth = 2
+      ..color = switchIsHidden
+          ? const Color(0x70FFF0B0)
+          : const Color(0xB8FFF0B0)
+      ..strokeWidth = switchIsHidden ? 1.5 : 2
       ..strokeCap = StrokeCap.round;
     final balloonEdge = _project(
       Vec2(balloon.position.x, balloon.position.y - balloon.size.y / 2),
@@ -725,7 +729,14 @@ class PropertyShotGame extends FlameGame {
     );
     _drawDashedRelation(canvas, balloonEdge, switchEdge, paint);
     _drawDashedRelation(canvas, switchEdge, gateEdge, paint);
-    canvas.drawCircle(switchEdge, 4, Paint()..color = const Color(0xFFFFF2A8));
+    canvas.drawCircle(
+      switchEdge,
+      switchIsHidden ? 3 : 4,
+      Paint()
+        ..color = switchIsHidden
+            ? const Color(0x99FFF2A8)
+            : const Color(0xFFFFF2A8),
+    );
   }
 
   void _drawDashedRelation(Canvas canvas, Offset from, Offset to, Paint paint) {
@@ -1709,10 +1720,15 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawEntity(Canvas canvas, EntityState entity, bool highlighted) {
-    if (!entity.active ||
-        entity.id == 'balloon_switch' &&
-            !entity.pressed &&
-            entity.visualState != 'revealed') {
+    if (!entity.active) {
+      return;
+    }
+    if (entity.id == 'balloon_switch' &&
+        !entity.pressed &&
+        entity.visualState != 'revealed') {
+      if (entity.visualState == 'hidden') {
+        _drawHiddenBalloonSwitchPreview(canvas, entity);
+      }
       return;
     }
     final stroke = Paint()
@@ -1899,6 +1915,90 @@ class PropertyShotGame extends FlameGame {
     }
 
     _drawEntityIcon(canvas, entity);
+  }
+
+  void _drawHiddenBalloonSwitchPreview(Canvas canvas, EntityState entity) {
+    final center = _project(entity.position);
+    final previewRect = Rect.fromCenter(
+      center: center,
+      width: math.max(48, entity.size.x * 0.9),
+      height: math.max(36, entity.size.y * 0.95),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(previewRect, const Radius.circular(12)),
+      Paint()
+        ..color = const Color(0x3DFFF4BE)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(previewRect, const Radius.circular(12)),
+      Paint()
+        ..color = const Color(0xC9F3D98B)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6,
+    );
+
+    final switchImage = _gimmickImages[EntityType.switchPad];
+    if (switchImage != null) {
+      final source = Rect.fromLTWH(
+        0,
+        0,
+        switchImage.width.toDouble(),
+        switchImage.height.toDouble(),
+      );
+      final side = math.min(previewRect.width, previewRect.height) * 0.82;
+      canvas.drawImageRect(
+        switchImage,
+        source,
+        Rect.fromCenter(center: center, width: side, height: side),
+        Paint()
+          ..filterQuality = _runtimeFilterQuality
+          ..colorFilter = const ColorFilter.mode(
+            Color(0x8892A29A),
+            BlendMode.modulate,
+          ),
+      );
+    }
+
+    final badgeCenter = previewRect.topRight.translate(-2, 2);
+    canvas.drawCircle(badgeCenter, 9, Paint()..color = const Color(0xFFFFF5C7));
+    canvas.drawCircle(
+      badgeCenter,
+      9,
+      Paint()
+        ..color = const Color(0xFF8B7140)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
+    );
+    final questionPaint = Paint()
+      ..color = const Color(0xFF5C5032)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.1
+      ..strokeCap = StrokeCap.round;
+    final questionPath = Path()
+      ..moveTo(badgeCenter.dx - 3.5, badgeCenter.dy - 2.5)
+      ..cubicTo(
+        badgeCenter.dx - 3,
+        badgeCenter.dy - 6,
+        badgeCenter.dx + 4,
+        badgeCenter.dy - 6,
+        badgeCenter.dx + 4,
+        badgeCenter.dy - 2,
+      )
+      ..cubicTo(
+        badgeCenter.dx + 4,
+        badgeCenter.dy + 0.5,
+        badgeCenter.dx,
+        badgeCenter.dy + 0.5,
+        badgeCenter.dx,
+        badgeCenter.dy + 3,
+      );
+    canvas.drawPath(questionPath, questionPaint);
+    canvas.drawCircle(
+      badgeCenter.translate(0, 6),
+      1.2,
+      Paint()..color = const Color(0xFF5C5032),
+    );
   }
 
   void _drawPowerSlider(Canvas canvas, EntityState entity, Paint stroke) {

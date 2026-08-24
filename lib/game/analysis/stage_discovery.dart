@@ -22,7 +22,7 @@ String stageDiscoveryQuestion(int levelIndex) => switch (levelIndex) {
   0 => '무거운 공으로 상자를 움직여 길을 만들 수 있을까?',
   1 => '탄성을 옮겨 벽 반사를 내 경로로 바꿀 수 있을까?',
   2 => '속성과 스위치를 이어 닫힌 문을 열 수 있을까?',
-  3 => '뾰족한 공으로 풍선 뒤의 장치를 드러낼 수 있을까?',
+  3 => '뾰족한 공으로 풍선 뒤의 스위치를 드러낼 수 있을까?',
   4 => '공이 얻은 능력과 비워진 원본을 함께 쓸 수 있을까?',
   5 => '감속한 공을 발판으로 다시 가속할 수 있을까?',
   6 => '과거 공을 남겨 다음 발사의 도구로 쓸 수 있을까?',
@@ -36,7 +36,7 @@ String stageDiscoveryCompactPath(int levelIndex) => switch (levelIndex) {
   0 => '무거움 → 상자 → 홀',
   1 => '탄성 → 벽 반사 → 홀',
   2 => '스위치 → 문 → 홀',
-  3 => '뾰족함 → 풍선 → 장치',
+  3 => '뾰족함 → 풍선 → 스위치',
   4 => '능력 획득 → 원본 이동',
   5 => '감속 → 발판 → 재가속',
   6 => '과거 공 → 다음 충돌',
@@ -68,7 +68,10 @@ Map<String, String> stageDiscoveryMilestoneLabels(int levelIndex) =>
         0 => const [('heavy_equipped', '무거움 장착'), ('crate_moved', '상자 움직임')],
         1 => const [('bouncy_equipped', '탄성 장착'), ('wall_bounce', '벽 반사 발견')],
         2 => const [('switch_pressed', '스위치 작동'), ('gate_opened', '문 열림')],
-        3 => const [('sharp_equipped', '뾰족함 장착'), ('balloon_popped', '풍선 파열')],
+        3 => const [
+          ('sharp_equipped', '뾰족함 장착'),
+          ('balloon_popped', '풍선 파열·스위치 공개'),
+        ],
         4 => const [
           ('source_drained', '원본 비우기'),
           ('drained_source_moved', '비워진 원본 이동'),
@@ -149,10 +152,12 @@ List<StageDiscoveryMilestone> stageDiscoveryMilestones({
       item('sharp_equipped', '뾰족함 장착', usedTraits.contains(TraitType.sharp)),
       item(
         'balloon_popped',
-        '풍선 파열',
-        events.contains('balloon_popped') ||
+        '풍선 파열·스위치 공개',
+        events.contains('balloon_switch_revealed') ||
             state.entities.any(
-              (entity) => entity.type == EntityType.balloon && !entity.active,
+              (entity) =>
+                  entity.id == 'balloon_switch' &&
+                  entity.visualState == 'revealed',
             ),
       ),
     ],

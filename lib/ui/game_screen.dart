@@ -6994,7 +6994,7 @@ String? _levelProgressHint(GameState state) {
     if (activeBall?.traits.contains(TraitType.sharp) == true) {
       return '뾰족한 공으로 풍선을 터뜨리면 뒤의 스위치가 보여요.';
     }
-    return '일반 공은 풍선을 튕겨 냅니다. 밀기와 우회 모두 시도할 수 있어요.';
+    return '일반 공은 풍선을 튕겨 냅니다. 풍선 뒤 흐린 스위치는 터뜨리면 드러나요.';
   }
   if (state.levelIndex != 2) {
     return null;
@@ -7059,7 +7059,7 @@ String? _compactLevelProgressHint(GameState state) {
         : state.entityById('active_ball')?.traits.contains(TraitType.sharp) ==
               true
         ? '뾰족함 장착 · 풍선 → 스위치'
-        : '풍선 밀기 · 우회하기';
+        : '풍선 뒤 ? · 터뜨리면 스위치 공개';
   }
   if (state.levelIndex != 2) {
     return null;

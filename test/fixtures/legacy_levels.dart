@@ -73,7 +73,7 @@ final legacyLevels = <LevelDefinition>[
       EntityState(
         id: 'hole',
         type: EntityType.hole,
-        position: Vec2(300, 130),
+        position: Vec2(298, 130),
         size: Vec2(74, 74),
         solid: false,
       ),
@@ -213,8 +213,8 @@ final legacyLevels = <LevelDefinition>[
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(300, 128),
-        size: Vec2(76, 76),
-        hitboxScale: 1.06,
+        size: Vec2(72, 72),
+        hitboxScale: 1.1188888889,
         solid: false,
       ),
       EntityState(
@@ -238,7 +238,7 @@ final legacyLevels = <LevelDefinition>[
       EntityState(
         id: 'balloon_gate',
         type: EntityType.gate,
-        position: Vec2(270, 176),
+        position: Vec2(270, 220),
         size: Vec2(38, 74),
         linkId: 'balloon_gate',
       ),

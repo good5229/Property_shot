@@ -18,12 +18,12 @@
           }
         ],
         "expectedFingerprints": [
-          "7fd634c05011d552"
+          "80d52caae0071a24"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1137,
-      "expectedReplaySignature": "138ad430cb7bf058",
+      "expectedReplaySignature": "0c42d4fb6087b136",
       "expectedChallengeAchieved": false,
       "expectedBreakdown": {
         "totalPoints": 1137,
@@ -56,7 +56,7 @@
         "safetyEvidence": {
           "checkedStateCount": 2,
           "dynamicObjectCount": 1,
-          "checkedMovementSegmentCount": 50,
+          "checkedMovementSegmentCount": 48,
           "tunnelingCandidateCount": 1,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 0,
@@ -87,13 +87,13 @@
           }
         ],
         "expectedFingerprints": [
-          "070096196a0fcf77",
-          "65f1beb0951ab5c2"
+          "29b0c820fc84634d",
+          "f8a5e3111be282dc"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1970,
-      "expectedReplaySignature": "f5d5f4b3b8a5ea08",
+      "expectedReplaySignature": "2e9586215b99cc30",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1970,
@@ -436,12 +436,12 @@
           }
         ],
         "expectedFingerprints": [
-          "19028e81c3be10a2"
+          "e33f202404d29974"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1207,
-      "expectedReplaySignature": "4c0d073889a0b26d",
+      "expectedReplaySignature": "78aefb54e03e0c42",
       "expectedChallengeAchieved": false,
       "expectedBreakdown": {
         "totalPoints": 1207,
@@ -474,7 +474,7 @@
         "safetyEvidence": {
           "checkedStateCount": 2,
           "dynamicObjectCount": 3,
-          "checkedMovementSegmentCount": 69,
+          "checkedMovementSegmentCount": 66,
           "tunnelingCandidateCount": 1,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 0,
@@ -505,13 +505,13 @@
           }
         ],
         "expectedFingerprints": [
-          "f5a7e7529ac89bb5",
-          "db1c194d6bc8d620"
+          "4597eecd2808cd7b",
+          "7ee01fbaa94f6dc4"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1945,
-      "expectedReplaySignature": "c1dd7733fc2d023a",
+      "expectedReplaySignature": "fcb63dbf867f4e94",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1945,
