@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
+import 'package:property_shot/game/domain/shot_input.dart';
+import 'package:property_shot/game/simulation/shot_resolver.dart';
+import 'package:property_shot/game/simulation/trait_resolver.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/core_experience_screen.dart';
 import 'package:property_shot/ui/game_screen.dart';
+import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fixtures/stage_drained_patterns.dart';
+import 'fixtures/stage_heavy_patterns.dart';
+import 'fixtures/stage_persistent_patterns.dart';
 
 void main() {
   setUp(() {
@@ -42,6 +50,111 @@ void main() {
     }
   });
 
+  test('홀 우회만으로는 장면을 완료하지 않고 각 장면의 실제 기믹 증거를 요구한다', () {
+    const resolver = ShotResolver();
+    const traits = TraitResolver();
+
+    final heavyScene = coreExperienceScenes[0];
+    final heavyLevel = heavyScene.createLevel();
+    final heavyBase = heavyLevel.createState(
+      heavyScene.levelIndex,
+      productRules: true,
+    );
+    final heavyBypass = stageHeavyRepresentatives[0];
+    final heavyBypassInput = ShotInput(
+      direction: heavyBypass.direction,
+      power: heavyBypass.power,
+    );
+    final heavyBypassResult = resolver.resolve(heavyBase, heavyBypassInput);
+    expect(heavyBypassResult.state.phase, GamePhase.success);
+    expect(
+      heavyScene
+          .evaluateObjective([heavyBypassResult], [heavyBypassInput])
+          .satisfied,
+      isFalse,
+    );
+    final heavyPrepared = traits.transferSelectedTrait(
+      traits.selectSource(heavyBase, 'anvil'),
+    );
+    final heavySolve = stageHeavyRepresentatives[1];
+    final heavyInput = ShotInput(
+      direction: heavySolve.direction,
+      power: heavySolve.power,
+      equippedTrait: heavyPrepared.equippedTrait,
+    );
+    final heavyResult = resolver.resolve(heavyPrepared, heavyInput);
+    expect(heavyResult.state.phase, GamePhase.success);
+    expect(
+      heavyScene.evaluateObjective([heavyResult], [heavyInput]).satisfied,
+      isTrue,
+    );
+
+    final drainedScene = coreExperienceScenes[1];
+    final drainedBase = drainedScene.createLevel().createState(
+      drainedScene.levelIndex,
+      productRules: true,
+    );
+    final drainedBypass = stageDrainedAlternativeSolutions.first;
+    final drainedBypassInput = ShotInput(
+      direction: drainedBypass.direction,
+      power: drainedBypass.power,
+    );
+    final drainedBypassResult = resolver.resolve(
+      drainedBase,
+      drainedBypassInput,
+    );
+    expect(drainedBypassResult.state.phase, GamePhase.success);
+    expect(
+      drainedScene
+          .evaluateObjective([drainedBypassResult], [drainedBypassInput])
+          .satisfied,
+      isFalse,
+    );
+    final drainedPrepared = traits.transferSelectedTrait(
+      traits.selectSource(drainedBase, 'drain_weight'),
+    );
+    final drainedSolve = stageDrainedRepresentativeSolutions.first;
+    final drainedInput = ShotInput(
+      direction: drainedSolve.direction,
+      power: drainedSolve.power,
+      equippedTrait: drainedPrepared.equippedTrait,
+    );
+    final drainedResult = resolver.resolve(drainedPrepared, drainedInput);
+    expect(drainedResult.state.phase, GamePhase.success);
+    expect(
+      drainedScene.evaluateObjective([drainedResult], [drainedInput]).satisfied,
+      isTrue,
+    );
+
+    final persistentScene = coreExperienceScenes[2];
+    final persistentBase = persistentScene.createLevel().createState(
+      persistentScene.levelIndex,
+      productRules: true,
+    );
+    final direct = stagePersistentAlternativeSolutions.first;
+    final directResult = resolver.resolve(persistentBase, direct.firstInput);
+    expect(directResult.state.phase, GamePhase.success);
+    expect(
+      persistentScene
+          .evaluateObjective([directResult], [direct.firstInput])
+          .satisfied,
+      isFalse,
+    );
+    final chain = stagePersistentRepresentativeSolutions.first;
+    final first = resolver.resolve(persistentBase, chain.firstInput);
+    final second = resolver.resolve(first.state, chain.secondInput);
+    expect(second.state.phase, GamePhase.success);
+    expect(
+      persistentScene
+          .evaluateObjective(
+            [first, second],
+            [chain.firstInput, chain.secondInput],
+          )
+          .satisfied,
+      isTrue,
+    );
+  });
+
   testWidgets('홈의 최상위 핵심 체험 버튼이 저장과 분리된 실제 게임 화면을 연다', (tester) async {
     await tester.pumpWidget(const PropertyShotApp(showHome: true));
     await tester.pump();
@@ -66,6 +179,7 @@ void main() {
   });
 
   testWidgets('각 핵심 장면은 현재 순서와 다음 행동을 명확히 표시한다', (tester) async {
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
     await tester.pumpWidget(
       MaterialApp(
         home: CoreExperienceScreen(
@@ -73,6 +187,7 @@ void main() {
           loadGameAssets: false,
           onExit: () {},
           onContinueCampaign: () {},
+          telemetry: telemetry,
         ),
       ),
     );
@@ -84,5 +199,15 @@ void main() {
     expect(game.nextActionLabel, '체험 마치기');
     expect(game.objectiveOverride, contains('핵심 체험 3/3'));
     expect(game.objectiveOverride, contains('남겨 둔 첫 공'));
+    expect(
+      find.byKey(const Key('persistent_objective_banner')),
+      findsOneWidget,
+    );
+    expect(
+      telemetry.events.any(
+        (event) => event['event_code'] == 'core_scene_entered',
+      ),
+      isTrue,
+    );
   });
 }

@@ -1829,6 +1829,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
     }
     if (_showCoreExperience) {
       return CoreExperienceScreen(
+        telemetry: _telemetry,
         onExit: () => _changeSurface(() => _showCoreExperience = false),
         onContinueCampaign: () {
           _changeSurface(() => _showCoreExperience = false);

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../game/domain/level_definition.dart';
+import '../game/domain/shot_input.dart';
+import '../game/domain/trait.dart';
 import '../game/levels/generated_stage_catalog.dart';
+import '../game/simulation/shot_resolver.dart';
 import 'app_language.dart';
 import 'game_feedback.dart';
 import 'game_screen.dart';
+import 'play_telemetry.dart';
 
 @immutable
 class CoreExperienceScene {
@@ -32,6 +36,50 @@ class CoreExperienceScene {
           stageId: stageId,
           stageTitle: _sceneCopy(id: patternId, language: language).title,
         );
+  }
+
+  StageObjectiveEvidence evaluateObjective(
+    List<ShotResult> results,
+    List<ShotInput> inputs,
+  ) {
+    final satisfied = switch (patternId) {
+      'stage_heavy_01' =>
+        inputs.any((input) => input.equippedTrait == TraitType.heavy) &&
+            results.any(
+              (result) => result.moves.any(
+                (move) => move.entityId == 'crate_a' && move.from != move.to,
+              ),
+            ),
+      'stage_drained_01' =>
+        inputs.any((input) => input.equippedTrait == TraitType.heavy) &&
+            results.any(
+              (result) => result.moves.any(
+                (move) =>
+                    move.entityId == 'drain_weight' && move.from != move.to,
+              ),
+            ),
+      'stage_persistent_01' =>
+        results.length >= 2 &&
+            results
+                .skip(1)
+                .any(
+                  (result) => result.impacts.any(
+                    (impact) =>
+                        impact.entityId == 'spent_ball_1' ||
+                        impact.sourceEntityId == 'spent_ball_1',
+                  ),
+                ),
+      _ => false,
+    };
+    return StageObjectiveEvidence(
+      satisfied: satisfied,
+      guidance: switch (patternId) {
+        'stage_heavy_01' => '바위의 무거움을 옮긴 공으로 상자를 움직인 뒤 홀에 넣어 보세요.',
+        'stage_drained_01' => '무거움을 옮겨 가벼워진 원본 돌을 실제로 움직인 뒤 홀에 넣어 보세요.',
+        'stage_persistent_01' => '첫 공을 남긴 뒤 새 공으로 그 공을 맞혀 홀까지 이어 보세요.',
+        _ => '장면 목표를 수행한 뒤 다시 홀에 넣어 보세요.',
+      },
+    );
   }
 }
 
@@ -104,6 +152,7 @@ class CoreExperienceScreen extends StatefulWidget {
     this.loadGameAssets = true,
     this.initialSceneIndex = 0,
     this.language = AppLanguage.korean,
+    this.telemetry,
   }) : assert(initialSceneIndex >= 0),
        assert(initialSceneIndex < coreExperienceScenes.length);
 
@@ -111,6 +160,7 @@ class CoreExperienceScreen extends StatefulWidget {
   final VoidCallback onContinueCampaign;
   final bool loadGameAssets;
   final AppLanguage language;
+  final LocalPlayTelemetry? telemetry;
 
   @visibleForTesting
   final int initialSceneIndex;
@@ -122,25 +172,98 @@ class CoreExperienceScreen extends StatefulWidget {
 class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
   late int _sceneIndex = widget.initialSceneIndex;
   bool _completed = false;
+  bool _exitRecorded = false;
+  final Stopwatch _experienceElapsed = Stopwatch();
+  final Stopwatch _sceneElapsed = Stopwatch();
+
+  @override
+  void initState() {
+    super.initState();
+    _experienceElapsed.start();
+    _sceneElapsed.start();
+    _record('핵심 체험 진입', 'core_experience_entered');
+    _recordSceneEntered();
+  }
+
+  void _record(
+    String type,
+    String eventCode, {
+    int? elapsedMs,
+    String? result,
+  }) {
+    final scene = coreExperienceScenes[_sceneIndex];
+    widget.telemetry?.record(
+      type,
+      stage: scene.levelIndex,
+      eventCode: eventCode,
+      routeTag: 'core_experience',
+      elapsedMs: elapsedMs,
+      result: result,
+      target: scene.patternId,
+    );
+  }
+
+  void _recordSceneEntered() {
+    _record('핵심 장면 진입', 'core_scene_entered');
+  }
+
+  void _exit() {
+    if (!_exitRecorded) {
+      _exitRecorded = true;
+      _record(
+        '핵심 체험 이탈',
+        'core_experience_abandoned',
+        elapsedMs: _experienceElapsed.elapsedMilliseconds,
+        result: 'scene_${_sceneIndex + 1}',
+      );
+    }
+    widget.onExit();
+  }
 
   void _advance() {
+    _record(
+      '핵심 장면 완료',
+      'core_scene_completed',
+      elapsedMs: _sceneElapsed.elapsedMilliseconds,
+      result: 'scene_${_sceneIndex + 1}',
+    );
     if (_sceneIndex >= coreExperienceScenes.length - 1) {
+      _record(
+        '핵심 체험 완료',
+        'core_experience_completed',
+        elapsedMs: _experienceElapsed.elapsedMilliseconds,
+      );
       setState(() => _completed = true);
       return;
     }
     setState(() => _sceneIndex += 1);
+    _sceneElapsed
+      ..reset()
+      ..start();
+    _recordSceneEntered();
   }
 
   @override
   Widget build(BuildContext context) {
     if (_completed) {
       return _CoreExperienceComplete(
-        onExit: widget.onExit,
+        onExit: _exit,
         onContinueCampaign: widget.onContinueCampaign,
-        onReplay: () => setState(() {
-          _sceneIndex = 0;
-          _completed = false;
-        }),
+        onReplay: () {
+          _record('핵심 체험 다시 시작', 'core_experience_replayed');
+          setState(() {
+            _sceneIndex = 0;
+            _completed = false;
+          });
+          _experienceElapsed
+            ..reset()
+            ..start();
+          _sceneElapsed
+            ..reset()
+            ..start();
+          _exitRecorded = false;
+          _recordSceneEntered();
+        },
         language: widget.language,
       );
     }
@@ -158,7 +281,8 @@ class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
       initialState: initialState,
       levelOverride: level,
       showStageSelector: false,
-      onExit: widget.onExit,
+      telemetry: widget.telemetry,
+      onExit: _exit,
       exitToMainMenu: true,
       progressPersistencePolicy: GameProgressPersistencePolicy.disabled,
       difficulty: PlayerDifficulty.easy,
@@ -175,6 +299,7 @@ class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
           ? widget.language.pick('체험 마치기', 'FINISH CORE PLAY')
           : widget.language.pick('다음 장면', 'NEXT SCENE'),
       onStageRequested: (_) async => _advance(),
+      objectiveEvidenceEvaluator: scene.evaluateObjective,
     );
   }
 }

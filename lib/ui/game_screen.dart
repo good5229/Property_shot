@@ -52,6 +52,23 @@ import 'trait_transfer_ribbon.dart';
 
 enum GameProgressPersistencePolicy { enabled, disabled }
 
+@immutable
+class StageObjectiveEvidence {
+  const StageObjectiveEvidence({
+    required this.satisfied,
+    required this.guidance,
+  });
+
+  final bool satisfied;
+  final String guidance;
+}
+
+typedef StageObjectiveEvidenceEvaluator =
+    StageObjectiveEvidence Function(
+      List<ShotResult> results,
+      List<ShotInput> inputs,
+    );
+
 @visibleForTesting
 IntentAssistStrength effectiveIntentAssistStrength({
   required IntentAssistStrength configured,
@@ -138,6 +155,7 @@ class GameScreen extends StatefulWidget {
     this.sequencePosition,
     this.sequenceLength,
     this.nextActionLabel,
+    this.objectiveEvidenceEvaluator,
   });
 
   final GameState? initialState;
@@ -213,6 +231,7 @@ class GameScreen extends StatefulWidget {
   final int? sequencePosition;
   final int? sequenceLength;
   final String? nextActionLabel;
+  final StageObjectiveEvidenceEvaluator? objectiveEvidenceEvaluator;
 
   /// 오늘의 도전처럼 일반 섬 진행을 오염시키면 안 되는 흐름은 disabled로 둔다.
   final GameProgressPersistencePolicy progressPersistencePolicy;
@@ -330,6 +349,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late List<SolutionMasteryEntry> _solutionEntries;
   bool _newSolutionStamp = false;
   bool _successAimGhostActive = false;
+  StageObjectiveEvidence? _objectiveEvidence;
+  int _invalidLaunchNoticeShot = -1;
 
   RunRewardInventory get _rewardInventory =>
       RunRewardInventory(_acquiredRewards);
@@ -1377,6 +1398,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _lastFailureCauseKey = null;
     _repeatedFailureCauseCount = 0;
     _successAimGhostActive = false;
+    _objectiveEvidence = null;
+    _invalidLaunchNoticeShot = -1;
     _setPreviousAimInput(null);
     _aimStartedForShot = false;
     _pendingLaunchDirection = null;
@@ -1445,6 +1468,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _goNextLevel() async {
     if (_isCommittingStageAction) return;
+    if (_objectiveEvidence?.satisfied == false) {
+      setState(() {
+        _state = _state.copyWith(message: _objectiveEvidence!.guidance);
+      });
+      return;
+    }
     _isCommittingStageAction = true;
     try {
       final persisted = await (_clearPersistenceFuture ?? Future.value(true));
@@ -2551,6 +2580,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     final cleared = _state.phase == GamePhase.success;
+    if (cleared && widget.objectiveEvidenceEvaluator != null) {
+      _objectiveEvidence = widget.objectiveEvidenceEvaluator!(
+        List<ShotResult>.unmodifiable(_stageShotResults),
+        List<ShotInput>.unmodifiable(_stageShotInputs),
+      );
+      if (_objectiveEvidence?.satisfied == false) {
+        _telemetry.record(
+          '장면 목표 미달',
+          stage: _state.levelIndex,
+          attempt: _state.shotCount,
+          result: _objectiveEvidence!.guidance,
+          eventCode: 'core_objective_missed',
+          routeTag: 'core_experience',
+        );
+      }
+    }
     if (cleared) {
       final persisted = await (_clearPersistenceFuture ?? Future.value(true));
       if (!mounted || !_isAnimatingShot) return;
@@ -3857,6 +3902,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     timeStamp = _effectivePointerTimeStamp(timeStamp);
     final logical = _toLogicalPosition(localPosition, fieldSize);
     final onBall = logical.distanceTo(_state.activeBall.position) <= 42;
+    if (!onBall) {
+      final onInspectableEntity = _state.entities.any(
+        (entity) =>
+            entity.active &&
+            entity.id != _state.activeBall.id &&
+            _entityContainsTap(entity, logical),
+      );
+      if (!onInspectableEntity &&
+          _invalidLaunchNoticeShot != _state.shotCount) {
+        _invalidLaunchNoticeShot = _state.shotCount;
+        _telemetry.record(
+          '잘못된 발사 시작',
+          stage: _state.levelIndex,
+          attempt: _state.shotCount + 1,
+          result: '공 바깥에서 시작',
+          eventCode: 'invalid_launch_start',
+          position: logical,
+          routeTag: widget.sequencePosition == null ? null : 'core_experience',
+        );
+        _setState(_state.copyWith(message: '발사는 공을 누른 상태에서 시작해 주세요.'));
+      }
+      return;
+    }
     _launchInputSession.chargeRateScale =
         _rewardInventory.precisionChargeEnabled ? 0.75 : 1.0;
     if (!_launchInputSession.begin(
@@ -4338,6 +4406,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                         ? _openDebugMenu
                                         : null,
                                     objectiveOverride: widget.objectiveOverride,
+                                    persistentObjective:
+                                        widget.sequencePosition == null
+                                        ? null
+                                        : widget.objectiveOverride,
                                     showDiscovery: widget.showDiscoveryHud,
                                     exitTooltipOverride:
                                         widget.exitTooltipOverride,
@@ -4384,6 +4456,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                           : null,
                                       objectiveOverride:
                                           widget.objectiveOverride,
+                                      persistentObjective:
+                                          widget.sequencePosition == null
+                                          ? null
+                                          : widget.objectiveOverride,
                                       showDiscovery: widget.showDiscoveryHud,
                                       exitTooltipOverride:
                                           widget.exitTooltipOverride,
@@ -5078,6 +5154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       sequencePosition: widget.sequencePosition,
                       sequenceLength: widget.sequenceLength,
                       nextActionLabel: widget.nextActionLabel,
+                      objectiveEvidence: _objectiveEvidence,
                     ),
                 ],
               );
@@ -5173,6 +5250,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_activeTutorialVariant == TutorialExperimentVariant.silent) {
       return null;
     }
+    final coreScene = widget.sequencePosition;
+    if (coreScene != null) {
+      if (_state.phase != GamePhase.planning ||
+          _state.selectedSourceId != null) {
+        return null;
+      }
+      if (coreScene == 2) {
+        return _state.shotCount <= 1 ? _state.activeBall : null;
+      }
+      if (_state.shotCount != 0) return null;
+      if (_state.equippedTrait != null) return _state.activeBall;
+      final preferredId = coreScene == 0 ? 'anvil' : 'drain_weight';
+      return _state.traitSources
+              .where((entity) => entity.id == preferredId)
+              .firstOrNull ??
+          _state.traitSources.firstOrNull;
+    }
     if (_state.levelIndex > 2 ||
         _state.shotCount != 0 ||
         _state.phase != GamePhase.planning ||
@@ -5195,6 +5289,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   String get _tutorialHint {
+    final coreScene = widget.sequencePosition;
+    if (coreScene != null) {
+      return switch (coreScene) {
+        0 when _state.equippedTrait == null => '바위를 누른 뒤 설명 창에서 무거움 옮기기를 선택해요',
+        0 => '무거운 공으로 상자를 밀도록 조준해요',
+        1 when _state.equippedTrait == null => '돌을 누른 뒤 설명 창에서 무거움 옮기기를 선택해요',
+        1 => '가벼워진 원본 돌을 공으로 밀어 움직여요',
+        2 when _state.shotCount == 0 => '첫 공을 아래쪽 길에 약하게 남겨 두세요',
+        2 => '새 공으로 남겨 둔 첫 공을 맞혀 홀로 보내세요',
+        _ => '공을 길게 눌러 힘을 모으고 손을 떼요',
+      };
+    }
     if (_activeTutorialVariant == TutorialExperimentVariant.action) {
       if (_state.equippedTrait == null) return '빛나는 속성 물체를 눌러 공에 옮겨요';
       return switch (_state.levelIndex) {
@@ -5807,6 +5913,7 @@ class ClearResultPopup extends StatelessWidget {
     this.sequencePosition,
     this.sequenceLength,
     this.nextActionLabel,
+    this.objectiveEvidence,
   });
 
   final GameState state;
@@ -5830,12 +5937,14 @@ class ClearResultPopup extends StatelessWidget {
   final int? sequencePosition;
   final int? sequenceLength;
   final String? nextActionLabel;
+  final StageObjectiveEvidence? objectiveEvidence;
 
   @override
   Widget build(BuildContext context) {
     final stars = _starsForShot(state.shotCount, level.parShots);
     final rewardSelectionPending =
         rewardCandidates.isNotEmpty && selectedRewardId == null;
+    final objectiveSatisfied = objectiveEvidence?.satisfied ?? true;
     return FocusScope(
       autofocus: true,
       child: Semantics(
@@ -5894,7 +6003,11 @@ class ClearResultPopup extends StatelessWidget {
                                   child: Column(
                                     children: [
                                       Text(
-                                        '클리어!',
+                                        objectiveSatisfied
+                                            ? '클리어!'
+                                            : '홀 도착 · 장면 목표가 남았어요',
+                                        key: const Key('clear_result_title'),
+                                        textAlign: TextAlign.center,
                                         style: Theme.of(
                                           context,
                                         ).textTheme.headlineSmall,
@@ -6316,6 +6429,41 @@ class ClearResultPopup extends StatelessWidget {
                                                   ],
                                                 ),
                                               ),
+                                              if (!objectiveSatisfied) ...[
+                                                const SizedBox(height: 10),
+                                                Container(
+                                                  key: const Key(
+                                                    'objective_evidence_pending',
+                                                  ),
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFFFE0B2,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFFB56A24,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    objectiveEvidence!.guidance,
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF6A3D16),
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                               if (chainScoreAnalysis !=
                                                   null) ...[
                                                 const SizedBox(height: 10),
@@ -6330,7 +6478,9 @@ class ClearResultPopup extends StatelessWidget {
                                                   sequenceLength != null) ...[
                                                 const SizedBox(height: 4),
                                                 Text(
-                                                  '핵심 체험 ${sequencePosition! + 1}/$sequenceLength 완료',
+                                                  objectiveSatisfied
+                                                      ? '핵심 체험 ${sequencePosition! + 1}/$sequenceLength 완료'
+                                                      : '장면 목표를 수행한 뒤 다음으로 갈 수 있어요',
                                                   key: const Key(
                                                     'sequence_progress_label',
                                                   ),
@@ -6410,7 +6560,9 @@ class ClearResultPopup extends StatelessWidget {
                                       FilledButton.icon(
                                         key: const Key('next_stage_button'),
                                         autofocus: !rewardSelectionPending,
-                                        onPressed: rewardSelectionPending
+                                        onPressed:
+                                            rewardSelectionPending ||
+                                                !objectiveSatisfied
                                             ? null
                                             : onNext,
                                         icon: const Icon(Icons.arrow_forward),
@@ -8045,6 +8197,7 @@ class _Hud extends StatelessWidget {
     this.hudScore,
     this.onDebug,
     this.objectiveOverride,
+    this.persistentObjective,
     this.showDiscovery = true,
     this.exitTooltipOverride,
     this.hintVisible = false,
@@ -8068,6 +8221,7 @@ class _Hud extends StatelessWidget {
   final int? hudScore;
   final VoidCallback? onDebug;
   final String? objectiveOverride;
+  final String? persistentObjective;
   final bool showDiscovery;
   final String? exitTooltipOverride;
   final bool hintVisible;
@@ -8227,6 +8381,13 @@ class _Hud extends StatelessWidget {
                   ),
               ],
             ),
+            if (persistentObjective != null) ...[
+              const SizedBox(height: 4),
+              _PersistentObjectiveBanner(
+                objective: persistentObjective!,
+                dense: dense,
+              ),
+            ],
             if (!dense) const SizedBox(height: 2),
             if (showStageSelector && !dense)
               SizedBox(
@@ -8356,6 +8517,10 @@ class _Hud extends StatelessWidget {
                 ),
             ],
           ),
+          if (persistentObjective != null) ...[
+            const SizedBox(height: 6),
+            _PersistentObjectiveBanner(objective: persistentObjective!),
+          ],
           const SizedBox(height: 8),
           if (showStageSelector)
             Row(
@@ -8387,6 +8552,50 @@ class _Hud extends StatelessWidget {
               ],
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _PersistentObjectiveBanner extends StatelessWidget {
+  const _PersistentObjectiveBanner({
+    required this.objective,
+    this.dense = false,
+  });
+
+  final String objective;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: '현재 목표: $objective',
+      child: Container(
+        key: const Key('persistent_objective_banner'),
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: dense ? 8 : 10,
+          vertical: dense ? 4 : 6,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF4C7),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF9B7A36)),
+        ),
+        child: Text(
+          objective,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: const Color(0xFF4E3C20),
+            fontSize: dense ? 10 : 12,
+            fontWeight: FontWeight.w900,
+            height: 1.15,
+          ),
+        ),
       ),
     );
   }

@@ -14,6 +14,19 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [ ] 첫 10분 상용 수직 슬라이스 고도화
+  - branch: codex/commercial-first-ten-minutes
+  - issue: 없음
+  - summary: 역할별 대리 플레이 증거를 먼저 수집하고, 첫 3스테이지 학습 구조, 충돌 피드백, 생산 40패턴 기믹 우회, 전 해상도 시각 일관성, 복구 보상의 실제 플레이 가치를 순차 개선한다.
+  - notes: 대리 플레이는 실제 사람의 재미 검증으로 표현하지 않는다. 각 단계는 독립 검증과 커밋을 거치며 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다.
+  - progress:
+    - [x] 역할별 에이전트 대리 플레이 평가
+    - [ ] 첫 3스테이지 학습 목적과 조준 허용폭 재구성
+    - [ ] 충돌·성공 피드백과 저모션 대응 고도화
+    - [ ] 생산 40패턴 지름길·기믹 우회 전수 감사
+    - [ ] 전 해상도 시각 일관성 검수
+    - [ ] 복구 시설의 반복 플레이 선택 가치 강화
+
 - [x] OpenAI Game Builders Seoul Track 1 대응
   - branch: main (사용자 요청으로 별도 브랜치 없음)
   - issue: 없음
