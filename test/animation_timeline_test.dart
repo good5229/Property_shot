@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flame/game.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/property_shot_game.dart';
+import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/levels/levels.dart';
@@ -307,27 +308,61 @@ void main() {
     expect(reduced.animationCursorForTest, greaterThan(reducedAt));
   });
 
-  test('충돌 카메라는 첫 프레임에 순간 이동하지 않고 30·45·60 FPS에서 감쇠한다', () {
+  test('일반 충돌은 보드를 움직이지 않고 핵심 사건만 30·45·60 FPS에서 작게 감쇠한다', () {
     const resolver = ShotResolver();
     final start = levels[0].createState(0);
     final result = resolver.resolve(
       start,
       const ShotInput(direction: Vec2(1, -0.4), power: 0.86),
     );
-    final impact = result.impacts.last;
+    final ordinaryImpact = result.impacts.firstWhere(
+      (impact) =>
+          impact.entityType != EntityType.hole &&
+          impact.entityType != EntityType.balloon &&
+          impact.entityType != EntityType.switchPad &&
+          impact.entityType != EntityType.powerSlider &&
+          impact.entityType != EntityType.rotatingReflector,
+    );
+    final cinematicImpact = ShotImpact(
+      entityId: 'test_hole',
+      entityType: EntityType.hole,
+      position: result.path.last,
+      normal: const Vec2(0, -1),
+      pathIndex: ordinaryImpact.pathIndex,
+      strength: ordinaryImpact.strength,
+      impulse: ordinaryImpact.impulse,
+    );
 
     for (final framesPerSecond in [30, 45, 60]) {
+      final ordinaryGame = PropertyShotGame(result.state);
+      ordinaryGame.setStateSnapshot(
+        result.state,
+        path: result.path,
+        transitionStart: start,
+        impacts: [ordinaryImpact],
+        animationTransaction: true,
+      );
+      ordinaryGame.setAnimationCursorForTest(
+        ordinaryImpact.pathIndex.toDouble(),
+      );
+      for (var frame = 0; frame < 5; frame++) {
+        expect(
+          ordinaryGame.screenShakeOffsetForTest(),
+          ui.Offset.zero,
+          reason: '$framesPerSecond FPS 일반 충돌이 보드 전체를 움직임',
+        );
+        ordinaryGame.update(1 / framesPerSecond);
+      }
+
       final game = PropertyShotGame(result.state);
       game.setStateSnapshot(
         result.state,
         path: result.path,
         transitionStart: start,
-        moves: result.moves,
-        impacts: result.impacts,
-        physicsEvents: result.physicsEvents,
+        impacts: [cinematicImpact],
         animationTransaction: true,
       );
-      game.setAnimationCursorForTest(impact.pathIndex.toDouble());
+      game.setAnimationCursorForTest(cinematicImpact.pathIndex.toDouble());
 
       expect(
         game.screenShakeOffsetForTest(),
@@ -351,14 +386,16 @@ void main() {
         previous = offset;
       }
 
-      expect(nonZeroFrames, greaterThanOrEqualTo(3));
+      expect(nonZeroFrames, greaterThanOrEqualTo(2));
       expect(
         maximumStep,
-        lessThan(ImpactMetrics.cameraShake(impact.impulse) * 1.25),
+        lessThan(ImpactMetrics.cameraShake(cinematicImpact.impulse) * 0.25),
         reason: '$framesPerSecond FPS에서 인접 프레임 흔들림 차이가 너무 큼',
       );
       game.setAnimationCursorForTest(
-        impact.pathIndex + PropertyShotGame.screenShakeDurationCursor + 0.01,
+        cinematicImpact.pathIndex +
+            PropertyShotGame.screenShakeDurationCursor +
+            0.01,
       );
       expect(game.screenShakeOffsetForTest(), ui.Offset.zero);
     }

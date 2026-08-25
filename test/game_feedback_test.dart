@@ -245,6 +245,25 @@ void main() {
     expect(cues, [FeedbackCue.clear, FeedbackCue.medal]);
   });
 
+  test('Web 장치 피드백은 충돌 프레임이 끝난 뒤 실행한다', () async {
+    final scheduled = <void Function()>[];
+    final cues = <FeedbackCue>[];
+    final feedback = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+      deferDeviceFeedback: true,
+      deviceFeedbackScheduler: scheduled.add,
+    );
+
+    feedback.collision(EntityType.wall, impactStrength: 0.8);
+
+    expect(cues, isEmpty);
+    expect(scheduled, hasLength(1));
+    scheduled.single();
+    await _flushFeedback();
+    expect(cues, [FeedbackCue.heavyCollision]);
+  });
+
   test('소리와 진동 설정을 로컬 저장소에서 복원한다', () async {
     SharedPreferences.setMockInitialValues({
       GameFeedback.soundPreferenceKey: false,

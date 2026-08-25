@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
@@ -14,6 +15,7 @@ import 'feedback_audio.dart';
 
 typedef SoundPlayer = Future<void> Function(SystemSoundType type);
 typedef SoundCuePlayer = Future<void> Function(FeedbackCue cue);
+typedef DeviceFeedbackScheduler = void Function(VoidCallback callback);
 
 enum ChargeGaugeSide { right, left }
 
@@ -22,9 +24,16 @@ enum PlayerDifficulty { normal, easy }
 /// 외부 오디오 파일 없이 플랫폼 기본 피드백을 조합한다.
 /// 웹이나 무음·미지원 플랫폼에서 실패해도 게임 상태에는 영향을 주지 않는다.
 class GameFeedback {
-  GameFeedback({SoundPlayer? soundPlayer, SoundCuePlayer? cuePlayer})
-    : _soundPlayer = soundPlayer ?? _playSystemSound,
-      _cuePlayer = cuePlayer ?? playFeedbackCue;
+  GameFeedback({
+    SoundPlayer? soundPlayer,
+    SoundCuePlayer? cuePlayer,
+    bool? deferDeviceFeedback,
+    DeviceFeedbackScheduler? deviceFeedbackScheduler,
+  }) : _soundPlayer = soundPlayer ?? _playSystemSound,
+       _cuePlayer = cuePlayer ?? playFeedbackCue,
+       deferDeviceFeedback = deferDeviceFeedback ?? kIsWeb,
+       _deviceFeedbackScheduler =
+           deviceFeedbackScheduler ?? _scheduleAfterFrame;
 
   static const soundPreferenceKey = 'property_shot_sound_enabled';
   static const backgroundMusicPreferenceKey =
@@ -114,6 +123,8 @@ class GameFeedback {
 
   final SoundPlayer _soundPlayer;
   final SoundCuePlayer _cuePlayer;
+  final bool deferDeviceFeedback;
+  final DeviceFeedbackScheduler _deviceFeedbackScheduler;
   final Map<String, DateTime> _lastPlayed = <String, DateTime>{};
   Future<void>? _audioTail;
   DateTime? _lastBackgroundMusicRequest;
@@ -123,6 +134,10 @@ class GameFeedback {
     // 채널을 함께 호출하면 충돌 프레임에 불필요한 왕복과 중복 음이 생긴다.
     if (kIsWeb) return Future<void>.value();
     return SystemSound.play(type);
+  }
+
+  static void _scheduleAfterFrame(VoidCallback callback) {
+    SchedulerBinding.instance.addPostFrameCallback((_) => callback());
   }
 
   static Future<void> loadPreferences() async {
@@ -771,19 +786,38 @@ class GameFeedback {
       return;
     }
     _lastPlayed[key] = now;
-    if (haptic != null && hapticsEnabled) {
-      unawaited(_safe(haptic));
-    }
-    if (sound && soundEnabled) {
-      _queueAudio(cue: cue, alert: alert);
-    }
+    final shouldPlayHaptic = haptic != null && hapticsEnabled;
+    final shouldPlaySound = sound && soundEnabled;
+    var shouldResumeMusic = false;
     if (backgroundMusicEnabled) {
       final previousRequest = _lastBackgroundMusicRequest;
       if (previousRequest == null ||
           now.difference(previousRequest) >= const Duration(seconds: 2)) {
         _lastBackgroundMusicRequest = now;
+        shouldResumeMusic = true;
+      }
+    }
+    if (!shouldPlayHaptic && !shouldPlaySound && !shouldResumeMusic) return;
+
+    void playDeviceFeedback() {
+      if (shouldPlayHaptic) {
+        unawaited(_safe(haptic));
+      }
+      if (shouldPlaySound) {
+        _queueAudio(cue: cue, alert: alert);
+      }
+      if (shouldResumeMusic) {
         unawaited(setBackgroundMusicPlayback(true));
       }
+    }
+
+    if (deferDeviceFeedback) {
+      // Web Audio 노드 생성과 햅틱 플랫폼 채널 호출을 충돌을 그리는 현재
+      // 프레임에서 분리한다. 한 프레임 뒤의 피드백은 지각상 동시성을
+      // 유지하면서도 충돌 순간의 메인 스레드 경쟁을 피한다.
+      _deviceFeedbackScheduler(playDeviceFeedback);
+    } else {
+      playDeviceFeedback();
     }
   }
 

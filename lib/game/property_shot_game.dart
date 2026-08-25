@@ -156,6 +156,7 @@ class PropertyShotGame extends FlameGame {
   List<ShotImpact> _animationImpacts = const [];
   List<ShotImpact> _animationImpactsByPath = const [];
   List<ShotImpact> _bouncyWallImpacts = const [];
+  List<ShotImpact> _cinematicImpacts = const [];
   List<ShotAnimationMove> _causalAnimationMoves = const [];
   List<PhysicsEvent> _animationPhysicsEvents = const [];
   List<_ReflectorAnimationStep> _animationReflectorSchedule = const [];
@@ -181,6 +182,21 @@ class PropertyShotGame extends FlameGame {
   ui.Image? _hiddenMechanicImage;
   ui.Picture? _boardPicture;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
+  // 충돌 프레임은 여러 효과를 동시에 그리므로 매 프레임 Paint를 새로
+  // 만들지 않는다. Skia/WebGL 래퍼 할당과 GC가 타격 순간에 몰리는 것을
+  // 피하기 위해 효과 종류별 Paint를 재사용한다.
+  final Paint _balloonBurstPaint = Paint();
+  final Paint _moveImpactRingPaint = Paint();
+  final Paint _moveImpactSparkPaint = Paint();
+  final Paint _moveImpactFlashPaint = Paint();
+  final Paint _moveImpactShardPaint = Paint();
+  final Paint _directImpactRingPaint = Paint();
+  final Paint _directImpactFlashPaint = Paint();
+  final Paint _elasticImpactPaint = Paint();
+  final Paint _traitImpactPaint = Paint();
+  final Paint _goalConvergencePaint = Paint();
+  final Paint _animatedTrailPaint = Paint();
+  final Paint _animatedPulsePaint = Paint();
   int _boardPictureBuildCount = 0;
   int _animationRenderCacheBuildCount = 0;
   static const int _runtimeAssetDecodeSize = 384;
@@ -347,6 +363,7 @@ class PropertyShotGame extends FlameGame {
     _animationImpacts = const [];
     _animationImpactsByPath = const [];
     _bouncyWallImpacts = const [];
+    _cinematicImpacts = const [];
     _causalAnimationMoves = const [];
     _animationPhysicsEvents = const [];
     _animationReflectorSchedule = const [];
@@ -777,11 +794,13 @@ class PropertyShotGame extends FlameGame {
   /// 이전 식은 30 FPS에서 프레임마다 거의 한 주기, 60 FPS에서 반 주기씩
   /// 건너뛰었고 Y축이 cos(0)에서 시작해 충돌 첫 프레임에 보드가 순간 이동했다.
   static const double screenShakeDurationCursor = 8;
-  static const double _screenShakeFrequencyHz = 6;
 
   Offset _screenShakeOffset() {
     if (!screenShake || reducedMotion) return Offset.zero;
-    final latestImpact = _latestImpactAt(_animationCursor);
+    final latestImpact = _latestImpactAt(
+      _animationCursor,
+      impacts: _cinematicImpacts,
+    );
     if (latestImpact == null) return Offset.zero;
     final elapsed = _animationCursor - latestImpact.pathIndex;
     if (elapsed < 0 || elapsed > screenShakeDurationCursor) {
@@ -796,11 +815,10 @@ class PropertyShotGame extends FlameGame {
         ) *
         (screenShakeStrength.clamp(0, 3) / 2) *
         fade;
-    final elapsedSeconds = elapsed / animationCursorUnitsPerSecond;
-    final phase = elapsedSeconds * math.pi * 2 * _screenShakeFrequencyHz;
+    final phase = progress * math.pi;
     return Offset(
-      math.sin(phase) * amplitude,
-      math.sin(phase * 0.72) * amplitude * 0.55,
+      math.sin(phase * 2) * amplitude * 0.12,
+      -math.sin(phase) * amplitude * 0.08,
     );
   }
 
@@ -814,7 +832,10 @@ class PropertyShotGame extends FlameGame {
     if (reducedMotion) {
       return;
     }
-    final latest = _latestImpactAt(_animationCursor);
+    final latest = _latestImpactAt(
+      _animationCursor,
+      impacts: _cinematicImpacts,
+    );
     final latestCausalMove = _latestMoveAt(
       _causalAnimationMoves,
       _animationCursor,
@@ -839,7 +860,7 @@ class PropertyShotGame extends FlameGame {
             _ => (0.38 + latest.strength * 0.34).clamp(0.38, 0.72),
           };
     final envelope = math.sin((elapsed / 8) * math.pi).clamp(0.0, 1.0);
-    final zoom = 1 + 0.018 * importance * envelope;
+    final zoom = 1 + 0.008 * importance * envelope;
     final focus = _project(useMove ? latestCausalMove.to : latest!.position);
     canvas.translate(focus.dx, focus.dy);
     canvas.scale(zoom);
@@ -960,8 +981,9 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawBalloonBurst(Canvas canvas, Offset center, double progress) {
-    final paint = Paint()
+    final paint = _balloonBurstPaint
       ..color = const Color(0xFFFFB45E).withValues(alpha: 0.9 * (1 - progress))
+      ..style = PaintingStyle.fill
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
     for (var index = 0; index < 8; index++) {
@@ -998,7 +1020,7 @@ class PropertyShotGame extends FlameGame {
         EntityType.wall => const Color(0xFF7A9693),
         _ => const Color(0xFFFFF2A8),
       };
-      final ring = Paint()
+      final ring = _moveImpactRingPaint
         ..color = Color.lerp(
           accent.withValues(alpha: 0.88),
           accent.withValues(alpha: 0),
@@ -1010,8 +1032,9 @@ class PropertyShotGame extends FlameGame {
                 (1 - progress) +
             1;
       canvas.drawCircle(center, 8 + progress * 24, ring);
-      final spark = Paint()
+      final spark = _moveImpactSparkPaint
         ..color = accent.withValues(alpha: 0.7)
+        ..style = PaintingStyle.fill
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round;
       final sparkCount = targetType == EntityType.stickySurface ? 6 : 4;
@@ -1029,8 +1052,9 @@ class PropertyShotGame extends FlameGame {
       }
       if (move.visualState == 'wall_hit' && impactNormal != null) {
         final tangent = Offset(-impactNormal.y, impactNormal.x);
-        final flash = Paint()
+        final flash = _moveImpactFlashPaint
           ..color = accent.withValues(alpha: 0.82 * (1 - progress))
+          ..style = PaintingStyle.fill
           ..strokeWidth = 4 * (1 - progress) + 1
           ..strokeCap = StrokeCap.round;
         canvas.drawLine(
@@ -1040,7 +1064,7 @@ class PropertyShotGame extends FlameGame {
         );
       }
       if (targetType == EntityType.crate || targetType == EntityType.weight) {
-        final shard = Paint()
+        final shard = _moveImpactShardPaint
           ..color = accent.withValues(alpha: 0.72 * (1 - progress))
           ..style = PaintingStyle.fill;
         for (var index = 0; index < 3; index++) {
@@ -1082,14 +1106,15 @@ class PropertyShotGame extends FlameGame {
         EntityType.powerSlider => const Color(0xFF4E8FD6),
         EntityType.rotatingReflector => const Color(0xFFF2B66D),
       };
-      final ring = Paint()
+      final ring = _directImpactRingPaint
         ..color = accent.withValues(alpha: 0.82 * (1 - progress))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5 + impact.strength * 2;
       canvas.drawCircle(center, 8 + progress * 20 * impact.strength, ring);
       final normal = impact.normal.normalized();
-      final flash = Paint()
+      final flash = _directImpactFlashPaint
         ..color = accent.withValues(alpha: 0.8 * (1 - progress))
+        ..style = PaintingStyle.fill
         ..strokeWidth = 2 + impact.strength * 2
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(
@@ -1102,7 +1127,7 @@ class PropertyShotGame extends FlameGame {
           (impact.entityType == EntityType.wall ||
               impact.entityType == EntityType.gate);
       if (isElasticWallRebound) {
-        final elasticWave = Paint()
+        final elasticWave = _elasticImpactPaint
           ..color = const Color(
             0xFF4FE0AD,
           ).withValues(alpha: 0.9 * (1 - progress))
@@ -1142,8 +1167,9 @@ class PropertyShotGame extends FlameGame {
     final normal = impact.normal.normalized();
     final baseAngle = math.atan2(normal.y, normal.x);
     final fade = (1 - progress).clamp(0.0, 1.0);
-    final paint = Paint()
+    final paint = _traitImpactPaint
       ..color = color.withValues(alpha: 0.82 * fade)
+      ..style = PaintingStyle.fill
       ..strokeCap = StrokeCap.round
       ..strokeWidth = trait == TraitType.sharp ? 2.2 : 1.8;
     for (var index = 0; index < count; index++) {
@@ -1208,8 +1234,9 @@ class PropertyShotGame extends FlameGame {
 
   void _drawGoalConvergence(Canvas canvas, Offset center, double progress) {
     final fade = (1 - progress).clamp(0.0, 1.0);
-    final ray = Paint()
+    final ray = _goalConvergencePaint
       ..color = const Color(0xFFFFE59B).withValues(alpha: 0.78 * fade)
+      ..style = PaintingStyle.fill
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
     final count = reducedMotion ? 4 : 10;
@@ -1397,6 +1424,9 @@ class PropertyShotGame extends FlameGame {
                 impact.entityType == EntityType.gate),
       ),
     );
+    _cinematicImpacts = List<ShotImpact>.unmodifiable(
+      _animationImpactsByPath.where(_isCinematicImpact),
+    );
     _causalAnimationMoves = List<ShotAnimationMove>.unmodifiable(
       _animationMovesByTrigger.where(
         (move) => _isCausalRevealState(move.visualState),
@@ -1559,6 +1589,15 @@ class PropertyShotGame extends FlameGame {
     }
     return low == 0 ? null : sorted[low - 1];
   }
+
+  bool _isCinematicImpact(ShotImpact impact) => switch (impact.entityType) {
+    EntityType.hole ||
+    EntityType.balloon ||
+    EntityType.switchPad ||
+    EntityType.powerSlider ||
+    EntityType.rotatingReflector => true,
+    _ => false,
+  };
 
   int _firstMoveAtOrAfter(List<ShotAnimationMove> moves, double cursor) {
     var low = 0;
@@ -4598,10 +4637,11 @@ class PropertyShotGame extends FlameGame {
     final previous = _samplePathAtTime(_animationPath, _animationCursor - 1);
     final speedRatio = ((position - previous).length / 8.0).clamp(0.0, 1.0);
     final trailCount = 3 + (speedRatio * 4).round();
-    final trailPaint = Paint()
+    final trailPaint = _animatedTrailPaint
       ..color = ballRewardAppearance
           ? const Color(0x994EE7D5)
           : const Color(0x55FFFFFF)
+      ..style = PaintingStyle.fill
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
     for (var i = 1; i <= trailCount; i++) {
@@ -4647,7 +4687,7 @@ class PropertyShotGame extends FlameGame {
         canvas.drawCircle(
           impact,
           18 - pulse * 2.2,
-          Paint()
+          _animatedPulsePaint
             ..color = const Color(0x66FFDE59)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 3,

@@ -62,6 +62,12 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Recently Closed
 
+- [x] 충돌 프레임 무감지 수준 페이싱
+  - branch: codex/imperceptible-collision-frame-pacing
+  - issue: 없음
+  - summary: 일반 충돌의 전체 보드 카메라 변형을 제거하고 Web Audio·햅틱을 프레임 뒤로 분리하며 충돌 효과 Paint를 재사용했다.
+  - notes: 일반 충돌 보드 이동 0, 핵심 사건 첫 프레임 이동 0, 30·45·60 FPS와 불규칙 30~60 FPS, 충돌·기믹 Golden 53건, 전체 직렬 1,473개 테스트, 정적 분석, 생산 40패턴 런타임, Wasm 릴리스 빌드를 통과했다. 실제 사용자 지각과 특정 기기의 실측 프레임 시간은 배포 후 체감 확인 대상으로 남긴다. 기존 게임소개서 PPT/PDF 미커밋 변경은 범위 밖으로 보존한다.
+
 - [x] 30~60 FPS 충돌 애니메이션 프레임 안정화
   - branch: codex/smooth-collision-30-60fps
   - issue: 없음
