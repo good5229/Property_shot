@@ -1969,6 +1969,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         totalScore: _completedRunScore,
         totalBestShots: _completedRunBestShots,
         rewardCount: _completedRunRewardCount,
+        restorationProgress: restorationProgress,
         onStartNewRun: () {
           setState(() => _showRunResult = false);
           unawaited(_startStage(0, allowStoredRunResume: true));
@@ -2351,11 +2352,29 @@ class _ExpeditionStageTile extends StatelessWidget {
   }
 }
 
+@visibleForTesting
+Widget buildCampaignFinaleForTesting({
+  required int totalScore,
+  required int totalBestShots,
+  required int rewardCount,
+  required IslandRestorationProgress restorationProgress,
+  VoidCallback? onStartNewRun,
+  VoidCallback? onHome,
+}) => _RunResultScreen(
+  totalScore: totalScore,
+  totalBestShots: totalBestShots,
+  rewardCount: rewardCount,
+  restorationProgress: restorationProgress,
+  onStartNewRun: onStartNewRun ?? () {},
+  onHome: onHome ?? () {},
+);
+
 class _RunResultScreen extends StatelessWidget {
   const _RunResultScreen({
     required this.totalScore,
     required this.totalBestShots,
     required this.rewardCount,
+    required this.restorationProgress,
     required this.onStartNewRun,
     required this.onHome,
   });
@@ -2363,82 +2382,132 @@ class _RunResultScreen extends StatelessWidget {
   final int totalScore;
   final int totalBestShots;
   final int rewardCount;
+  final IslandRestorationProgress restorationProgress;
   final VoidCallback onStartNewRun;
   final VoidCallback onHome;
 
   @override
   Widget build(BuildContext context) {
+    final fullyRestored = restorationProgress.restoredCount == 3;
+    final nextLandmark = restorationProgress.nextLandmark;
+    final story = fullyRestored
+        ? '발견한 성질이 세 시설을 잇고, 다음 항해를 돕는 하나의 항로가 됐습니다.'
+        : restorationProgress.restoredCount == 0
+        ? '이번 완주가 섬 복구의 출발점입니다. 물리 사건을 직접 확인하면 시설이 깨어납니다.'
+        : '${restorationProgress.restoredCount}개 시설이 다음 항해를 지원합니다. '
+              '${nextLandmark!.label}까지 발견 ${nextLandmark.requiredDiscoveries - restorationProgress.discoveryCount}개가 남았습니다.';
     return Scaffold(
       key: const Key('run_result_screen'),
       backgroundColor: const Color(0xFFBFE8E3),
       body: SafeArea(
         child: Stack(
+          fit: StackFit.expand,
           children: [
             const Positioned.fill(child: _IslandBackdrop()),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7DB),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF503C2E),
-                        width: 3,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x44000000),
-                          blurRadius: 18,
-                          offset: Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.emoji_events_rounded,
-                          size: 54,
-                          color: Color(0xFFF0AE34),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '첫 번째 섬 완주!',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 18),
-                        _RunResultRow(label: '총 연쇄 점수', value: '$totalScore점'),
-                        _RunResultRow(
-                          label: '단계별 최고 기록 합계',
-                          value: '$totalBestShots회',
-                        ),
-                        _RunResultRow(
-                          label: '선택한 런 보상',
-                          value: '$rewardCount개',
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton.icon(
-                          key: const Key('new_run_button'),
-                          onPressed: onStartNewRun,
-                          icon: const Icon(Icons.refresh_rounded),
-                          label: const Text('새 런 시작'),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          key: const Key('run_result_home_button'),
-                          onPressed: onHome,
-                          icon: const Icon(Icons.home_outlined),
-                          label: const Text('메인 메뉴'),
-                        ),
-                      ],
-                    ),
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x180E5E69), Color(0x8A183E38)],
                   ),
                 ),
               ),
+            ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 620;
+                final wide = constraints.maxWidth >= 860;
+                final horizontal = compact ? 12.0 : 24.0;
+                return SingleChildScrollView(
+                  key: const Key('campaign_finale_scroll'),
+                  padding: EdgeInsets.fromLTRB(horizontal, 18, horizontal, 24),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 980),
+                      child: Semantics(
+                        container: true,
+                        label:
+                            '첫 번째 섬 완주. 섬 복구 ${restorationProgress.restoredCount}/3. $story',
+                        child: Container(
+                          padding: EdgeInsets.all(compact ? 16 : 24),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFFFF8DF), Color(0xFFF2F6D9)],
+                            ),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: const Color(0xFF4C5D43),
+                              width: 2,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x550A332B),
+                                blurRadius: 26,
+                                offset: Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              _FinaleHeading(
+                                fullyRestored: fullyRestored,
+                                compact: compact,
+                              ),
+                              const SizedBox(height: 18),
+                              if (wide)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 6,
+                                      child: _FinaleRestorationStory(
+                                        progress: restorationProgress,
+                                        story: story,
+                                        compact: false,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 22),
+                                    Expanded(
+                                      flex: 4,
+                                      child: _FinaleRunSummary(
+                                        totalScore: totalScore,
+                                        totalBestShots: totalBestShots,
+                                        rewardCount: rewardCount,
+                                        progress: restorationProgress,
+                                        onStartNewRun: onStartNewRun,
+                                        onHome: onHome,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                _FinaleRestorationStory(
+                                  progress: restorationProgress,
+                                  story: story,
+                                  compact: compact,
+                                ),
+                                const SizedBox(height: 14),
+                                _FinaleRunSummary(
+                                  totalScore: totalScore,
+                                  totalBestShots: totalBestShots,
+                                  rewardCount: rewardCount,
+                                  progress: restorationProgress,
+                                  onStartNewRun: onStartNewRun,
+                                  onHome: onHome,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -2447,24 +2516,316 @@ class _RunResultScreen extends StatelessWidget {
   }
 }
 
-class _RunResultRow extends StatelessWidget {
-  const _RunResultRow({required this.label, required this.value});
+class _FinaleHeading extends StatelessWidget {
+  const _FinaleHeading({required this.fullyRestored, required this.compact});
+
+  final bool fullyRestored;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Image.asset(
+        'assets/generated/stage-icon-finale-v1.png',
+        width: compact ? 62 : 78,
+        height: compact ? 62 : 78,
+        filterQuality: FilterQuality.high,
+        excludeFromSemantics: true,
+      ),
+      SizedBox(width: compact ? 10 : 16),
+      Flexible(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '첫 번째 섬 완주!',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: const Color(0xFF214F3B),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Text(
+              fullyRestored ? '세 시설이 하나의 항로로 이어졌습니다' : '완주 기록이 섬을 다시 움직입니다',
+              style: const TextStyle(
+                color: Color(0xFF52706A),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _FinaleRestorationStory extends StatelessWidget {
+  const _FinaleRestorationStory({
+    required this.progress,
+    required this.story,
+    required this.compact,
+  });
+
+  final IslandRestorationProgress progress;
+  final String story;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('campaign_finale_restoration'),
+    width: double.infinity,
+    padding: EdgeInsets.all(compact ? 12 : 16),
+    decoration: BoxDecoration(
+      color: const Color(0xE8FFFFFF),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: const Color(0xFF9FB78E)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                '복구 시설이 만든 항로',
+                style: TextStyle(
+                  color: Color(0xFF315C46),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Text(
+              '${progress.restoredCount}/3',
+              key: const Key('campaign_finale_restored_count'),
+              style: const TextStyle(
+                color: Color(0xFF315C46),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final landmark in IslandLandmark.values) ...[
+              Expanded(
+                child: _FinaleLandmarkNode(
+                  landmark: landmark,
+                  progress: progress,
+                  compact: compact,
+                ),
+              ),
+              if (landmark != IslandLandmark.bridge)
+                Padding(
+                  padding: EdgeInsets.only(top: compact ? 31 : 39),
+                  child: Container(
+                    width: compact ? 8 : 18,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: progress.isRestored(landmark)
+                          ? const Color(0xFF66A874)
+                          : const Color(0xFFB8B6A9),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          story,
+          key: const Key('campaign_finale_story'),
+          style: const TextStyle(
+            color: Color(0xFF456B58),
+            height: 1.4,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _FinaleLandmarkNode extends StatelessWidget {
+  const _FinaleLandmarkNode({
+    required this.landmark,
+    required this.progress,
+    required this.compact,
+  });
+
+  final IslandLandmark landmark;
+  final IslandRestorationProgress progress;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final restored = progress.isRestored(landmark);
+    final percentage = (progress.repairProgress(landmark) * 100).round();
+    return Semantics(
+      label:
+          '${landmark.label}. ${restored ? '복구 완료. ${landmark.benefitDescription}' : '복구 $percentage퍼센트'}',
+      child: Column(
+        children: [
+          _IslandLandmarkIllustration(
+            landmark: landmark,
+            progress: progress.repairProgress(landmark),
+            size: compact ? 60 : 78,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            landmark.label,
+            maxLines: 1,
+            style: const TextStyle(
+              color: Color(0xFF315C46),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          Text(
+            restored ? landmark.benefitLabel : '$percentage%',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: restored
+                  ? const Color(0xFF2F7650)
+                  : const Color(0xFF777A70),
+              fontSize: compact ? 10 : 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinaleRunSummary extends StatelessWidget {
+  const _FinaleRunSummary({
+    required this.totalScore,
+    required this.totalBestShots,
+    required this.rewardCount,
+    required this.progress,
+    required this.onStartNewRun,
+    required this.onHome,
+  });
+
+  final int totalScore;
+  final int totalBestShots;
+  final int rewardCount;
+  final IslandRestorationProgress progress;
+  final VoidCallback onStartNewRun;
+  final VoidCallback onHome;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('campaign_finale_summary'),
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xEBFFF7DB),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: const Color(0xFFB49A61)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          '이번 항해가 남긴 것',
+          style: TextStyle(
+            color: Color(0xFF4D4535),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _FinaleStat(label: '연쇄 점수', value: '$totalScore점'),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _FinaleStat(label: '최고 기록 합', value: '$totalBestShots회'),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _FinaleStat(label: '선택 보상', value: '$rewardCount개'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          progress.nextLandmark == null
+              ? '다음 항해에서는 다른 속성 조합과 더 짧은 경로를 발견해 보세요.'
+              : '다음 목표 · ${progress.nextLandmark!.label} 복구를 위해 새로운 물리 사건을 찾아보세요.',
+          key: const Key('campaign_finale_next_goal'),
+          style: const TextStyle(
+            color: Color(0xFF5D594B),
+            fontSize: 12,
+            height: 1.35,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          key: const Key('new_run_button'),
+          onPressed: onStartNewRun,
+          icon: const _MenuAssetImage(
+            path: 'assets/generated/nav-helm-v1.png',
+            size: 28,
+          ),
+          label: const Text('새 항해 시작'),
+        ),
+        const SizedBox(height: 6),
+        TextButton.icon(
+          key: const Key('run_result_home_button'),
+          onPressed: onHome,
+          icon: const _MenuAssetImage(
+            path: 'assets/generated/nav-stage-map-v1.png',
+            size: 26,
+          ),
+          label: const Text('메인 메뉴'),
+        ),
+      ],
+    ),
+  );
+}
+
+class _FinaleStat extends StatelessWidget {
+  const _FinaleStat({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          Expanded(child: Text(label)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
+    decoration: BoxDecoration(
+      color: const Color(0xD6FFFFFF),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      children: [
+        Text(
+          value,
+          maxLines: 1,
+          style: const TextStyle(
+            color: Color(0xFF315C46),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Color(0xFF6C6A5E), fontSize: 10),
+        ),
+      ],
+    ),
+  );
 }
 
 class _RewardInventoryScreen extends StatelessWidget {

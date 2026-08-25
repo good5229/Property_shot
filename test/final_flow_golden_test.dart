@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flame/game.dart';
 import 'package:property_shot/game/analysis/failure_replay.dart';
+import 'package:property_shot/game/analysis/stage_discovery.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
 import 'package:property_shot/game/levels/levels.dart';
+import 'package:property_shot/game/persistence/progress_store.dart';
 import 'package:property_shot/game/persistence/run_state_store.dart';
 import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/run/stage_pattern_session.dart';
@@ -133,6 +135,16 @@ void main() {
       );
       await session.selectReward(candidates.first.id);
       await session.completeRun();
+      final progressStore = ProgressStore(
+        stageCount: levels.length,
+        stageIds: levels.map((level) => level.id),
+      );
+      for (var index = 0; index < levels.length; index++) {
+        await progressStore.recordDiscoveries(
+          index,
+          stageDiscoveryMilestoneIds(index),
+        );
+      }
 
       await tester.pumpWidget(
         const PropertyShotApp(
@@ -143,6 +155,7 @@ void main() {
       await _pumpForAsyncWork(tester);
       await tester.tap(find.byKey(const Key('start_game_button')));
       await _pumpForAsyncWork(tester);
+      await _precacheFinaleAssets(tester);
 
       expect(find.text('1970점'), findsOneWidget);
       expect(find.text('3회'), findsOneWidget);
@@ -153,6 +166,23 @@ void main() {
       );
     });
   }
+}
+
+Future<void> _precacheFinaleAssets(WidgetTester tester) async {
+  final context = tester.element(find.byKey(const Key('run_result_screen')));
+  await tester.runAsync(() async {
+    for (final asset in const [
+      'assets/generated/stage-icon-finale-v1.png',
+      'assets/generated/island-observatory-v2.png',
+      'assets/generated/island-lighthouse-v2.png',
+      'assets/generated/island-bridge-v2.png',
+      'assets/generated/nav-helm-v1.png',
+      'assets/generated/nav-stage-map-v1.png',
+    ]) {
+      await precacheImage(AssetImage(asset), context);
+    }
+  });
+  await tester.pump();
 }
 
 Future<void> _pumpForAsyncWork(WidgetTester tester) async {
