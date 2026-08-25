@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
@@ -304,5 +305,115 @@ void main() {
     final reducedAt = reduced.animationCursorForTest;
     reduced.update(0.01);
     expect(reduced.animationCursorForTest, greaterThan(reducedAt));
+  });
+
+  test('충돌 카메라는 첫 프레임에 순간 이동하지 않고 30·45·60 FPS에서 감쇠한다', () {
+    const resolver = ShotResolver();
+    final start = levels[0].createState(0);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, -0.4), power: 0.86),
+    );
+    final impact = result.impacts.last;
+
+    for (final framesPerSecond in [30, 45, 60]) {
+      final game = PropertyShotGame(result.state);
+      game.setStateSnapshot(
+        result.state,
+        path: result.path,
+        transitionStart: start,
+        moves: result.moves,
+        impacts: result.impacts,
+        physicsEvents: result.physicsEvents,
+        animationTransaction: true,
+      );
+      game.setAnimationCursorForTest(impact.pathIndex.toDouble());
+
+      expect(
+        game.screenShakeOffsetForTest(),
+        ui.Offset.zero,
+        reason: '$framesPerSecond FPS 충돌 첫 프레임에서 보드가 점프함',
+      );
+
+      var previous = ui.Offset.zero;
+      var nonZeroFrames = 0;
+      var maximumStep = 0.0;
+      final sampleFrames =
+          (PropertyShotGame.screenShakeDurationCursor /
+                  PropertyShotGame.animationCursorUnitsPerSecond *
+                  framesPerSecond)
+              .ceil();
+      for (var frame = 0; frame < sampleFrames; frame++) {
+        game.update(1 / framesPerSecond);
+        final offset = game.screenShakeOffsetForTest();
+        if (offset != ui.Offset.zero) nonZeroFrames += 1;
+        maximumStep = math.max(maximumStep, (offset - previous).distance);
+        previous = offset;
+      }
+
+      expect(nonZeroFrames, greaterThanOrEqualTo(3));
+      expect(
+        maximumStep,
+        lessThan(ImpactMetrics.cameraShake(impact.impulse) * 1.25),
+        reason: '$framesPerSecond FPS에서 인접 프레임 흔들림 차이가 너무 큼',
+      );
+      game.setAnimationCursorForTest(
+        impact.pathIndex + PropertyShotGame.screenShakeDurationCursor + 0.01,
+      );
+      expect(game.screenShakeOffsetForTest(), ui.Offset.zero);
+    }
+  });
+
+  test('30~60 FPS 불규칙 프레임에서도 커서와 충돌 사건이 연속·단일 재생된다', () {
+    const resolver = ShotResolver();
+    final start = levels[4].createState(4);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(-0.8, -0.5), power: 0.82),
+    );
+    final eventIds = <String>[];
+    var finished = 0;
+    final game = PropertyShotGame(
+      result.state,
+      onPhysicsEvent: (event) => eventIds.add(event.eventId),
+      onAnimationFinished: () => finished += 1,
+    );
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+
+    const frameDurations = <double>[
+      1 / 60,
+      1 / 45,
+      1 / 30,
+      1 / 50,
+      1 / 35,
+      1 / 60,
+    ];
+    var frame = 0;
+    while (finished == 0 && frame < 4000) {
+      final before = game.animationCursorForTest;
+      final dt = frameDurations[frame % frameDurations.length];
+      game.update(dt);
+      final advanced = game.animationCursorForTest - before;
+      expect(advanced, greaterThan(0));
+      expect(
+        advanced,
+        lessThanOrEqualTo(
+          PropertyShotGame.animationCursorUnitsPerSecond / 30 + 0.0001,
+        ),
+      );
+      frame += 1;
+    }
+
+    expect(finished, 1);
+    expect(eventIds, result.physicsEvents.map((event) => event.eventId));
+    expect(eventIds.toSet(), hasLength(eventIds.length));
   });
 }

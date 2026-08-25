@@ -148,11 +148,15 @@ class PropertyShotGame extends FlameGame {
 
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
+  List<ShotAnimationMove> _animationMovesByTrigger = const [];
   Map<String, List<ShotAnimationMove>> _animationMovesByEntity = const {};
   Set<String> _animatedEntityIds = const {};
   Map<ShotAnimationMove, double> _animationMoveDistances = const {};
   Map<ShotAnimationMove, double> _animationMoveDurations = const {};
   List<ShotImpact> _animationImpacts = const [];
+  List<ShotImpact> _animationImpactsByPath = const [];
+  List<ShotImpact> _bouncyWallImpacts = const [];
+  List<ShotAnimationMove> _causalAnimationMoves = const [];
   List<PhysicsEvent> _animationPhysicsEvents = const [];
   List<_ReflectorAnimationStep> _animationReflectorSchedule = const [];
   Map<String, List<_ReflectorAnimationStep>> _reflectorStepsByEntity = const {};
@@ -188,8 +192,7 @@ class PropertyShotGame extends FlameGame {
   int get animationRenderCacheBuildCountForTest =>
       _animationRenderCacheBuildCount;
 
-  int get animationRenderEntityCountForTest =>
-      _animationEntityTypes.length;
+  int get animationRenderEntityCountForTest => _animationEntityTypes.length;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
   static const Offset _lightDirection = Offset(-0.72, -0.69);
@@ -336,11 +339,15 @@ class PropertyShotGame extends FlameGame {
     _animationCompletionTimer = null;
     _animationPath = const [];
     _animationMoves = const [];
+    _animationMovesByTrigger = const [];
     _animationMovesByEntity = const {};
     _animatedEntityIds = const {};
     _animationMoveDistances = const {};
     _animationMoveDurations = const {};
     _animationImpacts = const [];
+    _animationImpactsByPath = const [];
+    _bouncyWallImpacts = const [];
+    _causalAnimationMoves = const [];
     _animationPhysicsEvents = const [];
     _animationReflectorSchedule = const [];
     _reflectorStepsByEntity = const {};
@@ -759,37 +766,45 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawScreenShake(Canvas canvas) {
-    if (!screenShake || reducedMotion || _animationPhysicsEvents.isEmpty) {
-      return;
+    final offset = _screenShakeOffset();
+    if (offset != Offset.zero) {
+      canvas.translate(offset.dx, offset.dy);
     }
-    PhysicsEvent? latestImpact;
-    for (final event in _animationPhysicsEvents) {
-      if (event.kind != PhysicsEventKind.impact ||
-          event.pathIndex > _animationCursor) {
-        continue;
-      }
-      if (latestImpact == null || event.pathIndex > latestImpact.pathIndex) {
-        latestImpact = event;
-      }
-    }
-    if (latestImpact == null) {
-      return;
-    }
+  }
+
+  /// 충돌 흔들림은 물리 경로 단위가 아니라 초 단위 저주파 감쇠로 계산한다.
+  ///
+  /// 이전 식은 30 FPS에서 프레임마다 거의 한 주기, 60 FPS에서 반 주기씩
+  /// 건너뛰었고 Y축이 cos(0)에서 시작해 충돌 첫 프레임에 보드가 순간 이동했다.
+  static const double screenShakeDurationCursor = 8;
+  static const double _screenShakeFrequencyHz = 6;
+
+  Offset _screenShakeOffset() {
+    if (!screenShake || reducedMotion) return Offset.zero;
+    final latestImpact = _latestImpactAt(_animationCursor);
+    if (latestImpact == null) return Offset.zero;
     final elapsed = _animationCursor - latestImpact.pathIndex;
-    if (elapsed < 0 || elapsed > 5) {
-      return;
+    if (elapsed < 0 || elapsed > screenShakeDurationCursor) {
+      return Offset.zero;
     }
-    final strength = ImpactMetrics.cameraShake(
-      latestImpact.impulse,
-      reducedMotion: reducedMotion,
-    );
-    final fade = 1 - (elapsed / 5).clamp(0.0, 1.0);
-    final amplitude = strength * (screenShakeStrength.clamp(0, 3) / 2);
-    canvas.translate(
-      math.sin(elapsed * 5.6) * amplitude * fade,
-      math.cos(elapsed * 6.4) * amplitude * fade,
+    final progress = (elapsed / screenShakeDurationCursor).clamp(0.0, 1.0);
+    final fade = (1 - progress) * (1 - progress);
+    final amplitude =
+        ImpactMetrics.cameraShake(
+          latestImpact.impulse,
+          reducedMotion: reducedMotion,
+        ) *
+        (screenShakeStrength.clamp(0, 3) / 2) *
+        fade;
+    final elapsedSeconds = elapsed / animationCursorUnitsPerSecond;
+    final phase = elapsedSeconds * math.pi * 2 * _screenShakeFrequencyHz;
+    return Offset(
+      math.sin(phase) * amplitude,
+      math.sin(phase * 0.72) * amplitude * 0.55,
     );
   }
+
+  Offset screenShakeOffsetForTest() => _screenShakeOffset();
 
   /// Adds a brief, deterministic camera punch around meaningful impacts.
   ///
@@ -799,24 +814,11 @@ class PropertyShotGame extends FlameGame {
     if (reducedMotion) {
       return;
     }
-    ShotImpact? latest;
-    for (final impact in _animationImpacts) {
-      if (impact.pathIndex > _animationCursor) continue;
-      if (latest == null || impact.pathIndex > latest.pathIndex) {
-        latest = impact;
-      }
-    }
-    ShotAnimationMove? latestCausalMove;
-    for (final move in _animationMoves) {
-      if (move.triggerPathIndex > _animationCursor ||
-          !_isCausalRevealState(move.visualState)) {
-        continue;
-      }
-      if (latestCausalMove == null ||
-          move.triggerPathIndex > latestCausalMove.triggerPathIndex) {
-        latestCausalMove = move;
-      }
-    }
+    final latest = _latestImpactAt(_animationCursor);
+    final latestCausalMove = _latestMoveAt(
+      _causalAnimationMoves,
+      _animationCursor,
+    );
     final useMove =
         latestCausalMove != null &&
         (latest == null ||
@@ -973,11 +975,14 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawImpactFeedback(Canvas canvas) {
-    for (final move in _animationMoves) {
+    final first = _firstMoveAtOrAfter(
+      _animationMovesByTrigger,
+      _animationCursor - 16,
+    );
+    for (var index = first; index < _animationMovesByTrigger.length; index++) {
+      final move = _animationMovesByTrigger[index];
+      if (move.triggerPathIndex > _animationCursor) break;
       final elapsed = _animationCursor - move.triggerPathIndex;
-      if (elapsed < 0 || elapsed > 16) {
-        continue;
-      }
       final progress = reducedMotion ? 0.55 : (elapsed / 16).clamp(0.0, 1.0);
       final center = _project(move.impactPosition ?? move.from);
       final targetType =
@@ -1056,11 +1061,11 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawDirectImpactFeedback(Canvas canvas) {
-    for (final impact in _animationImpacts) {
+    final first = _firstImpactAtOrAfter(_animationCursor - 14);
+    for (var index = first; index < _animationImpactsByPath.length; index++) {
+      final impact = _animationImpactsByPath[index];
+      if (impact.pathIndex > _animationCursor) break;
       final elapsed = _animationCursor - impact.pathIndex;
-      if (elapsed < 0 || elapsed > 14) {
-        continue;
-      }
       final progress = reducedMotion ? 0.55 : (elapsed / 14).clamp(0.0, 1.0);
       final center = _project(impact.position);
       final accent = switch (impact.entityType) {
@@ -1373,6 +1378,30 @@ class PropertyShotGame extends FlameGame {
           for (final entry in movesByEntity.entries)
             entry.key: List<ShotAnimationMove>.unmodifiable(entry.value),
         });
+    _animationMovesByTrigger = List<ShotAnimationMove>.unmodifiable(
+      [..._animationMoves]..sort(
+        (first, second) =>
+            first.triggerPathIndex.compareTo(second.triggerPathIndex),
+      ),
+    );
+    _animationImpactsByPath = List<ShotImpact>.unmodifiable(
+      [..._animationImpacts]
+        ..sort((first, second) => first.pathIndex.compareTo(second.pathIndex)),
+    );
+    _bouncyWallImpacts = List<ShotImpact>.unmodifiable(
+      _animationImpactsByPath.where(
+        (impact) =>
+            impact.sourceEntityId == 'active_ball' &&
+            impact.sourceTraits.contains(TraitType.bouncy) &&
+            (impact.entityType == EntityType.wall ||
+                impact.entityType == EntityType.gate),
+      ),
+    );
+    _causalAnimationMoves = List<ShotAnimationMove>.unmodifiable(
+      _animationMovesByTrigger.where(
+        (move) => _isCausalRevealState(move.visualState),
+      ),
+    );
     _animatedEntityIds = Set<String>.unmodifiable(movesByEntity.keys);
     _animationMoveDistances = Map.unmodifiable(distances);
     _animationMoveDurations = Map.unmodifiable(durations);
@@ -1434,14 +1463,22 @@ class PropertyShotGame extends FlameGame {
     final duration = _moveDuration(move);
     final progress = (elapsed / duration).clamp(0.0, 1.0);
     final distance = _animationMoveDistances[move] ?? _pathDistance(points);
-    return _samplePathByDistance(points, distance * progress);
+    return _samplePathByDistance(
+      points,
+      distance * progress,
+      totalDistance: distance,
+    );
   }
 
-  Vec2 _samplePathByDistance(List<Vec2> points, double distance) {
+  Vec2 _samplePathByDistance(
+    List<Vec2> points,
+    double distance, {
+    double? totalDistance,
+  }) {
     if (points.length < 2) {
       return points.isEmpty ? Vec2.zero : points.first;
     }
-    var remaining = distance.clamp(0.0, _pathDistance(points));
+    var remaining = distance.clamp(0.0, totalDistance ?? _pathDistance(points));
     for (var index = 1; index < points.length; index++) {
       final from = points[index - 1];
       final to = points[index];
@@ -1491,6 +1528,67 @@ class PropertyShotGame extends FlameGame {
       distance += points[index - 1].distanceTo(points[index]);
     }
     return distance;
+  }
+
+  int _firstImpactAtOrAfter(double cursor, {List<ShotImpact>? impacts}) {
+    final sorted = impacts ?? _animationImpactsByPath;
+    var low = 0;
+    var high = sorted.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (sorted[middle].pathIndex < cursor) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  ShotImpact? _latestImpactAt(double cursor, {List<ShotImpact>? impacts}) {
+    final sorted = impacts ?? _animationImpactsByPath;
+    var low = 0;
+    var high = sorted.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (sorted[middle].pathIndex <= cursor) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low == 0 ? null : sorted[low - 1];
+  }
+
+  int _firstMoveAtOrAfter(List<ShotAnimationMove> moves, double cursor) {
+    var low = 0;
+    var high = moves.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (moves[middle].triggerPathIndex < cursor) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  ShotAnimationMove? _latestMoveAt(
+    List<ShotAnimationMove> moves,
+    double cursor,
+  ) {
+    var low = 0;
+    var high = moves.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (moves[middle].triggerPathIndex <= cursor) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low == 0 ? null : moves[low - 1];
   }
 
   double _scaleFor(Vector2 size) {
@@ -3603,9 +3701,8 @@ class PropertyShotGame extends FlameGame {
       return const _MotionVisual();
     }
     ShotAnimationMove? move;
-    for (final candidate in _animationMoves) {
-      if (candidate.entityId != entity.id ||
-          candidate.path.length < 2 ||
+    for (final candidate in _animationMovesByEntity[entity.id] ?? const []) {
+      if (candidate.path.length < 2 ||
           candidate.triggerPathIndex > _animationCursor) {
         continue;
       }
@@ -4528,7 +4625,17 @@ class PropertyShotGame extends FlameGame {
       );
     }
     _drawCueStrike(canvas, index, position);
-    for (final move in _animationMoves) {
+    final firstPulseMove = _firstMoveAtOrAfter(
+      _animationMovesByTrigger,
+      _animationCursor - 5,
+    );
+    for (
+      var moveIndex = firstPulseMove;
+      moveIndex < _animationMovesByTrigger.length;
+      moveIndex++
+    ) {
+      final move = _animationMovesByTrigger[moveIndex];
+      if (move.triggerPathIndex > _animationCursor + 5) break;
       final pulse = (_animationCursor - move.triggerPathIndex).abs();
       if (pulse < 5) {
         final impact = _project(
@@ -4573,20 +4680,10 @@ class PropertyShotGame extends FlameGame {
       _drawEntity(canvas, entity, false);
       return;
     }
-    ShotImpact? latestWallImpact;
-    for (final impact in _animationImpacts) {
-      if (impact.sourceEntityId != 'active_ball' ||
-          !impact.sourceTraits.contains(TraitType.bouncy) ||
-          (impact.entityType != EntityType.wall &&
-              impact.entityType != EntityType.gate) ||
-          impact.pathIndex > _animationCursor) {
-        continue;
-      }
-      if (latestWallImpact == null ||
-          impact.pathIndex > latestWallImpact.pathIndex) {
-        latestWallImpact = impact;
-      }
-    }
+    final latestWallImpact = _latestImpactAt(
+      _animationCursor,
+      impacts: _bouncyWallImpacts,
+    );
     if (latestWallImpact == null) {
       _drawEntity(canvas, entity, false);
       return;

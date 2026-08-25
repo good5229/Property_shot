@@ -62,6 +62,12 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Recently Closed
 
+- [x] 30~60 FPS 충돌 애니메이션 프레임 안정화
+  - branch: codex/smooth-collision-30-60fps
+  - issue: 없음
+  - summary: 공·오브젝트 충돌 순간의 카메라 불연속과 프레임당 사건 탐색 비용을 제거하고 30·45·60 FPS 및 불규칙 프레임 재생을 고정했다.
+  - notes: 충돌 첫 프레임 무점프·감쇠 연속성·이벤트 단일 순서, 전체 2,018개 테스트 이벤트, 정적 분석, 40패턴 런타임, 충돌 Golden 63건, Wasm 릴리스 및 로컬 브라우저 콘솔 오류 0건을 확인했다. 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다.
+
 - [x] 첫 10분 상용 수직 슬라이스 고도화
   - branch: codex/commercial-first-ten-minutes
   - issue: 없음
