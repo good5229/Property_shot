@@ -14,6 +14,7 @@ import 'domain/shot_input.dart';
 import 'domain/trait.dart';
 import 'levels/levels.dart';
 import 'simulation/shot_resolver.dart';
+import 'simulation/impact_metrics.dart';
 import 'analysis/failure_replay.dart';
 import '../ui/game_ball_painter.dart';
 import '../ui/debug_labels.dart';
@@ -56,7 +57,7 @@ class PropertyShotGame extends FlameGame {
   final ValueChanged<ShotImpact>? onShotImpact;
   final ValueChanged<PhysicsEvent>? onPhysicsEvent;
   final bool loadVisualAssets;
-  final bool reducedMotion;
+  bool reducedMotion;
   final bool screenShake;
   final int screenShakeStrength;
   final bool strongFlash;
@@ -128,6 +129,13 @@ class PropertyShotGame extends FlameGame {
     playbackSpeed = speed.clamp(0, 2.0).toDouble();
   }
 
+  void setReducedMotion(bool enabled) {
+    reducedMotion = enabled;
+    if (enabled) {
+      _hitStopRemainingSeconds = 0;
+    }
+  }
+
   double reflectorRenderOrientationForTest(String entityId) {
     final entity = _animatedEntities().firstWhere(
       (candidate) => candidate.id == entityId,
@@ -136,6 +144,10 @@ class PropertyShotGame extends FlameGame {
   }
 
   double get animationEndCursorForTest => _animationEndCursor;
+
+  double get animationCursorForTest => _animationCursor;
+
+  double get hitStopRemainingSecondsForTest => _hitStopRemainingSeconds;
 
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
@@ -149,6 +161,7 @@ class PropertyShotGame extends FlameGame {
   int _nextAnimationEventIndex = 0;
   GameState? _animationStartState;
   double _animationCursor = 0;
+  double _hitStopRemainingSeconds = 0;
   int _animationUpdateCount = 0;
   TraitType? _animationTrait;
   double _pulseClock = 0;
@@ -264,6 +277,7 @@ class PropertyShotGame extends FlameGame {
       _nextAnimationEventIndex = 0;
       _animationStartState = transitionStart;
       _animationCursor = 0;
+      _hitStopRemainingSeconds = 0;
       _animationUpdateCount = 0;
       _reportedImpactKeys.clear();
       final spentBalls = next.entities.where(
@@ -290,8 +304,14 @@ class PropertyShotGame extends FlameGame {
       // 한 프레임에 남은 충돌을 모두 소비하면 물체 이동과 타격 피드백의
       // 인과가 사라지므로, 다음 정상 프레임부터 시간축을 이어간다.
       final boundedDt = dt > 0.5 ? 0.0 : dt.clamp(0.0, 1 / 30).toDouble();
+      var animationDt = boundedDt;
+      if (_hitStopRemainingSeconds > 0) {
+        final consumed = math.min(animationDt, _hitStopRemainingSeconds);
+        _hitStopRemainingSeconds -= consumed;
+        animationDt -= consumed;
+      }
       _animationCursor +=
-          boundedDt * animationCursorUnitsPerSecond * playbackSpeed;
+          animationDt * animationCursorUnitsPerSecond * playbackSpeed;
       _emitDueAnimationEvents();
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
@@ -315,6 +335,7 @@ class PropertyShotGame extends FlameGame {
     _animationPhysicsEvents = const [];
     _animationReflectorSchedule = const [];
     _animationEndCursorCached = 0;
+    _hitStopRemainingSeconds = 0;
     _nextAnimationEventIndex = 0;
     _animationStartState = null;
     _animationTrait = null;
@@ -372,6 +393,14 @@ class PropertyShotGame extends FlameGame {
       onPhysicsEvent?.call(event);
       final impact = event.impact;
       if (impact != null) {
+        _hitStopRemainingSeconds = math.max(
+          _hitStopRemainingSeconds,
+          ImpactMetrics.hitStopMilliseconds(
+                impact.impulse,
+                reducedMotion: reducedMotion,
+              ) /
+              1000,
+        );
         onShotImpact?.call(impact);
       } else if (event.move != null) {
         onAnimationImpact?.call(event.move!);
@@ -745,10 +774,12 @@ class PropertyShotGame extends FlameGame {
     if (elapsed < 0 || elapsed > 5) {
       return;
     }
-    final strength = (latestImpact.impulse / 2.4).clamp(0.0, 1.0);
+    final strength = ImpactMetrics.cameraShake(
+      latestImpact.impulse,
+      reducedMotion: reducedMotion,
+    );
     final fade = 1 - (elapsed / 5).clamp(0.0, 1.0);
-    final amplitude =
-        (0.9 + strength * 1.8) * (screenShakeStrength.clamp(0, 3) / 2);
+    final amplitude = strength * (screenShakeStrength.clamp(0, 3) / 2);
     canvas.translate(
       math.sin(elapsed * 5.6) * amplitude * fade,
       math.cos(elapsed * 6.4) * amplitude * fade,

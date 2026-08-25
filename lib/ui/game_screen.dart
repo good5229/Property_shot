@@ -514,6 +514,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     unawaited(_showRequestedHelp());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _game.setReducedMotion(
+      GameFeedback.reducedMotionEnabled ||
+          MediaQuery.disableAnimationsOf(context),
+    );
+  }
+
   PlayTelemetryContext _telemetryContext() {
     final supplied = widget.telemetryContextBuilder?.call();
     if (supplied != null) {

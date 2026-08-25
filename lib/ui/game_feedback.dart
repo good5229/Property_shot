@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
 import '../game/input/intent_assist_resolver.dart';
+import '../game/simulation/impact_metrics.dart';
 import 'background_music.dart';
 import 'feedback_audio.dart';
 
@@ -514,23 +515,31 @@ class GameFeedback {
     bool emphasizeJelly = false,
     double impactStrength = 0,
   }) {
+    final effectiveStrength = impactStrength > 0
+        ? impactStrength
+        : switch (type) {
+            EntityType.wall ||
+            EntityType.gate ||
+            EntityType.weight ||
+            EntityType.hole => 0.8,
+            EntityType.crate ||
+            EntityType.ball ||
+            EntityType.switchPad ||
+            EntityType.rotatingReflector ||
+            EntityType.balloon => 0.55,
+            _ => 0.3,
+          };
+    final tier = ImpactMetrics.tierFor(effectiveStrength);
+    final strengthHaptic = switch (tier) {
+      ImpactTier.tap => HapticFeedback.selectionClick,
+      ImpactTier.light => HapticFeedback.lightImpact,
+      ImpactTier.heavy => HapticFeedback.mediumImpact,
+      ImpactTier.critical => HapticFeedback.heavyImpact,
+    };
     final haptic = switch (type) {
-      EntityType.wall ||
-      EntityType.gate ||
-      EntityType.weight => HapticFeedback.heavyImpact,
-      EntityType.crate ||
-      EntityType.ball ||
-      EntityType.switchPad => HapticFeedback.mediumImpact,
-      EntityType.bumper => HapticFeedback.lightImpact,
       EntityType.stickySurface => HapticFeedback.selectionClick,
       EntityType.hole => HapticFeedback.heavyImpact,
-      EntityType.balloon =>
-        impactStrength >= 0.78
-            ? HapticFeedback.heavyImpact
-            : HapticFeedback.mediumImpact,
-      EntityType.spikeSource => HapticFeedback.lightImpact,
-      EntityType.powerSlider => HapticFeedback.lightImpact,
-      EntityType.rotatingReflector => HapticFeedback.mediumImpact,
+      _ => strengthHaptic,
     };
     _emit(
       'collision_${type.name}',
@@ -543,18 +552,15 @@ class GameFeedback {
               : FeedbackCue.bouncyCollision,
         EntityType.stickySurface => FeedbackCue.stickyCollision,
         EntityType.hole => FeedbackCue.holeEntered,
-        EntityType.balloon => FeedbackCue.heavyCollision,
-        EntityType.spikeSource => FeedbackCue.lightCollision,
-        EntityType.wall ||
-        EntityType.gate ||
-        EntityType.weight => FeedbackCue.heavyCollision,
-        _ => FeedbackCue.lightCollision,
+        _ =>
+          tier == ImpactTier.heavy || tier == ImpactTier.critical
+              ? FeedbackCue.heavyCollision
+              : FeedbackCue.lightCollision,
       },
       alert:
-          type == EntityType.wall ||
-          type == EntityType.gate ||
-          type == EntityType.weight ||
-          type == EntityType.hole,
+          type == EntityType.hole ||
+          tier == ImpactTier.heavy ||
+          tier == ImpactTier.critical,
     );
   }
 

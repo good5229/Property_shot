@@ -7,6 +7,7 @@ import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
+import 'package:property_shot/game/simulation/impact_metrics.dart';
 
 void main() {
   test('30·60·120Hz 업데이트에서 충돌 이벤트와 완료 콜백은 한 번씩만 발생한다', () {
@@ -199,5 +200,50 @@ void main() {
     final recorder = ui.PictureRecorder();
     game.render(ui.Canvas(recorder));
     recorder.endRecording();
+  });
+
+  test('강한 충돌은 짧은 타격 정지를 만들고 저모션에서는 생략한다', () {
+    const resolver = ShotResolver();
+    final start = levels[0].createState(0);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, -0.4), power: 0.86),
+    );
+    final strongest = [...result.impacts]
+      ..sort((left, right) => right.impulse.compareTo(left.impulse));
+    final impact = strongest.first;
+    expect(ImpactMetrics.tierFor(impact.impulse), isNot(ImpactTier.tap));
+
+    final game = PropertyShotGame(result.state);
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+    game.setAnimationCursorForTest(impact.pathIndex.toDouble());
+    final stoppedAt = game.animationCursorForTest;
+    expect(game.hitStopRemainingSecondsForTest, greaterThan(0));
+    game.update(0.01);
+    expect(game.animationCursorForTest, stoppedAt);
+
+    final reduced = PropertyShotGame(result.state, reducedMotion: true);
+    reduced.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+    reduced.setAnimationCursorForTest(impact.pathIndex.toDouble());
+    final reducedAt = reduced.animationCursorForTest;
+    expect(reduced.hitStopRemainingSecondsForTest, 0);
+    reduced.update(0.01);
+    expect(reduced.animationCursorForTest, greaterThan(reducedAt));
   });
 }

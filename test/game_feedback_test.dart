@@ -146,6 +146,24 @@ void main() {
     ]);
   });
 
+  test('같은 재질도 실제 충격량에 따라 가벼운 타격과 강한 타격을 구분한다', () async {
+    final cues = <FeedbackCue>[];
+    final light = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+    final heavy = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+
+    light.collision(EntityType.wall, impactStrength: 0.18);
+    heavy.collision(EntityType.wall, impactStrength: 0.92);
+    await _flushFeedback();
+
+    expect(cues, [FeedbackCue.lightCollision, FeedbackCue.heavyCollision]);
+  });
+
   test('연속 효과음은 겹치지 않고 이벤트 순서를 지킨다', () async {
     final cues = <FeedbackCue>[];
     var active = 0;
