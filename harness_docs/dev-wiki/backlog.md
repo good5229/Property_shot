@@ -14,19 +14,6 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
-- [ ] 첫 10분 상용 수직 슬라이스 고도화
-  - branch: codex/commercial-first-ten-minutes
-  - issue: 없음
-  - summary: 역할별 대리 플레이 증거를 먼저 수집하고, 첫 3스테이지 학습 구조, 충돌 피드백, 생산 40패턴 기믹 우회, 전 해상도 시각 일관성, 복구 보상의 실제 플레이 가치를 순차 개선한다.
-  - notes: 대리 플레이는 실제 사람의 재미 검증으로 표현하지 않는다. 각 단계는 독립 검증과 커밋을 거치며 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다.
-  - progress:
-    - [x] 역할별 에이전트 대리 플레이 평가
-    - [x] 첫 3스테이지 학습 목적과 조준 허용폭 재구성
-    - [x] 충돌·성공 피드백과 저모션 대응 고도화
-    - [x] 생산 40패턴 지름길·기믹 우회 전수 감사
-    - [x] 전 해상도 시각 일관성 검수
-    - [x] 복구 시설의 반복 플레이 선택 가치 강화
-
 - [x] OpenAI Game Builders Seoul Track 1 대응
   - branch: main (사용자 요청으로 별도 브랜치 없음)
   - issue: 없음
@@ -49,6 +36,19 @@ GitHub Issues own task status. This file owns planning context.
   - notes: 결정론적 물리와 기존 테스트를 보존한다. 복사 자원의 최종 모델은 사용자 결정 전까지 확정하지 않는다.
 
 ## Recently Closed
+
+- [x] 첫 10분 상용 수직 슬라이스 고도화
+  - branch: codex/commercial-first-ten-minutes
+  - issue: 없음
+  - summary: 역할별 대리 플레이 증거를 바탕으로 첫 3스테이지 학습 계약, 물리 강도 기반 피드백, 생산 40패턴 의도 경로 검증, 전 해상도 콘솔 밀도, 복구 지원 추천을 순차 개선했다.
+  - notes: 기능별 독립 커밋과 집중 검증 후 전체 1,441개 테스트, 정적 분석, 생산 40패턴 런타임 검증, 358개 Golden, Web Release 빌드를 통과했다. 전체 회귀에서 발견한 반응형 엔티티 탭 차단과 390px 지도 첫 항해 가시성 회귀도 수정한 뒤 처음부터 재검증했다. 대리 플레이 평가는 실제 사람의 재미 검증으로 표현하지 않으며, 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 범위 밖으로 보존했다.
+  - progress:
+    - [x] 역할별 에이전트 대리 플레이 평가
+    - [x] 첫 3스테이지 학습 목적과 조준 허용폭 재구성
+    - [x] 충돌·성공 피드백과 저모션 대응 고도화
+    - [x] 생산 40패턴 지름길·기믹 우회 전수 감사
+    - [x] 전 해상도 시각 일관성 검수
+    - [x] 복구 시설의 반복 플레이 선택 가치 강화
 
 - [x] 난도·학습·반복 루프 튜닝
   - branch: codex/difficulty-learning-loop
