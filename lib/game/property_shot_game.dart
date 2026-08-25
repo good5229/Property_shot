@@ -38,6 +38,7 @@ class PropertyShotGame extends FlameGame {
     this.onAnimationImpact,
     this.onShotImpact,
     this.onPhysicsEvent,
+    this.onVisualsReady,
     this.loadVisualAssets = true,
     this.reducedMotion = false,
     this.screenShake = true,
@@ -56,6 +57,7 @@ class PropertyShotGame extends FlameGame {
   final ValueChanged<ShotAnimationMove>? onAnimationImpact;
   final ValueChanged<ShotImpact>? onShotImpact;
   final ValueChanged<PhysicsEvent>? onPhysicsEvent;
+  final VoidCallback? onVisualsReady;
   final bool loadVisualAssets;
   bool reducedMotion;
   final bool screenShake;
@@ -164,7 +166,9 @@ class PropertyShotGame extends FlameGame {
   double _hitStopRemainingSeconds = 0;
   int _animationUpdateCount = 0;
   TraitType? _animationTrait;
-  double _pulseClock = 0;
+  // 계획 단계에서는 엔진을 멈추므로 강조선의 기준 위상을 기존 첫 화면
+  // Golden과 같은 1초 시점에 고정한다. 발사 중에는 이 값이 다시 진행된다.
+  double _pulseClock = 1;
   Timer? _animationCompletionTimer;
   final Set<String> _reportedImpactKeys = <String>{};
   final Map<EntityType, ui.Image> _objectImages = {};
@@ -173,10 +177,14 @@ class PropertyShotGame extends FlameGame {
   ui.Image? _holeImage;
   ui.Image? _wallImage;
   ui.Image? _hiddenMechanicImage;
+  ui.Picture? _boardPicture;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
+  int _boardPictureBuildCount = 0;
   static const int _runtimeAssetDecodeSize = 384;
   static const int _runtimeWallAssetDecodeSize = 768;
   static const FilterQuality _runtimeFilterQuality = FilterQuality.high;
+
+  int get boardPictureBuildCountForTest => _boardPictureBuildCount;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
   static const Offset _lightDirection = Offset(-0.72, -0.69);
@@ -187,6 +195,7 @@ class PropertyShotGame extends FlameGame {
   Future<void> onLoad() async {
     await super.onLoad();
     if (!loadVisualAssets) {
+      onVisualsReady?.call();
       return;
     }
     final images = await Future.wait([
@@ -230,6 +239,7 @@ class PropertyShotGame extends FlameGame {
     _gimmickImages[EntityType.powerSlider] = images[15];
     _gimmickImages[EntityType.rotatingReflector] = images[16];
     _hiddenMechanicImage = images[17];
+    onVisualsReady?.call();
   }
 
   Future<ui.Image> _loadUiImage(
@@ -437,6 +447,8 @@ class PropertyShotGame extends FlameGame {
     _wallImage = null;
     _hiddenMechanicImage?.dispose();
     _hiddenMechanicImage = null;
+    _boardPicture?.dispose();
+    _boardPicture = null;
     for (final cached in _staticEntityPictures.values) {
       cached.picture.dispose();
     }
@@ -461,7 +473,7 @@ class PropertyShotGame extends FlameGame {
       _applyCinematicCamera(canvas);
       _drawScreenShake(canvas);
     }
-    _drawBoard(canvas);
+    _drawBoardWithCache(canvas);
     final animated = _animationPath.isNotEmpty;
     final renderEntities =
         [...(animated ? _animatedEntities() : state.entities)]
@@ -1633,6 +1645,18 @@ class PropertyShotGame extends FlameGame {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
+  }
+
+  void _drawBoardWithCache(Canvas canvas) {
+    var picture = _boardPicture;
+    if (picture == null) {
+      final recorder = ui.PictureRecorder();
+      _drawBoard(Canvas(recorder));
+      picture = recorder.endRecording();
+      _boardPicture = picture;
+      _boardPictureBuildCount += 1;
+    }
+    canvas.drawPicture(picture);
   }
 
   void _drawAimArrow(Canvas canvas) {

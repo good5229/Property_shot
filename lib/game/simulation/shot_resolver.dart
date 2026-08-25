@@ -1931,6 +1931,125 @@ class ShotResolver {
     return firstArrivalFromResult(resolve(state, rawInput));
   }
 
+  /// 조준 보정 후보를 좁히기 위한 첫 도착 전용 탐색이다. 이 결과만으로
+  /// 보정을 확정하지 않으며, 선택 후보는 반드시 [resolve]로 다시 검증한다.
+  FirstArrivalPreview quickFirstArrival(GameState state, ShotInput rawInput) {
+    final input = rawInput.normalized();
+    final ball = state.activeBall.copyWith(
+      traits: input.equippedTrait == null ? const {} : {input.equippedTrait!},
+    );
+    final direction = input.direction.normalized();
+    final power = input.power.clamp(0, 1).toDouble();
+    final entities = [...state.entities, ..._fieldBoundaryEntities()];
+    final maxDistance = 130 + power * 260;
+    final from = ball.position;
+    final to = from + direction * maxDistance;
+    var bestProgress = double.infinity;
+    EntityState? bestEntity;
+    var bestKind = FirstArrivalKind.rangeEnd;
+    for (final entity in entities) {
+      if (!entity.active || entity.id == ball.id) continue;
+      var progress = double.infinity;
+      var kind = FirstArrivalKind.impact;
+      if (entity.type == EntityType.hole) {
+        final captureRadius =
+            entity.hitRadius +
+            ball.hitRadius * 0.85 +
+            input.holeForgivenessRadius;
+        progress = _assistedHoleEntryProgress(
+          previousPosition: from,
+          position: to,
+          direction: direction,
+          hole: entity,
+          captureRadius: captureRadius,
+        );
+        kind = FirstArrivalKind.hole;
+      } else if (entity.type == EntityType.powerSlider) {
+        progress = _segmentBoundsEntryProgress(
+          from,
+          to,
+          entity.hitBounds,
+          padding: ball.hitRadius,
+        );
+        kind = FirstArrivalKind.powerSlider;
+      } else if (_isSolidForPhysics(entity) &&
+          !(entity.type == EntityType.gate && entity.open)) {
+        progress = entity.isCircle
+            ? _segmentCircleEntryProgress(
+                from,
+                to,
+                entity.position,
+                ball.hitRadius + entity.hitRadius,
+              )
+            : _segmentBoundsEntryProgress(
+                from,
+                to,
+                entity.hitBounds,
+                padding: ball.hitRadius,
+              );
+      }
+      if (!progress.isFinite) continue;
+      if (progress < bestProgress - 0.000001 ||
+          ((progress - bestProgress).abs() <= 0.000001 &&
+              (bestEntity == null || entity.id.compareTo(bestEntity.id) < 0))) {
+        bestProgress = progress;
+        bestEntity = entity;
+        bestKind = kind;
+      }
+    }
+    if (bestEntity != null) {
+      final position = from + (to - from) * bestProgress;
+      return FirstArrivalPreview(
+        position: position,
+        pathIndex: math.max(1, (bestProgress * maxDistance / 2).ceil()),
+        kind: bestKind,
+        entityId: bestEntity.id,
+      );
+    }
+    return FirstArrivalPreview(
+      position: to,
+      pathIndex: math.max(1, (maxDistance / 2).ceil()),
+      kind: FirstArrivalKind.rangeEnd,
+    );
+  }
+
+  double _segmentBoundsEntryProgress(
+    Vec2 from,
+    Vec2 to,
+    Bounds bounds, {
+    double padding = 0,
+  }) {
+    final delta = to - from;
+    final left = bounds.left - padding;
+    final right = bounds.right + padding;
+    final top = bounds.top - padding;
+    final bottom = bounds.bottom + padding;
+    var minimum = 0.0;
+    var maximum = 1.0;
+
+    bool clip(double origin, double direction, double low, double high) {
+      if (direction.abs() <= _physicsEpsilon) {
+        return origin >= low && origin <= high;
+      }
+      var first = (low - origin) / direction;
+      var second = (high - origin) / direction;
+      if (first > second) {
+        final swap = first;
+        first = second;
+        second = swap;
+      }
+      minimum = math.max(minimum, first);
+      maximum = math.min(maximum, second);
+      return minimum <= maximum;
+    }
+
+    if (!clip(from.x, delta.x, left, right) ||
+        !clip(from.y, delta.y, top, bottom)) {
+      return double.infinity;
+    }
+    return minimum >= 0 && minimum <= 1 ? minimum : double.infinity;
+  }
+
   double _assistedHoleEntryProgress({
     required Vec2 previousPosition,
     required Vec2 position,

@@ -202,6 +202,23 @@ void main() {
     recorder.endRecording();
   });
 
+  test('변하지 않는 보드 배경은 여러 프레임에서 한 번만 기록한다', () {
+    final game = PropertyShotGame(
+      levels[0].createState(0),
+      loadVisualAssets: false,
+    );
+    game.onGameResize(Vector2(360, 520));
+
+    for (var frame = 0; frame < 3; frame++) {
+      final recorder = ui.PictureRecorder();
+      game.render(ui.Canvas(recorder));
+      recorder.endRecording().dispose();
+    }
+
+    expect(game.boardPictureBuildCountForTest, 1);
+    game.onRemove();
+  });
+
   test('강한 충돌은 짧은 타격 정지를 만들고 저모션에서는 생략한다', () {
     const resolver = ShotResolver();
     final start = levels[0].createState(0);

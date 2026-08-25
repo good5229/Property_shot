@@ -10,62 +10,22 @@ import json
 import math
 import statistics
 from datetime import datetime, timezone
-from io import BytesIO
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-try:
-    from PIL import Image
-except (ImportError, OSError):
-    Image = None
 
-
-VIEWPORTS = ((390, 844), (768, 1024))
-BALL_POINTS = {(390, 844): (60, 580), (768, 1024): (176, 850)}
-START_POINTS = {(390, 844): (194.5, 549.5), (768, 1024): (383.5, 653.5)}
-
-
-def _start_button_center(image_bytes: bytes) -> tuple[float, float]:
-    if Image is None:
-        raise RuntimeError("Pillow 이미지 디코더를 사용할 수 없습니다.")
-    image = Image.open(BytesIO(image_bytes)).convert("RGB")
-    width, height = image.size
-    row_counts = []
-    for y in range(int(height * 0.45), height):
-        count = 0
-        for x in range(width):
-            red, green, blue = image.getpixel((x, y))
-            if red > 215 and 75 < green < 145 and blue < 125 and red - green > 80:
-                count += 1
-        row_counts.append((y, count))
-
-    runs: list[list[int]] = []
-    current: list[int] = []
-    for y, count in row_counts:
-        if count > width * 0.5:
-            current.append(y)
-        elif current:
-            runs.append(current)
-            current = []
-    if current:
-        runs.append(current)
-    if not runs:
-        raise RuntimeError("시작 버튼 색상 영역을 찾지 못했습니다.")
-
-    button_rows = max(runs, key=lambda run: (run[-1], len(run)))
-    points = []
-    for y in button_rows:
-        for x in range(width):
-            red, green, blue = image.getpixel((x, y))
-            if red > 215 and 75 < green < 145 and blue < 125 and red - green > 80:
-                points.append((x, y))
-    if not points:
-        raise RuntimeError("시작 버튼의 중심을 계산하지 못했습니다.")
-    return (
-        (min(point[0] for point in points) + max(point[0] for point in points)) / 2,
-        (min(point[1] for point in points) + max(point[1] for point in points)) / 2,
-    )
+VIEWPORTS = ((390, 844), (768, 1024), (320, 568), (1440, 900), (1920, 1080))
+INTERACTIVE_VIEWPORTS = {(390, 844), (768, 1024)}
+# 390x844 핵심 체험에서 검증된 입력점을 게임판 비율로 보존한다.
+LAUNCH_POINT_RATIO = (60 / 390, (580 - 106) / 606.65625)
+CORE_EXPERIENCE_POINTS = {
+    (320, 568): (160.0, 376.0),
+    (390, 844): (195.0, 537.0),
+    (768, 1024): (564.0, 461.0),
+    (1440, 900): (1010.0, 391.0),
+    (1920, 1080): (1250.0, 481.0),
+}
 
 
 def _measure_frames(page, duration_ms: int) -> list[float]:
@@ -210,6 +170,43 @@ def _aggregate_trials(trials: list[dict], section: str) -> dict:
     return _stats(samples)
 
 
+def _viewport(value: str) -> tuple[int, int]:
+    try:
+        width_text, height_text = value.lower().split("x", maxsplit=1)
+        viewport = (int(width_text), int(height_text))
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError("뷰포트는 390x844 형식이어야 합니다.")
+    if viewport not in VIEWPORTS:
+        choices = ", ".join(f"{width}x{height}" for width, height in VIEWPORTS)
+        raise argparse.ArgumentTypeError(f"지원 뷰포트: {choices}")
+    return viewport
+
+
+def _gameplay_bounds(browser, url: str, viewport: tuple[int, int]) -> dict[str, float]:
+    width, height = viewport
+    context = browser.new_context(viewport={"width": width, "height": height})
+    try:
+        page = context.new_page()
+        page.goto(url)
+        page.wait_for_timeout(3000)
+        page.mouse.click(*CORE_EXPERIENCE_POINTS[viewport])
+        page.wait_for_timeout(3000)
+        placeholder = page.locator("flt-semantics-placeholder")
+        if placeholder.count() > 0:
+            placeholder.evaluate("node => node.click()")
+            page.wait_for_timeout(500)
+        bounds = page.locator(
+            '[aria-label="공을 조준하는 게임 화면"]'
+        ).bounding_box()
+        if bounds is None:
+            raise RuntimeError(
+                f"{width}x{height}에서 핵심 체험 게임판 접근성 경계를 찾지 못했습니다."
+            )
+        return {key: round(float(value), 3) for key, value in bounds.items()}
+    finally:
+        context.close()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://127.0.0.1:8080/")
@@ -221,6 +218,12 @@ def main() -> int:
     parser.add_argument("--page-warmup-ms", type=int, default=5000)
     parser.add_argument("--play-warmup-ms", type=int, default=5000)
     parser.add_argument("--repetitions", type=int, default=3)
+    parser.add_argument(
+        "--viewport",
+        action="append",
+        type=_viewport,
+        help="특정 뷰포트만 격리 재측정합니다. 여러 번 지정할 수 있습니다.",
+    )
     args = parser.parse_args()
     if args.repetitions < 1:
         parser.error("반복 횟수는 1 이상이어야 합니다.")
@@ -228,7 +231,17 @@ def main() -> int:
     records = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
-        for width, height in VIEWPORTS:
+        for width, height in args.viewport or VIEWPORTS:
+            viewport = (width, height)
+            gameplay_bounds = _gameplay_bounds(browser, args.url, viewport)
+            launch_point = None
+            if viewport in INTERACTIVE_VIEWPORTS:
+                launch_point = (
+                    gameplay_bounds["x"]
+                    + gameplay_bounds["width"] * LAUNCH_POINT_RATIO[0],
+                    gameplay_bounds["y"]
+                    + gameplay_bounds["height"] * LAUNCH_POINT_RATIO[1],
+                )
             trials = []
             for trial_index in range(args.repetitions):
                 context = browser.new_context(
@@ -245,10 +258,10 @@ def main() -> int:
                 )
                 page.goto(args.url)
                 page.wait_for_timeout(args.page_warmup_ms)
-                try:
-                    start = _start_button_center(page.screenshot())
-                except RuntimeError:
-                    start = START_POINTS[(width, height)]
+                # 모든 뷰포트가 같은 60초 핵심 체험을 측정해야 한다. 기존의
+                # 주황 버튼 색상 탐지는 2열 홈에서 다른 행동을 고를 수 있어
+                # 반응형 Golden으로 검증된 좌표를 사용한다.
+                start = CORE_EXPERIENCE_POINTS[(width, height)]
                 page.mouse.click(*start)
                 page.wait_for_timeout(args.play_warmup_ms)
                 _start_long_task_capture(page)
@@ -256,14 +269,18 @@ def main() -> int:
                 idle = _measure_frames(page, 1800)
                 idle_long_tasks = _drain_long_tasks(page)
 
-                _start_frame_capture(page)
-                page.mouse.move(*BALL_POINTS[(width, height)])
-                page.mouse.down()
-                page.wait_for_timeout(650)
-                page.mouse.up()
-                page.wait_for_timeout(2500)
-                shot = _stop_frame_capture(page)
-                shot_long_tasks = _drain_long_tasks(page)
+                if launch_point is None:
+                    shot = []
+                    shot_long_tasks = []
+                else:
+                    _start_frame_capture(page)
+                    page.mouse.move(*launch_point)
+                    page.mouse.down()
+                    page.wait_for_timeout(650)
+                    page.mouse.up()
+                    page.wait_for_timeout(2500)
+                    shot = _stop_frame_capture(page)
+                    shot_long_tasks = _drain_long_tasks(page)
                 trials.append(
                     {
                         "trial": trial_index + 1,
@@ -295,9 +312,13 @@ def main() -> int:
             records.append(
                 {
                     "viewport": {"width": width, "height": height},
-                    "launch_point": {
-                        "x": BALL_POINTS[(width, height)][0],
-                        "y": BALL_POINTS[(width, height)][1],
+                    "gameplay_bounds": gameplay_bounds,
+                    "interactive_shot_proxy": viewport in INTERACTIVE_VIEWPORTS,
+                    "launch_point": None
+                    if launch_point is None
+                    else {
+                        "x": round(launch_point[0], 3),
+                        "y": round(launch_point[1], 3),
                     },
                     "console_errors": errors,
                     "idle": _aggregate_trials(trials, "idle"),
@@ -320,6 +341,7 @@ def main() -> int:
         "measured_at": datetime.now(timezone.utc).isoformat(),
         "url": args.url,
         "runtime": "Chromium headless Web release proxy; not a physical-device result",
+        "flow_target": "60-second core experience scene 1",
         "frame_metric": (
             "requestAnimationFrame callback interval; includes browser display "
             "scheduler jitter and is not Flutter build/raster duration"

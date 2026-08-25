@@ -151,6 +151,76 @@ void main() {
     expect(shared.position, independent.position);
     expect(shared.pathIndex, independent.pathIndex);
   });
+
+  test('quick shortlist agrees on the first wall, hole, and slider', () {
+    final cases = <GameState>[
+      _state([
+        _ball(),
+        const EntityState(
+          id: 'wall',
+          type: EntityType.wall,
+          position: Vec2(150, 280),
+          size: Vec2(24, 120),
+        ),
+      ]),
+      _state([
+        _ball(),
+        const EntityState(
+          id: 'hole',
+          type: EntityType.hole,
+          position: Vec2(150, 280),
+          size: Vec2(36, 36),
+          solid: false,
+        ),
+      ]),
+      _state([
+        _ball(),
+        const EntityState(
+          id: 'slider',
+          type: EntityType.powerSlider,
+          position: Vec2(110, 280),
+          size: Vec2(36, 64),
+          solid: false,
+          referenceSpeed: 30,
+          allowedTargets: {EntityType.ball},
+        ),
+        const EntityState(
+          id: 'wall',
+          type: EntityType.wall,
+          position: Vec2(220, 280),
+          size: Vec2(24, 120),
+        ),
+      ]),
+    ];
+
+    for (final state in cases) {
+      final exact = resolver.firstArrival(state, _shot());
+      final quick = resolver.quickFirstArrival(state, _shot());
+
+      expect(quick.kind, exact.kind);
+      expect(quick.entityId, exact.entityId);
+    }
+  });
+
+  test('quick shortlist does not mutate the supplied game state', () {
+    final entities = <EntityState>[
+      _ball(),
+      const EntityState(
+        id: 'wall',
+        type: EntityType.wall,
+        position: Vec2(150, 280),
+        size: Vec2(24, 120),
+      ),
+    ];
+    final state = _state(entities);
+
+    resolver.quickFirstArrival(state, _shot());
+
+    expect(identical(state.entities, entities), isTrue);
+    expect(state.shotCount, 0);
+    expect(state.phase, GamePhase.planning);
+    expect(state.activeBall.position, const Vec2(60, 280));
+  });
 }
 
 ShotInput _shot() => const ShotInput(direction: Vec2(1, 0), power: 0.5);

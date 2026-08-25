@@ -478,6 +478,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       onAnimationImpact: _onAnimationImpact,
       onShotImpact: _onShotImpact,
       onPhysicsEvent: _onPhysicsEvent,
+      onVisualsReady: _onGameVisualsReady,
       loadVisualAssets: widget.loadGameAssets,
       reducedMotion: GameFeedback.reducedMotionEnabled,
       screenShake: GameFeedback.screenShakeEnabled,
@@ -1371,6 +1372,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     List<ShotImpact> impacts = const [],
     List<PhysicsEvent> physicsEvents = const [],
   }) {
+    if (path.isNotEmpty) {
+      _game.resumeEngine();
+    }
     setState(() {
       _state = next;
       if (next.phase != GamePhase.success) {
@@ -1387,7 +1391,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
       _syncFirstArrivalPreview();
     });
+    if (path.isEmpty) {
+      _paintSingleGameFrame();
+    }
     _recordHintExposureIfNeeded();
+  }
+
+  void _onGameVisualsReady() {
+    if (!mounted || _isAnimatingShot) return;
+    _game.pauseEngine();
+    _game.stepEngine(stepTime: 0);
+  }
+
+  void _paintSingleGameFrame() {
+    if (_game.paused) {
+      _game.stepEngine(stepTime: 0);
+    }
   }
 
   void _setPreviousAimInput(ShotInput? input, {Iterable<Vec2>? path}) {
@@ -2075,7 +2094,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bonusSwitchHistory.insert(0, _bonusSwitchPressed);
     _bonusDrainedSourceHistory.insert(0, _bonusDrainedSourceMoved);
     final shotStartState = _state;
-    final result = _shotResolver.resolve(shotStartState, normalizedInput);
+    final result =
+        _cachedPreviewForLaunch(shotStartState, normalizedInput) ??
+        _shotResolver.resolve(shotStartState, normalizedInput);
     final assistDecision = _pendingIntentAssistDecision;
     _pendingIntentAssistDecision = null;
     _updateIntentAssistStreak(
@@ -2588,6 +2609,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onAnimationFinished() {
+    _game.pauseEngine();
+    scheduleMicrotask(_paintSingleGameFrame);
     unawaited(_finishAnimationAfterPersistence());
   }
 
@@ -3521,6 +3544,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _syncFirstArrivalPreview({
     ShotInput? inputOverride,
+    ShotResult? resultOverride,
     bool force = false,
   }) {
     if (_difficulty != PlayerDifficulty.easy ||
@@ -3536,10 +3560,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           direction: _pendingLaunchDirection ?? _state.aimDirection,
           power: _state.aimPower,
           equippedTrait: _state.equippedTrait,
+          holeForgivenessRadius: _intentAssistResolver.forgivenessRadius(
+            strength: _intentAssistStrength,
+            compactPointer: MediaQuery.sizeOf(context).shortestSide < 600,
+            repeatedNearMisses: _repeatedNearMisses,
+          ),
         );
     final normalizedInput = input.normalized();
     final directionBucket = quantizeAimDirection(normalizedInput.direction);
-    final powerBucket = (normalizedInput.power * 100).round();
+    // 충전 UI는 80ms마다 움직이지만 물리 기반 예상 도착은 10% 구간이
+    // 바뀔 때만 갱신한다. 손을 떼는 순간 force 경로에서 정확한 힘으로
+    // 다시 계산하므로 표시 반응성과 최종 판정 정확도를 함께 지킨다.
+    final powerBucket = (normalizedInput.power * 10).round() * 10;
     if (!force &&
         identical(_firstArrivalEntities, _state.entities) &&
         _firstArrivalShotCount == _state.shotCount &&
@@ -3548,9 +3580,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _firstArrivalTrait == _state.equippedTrait) {
       return;
     }
-    final preview = _shotResolver.firstArrivalFromResult(
-      _previewShotResult(normalizedInput),
-    );
+    final result = resultOverride ?? _previewShotResult(normalizedInput);
+    if (resultOverride != null) {
+      _cachePreviewResult(normalizedInput, resultOverride);
+    }
+    final preview = _shotResolver.firstArrivalFromResult(result);
     _firstArrivalPreview = preview;
     _firstArrivalInputSnapshot = normalizedInput;
     _firstArrivalEntities = _state.entities;
@@ -3573,6 +3607,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return _previewResult!;
     }
     final result = _shotResolver.resolve(_state, normalizedInput);
+    _cachePreviewResult(normalizedInput, result);
+    return result;
+  }
+
+  void _cachePreviewResult(ShotInput normalizedInput, ShotResult result) {
     _previewResultEntities = _state.entities;
     _previewResultShotCount = _state.shotCount;
     _previewResultDirection = normalizedInput.direction;
@@ -3580,7 +3619,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _previewResultTrait = normalizedInput.equippedTrait;
     _previewResultHoleForgivenessRadius = normalizedInput.holeForgivenessRadius;
     _previewResult = result;
-    return result;
+  }
+
+  ShotResult? _cachedPreviewForLaunch(
+    GameState shotStartState,
+    ShotInput normalizedInput,
+  ) {
+    if (!identical(_previewResultEntities, shotStartState.entities) ||
+        _previewResultShotCount != shotStartState.shotCount ||
+        _previewResultDirection != normalizedInput.direction ||
+        _previewResultPower != normalizedInput.power ||
+        _previewResultTrait != normalizedInput.equippedTrait ||
+        _previewResultHoleForgivenessRadius !=
+            normalizedInput.holeForgivenessRadius) {
+      return null;
+    }
+    return _previewResult;
   }
 
   void _clearFirstArrivalPreview() {
@@ -4083,7 +4137,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     _setChargeGauge(ChargeGaugeState.green, active: false);
     if (release.shouldLaunch) {
-      final power = release.power ?? LaunchInputSession.minimumPower;
+      // Fire the value the gauge actually showed on its last update. This
+      // avoids a hidden sub-frame power change at pointer-up and lets the
+      // exact charging preview become the launch result.
+      final releasePower = release.power ?? LaunchInputSession.minimumPower;
+      final power = (_state.aimPower - releasePower).abs() <= 0.03
+          ? _state.aimPower
+          : releasePower;
       if (!_chargeStartRecorded && release.chargeStartedAt != null) {
         _recordChargeStarted(release.chargeStartedAt!);
       }
@@ -4105,6 +4165,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         direction: direction,
         power: power,
         equippedTrait: _state.equippedTrait,
+        holeForgivenessRadius: _intentAssistResolver.forgivenessRadius(
+          strength: _intentAssistStrength,
+          compactPointer: MediaQuery.sizeOf(context).shortestSide < 600,
+          repeatedNearMisses: _repeatedNearMisses,
+        ),
       ).normalized();
       final decision = _intentAssistResolver.resolve(
         state: _state,
@@ -4113,6 +4178,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         compactPointer: MediaQuery.sizeOf(context).shortestSide < 600,
         repeatedNearMisses: _repeatedNearMisses,
         policy: IntentAssistPolicy.forStage(_currentLevel.stageId),
+        rawResultHint: _cachedPreviewForLaunch(_state, rawLaunchInput),
       );
       var launchInput = decision.appliedInput;
       _pendingIntentAssistDecision = decision;
@@ -4132,7 +4198,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         );
       }
       if (_difficulty == PlayerDifficulty.easy) {
-        _syncFirstArrivalPreview(inputOverride: launchInput, force: true);
+        _syncFirstArrivalPreview(
+          inputOverride: launchInput,
+          resultOverride: decision.resolvedResult,
+          force: true,
+        );
         launchInput = _firstArrivalInputSnapshot ?? launchInput;
       }
       _launch(inputOverride: launchInput, inputReleasedAt: inputReleasedAt);

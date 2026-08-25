@@ -1,0 +1,918 @@
+{
+  "measured_at": "2026-08-25T06:47:48.309584+00:00",
+  "url": "http://127.0.0.1:8767/Property_shot/",
+  "runtime": "Chromium headless Web release proxy; not a physical-device result",
+  "flow_target": "60-second core experience scene 1",
+  "frame_metric": "requestAnimationFrame callback interval; includes browser display scheduler jitter and is not Flutter build/raster duration",
+  "warmup_ms": {
+    "page": 5000,
+    "play": 5000
+  },
+  "repetitions": 3,
+  "shot_window_ms": 3150,
+  "frame_target_ms": 16.667,
+  "missed_vsync_threshold": "interval > per-section median * 1.5",
+  "long_task_threshold_ms": 50.0,
+  "records": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "gameplay_bounds": {
+        "x": 0.0,
+        "y": 106.0,
+        "width": 390.0,
+        "height": 606.656
+      },
+      "interactive_shot_proxy": true,
+      "launch_point": {
+        "x": 60.0,
+        "y": 580.0
+      },
+      "console_errors": [],
+      "idle": {
+        "samples": 325,
+        "mean_ms": 16.772,
+        "median_ms": 16.7,
+        "p90_ms": 16.8,
+        "p95_ms": 17.5,
+        "p99_ms": 17.7,
+        "max_ms": 33.5,
+        "over_20ms_ratio": 0.0062,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 2,
+        "missed_vsync_ratio": 0.0062
+      },
+      "idle_long_tasks": [],
+      "shot": {
+        "samples": 540,
+        "mean_ms": 18.95,
+        "median_ms": 16.7,
+        "p90_ms": 16.9,
+        "p95_ms": 17.5,
+        "p99_ms": 33.3,
+        "max_ms": 466.7,
+        "over_20ms_ratio": 0.0148,
+        "over_50ms_count": 3,
+        "over_50ms_ratio": 0.0056,
+        "missed_vsync_count": 8,
+        "missed_vsync_ratio": 0.0148
+      },
+      "shot_long_tasks": [
+        {
+          "trial": 1,
+          "duration_ms": 473,
+          "start_ms": 12329.800000190735
+        },
+        {
+          "trial": 2,
+          "duration_ms": 360,
+          "start_ms": 12332.29999923706
+        },
+        {
+          "trial": 3,
+          "duration_ms": 51,
+          "start_ms": 11893.20000076294
+        },
+        {
+          "trial": 3,
+          "duration_ms": 368,
+          "start_ms": 12343.10000038147
+        }
+      ],
+      "trials": [
+        {
+          "trial": 1,
+          "start_button": {
+            "x": 195.0,
+            "y": 537.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.822,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.1,
+            "p99_ms": 17.6,
+            "max_ms": 33.5,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 177,
+            "mean_ms": 19.397,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.6,
+            "p99_ms": 33.3,
+            "max_ms": 466.7,
+            "over_20ms_ratio": 0.0169,
+            "over_50ms_count": 1,
+            "over_50ms_ratio": 0.0056,
+            "missed_vsync_count": 3,
+            "missed_vsync_ratio": 0.0169
+          },
+          "shot_long_tasks": [
+            {
+              "duration_ms": 473,
+              "start_ms": 12329.800000190735
+            }
+          ]
+        },
+        {
+          "trial": 2,
+          "start_button": {
+            "x": 195.0,
+            "y": 537.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.828,
+            "median_ms": 16.7,
+            "p90_ms": 17.5,
+            "p95_ms": 17.6,
+            "p99_ms": 17.7,
+            "max_ms": 33.2,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 186,
+            "mean_ms": 18.638,
+            "median_ms": 16.7,
+            "p90_ms": 17.2,
+            "p95_ms": 17.6,
+            "p99_ms": 33.4,
+            "max_ms": 351,
+            "over_20ms_ratio": 0.0161,
+            "over_50ms_count": 1,
+            "over_50ms_ratio": 0.0054,
+            "missed_vsync_count": 3,
+            "missed_vsync_ratio": 0.0161
+          },
+          "shot_long_tasks": [
+            {
+              "duration_ms": 360,
+              "start_ms": 12332.29999923706
+            }
+          ]
+        },
+        {
+          "trial": 3,
+          "start_button": {
+            "x": 195.0,
+            "y": 537.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.667,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.4,
+            "p99_ms": 17.5,
+            "max_ms": 17.7,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 177,
+            "mean_ms": 18.832,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.1,
+            "p99_ms": 50,
+            "max_ms": 366.7,
+            "over_20ms_ratio": 0.0113,
+            "over_50ms_count": 1,
+            "over_50ms_ratio": 0.0056,
+            "missed_vsync_count": 2,
+            "missed_vsync_ratio": 0.0113
+          },
+          "shot_long_tasks": [
+            {
+              "duration_ms": 51,
+              "start_ms": 11893.20000076294
+            },
+            {
+              "duration_ms": 368,
+              "start_ms": 12343.10000038147
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "gameplay_bounds": {
+        "x": 114.643,
+        "y": 106.0,
+        "width": 538.703,
+        "height": 838.0
+      },
+      "interactive_shot_proxy": true,
+      "launch_point": {
+        "x": 197.52,
+        "y": 760.756
+      },
+      "console_errors": [],
+      "idle": {
+        "samples": 325,
+        "mean_ms": 16.719,
+        "median_ms": 16.7,
+        "p90_ms": 16.8,
+        "p95_ms": 17.2,
+        "p99_ms": 17.7,
+        "max_ms": 33.4,
+        "over_20ms_ratio": 0.0031,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 1,
+        "missed_vsync_ratio": 0.0031
+      },
+      "idle_long_tasks": [],
+      "shot": {
+        "samples": 528,
+        "mean_ms": 18.749,
+        "median_ms": 16.7,
+        "p90_ms": 16.8,
+        "p95_ms": 17.6,
+        "p99_ms": 50,
+        "max_ms": 333.2,
+        "over_20ms_ratio": 0.0208,
+        "over_50ms_count": 4,
+        "over_50ms_ratio": 0.0076,
+        "missed_vsync_count": 11,
+        "missed_vsync_ratio": 0.0208
+      },
+      "shot_long_tasks": [
+        {
+          "trial": 1,
+          "duration_ms": 56,
+          "start_ms": 11877.699999809265
+        },
+        {
+          "trial": 1,
+          "duration_ms": 342,
+          "start_ms": 12328.099999427795
+        },
+        {
+          "trial": 2,
+          "duration_ms": 325,
+          "start_ms": 12324.199999809265
+        },
+        {
+          "trial": 3,
+          "duration_ms": 61,
+          "start_ms": 11886.800000190735
+        },
+        {
+          "trial": 3,
+          "duration_ms": 327,
+          "start_ms": 12352.699999809265
+        }
+      ],
+      "trials": [
+        {
+          "trial": 1,
+          "start_button": {
+            "x": 564.0,
+            "y": 461.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.669,
+            "median_ms": 16.7,
+            "p90_ms": 16.9,
+            "p95_ms": 17.4,
+            "p99_ms": 17.6,
+            "max_ms": 17.7,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 177,
+            "mean_ms": 18.734,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.5,
+            "p99_ms": 50,
+            "max_ms": 333.2,
+            "over_20ms_ratio": 0.0169,
+            "over_50ms_count": 1,
+            "over_50ms_ratio": 0.0056,
+            "missed_vsync_count": 3,
+            "missed_vsync_ratio": 0.0169
+          },
+          "shot_long_tasks": [
+            {
+              "duration_ms": 56,
+              "start_ms": 11877.699999809265
+            },
+            {
+              "duration_ms": 342,
+              "start_ms": 12328.099999427795
+            }
+          ]
+        },
+        {
+          "trial": 2,
+          "start_button": {
+            "x": 564.0,
+            "y": 461.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.821,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.3,
+            "p99_ms": 17.7,
+            "max_ms": 33.4,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 176,
+            "mean_ms": 18.656,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.7,
+            "p99_ms": 33.3,
+            "max_ms": 316.7,
+            "over_20ms_ratio": 0.0227,
+            "over_50ms_count": 1,
+            "over_50ms_ratio": 0.0057,
+            "missed_vsync_count": 4,
+            "missed_vsync_ratio": 0.0227
+          },
+          "shot_long_tasks": [
+            {
+              "duration_ms": 325,
+              "start_ms": 12324.199999809265
+            }
+          ]
+        },
+        {
+          "trial": 3,
+          "start_button": {
+            "x": 564.0,
+            "y": 461.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.667,
+            "median_ms": 16.7,
+            "p90_ms": 16.7,
+            "p95_ms": 16.7,
+            "p99_ms": 17.2,
+            "max_ms": 17.6,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 175,
+            "mean_ms": 18.857,
+            "median_ms": 16.7,
+            "p90_ms": 16.7,
+            "p95_ms": 17.4,
+            "p99_ms": 50.1,
+            "max_ms": 316.7,
+            "over_20ms_ratio": 0.0229,
+            "over_50ms_count": 2,
+            "over_50ms_ratio": 0.0114,
+            "missed_vsync_count": 4,
+            "missed_vsync_ratio": 0.0229
+          },
+          "shot_long_tasks": [
+            {
+              "duration_ms": 61,
+              "start_ms": 11886.800000190735
+            },
+            {
+              "duration_ms": 327,
+              "start_ms": 12352.699999809265
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "gameplay_bounds": {
+        "x": 35.286,
+        "y": 100.0,
+        "width": 249.422,
+        "height": 388.0
+      },
+      "interactive_shot_proxy": false,
+      "launch_point": null,
+      "console_errors": [],
+      "idle": {
+        "samples": 324,
+        "mean_ms": 16.82,
+        "median_ms": 16.7,
+        "p90_ms": 16.8,
+        "p95_ms": 17.2,
+        "p99_ms": 17.6,
+        "max_ms": 33.5,
+        "over_20ms_ratio": 0.0093,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 3,
+        "missed_vsync_ratio": 0.0093
+      },
+      "idle_long_tasks": [],
+      "shot": {
+        "samples": 0,
+        "mean_ms": null,
+        "median_ms": null,
+        "p90_ms": null,
+        "p95_ms": null,
+        "p99_ms": null,
+        "max_ms": null,
+        "over_20ms_ratio": null,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": null,
+        "missed_vsync_count": 0,
+        "missed_vsync_ratio": null
+      },
+      "shot_long_tasks": [],
+      "trials": [
+        {
+          "trial": 1,
+          "start_button": {
+            "x": 160.0,
+            "y": 376.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.822,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.2,
+            "p99_ms": 17.6,
+            "max_ms": 32.8,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 2,
+          "start_button": {
+            "x": 160.0,
+            "y": 376.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.815,
+            "median_ms": 16.7,
+            "p90_ms": 17.1,
+            "p95_ms": 17.5,
+            "p99_ms": 17.6,
+            "max_ms": 33.4,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 3,
+          "start_button": {
+            "x": 160.0,
+            "y": 376.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.822,
+            "median_ms": 16.7,
+            "p90_ms": 16.7,
+            "p95_ms": 16.7,
+            "p99_ms": 17.2,
+            "max_ms": 33.5,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "gameplay_bounds": {
+        "x": 512.357,
+        "y": 118.0,
+        "width": 415.281,
+        "height": 646.0
+      },
+      "interactive_shot_proxy": false,
+      "launch_point": null,
+      "console_errors": [],
+      "idle": {
+        "samples": 325,
+        "mean_ms": 16.77,
+        "median_ms": 16.7,
+        "p90_ms": 16.8,
+        "p95_ms": 17.3,
+        "p99_ms": 17.7,
+        "max_ms": 33.5,
+        "over_20ms_ratio": 0.0062,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 2,
+        "missed_vsync_ratio": 0.0062
+      },
+      "idle_long_tasks": [],
+      "shot": {
+        "samples": 0,
+        "mean_ms": null,
+        "median_ms": null,
+        "p90_ms": null,
+        "p95_ms": null,
+        "p99_ms": null,
+        "max_ms": null,
+        "over_20ms_ratio": null,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": null,
+        "missed_vsync_count": 0,
+        "missed_vsync_ratio": null
+      },
+      "shot_long_tasks": [],
+      "trials": [
+        {
+          "trial": 1,
+          "start_button": {
+            "x": 1010.0,
+            "y": 391.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.822,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17.1,
+            "p99_ms": 17.5,
+            "max_ms": 33.5,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 2,
+          "start_button": {
+            "x": 1010.0,
+            "y": 391.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.668,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 16.8,
+            "p99_ms": 17.6,
+            "max_ms": 17.6,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 3,
+          "start_button": {
+            "x": 1010.0,
+            "y": 391.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.822,
+            "median_ms": 16.7,
+            "p90_ms": 17.2,
+            "p95_ms": 17.5,
+            "p99_ms": 17.7,
+            "max_ms": 33.5,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "gameplay_bounds": {
+        "x": 694.5,
+        "y": 118.0,
+        "width": 531.0,
+        "height": 826.0
+      },
+      "interactive_shot_proxy": false,
+      "launch_point": null,
+      "console_errors": [],
+      "idle": {
+        "samples": 325,
+        "mean_ms": 16.716,
+        "median_ms": 16.7,
+        "p90_ms": 17.1,
+        "p95_ms": 17.4,
+        "p99_ms": 17.7,
+        "max_ms": 33.5,
+        "over_20ms_ratio": 0.0031,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": 0.0,
+        "missed_vsync_count": 1,
+        "missed_vsync_ratio": 0.0031
+      },
+      "idle_long_tasks": [],
+      "shot": {
+        "samples": 0,
+        "mean_ms": null,
+        "median_ms": null,
+        "p90_ms": null,
+        "p95_ms": null,
+        "p99_ms": null,
+        "max_ms": null,
+        "over_20ms_ratio": null,
+        "over_50ms_count": 0,
+        "over_50ms_ratio": null,
+        "missed_vsync_count": 0,
+        "missed_vsync_ratio": null
+      },
+      "shot_long_tasks": [],
+      "trials": [
+        {
+          "trial": 1,
+          "start_button": {
+            "x": 1250.0,
+            "y": 481.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.822,
+            "median_ms": 16.7,
+            "p90_ms": 17.4,
+            "p95_ms": 17.5,
+            "p99_ms": 17.7,
+            "max_ms": 33.5,
+            "over_20ms_ratio": 0.0093,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 1,
+            "missed_vsync_ratio": 0.0093
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 2,
+          "start_button": {
+            "x": 1250.0,
+            "y": 481.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 109,
+            "mean_ms": 16.659,
+            "median_ms": 16.7,
+            "p90_ms": 16.8,
+            "p95_ms": 17,
+            "p99_ms": 17.4,
+            "max_ms": 17.6,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        },
+        {
+          "trial": 3,
+          "start_button": {
+            "x": 1250.0,
+            "y": 481.0
+          },
+          "console_errors": [],
+          "idle": {
+            "samples": 108,
+            "mean_ms": 16.668,
+            "median_ms": 16.7,
+            "p90_ms": 17.1,
+            "p95_ms": 17.4,
+            "p99_ms": 17.7,
+            "max_ms": 17.7,
+            "over_20ms_ratio": 0.0,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": 0.0,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": 0.0
+          },
+          "idle_long_tasks": [],
+          "shot": {
+            "samples": 0,
+            "mean_ms": null,
+            "median_ms": null,
+            "p90_ms": null,
+            "p95_ms": null,
+            "p99_ms": null,
+            "max_ms": null,
+            "over_20ms_ratio": null,
+            "over_50ms_count": 0,
+            "over_50ms_ratio": null,
+            "missed_vsync_count": 0,
+            "missed_vsync_ratio": null
+          },
+          "shot_long_tasks": []
+        }
+      ]
+    }
+  ]
+}

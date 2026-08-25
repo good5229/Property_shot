@@ -1,6 +1,14 @@
+import argparse
 import unittest
 
-from scripts.web_performance_audit import _aggregate_trials, _stats
+from scripts.web_performance_audit import (
+    CORE_EXPERIENCE_POINTS,
+    INTERACTIVE_VIEWPORTS,
+    VIEWPORTS,
+    _aggregate_trials,
+    _stats,
+    _viewport,
+)
 
 
 class WebPerformanceAuditTest(unittest.TestCase):
@@ -27,6 +35,15 @@ class WebPerformanceAuditTest(unittest.TestCase):
         self.assertEqual(result["samples"], 4)
         self.assertEqual(result["max_ms"], 33.2)
         self.assertEqual(result["missed_vsync_count"], 1)
+
+    def test_viewport_parser_accepts_only_release_matrix(self):
+        self.assertEqual(_viewport("390x844"), (390, 844))
+        with self.assertRaises(argparse.ArgumentTypeError):
+            _viewport("400x900")
+
+    def test_each_release_viewport_has_a_core_experience_entry_point(self):
+        self.assertEqual(set(CORE_EXPERIENCE_POINTS), set(VIEWPORTS))
+        self.assertTrue(INTERACTIVE_VIEWPORTS.issubset(set(VIEWPORTS)))
 
 
 if __name__ == "__main__":

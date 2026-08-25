@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "measurement_scope": "Headless Chromium console proxy at five viewports and rAF proxy at 390x844/768x1024. Not field INP, physical-device frame time, GPU time, touch latency, sound, or haptic evidence. Interactive acceptance uses p95/p99 and bounded-jank ratios; it permits a bounded first CanvasKit ImageBitmap transfer but fails sustained or over-600ms stalls.",
+  "viewport_results": [
+    {
+      "viewport": "320x568",
+      "interactive_shot_proxy": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "viewport": "390x844",
+      "interactive_shot_proxy": true,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "viewport": "768x1024",
+      "interactive_shot_proxy": true,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "viewport": "1440x900",
+      "interactive_shot_proxy": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "viewport": "1920x1080",
+      "interactive_shot_proxy": false,
+      "passed": true,
+      "failures": []
+    }
+  ],
+  "assets": {
+    "total_build_bytes": 69262317,
+    "app_payload_bytes": 30786704,
+    "app_payload_scope": "all release files except Flutter canvaskit renderer variants",
+    "main_dart_js_bytes": 4094119,
+    "largest_raster": "assets/assets/generated/mystery-crate-v1.png",
+    "largest_raster_bytes": 1524227
+  },
+  "failures": [],
+  "performance_sources": [
+    "harness_docs/qa/web_performance_judge_ready.json"
+  ]
+}
