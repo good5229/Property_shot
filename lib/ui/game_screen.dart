@@ -4382,12 +4382,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               // 320x568급은 제어 정보를 한 줄로 줄이되, 기물을 가리지 않도록
               // 보드 밖 Safe bottom interaction band를 계속 사용한다.
               final denseCompact = safeSize.height < 600;
-              // 넓은 화면에서는 HUD가 세로 보드 폭(760px)에 묶이면 제목과
-              // 상태 아이콘이 서로 밀어낸다. 보드는 기존 비율로 가운데 두되
-              // 정보 영역은 일반 PC·대형 모니터에서 충분한 가로 폭을 쓴다.
+              // 대형 모니터에서 HUD와 조작부가 보드와 너무 멀어지면
+              // 시선과 포인터 이동량이 커진다. 840px 안에 묶어 핵심 플레이
+              // 영역을 하나의 조작 콘솔처럼 유지한다.
+              final heightBoundConsoleWidth =
+                  (math.max(0, safeSize.height - 150) *
+                          logicalSize.x /
+                          logicalSize.y +
+                      240)
+                  .clamp(600.0, 840.0)
+                  .toDouble();
               final contentWidth = compactLayout
                   ? safeSize.width
-                  : math.min(safeSize.width * 0.86, 1120.0);
+                  : math.min(
+                      safeSize.width * 0.86,
+                      heightBoundConsoleWidth,
+                    );
               return Stack(
                 children: [
                   const Positioned.fill(child: _GameplayBackdrop()),
@@ -4399,6 +4409,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         excluding: inputBlocked,
                         child: Center(
                           child: SizedBox(
+                            key: const Key('gameplay_content_shell'),
                             width: contentWidth,
                             height: safeSize.height,
                             child: Column(
@@ -4797,11 +4808,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                                       child: IgnorePointer(
                                                         child: SizedBox(
                                                           width: math.min(
-                                                            300,
+                                                            260,
                                                             math.max(
-                                                              0,
-                                                              boardSize.width -
-                                                                  12,
+                                                              180,
+                                                              boardSize.width *
+                                                                  0.72,
                                                             ),
                                                           ),
                                                           child:
