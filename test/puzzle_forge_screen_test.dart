@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/main.dart';
+import 'package:property_shot/ui/admin_access_verifier.dart';
 import 'package:property_shot/ui/puzzle_forge_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -41,23 +42,59 @@ void main() {
     );
   });
 
-  testWidgets('초행 홈에서 AI 제작 과정을 열고 다시 홈으로 돌아온다', (tester) async {
+  testWidgets('AI 제작 과정은 홈에서 숨고 관리자 인증 뒤에만 열린다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    final verifier = AdminAccessVerifier(
+      expectedIdHash: AdminAccessVerifier.digestForTesting('sample-admin'),
+      expectedPasswordHash: AdminAccessVerifier.digestForTesting('sample-pw'),
+    );
+    await tester.pumpWidget(
+      PropertyShotApp(showHome: true, adminAccessVerifier: verifier),
+    );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('puzzle_forge_entry_button')), findsNothing);
+    expect(find.byKey(const Key('local_session_export_button')), findsNothing);
+    await tester.tap(find.byKey(const Key('feedback_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('admin_login_button')));
+    await tester.tap(find.byKey(const Key('admin_login_button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('admin_id_field')),
+      'sample-admin',
+    );
+    await tester.enterText(
+      find.byKey(const Key('admin_password_field')),
+      'wrong',
+    );
+    await tester.tap(find.byKey(const Key('admin_login_submit_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('관리자 정보를 확인해 주세요.'), findsOneWidget);
+    expect(find.byKey(const Key('local_session_export_button')), findsNothing);
+    await tester.enterText(
+      find.byKey(const Key('admin_password_field')),
+      'sample-pw',
+    );
+    await tester.tap(find.byKey(const Key('admin_login_submit_button')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('admin_puzzle_forge_button')),
+    );
     expect(
-      find.byKey(const Key('puzzle_forge_entry_button')).hitTestable(),
+      find.byKey(const Key('admin_puzzle_forge_button')).hitTestable(),
       findsOneWidget,
     );
     expect(
-      tester
-          .getSemantics(find.byKey(const Key('puzzle_forge_entry_button')))
-          .label,
-      contains('AI 제작 과정'),
+      find.byKey(const Key('local_session_export_button')),
+      findsOneWidget,
     );
-    await tester.tap(find.byKey(const Key('puzzle_forge_entry_button')));
+    expect(
+      find.byKey(const Key('local_session_role_review_button')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('admin_puzzle_forge_button')));
     await tester.pump();
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 150)),
@@ -69,6 +106,8 @@ void main() {
     expect(find.textContaining('생산 패턴 40개'), findsOneWidget);
     expect(find.text('반려'), findsNWidgets(2));
     expect(find.text('채택'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('forge_role_flow')));
+    await tester.pumpAndSettle();
     expect(
       tester
           .getSemantics(find.byKey(const Key('forge_role_flow')))

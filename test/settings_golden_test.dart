@@ -43,13 +43,13 @@ void main() {
       expect(find.text('게임 설정'), findsOneWidget);
       expect(
         find.byKey(const Key('local_session_export_button')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.byKey(const Key('local_session_role_review_button')),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.textContaining('링크 생성이나 서버 전송'), findsOneWidget);
+      expect(find.byKey(const Key('admin_login_button')), findsOneWidget);
       expect(find.text('마지막 샷 슬로모션'), findsOneWidget);
       await expectLater(
         find.byType(AlertDialog),

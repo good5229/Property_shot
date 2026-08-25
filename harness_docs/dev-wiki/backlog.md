@@ -14,6 +14,12 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [x] 관리자 도구 격리와 고주사율 Web 애니메이션 최적화
+  - branch: codex/admin-tools-smooth-motion
+  - issue: 없음
+  - summary: AI 제작 과정과 로컬 세션 평가 도구를 일반 UI에서 제거하고 세션 한정 관리자 게이트 뒤로 이동하며, 충돌·기믹 애니메이션의 프레임당 렌더 비용을 줄인다.
+  - notes: 정적 Pages에는 실제 권한 인증 경계가 없으므로 자격증명 원문을 저장하지 않는 해시 비교와 새로고침 시 해제되는 표시 게이트로 한정했다. 샷 단위 조회 캐시, Web 중복 오디오 제거, SkWasm 우선·JS 폴백을 적용하고 30·60·120·144Hz 시간축 동등성, 전체 1,470개 테스트, 정적 분석, 생산 40패턴 런타임 검증, Wasm 릴리스 빌드, 320×568~1920×1080 브라우저 검수를 통과했다. 로컬 Wasm은 HTTP 200·`application/wasm`으로 로드되고 브라우저 오류 로그가 없었다. 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다.
+
 - [x] 시작 공 주변 벽 여유 공간 표준화
   - branch: codex/spawn-wall-clearance
   - issue: 없음

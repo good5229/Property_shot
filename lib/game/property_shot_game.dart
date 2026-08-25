@@ -149,11 +149,15 @@ class PropertyShotGame extends FlameGame {
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   Map<String, List<ShotAnimationMove>> _animationMovesByEntity = const {};
+  Set<String> _animatedEntityIds = const {};
   Map<ShotAnimationMove, double> _animationMoveDistances = const {};
   Map<ShotAnimationMove, double> _animationMoveDurations = const {};
   List<ShotImpact> _animationImpacts = const [];
   List<PhysicsEvent> _animationPhysicsEvents = const [];
   List<_ReflectorAnimationStep> _animationReflectorSchedule = const [];
+  Map<String, List<_ReflectorAnimationStep>> _reflectorStepsByEntity = const {};
+  Map<String, EntityType> _animationEntityTypes = const {};
+  ShotImpact? _activeBallHoleImpact;
   double _animationEndCursorCached = 0;
   int _nextAnimationEventIndex = 0;
   GameState? _animationStartState;
@@ -174,11 +178,18 @@ class PropertyShotGame extends FlameGame {
   ui.Picture? _boardPicture;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
   int _boardPictureBuildCount = 0;
+  int _animationRenderCacheBuildCount = 0;
   static const int _runtimeAssetDecodeSize = 384;
   static const int _runtimeWallAssetDecodeSize = 768;
   static const FilterQuality _runtimeFilterQuality = FilterQuality.high;
 
   int get boardPictureBuildCountForTest => _boardPictureBuildCount;
+
+  int get animationRenderCacheBuildCountForTest =>
+      _animationRenderCacheBuildCount;
+
+  int get animationRenderEntityCountForTest =>
+      _animationEntityTypes.length;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
   static const Offset _lightDirection = Offset(-0.72, -0.69);
@@ -326,11 +337,15 @@ class PropertyShotGame extends FlameGame {
     _animationPath = const [];
     _animationMoves = const [];
     _animationMovesByEntity = const {};
+    _animatedEntityIds = const {};
     _animationMoveDistances = const {};
     _animationMoveDurations = const {};
     _animationImpacts = const [];
     _animationPhysicsEvents = const [];
     _animationReflectorSchedule = const [];
+    _reflectorStepsByEntity = const {};
+    _animationEntityTypes = const {};
+    _activeBallHoleImpact = null;
     _animationEndCursorCached = 0;
     _nextAnimationEventIndex = 0;
     _animationStartState = null;
@@ -965,12 +980,8 @@ class PropertyShotGame extends FlameGame {
       }
       final progress = reducedMotion ? 0.55 : (elapsed / 16).clamp(0.0, 1.0);
       final center = _project(move.impactPosition ?? move.from);
-      final target = _animationStartState?.entities.where(
-        (entity) => entity.id == move.entityId,
-      );
-      final targetType = target == null || target.isEmpty
-          ? EntityType.ball
-          : target.first.type;
+      final targetType =
+          _animationEntityTypes[move.entityId] ?? EntityType.ball;
       final accent = switch (targetType) {
         EntityType.bumper => const Color(0xFF4EAF7C),
         EntityType.stickySurface => const Color(0xFF8E5AA9),
@@ -1237,9 +1248,7 @@ class PropertyShotGame extends FlameGame {
             : animated.visualState,
       );
     }
-    for (final step in _animationReflectorSchedule.where(
-      (step) => step.event.targetEntityId == entity.id,
-    )) {
+    for (final step in _reflectorStepsByEntity[entity.id] ?? const []) {
       final event = step.event;
       final dueStart = reducedMotion ? event.pathIndex.toDouble() : step.start;
       if (_animationCursor < dueStart) continue;
@@ -1269,9 +1278,7 @@ class PropertyShotGame extends FlameGame {
     if (_animationPath.isEmpty || entity.type != EntityType.rotatingReflector) {
       return orientation;
     }
-    for (final step in _animationReflectorSchedule.where(
-      (step) => step.event.targetEntityId == entity.id,
-    )) {
+    for (final step in _reflectorStepsByEntity[entity.id] ?? const []) {
       final event = step.event;
       final dueStart = reducedMotion ? event.pathIndex.toDouble() : step.start;
       if (_animationCursor < dueStart) break;
@@ -1366,11 +1373,43 @@ class PropertyShotGame extends FlameGame {
           for (final entry in movesByEntity.entries)
             entry.key: List<ShotAnimationMove>.unmodifiable(entry.value),
         });
+    _animatedEntityIds = Set<String>.unmodifiable(movesByEntity.keys);
     _animationMoveDistances = Map.unmodifiable(distances);
     _animationMoveDurations = Map.unmodifiable(durations);
     _animationReflectorSchedule = List.unmodifiable(
       _reflectorAnimationSchedule(),
     );
+    final reflectorStepsByEntity = <String, List<_ReflectorAnimationStep>>{};
+    for (final step in _animationReflectorSchedule) {
+      reflectorStepsByEntity
+          .putIfAbsent(
+            step.event.targetEntityId,
+            () => <_ReflectorAnimationStep>[],
+          )
+          .add(step);
+    }
+    _reflectorStepsByEntity = Map.unmodifiable({
+      for (final entry in reflectorStepsByEntity.entries)
+        entry.key: List<_ReflectorAnimationStep>.unmodifiable(entry.value),
+    });
+    final renderStart = _animationStartState?.entities ?? state.entities;
+    _animationEntityTypes = Map<String, EntityType>.unmodifiable({
+      for (final entity in renderStart) entity.id: entity.type,
+    });
+    _activeBallHoleImpact = _animationImpacts
+        .where(
+          (impact) =>
+              impact.entityType == EntityType.hole &&
+              impact.sourceEntityId == 'active_ball',
+        )
+        .fold<ShotImpact?>(
+          null,
+          (latest, impact) =>
+              latest == null || impact.pathIndex > latest.pathIndex
+              ? impact
+              : latest,
+        );
+    _animationRenderCacheBuildCount += 1;
 
     var end = math.max(0, _animationPath.length - 1).toDouble();
     for (final move in _animationMoves) {
@@ -2422,7 +2461,7 @@ class PropertyShotGame extends FlameGame {
     if (entity.type == EntityType.rotatingReflector) {
       return false;
     }
-    if (animated && _animationMoves.any((move) => move.entityId == entity.id)) {
+    if (animated && _animatedEntityIds.contains(entity.id)) {
       return false;
     }
     // Trait sources pulse during planning, while an opening gate has a
@@ -4517,19 +4556,7 @@ class PropertyShotGame extends FlameGame {
       movable: true,
       visualState: 'moving',
     );
-    final holeImpact = _animationImpacts
-        .where(
-          (impact) =>
-              impact.entityType == EntityType.hole &&
-              impact.sourceEntityId == 'active_ball',
-        )
-        .fold<ShotImpact?>(
-          null,
-          (latest, impact) =>
-              latest == null || impact.pathIndex > latest.pathIndex
-              ? impact
-              : latest,
-        );
+    final holeImpact = _activeBallHoleImpact;
     if (holeImpact == null || _animationCursor < holeImpact.pathIndex) {
       _drawAnimatedBallBody(canvas, entity);
       return;

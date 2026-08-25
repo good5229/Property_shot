@@ -12,7 +12,14 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
   try {
     final context = _sharedAudioContext();
     if (context == null) return;
-    await _awaitPromise(context.callMethodVarArgs<JSAny?>('resume'.toJS));
+    final state = context['state'];
+    final running =
+        state != null &&
+        state.isA<JSString>() &&
+        (state as JSString).toDart == 'running';
+    if (!running) {
+      await _awaitPromise(context.callMethodVarArgs<JSAny?>('resume'.toJS));
+    }
     final destination = _sharedDestination;
     if (destination == null) return;
 

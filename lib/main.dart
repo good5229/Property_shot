@@ -40,6 +40,7 @@ import 'game/run/run_hint_state.dart';
 import 'game/simulation/shot_resolver.dart';
 import 'game/simulation/trait_resolver.dart';
 import 'ui/game_feedback.dart';
+import 'ui/admin_access_verifier.dart';
 import 'ui/app_language.dart';
 import 'ui/game_screen.dart';
 import 'ui/daily_challenge_screen.dart';
@@ -95,6 +96,7 @@ class PropertyShotApp extends StatelessWidget {
     this.initialLanguage = AppLanguage.korean,
     this.languageStore,
     this.weeklyReferenceDate,
+    this.adminAccessVerifier = const AdminAccessVerifier(),
   });
 
   final GameState? initialState;
@@ -110,6 +112,7 @@ class PropertyShotApp extends StatelessWidget {
   final AppLanguage initialLanguage;
   final AppLanguageStore? languageStore;
   final DateTime? weeklyReferenceDate;
+  final AdminAccessVerifier adminAccessVerifier;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +151,7 @@ class PropertyShotApp extends StatelessWidget {
               initialLanguage: initialLanguage,
               languageStore: languageStore,
               weeklyReferenceDate: weeklyReferenceDate,
+              adminAccessVerifier: adminAccessVerifier,
             )
           : GameScreen(
               initialState: initialState,
@@ -297,6 +301,7 @@ class _PropertyShotRouter extends StatefulWidget {
     required this.initialLanguage,
     this.languageStore,
     this.weeklyReferenceDate,
+    required this.adminAccessVerifier,
   });
 
   final bool showDebugControls;
@@ -306,6 +311,7 @@ class _PropertyShotRouter extends StatefulWidget {
   final AppLanguage initialLanguage;
   final AppLanguageStore? languageStore;
   final DateTime? weeklyReferenceDate;
+  final AdminAccessVerifier adminAccessVerifier;
 
   @override
   State<_PropertyShotRouter> createState() => _PropertyShotRouterState();
@@ -338,6 +344,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showExpedition = false;
   bool _showCoreExperience = false;
   bool _showPuzzleForge = false;
+  bool _adminAuthenticated = false;
   Stopwatch? _judgeJourneyElapsed;
   bool _judgeJourneyCompleted = false;
   Future<Set<String>>? _rewardInventoryFuture;
@@ -1879,7 +1886,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         onBack: () => _changeSurface(() => _showPhysicsLab = false),
       );
     }
-    if (_showPuzzleForge) {
+    if (_showPuzzleForge && _adminAuthenticated) {
       return PuzzleForgeScreen(
         onBack: () => _changeSurface(() => _showPuzzleForge = false),
         language: _language,
@@ -2000,7 +2007,6 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       advancedActivitiesUnlocked: _clearedLevels.length >= 3,
       telemetry: _telemetry,
       onCoreExperience: _startJudgeJourney,
-      onPuzzleForge: () => _changeSurface(() => _showPuzzleForge = true),
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => _changeSurface(() => _showStageSelect = true),
       onRewardInventory: _openRewardInventory,
@@ -2014,6 +2020,26 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       },
       language: _language,
       onLanguageChanged: _changeLanguage,
+      adminAuthenticated: _adminAuthenticated,
+      adminAccessVerifier: widget.adminAccessVerifier,
+      onAdminAuthenticated: () {
+        if (!_adminAuthenticated) {
+          setState(() => _adminAuthenticated = true);
+        }
+      },
+      onAdminLoggedOut: () {
+        if (_adminAuthenticated || _showPuzzleForge) {
+          setState(() {
+            _adminAuthenticated = false;
+            _showPuzzleForge = false;
+          });
+        }
+      },
+      onAdminPuzzleForge: () {
+        if (_adminAuthenticated) {
+          _changeSurface(() => _showPuzzleForge = true);
+        }
+      },
     );
   }
 }
@@ -3119,7 +3145,6 @@ class _HomeScreen extends StatelessWidget {
     required this.advancedActivitiesUnlocked,
     required this.telemetry,
     required this.onCoreExperience,
-    required this.onPuzzleForge,
     required this.onStart,
     required this.onStageSelect,
     required this.onRewardInventory,
@@ -3131,13 +3156,17 @@ class _HomeScreen extends StatelessWidget {
     required this.onTutorialVariantChanged,
     required this.language,
     required this.onLanguageChanged,
+    required this.adminAuthenticated,
+    required this.adminAccessVerifier,
+    required this.onAdminAuthenticated,
+    required this.onAdminLoggedOut,
+    required this.onAdminPuzzleForge,
   });
 
   final bool hasCompletedFirstStage;
   final bool advancedActivitiesUnlocked;
   final LocalPlayTelemetry telemetry;
   final VoidCallback onCoreExperience;
-  final VoidCallback onPuzzleForge;
   final VoidCallback onStart;
   final VoidCallback onStageSelect;
   final VoidCallback onRewardInventory;
@@ -3149,6 +3178,11 @@ class _HomeScreen extends StatelessWidget {
   final ValueChanged<TutorialExperimentVariant> onTutorialVariantChanged;
   final AppLanguage language;
   final ValueChanged<AppLanguage> onLanguageChanged;
+  final bool adminAuthenticated;
+  final AdminAccessVerifier adminAccessVerifier;
+  final VoidCallback onAdminAuthenticated;
+  final VoidCallback onAdminLoggedOut;
+  final VoidCallback onAdminPuzzleForge;
 
   @override
   Widget build(BuildContext context) {
@@ -3245,24 +3279,6 @@ class _HomeScreen extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Semantics(
-                    key: const Key('puzzle_forge_entry_button'),
-                    label: language.pick('AI 제작 과정', 'AI creation process'),
-                    button: true,
-                    child: IconButton.filledTonal(
-                      tooltip: language.pick('AI 제작 과정', 'AI creation process'),
-                      onPressed: onPuzzleForge,
-                      icon: Image.asset(
-                        'assets/generated/stage-icon-property-transfer-v1.png',
-                        width: 28,
-                        height: 28,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
-                        excludeFromSemantics: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
                   TextButton(
                     key: const Key('language_toggle_button'),
                     onPressed: () => onLanguageChanged(
@@ -3289,8 +3305,14 @@ class _HomeScreen extends StatelessWidget {
                     ),
                     onPressed: () => showDialog<void>(
                       context: context,
-                      builder: (_) =>
-                          _FeedbackSettingsDialog(telemetry: telemetry),
+                      builder: (_) => _FeedbackSettingsDialog(
+                        telemetry: telemetry,
+                        adminAuthenticated: adminAuthenticated,
+                        adminAccessVerifier: adminAccessVerifier,
+                        onAdminAuthenticated: onAdminAuthenticated,
+                        onAdminLoggedOut: onAdminLoggedOut,
+                        onAdminPuzzleForge: onAdminPuzzleForge,
+                      ),
                     ),
                     icon: const Icon(Icons.tune_rounded),
                   ),
@@ -3805,9 +3827,21 @@ class _PreviewBoardPainter extends CustomPainter {
 enum _SettingsPreset { recommended, comfortable, direct }
 
 class _FeedbackSettingsDialog extends StatefulWidget {
-  const _FeedbackSettingsDialog({required this.telemetry});
+  const _FeedbackSettingsDialog({
+    required this.telemetry,
+    required this.adminAuthenticated,
+    required this.adminAccessVerifier,
+    required this.onAdminAuthenticated,
+    required this.onAdminLoggedOut,
+    required this.onAdminPuzzleForge,
+  });
 
   final LocalPlayTelemetry telemetry;
+  final bool adminAuthenticated;
+  final AdminAccessVerifier adminAccessVerifier;
+  final VoidCallback onAdminAuthenticated;
+  final VoidCallback onAdminLoggedOut;
+  final VoidCallback onAdminPuzzleForge;
 
   @override
   State<_FeedbackSettingsDialog> createState() =>
@@ -3818,6 +3852,28 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
   final ScrollController _scrollController = ScrollController();
   bool _applyingPreset = false;
   bool _exportingSession = false;
+  late bool _adminAuthenticated = widget.adminAuthenticated;
+
+  Future<void> _requestAdminAccess() async {
+    final authenticated = await showDialog<bool>(
+      context: context,
+      builder: (_) => _AdminLoginDialog(verifier: widget.adminAccessVerifier),
+    );
+    if (!mounted || authenticated != true) return;
+    setState(() => _adminAuthenticated = true);
+    widget.onAdminAuthenticated();
+  }
+
+  void _logOutAdmin() {
+    setState(() => _adminAuthenticated = false);
+    widget.onAdminLoggedOut();
+  }
+
+  void _openAdminPuzzleForge() {
+    if (!_adminAuthenticated) return;
+    Navigator.of(context).pop();
+    widget.onAdminPuzzleForge();
+  }
 
   Future<void> _exportSession() async {
     if (_exportingSession) return;
@@ -4014,33 +4070,6 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _sectionHeader(
-                  key: const Key('local_session_export_section'),
-                  title: '내 플레이 기록',
-                  description: '현재 세션만 기기 안에서 정리합니다. 링크 생성이나 서버 전송은 하지 않습니다.',
-                  icon: Icons.file_download_outlined,
-                ),
-                ListTile(
-                  key: const Key('local_session_export_button'),
-                  contentPadding: EdgeInsets.zero,
-                  leading: _exportingSession
-                      ? const SizedBox.square(
-                          dimension: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.data_object_rounded),
-                  title: const Text('세션 JSON 복사'),
-                  subtitle: const Text('시간·내부 ID를 제거한 분석용 기록'),
-                  onTap: _exportingSession ? null : _exportSession,
-                ),
-                ListTile(
-                  key: const Key('local_session_role_review_button'),
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.fact_check_outlined),
-                  title: const Text('역할별 평가 복사'),
-                  subtitle: const Text('심사자·모바일·숙련자·접근성 관점의 Markdown'),
-                  onTap: _exportingSession ? null : _exportRoleReview,
-                ),
-                _sectionHeader(
                   key: const Key('settings_preset_section'),
                   title: '빠른 설정',
                   description: '플레이 방식부터 고른 뒤 세부 항목을 원하는 만큼 바꿀 수 있습니다.',
@@ -4081,6 +4110,7 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 ),
                 DropdownButtonFormField<ChargeGaugeSide>(
                   key: const Key('charge_gauge_side_dropdown'),
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: '충전 게이지 위치'),
                   initialValue: GameFeedback.chargeGaugeSide,
                   items: const [
@@ -4102,6 +4132,7 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<PlayerDifficulty>(
                   key: const Key('player_difficulty_dropdown'),
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: '정밀 조작 도움',
                     helperText:
@@ -4307,6 +4338,61 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                     label: const Text('도움말 다시 보기'),
                   ),
                 ),
+                if (_adminAuthenticated) ...[
+                  _sectionHeader(
+                    key: const Key('admin_tools_section'),
+                    title: '관리자 도구',
+                    description: '현재 브라우저 세션에서만 내부 제작·평가 도구를 표시합니다.',
+                    icon: Icons.admin_panel_settings_outlined,
+                  ),
+                  ListTile(
+                    key: const Key('admin_puzzle_forge_button'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.account_tree_outlined),
+                    title: const Text('AI 제작 과정'),
+                    subtitle: const Text('제작 역할과 검증 흐름 확인'),
+                    onTap: _openAdminPuzzleForge,
+                  ),
+                  ListTile(
+                    key: const Key('local_session_export_button'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: _exportingSession
+                        ? const SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.data_object_rounded),
+                    title: const Text('세션 JSON 복사'),
+                    subtitle: const Text('시간·내부 ID를 제거한 분석용 기록'),
+                    onTap: _exportingSession ? null : _exportSession,
+                  ),
+                  ListTile(
+                    key: const Key('local_session_role_review_button'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.fact_check_outlined),
+                    title: const Text('역할별 평가 복사'),
+                    subtitle: const Text('심사자·모바일·숙련자·접근성 관점의 Markdown'),
+                    onTap: _exportingSession ? null : _exportRoleReview,
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const Key('admin_logout_button'),
+                      onPressed: _logOutAdmin,
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('관리자 로그아웃'),
+                    ),
+                  ),
+                ] else
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const Key('admin_login_button'),
+                      onPressed: _requestAdminAccess,
+                      icon: const Icon(Icons.lock_outline_rounded),
+                      label: const Text('관리자 도구'),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -4316,6 +4402,115 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('닫기'),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminLoginDialog extends StatefulWidget {
+  const _AdminLoginDialog({required this.verifier});
+
+  final AdminAccessVerifier verifier;
+
+  @override
+  State<_AdminLoginDialog> createState() => _AdminLoginDialogState();
+}
+
+class _AdminLoginDialogState extends State<_AdminLoginDialog> {
+  final TextEditingController _idController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final FocusNode _passwordFocusNode = FocusNode();
+  bool _obscurePassword = true;
+  String? _errorMessage;
+
+  void _submit() {
+    final valid = widget.verifier.verify(
+      id: _idController.text,
+      password: _passwordController.text,
+    );
+    _passwordController.clear();
+    if (!valid) {
+      setState(() => _errorMessage = '관리자 정보를 확인해 주세요.');
+      return;
+    }
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  void dispose() {
+    _idController.dispose();
+    _passwordController.dispose();
+    _passwordFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('admin_login_dialog'),
+      title: const Text('관리자 로그인'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: AutofillGroup(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('내부 제작·평가 도구는 인증한 현재 세션에서만 표시됩니다.'),
+              const SizedBox(height: 16),
+              TextField(
+                key: const Key('admin_id_field'),
+                controller: _idController,
+                autofocus: true,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.username],
+                decoration: const InputDecoration(
+                  labelText: '관리자 ID',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _passwordFocusNode.requestFocus(),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('admin_password_field'),
+                controller: _passwordController,
+                focusNode: _passwordFocusNode,
+                obscureText: _obscurePassword,
+                enableSuggestions: false,
+                autocorrect: false,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                decoration: InputDecoration(
+                  labelText: '관리자 PW',
+                  border: const OutlineInputBorder(),
+                  errorText: _errorMessage,
+                  suffixIcon: IconButton(
+                    key: const Key('admin_password_visibility_button'),
+                    tooltip: _obscurePassword ? '비밀번호 표시' : '비밀번호 숨기기',
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                  ),
+                ),
+                onSubmitted: (_) => _submit(),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: const Key('admin_login_submit_button'),
+          onPressed: _submit,
+          child: const Text('로그인'),
         ),
       ],
     );

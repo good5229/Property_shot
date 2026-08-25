@@ -116,8 +116,12 @@ class GameFeedback {
   final SoundCuePlayer _cuePlayer;
   final Map<String, DateTime> _lastPlayed = <String, DateTime>{};
   Future<void>? _audioTail;
+  DateTime? _lastBackgroundMusicRequest;
 
   static Future<void> _playSystemSound(SystemSoundType type) {
+    // Web에서는 전용 Web Audio 큐가 같은 신호를 재생한다. 플랫폼 사운드
+    // 채널을 함께 호출하면 충돌 프레임에 불필요한 왕복과 중복 음이 생긴다.
+    if (kIsWeb) return Future<void>.value();
     return SystemSound.play(type);
   }
 
@@ -774,7 +778,12 @@ class GameFeedback {
       _queueAudio(cue: cue, alert: alert);
     }
     if (backgroundMusicEnabled) {
-      unawaited(setBackgroundMusicPlayback(true));
+      final previousRequest = _lastBackgroundMusicRequest;
+      if (previousRequest == null ||
+          now.difference(previousRequest) >= const Duration(seconds: 2)) {
+        _lastBackgroundMusicRequest = now;
+        unawaited(setBackgroundMusicPlayback(true));
+      }
     }
   }
 

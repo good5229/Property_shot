@@ -48,7 +48,9 @@ jobs:
           PROPERTY_SHOT_GOLDEN_MODE: structure
 
       - name: Build Flutter web
-        run: flutter build web --release --base-href "/Property_shot/"
+        # SkWasm을 우선 사용하고 미지원 브라우저에는 자동 생성된 JS 빌드로
+        # 폴백해 고주사율 화면의 Canvas 애니메이션 부담을 줄인다.
+        run: flutter build web --release --wasm --base-href "/Property_shot/"
 
       - name: Add .nojekyll
         run: touch build/web/.nojekyll

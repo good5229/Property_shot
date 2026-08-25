@@ -10,7 +10,7 @@ import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/simulation/impact_metrics.dart';
 
 void main() {
-  test('30·60·120Hz 업데이트에서 충돌 이벤트와 완료 콜백은 한 번씩만 발생한다', () {
+  test('30·60·120·144Hz 업데이트에서 충돌 이벤트와 완료 콜백은 한 번씩만 발생한다', () {
     const resolver = ShotResolver();
     final start = levels[0].createState(0);
     final result = resolver.resolve(
@@ -18,7 +18,7 @@ void main() {
       const ShotInput(direction: Vec2(1, -0.4), power: 0.86),
     );
 
-    for (final framesPerSecond in [30, 60, 120]) {
+    for (final framesPerSecond in [30, 60, 120, 144]) {
       var finished = 0;
       final impactKeys = <String>{};
       final moveTriggerIndices = <int>[];
@@ -216,6 +216,37 @@ void main() {
     }
 
     expect(game.boardPictureBuildCountForTest, 1);
+    game.onRemove();
+  });
+
+  test('움직임용 엔티티 순서·조회 캐시는 샷마다 한 번만 만든다', () {
+    const resolver = ShotResolver();
+    final start = levels[4].createState(4);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(-0.8, -0.5), power: 0.82),
+    );
+    final game = PropertyShotGame(result.state, loadVisualAssets: false);
+    game.onGameResize(Vector2(360, 520));
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+
+    expect(game.animationRenderCacheBuildCountForTest, 1);
+    expect(game.animationRenderEntityCountForTest, start.entities.length);
+    for (var frame = 0; frame < 24; frame++) {
+      game.update(1 / 144);
+      final recorder = ui.PictureRecorder();
+      game.render(ui.Canvas(recorder));
+      recorder.endRecording().dispose();
+    }
+    expect(game.animationRenderCacheBuildCountForTest, 1);
     game.onRemove();
   });
 

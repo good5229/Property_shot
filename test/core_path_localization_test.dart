@@ -7,6 +7,7 @@ import 'package:property_shot/ui/app_language.dart';
 import 'package:property_shot/ui/core_experience_screen.dart';
 import 'package:property_shot/ui/daily_challenge_screen.dart';
 import 'package:property_shot/ui/game_screen.dart';
+import 'package:property_shot/ui/puzzle_forge_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -143,15 +144,12 @@ void main() {
     expect(tester.takeException(), isNull, reason: '지도 경로 200%');
   });
 
-  testWidgets('영어 홈에서 Puzzle Forge까지 영어 설명이 이어진다', (tester) async {
+  testWidgets('관리자 Puzzle Forge의 영어 설명이 완결된다', (tester) async {
     await tester.pumpWidget(
-      const PropertyShotApp(
-        showHome: true,
-        initialLanguage: AppLanguage.english,
+      MaterialApp(
+        home: PuzzleForgeScreen(language: AppLanguage.english, onBack: () {}),
       ),
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('puzzle_forge_entry_button')));
     await tester.pumpAndSettle();
 
     expect(find.text('CODEX PUZZLE FORGE'), findsOneWidget);
