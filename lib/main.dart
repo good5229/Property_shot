@@ -4799,6 +4799,10 @@ class _IslandRestorationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final supportRecommendation = recommendIslandSupportForStage(
+      levelIndex: weeklyResearchGoal.stageIndex,
+      progress: progress,
+    );
     if (compact) {
       return Semantics(
         container: true,
@@ -5166,6 +5170,57 @@ class _IslandRestorationCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 5),
+              if (supportRecommendation != null) ...[
+                Container(
+                  key: const Key('island_focus_recommendation'),
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDDEFE6),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: const Color(0xFF7AA68B)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _IslandLandmarkIllustration(
+                        landmark: supportRecommendation.landmark,
+                        progress: 1,
+                        size: 30,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '이번 주 ${weeklyResearchGoal.stageIndex + 1}단계 추천 · '
+                              '${supportRecommendation.landmark.label}',
+                              style: const TextStyle(
+                                color: Color(0xFF315C46),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              supportRecommendation.reason,
+                              style: const TextStyle(
+                                color: Color(0xFF456B58),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -5175,6 +5230,9 @@ class _IslandRestorationCard extends StatelessWidget {
                       key: Key('island_focus_${landmark.name}'),
                       selected: selectedFocus == landmark,
                       onSelected: (_) => onFocusSelected(landmark),
+                      tooltip: supportRecommendation?.landmark == landmark
+                          ? '이번 주 연구에 추천하는 지원입니다.'
+                          : '${landmark.label} 집중 지원',
                       avatar: _IslandLandmarkIllustration(
                         landmark: landmark,
                         progress: 1,

@@ -41,6 +41,58 @@ void main() {
     }
   });
 
+  test('10개 스테이지에 실제 기믹별 집중 지원을 추천한다', () {
+    final progress = IslandRestorationProgress(discoveryCount: 30);
+    const expected = <IslandLandmark>[
+      IslandLandmark.observatory,
+      IslandLandmark.lighthouse,
+      IslandLandmark.bridge,
+      IslandLandmark.lighthouse,
+      IslandLandmark.observatory,
+      IslandLandmark.lighthouse,
+      IslandLandmark.bridge,
+      IslandLandmark.bridge,
+      IslandLandmark.lighthouse,
+      IslandLandmark.observatory,
+    ];
+
+    for (var index = 0; index < expected.length; index++) {
+      final recommendation = recommendIslandSupportForStage(
+        levelIndex: index,
+        progress: progress,
+      );
+      expect(
+        recommendation?.landmark,
+        expected[index],
+        reason: '${index + 1}단계',
+      );
+      expect(recommendation?.reason, isNotEmpty);
+    }
+  });
+
+  test('복구되지 않은 시설은 추천하지 않고 잘못된 단계는 거부한다', () {
+    final none = IslandRestorationProgress(discoveryCount: 0);
+    expect(
+      recommendIslandSupportForStage(levelIndex: 2, progress: none),
+      isNull,
+    );
+
+    final observatoryOnly = IslandRestorationProgress(discoveryCount: 3);
+    final fallback = recommendIslandSupportForStage(
+      levelIndex: 2,
+      progress: observatoryOnly,
+    );
+    expect(fallback?.landmark, IslandLandmark.observatory);
+    expect(fallback?.reason, contains('다리 복구 전'));
+    expect(
+      () => recommendIslandSupportForStage(
+        levelIndex: 10,
+        progress: observatoryOnly,
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('세 복구 시설은 분석·즉시 L1·런당 복사 코어를 중복 없이 지급한다', () async {
     final backend = MemoryRunStateBackend();
     final session = _session(backend);
@@ -373,6 +425,45 @@ void main() {
     expect(find.byKey(const Key('island_focus_observatory')), findsOneWidget);
     expect(find.byKey(const Key('island_focus_lighthouse')), findsNothing);
     expect(find.byKey(const Key('island_focus_bridge')), findsNothing);
+  });
+
+  testWidgets('주간 재도전의 기믹에 맞는 지원 이유를 보여 주되 자동 선택하지 않는다', (tester) async {
+    final records = <String>[];
+    for (var stageIndex = 0; stageIndex < 8; stageIndex++) {
+      for (final milestoneId in stageDiscoveryMilestoneIds(stageIndex)) {
+        records.add('${levels[stageIndex].id}::$milestoneId');
+      }
+    }
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      ProgressStore.discoveryRecordsKey: records,
+    });
+    await tester.binding.setSurfaceSize(const Size(800, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      PropertyShotApp(
+        showHome: true,
+        loadGameAssets: false,
+        weeklyReferenceDate: DateTime(2026, 8, 25),
+      ),
+    );
+    await _pumpForAsyncWork(tester);
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await _pumpForAsyncWork(tester);
+
+    final recommendation = find.byKey(const Key('island_focus_recommendation'));
+    expect(recommendation, findsOneWidget);
+    expect(
+      find.descendant(
+        of: recommendation,
+        matching: find.textContaining('추천 ·'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      IslandSupportStore(await SharedPreferences.getInstance()).load(),
+      isNull,
+    );
+    expect(tester.takeException(), isNull);
   });
 }
 

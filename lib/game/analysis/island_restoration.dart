@@ -4,6 +4,52 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum IslandLandmark { observatory, lighthouse, bridge }
 
+class IslandSupportRecommendation {
+  const IslandSupportRecommendation({
+    required this.landmark,
+    required this.reason,
+  });
+
+  final IslandLandmark landmark;
+  final String reason;
+}
+
+IslandSupportRecommendation? recommendIslandSupportForStage({
+  required int levelIndex,
+  required IslandRestorationProgress progress,
+}) {
+  if (levelIndex < 0 || levelIndex >= 10) {
+    throw ArgumentError.value(levelIndex, 'levelIndex', '0~9여야 합니다.');
+  }
+  if (progress.restoredCount == 0) return null;
+
+  final preferred = switch (levelIndex) {
+    0 || 4 || 9 => IslandLandmark.observatory,
+    1 || 3 || 5 || 8 => IslandLandmark.lighthouse,
+    2 || 6 || 7 => IslandLandmark.bridge,
+    _ => throw StateError('도달할 수 없는 스테이지입니다.'),
+  };
+  final landmark = progress.isRestored(preferred)
+      ? preferred
+      : progress.restoredLandmarks.first;
+  final reason = landmark == preferred
+      ? switch (levelIndex) {
+          0 => '상자 이동이 빗나가면 마지막 충돌 순서부터 확인할 수 있어요.',
+          1 => '탄성 반사의 작은 조준 오차를 편안한 보정으로 줄여 줍니다.',
+          2 => '첫 공을 남기는 두 발 해법에 복사 코어를 하나 더 준비합니다.',
+          3 => '풍선 연쇄를 노리는 발사각의 작은 오차를 줄여 줍니다.',
+          4 => '속도 소진 구간이 어긋나면 실패 원인을 자세히 보여 줍니다.',
+          5 => '가속 구간을 통과하는 정밀 조준을 편안하게 보정합니다.',
+          6 => '여러 발을 이어 쓰는 해법에 복사 코어를 하나 더 준비합니다.',
+          7 => '연쇄 점수를 쌓는 다중 발사에 복사 코어를 하나 더 준비합니다.',
+          8 => '회전 반사판의 타이밍과 각도 오차를 편안하게 보정합니다.',
+          9 => '속성 배수와 연쇄가 끊긴 지점을 충돌 순서로 확인할 수 있어요.',
+          _ => throw StateError('도달할 수 없는 스테이지입니다.'),
+        }
+      : '${preferred.label} 복구 전에는 ${landmark.label}의 ${landmark.benefitLabel} 지원이 가장 유용해요.';
+  return IslandSupportRecommendation(landmark: landmark, reason: reason);
+}
+
 extension IslandLandmarkCopy on IslandLandmark {
   String get label => switch (this) {
     IslandLandmark.observatory => '관측소',

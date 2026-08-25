@@ -25,7 +25,7 @@ GitHub Issues own task status. This file owns planning context.
     - [x] 충돌·성공 피드백과 저모션 대응 고도화
     - [x] 생산 40패턴 지름길·기믹 우회 전수 감사
     - [x] 전 해상도 시각 일관성 검수
-    - [ ] 복구 시설의 반복 플레이 선택 가치 강화
+    - [x] 복구 시설의 반복 플레이 선택 가치 강화
 
 - [x] OpenAI Game Builders Seoul Track 1 대응
   - branch: main (사용자 요청으로 별도 브랜치 없음)
