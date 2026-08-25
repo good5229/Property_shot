@@ -219,7 +219,7 @@ void main() {
     game.onRemove();
   });
 
-  test('강한 충돌은 짧은 타격 정지를 만들고 저모션에서는 생략한다', () {
+  test('강한 충돌에서도 애니메이션 시간축은 매 프레임 연속 진행한다', () {
     const resolver = ShotResolver();
     final start = levels[0].createState(0);
     final result = resolver.resolve(
@@ -242,10 +242,22 @@ void main() {
       animationTransaction: true,
     );
     game.setAnimationCursorForTest(impact.pathIndex.toDouble());
-    final stoppedAt = game.animationCursorForTest;
-    expect(game.hitStopRemainingSecondsForTest, greaterThan(0));
-    game.update(0.01);
-    expect(game.animationCursorForTest, stoppedAt);
+    final cursorAtImpact = game.animationCursorForTest;
+    game.update(1 / 120);
+    final cursorAfterFirstFrame = game.animationCursorForTest;
+    game.update(1 / 60);
+    final cursorAfterSecondFrame = game.animationCursorForTest;
+
+    expect(cursorAfterFirstFrame, greaterThan(cursorAtImpact));
+    expect(cursorAfterSecondFrame, greaterThan(cursorAfterFirstFrame));
+    expect(
+      cursorAfterFirstFrame - cursorAtImpact,
+      closeTo(PropertyShotGame.animationCursorUnitsPerSecond / 120, 0.0001),
+    );
+    expect(
+      cursorAfterSecondFrame - cursorAfterFirstFrame,
+      closeTo(PropertyShotGame.animationCursorUnitsPerSecond / 60, 0.0001),
+    );
 
     final reduced = PropertyShotGame(result.state, reducedMotion: true);
     reduced.setStateSnapshot(
@@ -259,7 +271,6 @@ void main() {
     );
     reduced.setAnimationCursorForTest(impact.pathIndex.toDouble());
     final reducedAt = reduced.animationCursorForTest;
-    expect(reduced.hitStopRemainingSecondsForTest, 0);
     reduced.update(0.01);
     expect(reduced.animationCursorForTest, greaterThan(reducedAt));
   });

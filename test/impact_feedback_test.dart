@@ -19,10 +19,8 @@ void main() {
     expect(ImpactMetrics.tierFor(heavy), ImpactTier.critical);
   });
 
-  test('타격감 수치는 모션 감소에서 0이 된다', () {
-    expect(ImpactMetrics.hitStopMilliseconds(0.9), 46);
+  test('타격감은 시간축을 멈추지 않고 카메라 곡선으로만 표현한다', () {
     expect(ImpactMetrics.cameraShake(0.9), greaterThan(0));
-    expect(ImpactMetrics.hitStopMilliseconds(0.9, reducedMotion: true), 0);
     expect(ImpactMetrics.cameraShake(0.9, reducedMotion: true), 0);
   });
 }

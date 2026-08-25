@@ -133,9 +133,6 @@ class PropertyShotGame extends FlameGame {
 
   void setReducedMotion(bool enabled) {
     reducedMotion = enabled;
-    if (enabled) {
-      _hitStopRemainingSeconds = 0;
-    }
   }
 
   double reflectorRenderOrientationForTest(String entityId) {
@@ -149,8 +146,6 @@ class PropertyShotGame extends FlameGame {
 
   double get animationCursorForTest => _animationCursor;
 
-  double get hitStopRemainingSecondsForTest => _hitStopRemainingSeconds;
-
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   Map<String, List<ShotAnimationMove>> _animationMovesByEntity = const {};
@@ -163,7 +158,6 @@ class PropertyShotGame extends FlameGame {
   int _nextAnimationEventIndex = 0;
   GameState? _animationStartState;
   double _animationCursor = 0;
-  double _hitStopRemainingSeconds = 0;
   int _animationUpdateCount = 0;
   TraitType? _animationTrait;
   // 계획 단계에서는 엔진을 멈추므로 강조선의 기준 위상을 기존 첫 화면
@@ -287,7 +281,6 @@ class PropertyShotGame extends FlameGame {
       _nextAnimationEventIndex = 0;
       _animationStartState = transitionStart;
       _animationCursor = 0;
-      _hitStopRemainingSeconds = 0;
       _animationUpdateCount = 0;
       _reportedImpactKeys.clear();
       final spentBalls = next.entities.where(
@@ -314,14 +307,8 @@ class PropertyShotGame extends FlameGame {
       // 한 프레임에 남은 충돌을 모두 소비하면 물체 이동과 타격 피드백의
       // 인과가 사라지므로, 다음 정상 프레임부터 시간축을 이어간다.
       final boundedDt = dt > 0.5 ? 0.0 : dt.clamp(0.0, 1 / 30).toDouble();
-      var animationDt = boundedDt;
-      if (_hitStopRemainingSeconds > 0) {
-        final consumed = math.min(animationDt, _hitStopRemainingSeconds);
-        _hitStopRemainingSeconds -= consumed;
-        animationDt -= consumed;
-      }
       _animationCursor +=
-          animationDt * animationCursorUnitsPerSecond * playbackSpeed;
+          boundedDt * animationCursorUnitsPerSecond * playbackSpeed;
       _emitDueAnimationEvents();
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
@@ -345,7 +332,6 @@ class PropertyShotGame extends FlameGame {
     _animationPhysicsEvents = const [];
     _animationReflectorSchedule = const [];
     _animationEndCursorCached = 0;
-    _hitStopRemainingSeconds = 0;
     _nextAnimationEventIndex = 0;
     _animationStartState = null;
     _animationTrait = null;
@@ -403,14 +389,6 @@ class PropertyShotGame extends FlameGame {
       onPhysicsEvent?.call(event);
       final impact = event.impact;
       if (impact != null) {
-        _hitStopRemainingSeconds = math.max(
-          _hitStopRemainingSeconds,
-          ImpactMetrics.hitStopMilliseconds(
-                impact.impulse,
-                reducedMotion: reducedMotion,
-              ) /
-              1000,
-        );
         onShotImpact?.call(impact);
       } else if (event.move != null) {
         onAnimationImpact?.call(event.move!);
