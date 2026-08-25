@@ -71,9 +71,37 @@
     {
       "id": "submission_resilience_gate",
       "name": "제출 경로 복원력과 브라우저 품질 게이트",
-      "completedOn": "2026-08-23",
-      "summary": "저장 실패와 지연 복원, 비정상 날짜·점수 입력, 200% 글자와 320px 영문 화면을 방어하고 실제 Web Release와 전체 회귀를 제출 전 품질 게이트로 사용한다.",
+      "completedOn": "2026-08-25",
+      "summary": "저장 실패와 지연 복원, 비정상 날짜·점수 입력, 200% 글자와 320px 영문 화면을 방어하고 실제 게임 장면을 확인한 5개 화면 크기 Web Release와 전체 회귀를 제출 전 품질 게이트로 사용한다.",
       "criteria": ["Playability", "Release Potential", "Presentation"]
+    },
+    {
+      "id": "intent_preserving_aim_assist",
+      "name": "의도 보존 조준 보정",
+      "completedOn": "2026-08-25",
+      "summary": "정밀 조준의 작은 오차는 줄이되 벽 반사와 모호한 복수 목표에서는 플레이어의 원시 입력을 보존한다.",
+      "criteria": ["Playability", "Originality"]
+    },
+    {
+      "id": "local_role_session_review",
+      "name": "역할별 로컬 세션 평가",
+      "completedOn": "2026-08-25",
+      "summary": "모바일·키보드·접근성·비정상 입력 세션을 독립 게이트로 판정하며 실제 사람의 재미를 자동 점수로 대체하지 않는다.",
+      "criteria": ["Codex Collaboration", "Playability", "Presentation"]
+    },
+    {
+      "id": "island_restoration_finale",
+      "name": "복구 시설 통합 피날레",
+      "completedOn": "2026-08-25",
+      "summary": "관측소·등대·다리의 복구 상태와 실제 지원 효과, 완주 기록과 다음 목표를 한 결말 화면으로 연결한다.",
+      "criteria": ["Release Potential", "Presentation", "Playability"]
+    },
+    {
+      "id": "material_restoration_sound_pass",
+      "name": "재질·복구 상태 사운드 패스",
+      "completedOn": "2026-08-25",
+      "summary": "네 공 속성과 세 복구 시설을 고유한 짧은 패턴으로 구분하고 Web Audio와 네이티브 PCM이 같은 명세를 공유한다.",
+      "criteria": ["Playability", "Presentation"]
     }
   ],
   "officialCriteria": [

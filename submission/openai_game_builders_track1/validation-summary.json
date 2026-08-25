@@ -1,0 +1,28 @@
+{
+  "verified_at": "2026-08-25",
+  "public_play_url": "https://good5229.github.io/Property_shot/",
+  "access": {
+    "browser_playable": true,
+    "login_required": false,
+    "approval_required": false
+  },
+  "judge_entry": {
+    "recommended_action": "60초 핵심 체험",
+    "expected_first_scene_seconds": 5,
+    "expected_core_completion_seconds": 60
+  },
+  "automated_evidence": {
+    "responsive_viewports": [
+      "320x568",
+      "390x844",
+      "768x1024",
+      "1440x900",
+      "1920x1080"
+    ],
+    "console_errors": 0,
+    "web_release_gate_passed": true,
+    "static_analysis_issues": 0,
+    "physics_pattern_count": 40
+  },
+  "scope_note": "성능 수치는 Headless Chromium 프록시이며 실기기 GPU·터치·사운드·햅틱 측정으로 표현하지 않습니다. 실제 재미는 자동 평가가 아니라 심사위원의 직접 플레이로 확인해야 합니다."
+}
