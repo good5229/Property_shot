@@ -14,8 +14,7 @@
     "gameTitle": "속성 한방",
     "gameIntro": "주변 사물의 무거움·탄성·점착·뾰족함을 공으로 옮기는 물리 퍼즐입니다. 속성을 잃은 원본과 빗나간 공도 다음 샷의 기물로 남습니다. 60초 핵심 체험으로 규칙을 익히고, 섬의 관측소·등대·다리를 복구하며 다양한 해법을 발견하세요.",
     "playUrl": "https://good5229.github.io/Property_shot/",
-    "thumbnail": "submission/openai_game_builders_track1/track1_thumbnail_1920x1080.png",
-    "demoVideo": "deferred_by_user"
+    "thumbnail": "submission/openai_game_builders_track1/track1_thumbnail_1920x1080.png"
   },
   "baseline": {
     "description": "챌린지 시작 전부터 브라우저용 물리 퍼즐의 캠페인, 속성 이전, 섬 복구, 보상과 접근성 기반이 존재했다.",

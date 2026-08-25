@@ -21,7 +21,10 @@
     ],
     "console_errors": 0,
     "web_release_gate_passed": true,
+    "release_web_build_passed": true,
     "static_analysis_issues": 0,
+    "flutter_tests_passed": 1464,
+    "python_release_tests_passed": 13,
     "physics_pattern_count": 40
   },
   "scope_note": "성능 수치는 Headless Chromium 프록시이며 실기기 GPU·터치·사운드·햅틱 측정으로 표현하지 않습니다. 실제 재미는 자동 평가가 아니라 심사위원의 직접 플레이로 확인해야 합니다."

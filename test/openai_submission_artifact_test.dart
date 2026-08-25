@@ -26,7 +26,7 @@ void main() {
     expect(intro.runes.length, lessThanOrEqualTo(200));
     expect(playUrl.scheme, 'https');
     expect(playUrl.host, isNotEmpty);
-    expect(submission['demoVideo'], 'deferred_by_user');
+    expect(submission.containsKey('demoVideo'), isFalse);
     expect((manifest['officialCriteria']! as List<Object?>).toSet(), {
       'Playability',
       'Originality',
@@ -72,7 +72,8 @@ void main() {
     expect(copy, contains('https://good5229.github.io/Property_shot/'));
     expect(copy, contains('60초 핵심 체험'));
     expect(copy, contains('Codex Puzzle Forge'));
-    expect(copy, contains('이번 반복에서 제작하지 않았습니다'));
+    expect(copy, isNot(contains('이번 반복에서 제작하지 않았습니다')));
+    expect(copy, isNot(contains('플레이 영상')));
     expect(copy, isNot(contains('TODO')));
   });
 }

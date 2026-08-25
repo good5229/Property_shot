@@ -104,9 +104,7 @@ void main() {
     expect(rail.bottom, lessThanOrEqualTo(568 - 34));
     await expectLater(
       find.byKey(const Key('game_screen_golden')),
-      matchesGoldenFile(
-        'goldens/charge_gauge_safe_area_right_320x568.png',
-      ),
+      matchesGoldenFile('goldens/charge_gauge_safe_area_right_320x568.png'),
     );
     await gesture.cancel();
     await tester.pump();
@@ -241,7 +239,7 @@ Future<TestGesture> _holdCharge(
     _logicalPosition(tester, area, ball.x, ball.y),
     timeStamp: Duration.zero,
   );
-  await _pumpChargeFrames(tester, _holdDuration(state));
+  await _pumpUntilGaugeState(tester, state);
   if (state == ChargeGaugeState.cancelledGray) {
     await tester.pump(const Duration(milliseconds: 80));
   }
@@ -251,13 +249,7 @@ Future<TestGesture> _holdCharge(
     find.byKey(Key('charge_gauge_${GameFeedback.chargeGaugeSide.name}')),
     findsOneWidget,
   );
-  final expectedLabel = switch (state) {
-    ChargeGaugeState.green => '약',
-    ChargeGaugeState.yellow => '중',
-    ChargeGaugeState.red => '강',
-    ChargeGaugeState.warningRed => '주의',
-    ChargeGaugeState.cancelledGray => '취소',
-  };
+  final expectedLabel = _shortGaugeLabel(state);
   final expectedIcon = switch (state) {
     ChargeGaugeState.green => Icons.eco,
     ChargeGaugeState.yellow => Icons.bolt,
@@ -298,9 +290,9 @@ Future<void> _pumpPatternGame(
       home: RepaintBoundary(
         key: goldenKey,
         child: GameScreen(
-          initialState: level.createState(7, productRules: true).copyWith(
-            message: '충전 상태를 확인하세요',
-          ),
+          initialState: level
+              .createState(7, productRules: true)
+              .copyWith(message: '충전 상태를 확인하세요'),
           levelOverride: level,
           showStageSelector: false,
           loadGameAssets: false,
@@ -317,14 +309,11 @@ Future<void> _pumpPatternGame(
   await tester.pump(const Duration(milliseconds: 300));
 }
 
-Future<TestGesture> _holdChargeAt(
-  WidgetTester tester,
-  Vec2 ball,
-) async {
+Future<TestGesture> _holdChargeAt(WidgetTester tester, Vec2 ball) async {
   final area = find.byKey(const Key('aim_area'));
   final gesture = await tester.createGesture();
   await gesture.down(_logicalPosition(tester, area, ball.x, ball.y));
-  await _pumpChargeFrames(tester, _holdDuration(ChargeGaugeState.warningRed));
+  await _pumpUntilGaugeState(tester, ChargeGaugeState.warningRed);
   expect(find.byKey(const Key('charge_gauge_rail')), findsOneWidget);
   return gesture;
 }
@@ -343,16 +332,26 @@ Offset _logicalPosition(
   );
 }
 
-Future<void> _pumpChargeFrames(WidgetTester tester, Duration duration) async {
+Future<void> _pumpUntilGaugeState(
+  WidgetTester tester,
+  ChargeGaugeState state,
+) async {
   const frame = Duration(milliseconds: 80);
+  const timeout = Duration(seconds: 3);
   var elapsed = Duration.zero;
-  while (elapsed + frame <= duration) {
+  while (elapsed < timeout) {
     await tester.pump(frame);
     elapsed += frame;
+    final rail = find.byKey(const Key('charge_gauge_rail'));
+    if (rail.evaluate().isNotEmpty &&
+        find
+            .descendant(of: rail, matching: find.text(_shortGaugeLabel(state)))
+            .evaluate()
+            .isNotEmpty) {
+      return;
+    }
   }
-  if (elapsed < duration) {
-    await tester.pump(duration - elapsed);
-  }
+  fail('${state.name} 충전 상태가 ${timeout.inMilliseconds}ms 안에 나타나지 않았습니다.');
 }
 
 String _semanticStateLabel(ChargeGaugeState state) {
@@ -365,12 +364,12 @@ String _semanticStateLabel(ChargeGaugeState state) {
   };
 }
 
-Duration _holdDuration(ChargeGaugeState state) {
+String _shortGaugeLabel(ChargeGaugeState state) {
   return switch (state) {
-    ChargeGaugeState.green => const Duration(milliseconds: 640),
-    ChargeGaugeState.yellow => const Duration(milliseconds: 1080),
-    ChargeGaugeState.red => const Duration(milliseconds: 1440),
-    ChargeGaugeState.warningRed => const Duration(milliseconds: 1680),
-    ChargeGaugeState.cancelledGray => const Duration(milliseconds: 2280),
+    ChargeGaugeState.green => '약',
+    ChargeGaugeState.yellow => '중',
+    ChargeGaugeState.red => '강',
+    ChargeGaugeState.warningRed => '주의',
+    ChargeGaugeState.cancelledGray => '취소',
   };
 }

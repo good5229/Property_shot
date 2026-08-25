@@ -34,10 +34,10 @@
     }
   ],
   "assets": {
-    "total_build_bytes": 69262317,
-    "app_payload_bytes": 30786704,
+    "total_build_bytes": 69273013,
+    "app_payload_bytes": 30797400,
     "app_payload_scope": "all release files except Flutter canvaskit renderer variants",
-    "main_dart_js_bytes": 4094119,
+    "main_dart_js_bytes": 4104907,
     "largest_raster": "assets/assets/generated/mystery-crate-v1.png",
     "largest_raster_bytes": 1524227
   },
