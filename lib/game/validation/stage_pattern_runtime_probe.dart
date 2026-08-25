@@ -7,6 +7,7 @@ import '../domain/geometry.dart';
 import '../domain/shot_input.dart';
 import '../domain/stage_pattern.dart';
 import '../simulation/shot_resolver.dart';
+import '../simulation/trait_resolver.dart';
 
 /// 정적 패턴 검증으로 증명할 수 없는 런타임 사실을 주입하는 경계다.
 ///
@@ -30,6 +31,8 @@ class PatternRuntimeScenario {
     required this.familyId,
     required this.inputs,
     this.rewardFree = true,
+    this.intendedMechanic = false,
+    this.traitSourceEntityId,
   }) : assert(id != ''),
        assert(familyId != ''),
        assert(inputs.length > 0);
@@ -38,6 +41,12 @@ class PatternRuntimeScenario {
   final String familyId;
   final List<ShotInput> inputs;
   final bool rewardFree;
+
+  /// 우회 성공이 아니라 해당 패턴이 가르치거나 평가하려는 기믹 경로다.
+  final bool intendedMechanic;
+
+  /// 제품 UI와 동일하게 첫 발 전에 이 원본에서 속성을 이전한다.
+  final String? traitSourceEntityId;
 }
 
 /// 패턴 실행 검증에서 관찰된 사실이다.
@@ -55,6 +64,8 @@ class PatternRuntimeEvidence {
     this.observedSolutionFamilies = const {},
     this.rewardFreeRouteObserved = false,
     this.solutionContractRequired = false,
+    this.intendedMechanicContractRequired = false,
+    this.intendedMechanicRouteObserved = false,
     this.safetyStop = false,
     this.infiniteBounce = false,
     this.finiteCoordinates = true,
@@ -86,6 +97,8 @@ class PatternRuntimeEvidence {
   final Set<String> observedSolutionFamilies;
   final bool rewardFreeRouteObserved;
   final bool solutionContractRequired;
+  final bool intendedMechanicContractRequired;
+  final bool intendedMechanicRouteObserved;
   final bool safetyStop;
   final bool infiniteBounce;
 
@@ -130,6 +143,8 @@ class PatternRuntimeEvidence {
     Set<String>? observedSolutionFamilies,
     bool? rewardFreeRouteObserved,
     bool? solutionContractRequired,
+    bool? intendedMechanicContractRequired,
+    bool? intendedMechanicRouteObserved,
     bool? safetyStop,
     bool? infiniteBounce,
     bool? finiteCoordinates,
@@ -159,6 +174,11 @@ class PatternRuntimeEvidence {
           rewardFreeRouteObserved ?? this.rewardFreeRouteObserved,
       solutionContractRequired:
           solutionContractRequired ?? this.solutionContractRequired,
+      intendedMechanicContractRequired:
+          intendedMechanicContractRequired ??
+          this.intendedMechanicContractRequired,
+      intendedMechanicRouteObserved:
+          intendedMechanicRouteObserved ?? this.intendedMechanicRouteObserved,
       safetyStop: safetyStop ?? this.safetyStop,
       infiniteBounce: infiniteBounce ?? this.infiniteBounce,
       finiteCoordinates: finiteCoordinates ?? this.finiteCoordinates,
@@ -206,6 +226,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     this.representativeInputs = defaultRepresentativeInputs,
     this.representativeScenarios = const [],
     this.requireSolutionContract = false,
+    this.requireIntendedMechanicContract = false,
     this.boardSize = const Vec2(360, 560),
     this.maxProbeCount = 24,
     this.maxShots = 48,
@@ -232,6 +253,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
   final List<ShotInput> representativeInputs;
   final List<PatternRuntimeScenario> representativeScenarios;
   final bool requireSolutionContract;
+  final bool requireIntendedMechanicContract;
   final Vec2 boardSize;
   final int maxProbeCount;
   final int maxShots;
@@ -256,6 +278,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
         rotatorApplicable: hasRotatingReflector,
         allRepresentativeInputsNoMovement: true,
         solutionContractRequired: requireSolutionContract,
+        intendedMechanicContractRequired: requireIntendedMechanicContract,
       );
     }
 
@@ -279,6 +302,7 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     var rotatorOrderViolation = false;
     var routeObserved = false;
     var rewardFreeRouteObserved = false;
+    var intendedMechanicRouteObserved = false;
     final autoClearDetected = _initialBallOverlapsHole(initial);
     final definitiveNoRoute = !_hasStaticWallRoute(initial, boardSize);
     final families = <String>{};
@@ -289,8 +313,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       final secondRun = _resolveScenario(initial, scenario);
       shotCount += scenario.inputs.length * 2;
       results
-        ..addAll(firstRun)
-        ..addAll(secondRun);
+        ..addAll(firstRun.map((shot) => shot.result))
+        ..addAll(secondRun.map((shot) => shot.result));
       if (_resultListFingerprint(firstRun) !=
           _resultListFingerprint(secondRun)) {
         nonDeterministic = true;
@@ -298,8 +322,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       final scenarioSucceeded =
           firstRun.isNotEmpty &&
           secondRun.isNotEmpty &&
-          firstRun.last.state.phase == GamePhase.success &&
-          secondRun.last.state.phase == GamePhase.success;
+          firstRun.last.result.state.phase == GamePhase.success &&
+          secondRun.last.result.state.phase == GamePhase.success;
       if (scenarioSucceeded) {
         routeObserved = true;
         if (representativeScenarios.isNotEmpty) {
@@ -307,8 +331,12 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
         }
         rewardFreeRouteObserved =
             rewardFreeRouteObserved || scenario.rewardFree;
+        intendedMechanicRouteObserved =
+            intendedMechanicRouteObserved || scenario.intendedMechanic;
       }
-      for (final result in [...firstRun, ...secondRun]) {
+      for (final shot in [...firstRun, ...secondRun]) {
+        final before = shot.before;
+        final result = shot.result;
         finiteCoordinates = finiteCoordinates && _hasFiniteCoordinates(result);
         negativeTime = negativeTime || _hasNegativeEventOrder(result);
         safetyStop =
@@ -327,14 +355,14 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
               rewardFreeRouteObserved ||
               result.state.phase == GamePhase.success;
         }
-        wallMoved = wallMoved || _wallMoved(initial, result.state);
+        wallMoved = wallMoved || _wallMoved(before, result.state);
         holePassThrough =
-            holePassThrough || _holeWasPassedWithoutCapture(initial, result);
+            holePassThrough || _holeWasPassedWithoutCapture(before, result);
         sliderTunneling =
-            sliderTunneling || _hasSliderTunneling(initial, result);
+            sliderTunneling || _hasSliderTunneling(before, result);
         rotatorOrderViolation =
             rotatorOrderViolation ||
-            _hasReflectorOrderViolation(initial, result);
+            _hasReflectorOrderViolation(before, result);
       }
     }
 
@@ -349,6 +377,8 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
       observedSolutionFamilies: Set.unmodifiable(families),
       rewardFreeRouteObserved: rewardFreeRouteObserved,
       solutionContractRequired: requireSolutionContract,
+      intendedMechanicContractRequired: requireIntendedMechanicContract,
+      intendedMechanicRouteObserved: intendedMechanicRouteObserved,
       safetyStop: safetyStop,
       infiniteBounce: infiniteBounce,
       finiteCoordinates: finiteCoordinates,
@@ -392,23 +422,45 @@ class ShotResolverPatternRuntimeProbe implements PatternRuntimeProbe {
     return selected;
   }
 
-  List<ShotResult> _resolveScenario(
+  List<({GameState before, ShotResult result})> _resolveScenario(
     GameState initial,
     PatternRuntimeScenario scenario,
   ) {
     var state = initial;
-    final results = <ShotResult>[];
+    final traitSourceEntityId = scenario.traitSourceEntityId;
+    if (traitSourceEntityId != null) {
+      const traits = TraitResolver();
+      state = traits.transferSelectedTrait(
+        traits.selectSource(state, traitSourceEntityId),
+      );
+    }
+    final results = <({GameState before, ShotResult result})>[];
     for (final input in scenario.inputs) {
-      final result = shotResolver.resolve(state, input);
-      results.add(result);
+      final effectiveInput =
+          input.equippedTrait != null || state.equippedTrait == null
+          ? input
+          : ShotInput(
+              direction: input.direction,
+              power: input.power,
+              equippedTrait: state.equippedTrait,
+              rawDirection: input.rawDirection,
+              rawPower: input.rawPower,
+              assistKind: input.assistKind,
+              assistTargetId: input.assistTargetId,
+              holeForgivenessRadius: input.holeForgivenessRadius,
+            );
+      final before = state;
+      final result = shotResolver.resolve(state, effectiveInput);
+      results.add((before: before, result: result));
       state = result.state;
     }
     return results;
   }
 }
 
-String _resultListFingerprint(List<ShotResult> results) =>
-    results.map(_fingerprint).join('\u0000');
+String _resultListFingerprint(
+  List<({GameState before, ShotResult result})> results,
+) => results.map((shot) => _fingerprint(shot.result)).join('\u0000');
 
 bool _hasSliderTunneling(GameState initial, ShotResult result) {
   final sliders = initial.entities.where(

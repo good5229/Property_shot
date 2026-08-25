@@ -24,12 +24,151 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
   }
 
   for (final fixture in stageHeavyRepresentatives.where(
-    (fixture) => fixture.strategyId == 'none',
+    (fixture) => fixture.strategyId == 'anvil',
   )) {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
         id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
+        intendedMechanic: true,
+        traitSourceEntityId: 'anvil',
+      ),
+    );
+  }
+  for (final fixture in stageBouncyRepresentatives.where(
+    (fixture) => fixture.strategyId == 'jelly',
+  )) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
+        intendedMechanic: true,
+        traitSourceEntityId: 'jelly',
+      ),
+    );
+  }
+  for (final fixture in stageChainGateRepresentatives.where(
+    (fixture) => fixture.strategyId == 'steel',
+  )) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
+        intendedMechanic: true,
+        traitSourceEntityId: 'steel',
+      ),
+    );
+  }
+  for (final fixture in stageBalloonRepresentatives.where(
+    (fixture) => fixture.strategyId == 'sharp',
+  )) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
+        intendedMechanic: true,
+        traitSourceEntityId: 'spike_source',
+      ),
+    );
+  }
+  for (final fixture in stageDrainedRepresentativeSolutions) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
+        intendedMechanic: true,
+        traitSourceEntityId: fixture.strategyId,
+      ),
+    );
+  }
+  for (final fixture in stageSpeedRepresentativeSolutions) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
+        intendedMechanic: true,
+      ),
+    );
+  }
+  for (final fixture in stagePersistentRepresentativeSolutions) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [fixture.firstInput, fixture.secondInput],
+        intendedMechanic: true,
+      ),
+    );
+  }
+  for (final fixture in stageChainScoreSolutions) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [fixture.firstInput, fixture.secondInput],
+        intendedMechanic: true,
+      ),
+    );
+  }
+  const reflectorFamilies = <String, String>{
+    'stage_rotating_reflector_01': 'single_reflector_prepare',
+    'stage_rotating_reflector_02': 'two_reflector_order',
+    'stage_rotating_reflector_03': 'past_ball_activation',
+    'stage_rotating_reflector_04': 'slider_reflector_chain',
+  };
+  for (final fixture in stage9RotatingReflectorSolutions) {
+    final familyId = reflectorFamilies[fixture.patternId]!;
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_$familyId',
+        familyId: familyId,
+        inputs: [fixture.firstInput, fixture.secondInput],
+        intendedMechanic: true,
+      ),
+    );
+  }
+  for (final fixture in stage10PropertyShotSolutions) {
+    final traitSourceEntityId = switch (fixture.contract) {
+      'A' => 'a_stone',
+      'C' => 'c_sticky',
+      _ => null,
+    };
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}',
+        familyId: fixture.familyId,
+        inputs: [fixture.firstInput, fixture.secondInput],
+        intendedMechanic: true,
+        traitSourceEntityId: traitSourceEntityId,
+      ),
+    );
+  }
+
+  // 대체 해법도 계속 재생해 선언된 모든 solution family가 살아 있는지
+  // 확인한다. 다만 아래 시나리오는 의도 기믹 증거로 승격하지 않는다.
+  for (final fixture in stageHeavyRepresentatives.where(
+    (fixture) => fixture.strategyId == 'none',
+  )) {
+    add(
+      fixture.patternId,
+      PatternRuntimeScenario(
+        id: '${fixture.patternId}_${fixture.familyId}_alternative',
         familyId: fixture.familyId,
         inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
       ),
@@ -41,7 +180,7 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_${fixture.familyId}',
+        id: '${fixture.patternId}_${fixture.familyId}_alternative',
         familyId: fixture.familyId,
         inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
       ),
@@ -53,7 +192,7 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_${fixture.familyId}',
+        id: '${fixture.patternId}_${fixture.familyId}_alternative',
         familyId: fixture.familyId,
         inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
       ),
@@ -65,21 +204,22 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_${fixture.familyId}',
+        id: '${fixture.patternId}_${fixture.familyId}_alternative',
         familyId: fixture.familyId,
         inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
       ),
     );
   }
-  for (final fixture in stageDrainedAlternativeSolutions.where(
-    (fixture) => fixture.strategyId == 'none',
-  )) {
+  for (final fixture in stageDrainedAlternativeSolutions) {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_${fixture.familyId}',
+        id: '${fixture.patternId}_${fixture.familyId}_alternative',
         familyId: fixture.familyId,
         inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
+        traitSourceEntityId: fixture.strategyId == 'none'
+            ? null
+            : fixture.strategyId,
       ),
     );
   }
@@ -87,7 +227,7 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_${fixture.familyId}',
+        id: '${fixture.patternId}_${fixture.familyId}_alternative',
         familyId: fixture.familyId,
         inputs: [ShotInput(direction: fixture.direction, power: fixture.power)],
       ),
@@ -97,7 +237,7 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_${fixture.familyId}',
+        id: '${fixture.patternId}_${fixture.familyId}_alternative',
         familyId: fixture.familyId,
         inputs: [fixture.firstInput],
       ),
@@ -110,7 +250,7 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_$familyId',
+        id: '${fixture.patternId}_${familyId}_alternative',
         familyId: familyId,
         inputs: [fixture.directInput],
       ),
@@ -120,7 +260,7 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
     add(
       fixture.patternId,
       PatternRuntimeScenario(
-        id: '${fixture.patternId}_direct_bypass',
+        id: '${fixture.patternId}_direct_bypass_alternative',
         familyId: 'direct_bypass',
         inputs: [fixture.directInput],
       ),
@@ -132,33 +272,25 @@ Map<String, List<PatternRuntimeScenario>> buildRuntimeValidationManifest() {
       add(
         fixture.patternId,
         PatternRuntimeScenario(
-          id: '${fixture.patternId}_$directFamilyId',
+          id: '${fixture.patternId}_${directFamilyId}_alternative',
           familyId: directFamilyId,
           inputs: [fixture.directInput],
         ),
       );
       continue;
     }
-
-    // A/C 계약은 기믹을 직접 완성하는 정규 해법과, 같은 첫 발로 문을 연 뒤
-    // 뱅크 샷으로 끝내는 대체 해법을 모두 갖는다. 이전 manifest는 후자만
-    // 실행하면서 정규 해법의 family 증거가 있는 것처럼 보이게 했다.
-    add(
-      fixture.patternId,
-      PatternRuntimeScenario(
-        id: '${fixture.patternId}_${fixture.familyId}',
-        familyId: fixture.familyId,
-        inputs: [fixture.firstInput, fixture.secondInput],
-      ),
-    );
     final openedGateBankInput = fixture.openedGateBankInput;
     if (openedGateBankInput != null) {
+      final traitSourceEntityId = fixture.contract == 'A'
+          ? 'a_stone'
+          : 'c_sticky';
       add(
         fixture.patternId,
         PatternRuntimeScenario(
-          id: '${fixture.patternId}_opened_gate_bank',
+          id: '${fixture.patternId}_opened_gate_bank_alternative',
           familyId: 'opened_gate_bank',
           inputs: [fixture.firstInput, openedGateBankInput],
+          traitSourceEntityId: traitSourceEntityId,
         ),
       );
     }

@@ -120,6 +120,7 @@ List<ValidationIssue> validateRuntimeCatalog(
         representativeInputs: const [],
         representativeScenarios: scenarios,
         requireSolutionContract: true,
+        requireIntendedMechanicContract: true,
         maxProbeCount: math.max(1, scenarios.length),
         maxShots: math.max(2, requiredShots),
       );

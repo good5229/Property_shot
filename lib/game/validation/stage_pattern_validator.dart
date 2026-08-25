@@ -88,6 +88,7 @@ enum ValidationIssueCode {
   runtimeProbeBudget,
   runtimeMissingSolutionEvidence,
   runtimeRewardFreeRouteMissing,
+  runtimeIntendedMechanicRouteMissing,
   hintCatalogVersion,
   hintMissing,
   hintDuplicate,
@@ -241,6 +242,8 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'missing_solution_family_evidence';
       case ValidationIssueCode.runtimeRewardFreeRouteMissing:
         return 'missing_reward_free_route_evidence';
+      case ValidationIssueCode.runtimeIntendedMechanicRouteMissing:
+        return 'missing_intended_mechanic_route_evidence';
       case ValidationIssueCode.hintCatalogVersion:
         return 'invalid_hint_catalog_version';
       case ValidationIssueCode.hintMissing:
@@ -1538,6 +1541,13 @@ class StagePatternValidator {
         );
       }
     }
+    if (evidence.intendedMechanicContractRequired &&
+        !evidence.intendedMechanicRouteObserved) {
+      add(
+        ValidationIssueCode.runtimeIntendedMechanicRouteMissing,
+        '우회 해법이 아닌 의도된 기믹 경로를 실제 성공으로 재현한 증거가 없습니다.',
+      );
+    }
   }
 
   /// 패턴 물리 카탈로그와 분리된 힌트/열쇠 카탈로그를 검사한다.
@@ -2020,6 +2030,8 @@ String _defaultMessage(ValidationIssueCode code) {
       return '선언된 풀이 계열의 실행 증거가 없습니다.';
     case ValidationIssueCode.runtimeRewardFreeRouteMissing:
       return '런 보상 없는 대표 성공 증거가 없습니다.';
+    case ValidationIssueCode.runtimeIntendedMechanicRouteMissing:
+      return '의도된 기믹을 수행한 대표 성공 증거가 없습니다.';
     case ValidationIssueCode.hintCatalogVersion:
       return '힌트 카탈로그 버전이 올바르지 않습니다.';
     case ValidationIssueCode.hintMissing:

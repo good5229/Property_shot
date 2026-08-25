@@ -482,6 +482,7 @@ void main() {
       containsAll({
         ValidationIssueCode.runtimeMissingSolutionEvidence,
         ValidationIssueCode.runtimeRewardFreeRouteMissing,
+        ValidationIssueCode.runtimeIntendedMechanicRouteMissing,
       }),
     );
 
@@ -494,6 +495,8 @@ void main() {
           familyId: original.familyId,
           inputs: original.inputs,
           rewardFree: false,
+          intendedMechanic: original.intendedMechanic,
+          traitSourceEntityId: original.traitSourceEntityId,
         ),
       ],
     };
@@ -506,6 +509,34 @@ void main() {
         (issue) =>
             issue.patternId == firstPattern.patternId &&
             issue.code == ValidationIssueCode.runtimeRewardFreeRouteMissing,
+      ),
+      isTrue,
+    );
+
+    final bypassOnly = {
+      ...manifest,
+      firstPattern.patternId: [
+        for (final scenario in manifest[firstPattern.patternId]!)
+          PatternRuntimeScenario(
+            id: scenario.id,
+            familyId: scenario.familyId,
+            inputs: scenario.inputs,
+            rewardFree: scenario.rewardFree,
+            intendedMechanic: false,
+            traitSourceEntityId: scenario.traitSourceEntityId,
+          ),
+      ],
+    };
+    final bypassIssues = stage_catalog_generator.validateRuntimeCatalog(
+      sourceCatalog,
+      manifest: bypassOnly,
+    );
+    expect(
+      bypassIssues.any(
+        (issue) =>
+            issue.patternId == firstPattern.patternId &&
+            issue.code ==
+                ValidationIssueCode.runtimeIntendedMechanicRouteMissing,
       ),
       isTrue,
     );
