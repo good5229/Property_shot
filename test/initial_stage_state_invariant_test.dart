@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
+import 'package:property_shot/game/validation/stage_pattern_validator.dart';
 
 void main() {
   test('40개 모든 패턴은 발사 전 공이 spawn에 있고 홀 밖의 planning 0발 상태다', () {
@@ -62,5 +63,47 @@ void main() {
     }
 
     expect(checkedPatterns, 40);
+  });
+
+  test('40개 모든 패턴은 시작 공 주변 내부 벽에 최소 조준 공간을 둔다', () {
+    var checkedWalls = 0;
+
+    for (
+      var stageIndex = 0;
+      stageIndex < generatedStageCatalog.stages.length;
+      stageIndex++
+    ) {
+      final stage = generatedStageCatalog.stages[stageIndex];
+      for (final pattern in stage.patterns) {
+        final state = pattern
+            .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+            .createState(stageIndex, productRules: true);
+        final ball = state.activeBall;
+        final blockers = state.entities.where(
+          (entity) =>
+              entity.active &&
+              ((entity.type == EntityType.wall &&
+                      !stageBoundaryWallIds.contains(entity.id)) ||
+                  (entity.type == EntityType.gate && !entity.open)),
+        );
+
+        for (final wall in blockers) {
+          final clearance =
+              ball.position.distanceTo(
+                wall.hitBounds.nearestPoint(ball.position),
+              ) -
+              ball.hitRadius;
+          expect(
+            clearance,
+            greaterThanOrEqualTo(defaultMinSpawnWallClearance - 0.001),
+            reason:
+                '${pattern.patternId}/${wall.id}: 시작 공과 벽 사이 빈 공간 $clearance',
+          );
+          checkedWalls++;
+        }
+      }
+    }
+
+    expect(checkedWalls, greaterThan(0));
   });
 }

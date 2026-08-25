@@ -3845,8 +3845,8 @@ const generatedStageCatalogJson = r'''
               "id": "drained_01_direct_guard",
               "type": "wall",
               "position": {
-                "x": 71.5,
-                "y": 438.6
+                "x": 82.0,
+                "y": 425.5
               },
               "size": {
                 "x": 12.0,
@@ -4654,7 +4654,7 @@ const generatedStageCatalogJson = r'''
               "id": "speed_01_direct_guard",
               "type": "wall",
               "position": {
-                "x": 93.0,
+                "x": 97.0,
                 "y": 437.0
               },
               "size": {
@@ -6452,7 +6452,7 @@ const generatedStageCatalogJson = r'''
               "id": "chain_score_01_direct_guard",
               "type": "wall",
               "position": {
-                "x": 96.0,
+                "x": 103.0,
                 "y": 462.0
               },
               "size": {

@@ -493,6 +493,42 @@ void main() {
       expect(report.hasCode(ValidationIssueCode.ballSpawnInsideSolid), isTrue);
     });
 
+    test('시작 공과 벽 사이에 읽기 쉬운 최소 조준 공간을 요구한다', () {
+      StageDefinition fixture(double wallX) => _stage(
+        patterns: [
+          _pattern(
+            ballSpawn: const Vec2(100, 300),
+            objects: [
+              _hole(),
+              _object(
+                'near_wall',
+                EntityType.wall,
+                Vec2(wallX, 300),
+                size: const Vec2(20, 80),
+                hitboxScale: 1,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final tooClose = StagePatternValidator().validateLegacyStage(
+        fixture(144.4),
+      );
+      final enoughRoom = StagePatternValidator().validateLegacyStage(
+        fixture(144.7),
+      );
+
+      expect(
+        tooClose.hasCode(ValidationIssueCode.ballSpawnTooCloseToWall),
+        isTrue,
+      );
+      expect(
+        enoughRoom.hasCode(ValidationIssueCode.ballSpawnTooCloseToWall),
+        isFalse,
+      );
+    });
+
     test('기존 공의 시작 홀 포획과 정상 위치를 구분한다', () {
       final captured = _stage(
         patterns: [

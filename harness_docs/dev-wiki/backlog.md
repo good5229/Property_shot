@@ -14,6 +14,12 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [x] 시작 공 주변 벽 여유 공간 표준화
+  - branch: codex/spawn-wall-clearance
+  - issue: 없음
+  - summary: 전체 생산 패턴과 60초 핵심 체험에서 시작 공 주변 벽의 최소 시각·물리 여유를 보장한다.
+  - notes: StagePatternValidator에 내부 벽·닫힌 문 최소 여유 24(공 한 지름)와 `ball_spawn_too_close_to_wall` 계약을 추가했다. 생산 40패턴 최솟값 24.12, 무충돌 직행 0개, 5단계 기믹 우위 1.61, 전체 테스트 1,468개 통과를 확인했다. 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다.
+
 - [x] OpenAI Game Builders 심사 준비 릴리스
   - branch: codex/judge-ready-release
   - issue: 없음

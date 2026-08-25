@@ -14,6 +14,12 @@ import 'stage_pattern_runtime_probe.dart';
 
 const _activeBallHitRadius = 12 * 0.88;
 
+/// 시작 공과 벽 사이에 공의 시각 지름과 같은 빈 조준 공간을 둔다.
+const defaultMinSpawnWallClearance = 24.0;
+
+/// 플레이 영역을 둘러싸는 프레임 벽은 내부 장애물과 구분한다.
+const stageBoundaryWallIds = {'wall_top', 'wall_left', 'wall_right'};
+
 /// 기본 발사 속력(약 24)과 연쇄 이동 단위(약 4)를 고려해 반복 안전성을
 /// 보수적으로 확보하는 파워 슬라이더 기준 속력 상한이다.
 const maxPowerSliderReferenceSpeed = 48.0;
@@ -63,6 +69,7 @@ enum ValidationIssueCode {
   ballSpawnOverlapsHole,
   existingBallOverlapsHole,
   ballSpawnInsideSolid,
+  ballSpawnTooCloseToWall,
   initialObjectOverlap,
   visualObjectOverlap,
   missingLinkedTarget,
@@ -192,6 +199,8 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'existing_ball_overlaps_hole';
       case ValidationIssueCode.ballSpawnInsideSolid:
         return 'ball_spawn_inside_solid';
+      case ValidationIssueCode.ballSpawnTooCloseToWall:
+        return 'ball_spawn_too_close_to_wall';
       case ValidationIssueCode.initialObjectOverlap:
         return 'initial_object_overlap';
       case ValidationIssueCode.visualObjectOverlap:
@@ -354,6 +363,7 @@ class StagePatternValidator {
     this.maxObjectCount = 64,
     this.minSolutionFamilyCount = 2,
     this.maxRestitution = 1,
+    this.minSpawnWallClearance = defaultMinSpawnWallClearance,
     this.runtimeRulePolicy = const RuntimeValidationRulePolicy(),
   }) : assert(boardSize.x.isFinite && boardSize.x > 0),
        assert(boardSize.y.isFinite && boardSize.y > 0),
@@ -361,7 +371,8 @@ class StagePatternValidator {
        assert(maxPatternCount >= minPatternCount),
        assert(maxObjectCount >= 0),
        assert(minSolutionFamilyCount >= 0),
-       assert(maxRestitution.isFinite && maxRestitution >= 0);
+       assert(maxRestitution.isFinite && maxRestitution >= 0),
+       assert(minSpawnWallClearance.isFinite && minSpawnWallClearance >= 0);
 
   final Vec2 boardSize;
   final int minPatternCount;
@@ -369,6 +380,7 @@ class StagePatternValidator {
   final int maxObjectCount;
   final int minSolutionFamilyCount;
   final double maxRestitution;
+  final double minSpawnWallClearance;
   final RuntimeValidationRulePolicy runtimeRulePolicy;
 
   /// production 정책까지 포함해 하나의 스테이지를 검사한다.
@@ -1008,6 +1020,26 @@ class StagePatternValidator {
             stage.stageId,
             patternId: pattern.patternId,
             objectIds: ids,
+          ),
+        );
+      }
+      final blocksLikeWall =
+          (object.type == EntityType.wall &&
+              !stageBoundaryWallIds.contains(object.id)) ||
+          (object.type == EntityType.gate && !object.open);
+      if (blocksLikeWall &&
+          _isSolidForValidation(object) &&
+          !_overlaps(spawn, shape) &&
+          _clearanceBetween(spawn, shape) < minSpawnWallClearance) {
+        final ids = object.id.isEmpty ? const <String>[] : [object.id];
+        issues.add(
+          _issue(
+            ValidationIssueCode.ballSpawnTooCloseToWall,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: ids,
+            message:
+                '공 시작점과 벽 사이에 최소 ${minSpawnWallClearance.toStringAsFixed(0)}의 빈 공간이 필요합니다.',
           ),
         );
       }
@@ -1980,6 +2012,8 @@ String _defaultMessage(ValidationIssueCode code) {
       return '기존 공이 시작부터 홀 포획 범위에 있습니다.';
     case ValidationIssueCode.ballSpawnInsideSolid:
       return '공 시작 히트박스가 고체 기물 안에 있습니다.';
+    case ValidationIssueCode.ballSpawnTooCloseToWall:
+      return '공 시작점과 벽 사이의 조준 공간이 너무 좁습니다.';
     case ValidationIssueCode.initialObjectOverlap:
       return '초기 기물 히트박스가 겹칩니다.';
     case ValidationIssueCode.visualObjectOverlap:
@@ -2308,6 +2342,26 @@ bool _overlaps(_Shape first, _Shape second, {bool inclusive = false}) {
   return inclusive
       ? distance <= circle.radius + epsilon
       : distance < circle.radius - epsilon;
+}
+
+double _clearanceBetween(_Shape first, _Shape second) {
+  if (first.isCircle && second.isCircle) {
+    return first.center.distanceTo(second.center) -
+        first.radius -
+        second.radius;
+  }
+  final circle = first.isCircle ? first : second;
+  final rectangle = first.isCircle ? second : first;
+  final local = circle.center - rectangle.center;
+  final localX = local.dot(rectangle.axisX);
+  final localY = local.dot(rectangle.axisY);
+  final nearestX = localX.clamp(-rectangle.halfWidth, rectangle.halfWidth);
+  final nearestY = localY.clamp(-rectangle.halfHeight, rectangle.halfHeight);
+  final nearest =
+      rectangle.center +
+      rectangle.axisX * nearestX +
+      rectangle.axisY * nearestY;
+  return circle.center.distanceTo(nearest) - circle.radius;
 }
 
 bool _isAllowedWallCorner(

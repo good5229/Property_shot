@@ -8,6 +8,7 @@ import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/simulation/trait_resolver.dart';
+import 'package:property_shot/game/validation/stage_pattern_validator.dart';
 import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/core_experience_screen.dart';
 import 'package:property_shot/ui/game_screen.dart';
@@ -49,6 +50,25 @@ void main() {
         greaterThan((state.activeBall.size.x + hole.size.x) / 2),
         reason: '${scene.patternId}은 입력 전 자동 클리어 상태여서는 안 된다.',
       );
+      final blockers = state.entities.where(
+        (entity) =>
+            entity.active &&
+            ((entity.type == EntityType.wall &&
+                    !stageBoundaryWallIds.contains(entity.id)) ||
+                (entity.type == EntityType.gate && !entity.open)),
+      );
+      for (final wall in blockers) {
+        final clearance =
+            state.activeBall.position.distanceTo(
+              wall.hitBounds.nearestPoint(state.activeBall.position),
+            ) -
+            state.activeBall.hitRadius;
+        expect(
+          clearance,
+          greaterThanOrEqualTo(defaultMinSpawnWallClearance - 0.001),
+          reason: '${scene.patternId}/${wall.id}: 시작 공 주변 벽 여유 $clearance',
+        );
+      }
     }
   });
 

@@ -18,12 +18,12 @@
           }
         ],
         "expectedFingerprints": [
-          "80d52caae0071a24"
+          "22fe92025da55bf5"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1137,
-      "expectedReplaySignature": "0c42d4fb6087b136",
+      "expectedReplaySignature": "d718d51ed31e1a19",
       "expectedChallengeAchieved": false,
       "expectedBreakdown": {
         "totalPoints": 1137,
@@ -87,13 +87,13 @@
           }
         ],
         "expectedFingerprints": [
-          "29b0c820fc84634d",
-          "f8a5e3111be282dc"
+          "37f0c1da9f4e2660",
+          "42ea2605028480dd"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1970,
-      "expectedReplaySignature": "2e9586215b99cc30",
+      "expectedReplaySignature": "f599bc7a9162d4ab",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1970,
