@@ -8,6 +8,9 @@ import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/simulation/trait_resolver.dart';
 
+import 'fixtures/stage_bouncy_patterns.dart';
+import 'fixtures/stage_heavy_patterns.dart';
+
 void main() {
   const shots = ShotResolver();
   const traits = TraitResolver();
@@ -117,14 +120,20 @@ void main() {
   });
 
   test('무거운 공은 상자를 밀 수 있다', () {
+    final fixture = stageHeavyRepresentatives.firstWhere(
+      (candidate) =>
+          candidate.patternId == 'stage_heavy_01' &&
+          candidate.strategyId == 'anvil' &&
+          candidate.familyId == 'crate_push',
+    );
     final state = traits.transferSelectedTrait(
       traits.selectSource(levels[0].createState(0), 'anvil'),
     );
     final result = shots.resolve(
-      state.copyWith(aimDirection: const Vec2(1, -1.3), aimPower: 0.8),
-      const ShotInput(
-        direction: Vec2(1, -1.3),
-        power: 0.8,
+      state.copyWith(aimDirection: fixture.direction, aimPower: fixture.power),
+      ShotInput(
+        direction: fixture.direction,
+        power: fixture.power,
         equippedTrait: TraitType.heavy,
       ),
     );
@@ -135,14 +144,20 @@ void main() {
   });
 
   test('무거움 튜토리얼은 상자가 충분히 밀리도록 구성되어 있다', () {
+    final fixture = stageHeavyRepresentatives.firstWhere(
+      (candidate) =>
+          candidate.patternId == 'stage_heavy_01' &&
+          candidate.strategyId == 'anvil' &&
+          candidate.familyId == 'crate_push',
+    );
     final state = traits.transferSelectedTrait(
       traits.selectSource(levels[0].createState(0), 'anvil'),
     );
     final result = shots.resolve(
       state,
-      const ShotInput(
-        direction: Vec2(1, -1.3),
-        power: 1,
+      ShotInput(
+        direction: fixture.direction,
+        power: fixture.power,
         equippedTrait: TraitType.heavy,
       ),
     );
@@ -233,16 +248,22 @@ void main() {
   });
 
   test('1라운드는 같은 대표 조준에서 무거움 없이는 홀에 도달하지 못한다', () {
-    const input = ShotInput(direction: Vec2(1, -1.3), power: 1);
+    final fixture = stageHeavyRepresentatives.firstWhere(
+      (candidate) =>
+          candidate.patternId == 'stage_heavy_01' &&
+          candidate.strategyId == 'anvil' &&
+          candidate.familyId == 'crate_push',
+    );
+    final input = ShotInput(direction: fixture.direction, power: fixture.power);
     final normal = shots.resolve(levels[0].createState(0), input);
     final heavyState = traits.transferSelectedTrait(
       traits.selectSource(levels[0].createState(0), 'anvil'),
     );
     final heavy = shots.resolve(
       heavyState,
-      const ShotInput(
-        direction: Vec2(1, -1.3),
-        power: 1,
+      ShotInput(
+        direction: fixture.direction,
+        power: fixture.power,
         equippedTrait: TraitType.heavy,
       ),
     );
@@ -258,17 +279,25 @@ void main() {
   });
 
   test('2라운드는 탄성 속성으로 벽 반사 경로를 제공한다', () {
-    // 현재 baseline 패턴의 검증된 48° 다중 반사 대표 입력.
-    const direction = Vec2(0.669130606, 0.743144825);
+    final fixture = stageBouncyRepresentatives.firstWhere(
+      (candidate) =>
+          candidate.patternId == 'stage_bouncy_01' &&
+          candidate.strategyId == 'jelly' &&
+          candidate.familyId == 'wall_reflection',
+    );
+    final direction = fixture.direction;
     final state = traits.transferSelectedTrait(
       traits.selectSource(levels[1].createState(1), 'jelly'),
     );
-    final aimed = state.copyWith(aimDirection: direction, aimPower: 0.9);
+    final aimed = state.copyWith(
+      aimDirection: direction,
+      aimPower: fixture.power,
+    );
     final result = shots.resolve(
       aimed,
-      const ShotInput(
+      ShotInput(
         direction: direction,
-        power: 0.9,
+        power: fixture.power,
         equippedTrait: TraitType.bouncy,
       ),
     );
@@ -574,14 +603,20 @@ void main() {
   });
 
   test('연쇄 이동 애니메이션은 충돌 지점 이후에 시작된다', () {
+    final fixture = stageHeavyRepresentatives.firstWhere(
+      (candidate) =>
+          candidate.patternId == 'stage_heavy_01' &&
+          candidate.strategyId == 'anvil' &&
+          candidate.familyId == 'crate_push',
+    );
     final state = traits.transferSelectedTrait(
       traits.selectSource(levels[0].createState(0), 'anvil'),
     );
     final result = shots.resolve(
       state,
-      const ShotInput(
-        direction: Vec2(1, -1.3),
-        power: 1,
+      ShotInput(
+        direction: fixture.direction,
+        power: fixture.power,
         equippedTrait: TraitType.heavy,
       ),
     );

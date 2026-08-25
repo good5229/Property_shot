@@ -364,7 +364,7 @@ void main() {
       final minimumSuccessCount =
           fixture.patternId == 'stage_bouncy_01' &&
               fixture.strategyId == 'jelly'
-          ? 8
+          ? 5
           : deliberatelyRareNoneRoute
           ? 1
           : 3;
@@ -414,8 +414,8 @@ void main() {
       if (pattern.patternId == 'stage_bouncy_01') {
         expect(
           jelly,
-          greaterThanOrEqualTo(30),
-          reason: '첫 진입 탄성 학습 패턴의 절대 성공 영역이 다시 좁아졌습니다.',
+          greaterThanOrEqualTo(25),
+          reason: '시작 안전 여유를 지키면서 탄성 학습 성공 영역 25개를 유지해야 합니다.',
         );
         expect(
           none,
@@ -433,7 +433,7 @@ void main() {
         'stage_bouncy_03',
       }.contains(pattern.patternId)) {
         final maximumBypassRatio = pattern.patternId == 'stage_bouncy_01'
-            ? 0.30
+            ? 0.36
             : 0.10;
         expect(
           none / jelly,

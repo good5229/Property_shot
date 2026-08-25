@@ -65,8 +65,8 @@ void main() {
     expect(checkedPatterns, 40);
   });
 
-  test('40개 모든 패턴은 시작 공 주변 내부 벽에 최소 조준 공간을 둔다', () {
-    var checkedWalls = 0;
+  test('40개 모든 패턴은 시작 공 주변 모든 활성 기물과 공 지름 3배를 비운다', () {
+    var checkedObjects = 0;
 
     for (
       var stageIndex = 0;
@@ -80,30 +80,26 @@ void main() {
             .createState(stageIndex, productRules: true);
         final ball = state.activeBall;
         final blockers = state.entities.where(
-          (entity) =>
-              entity.active &&
-              ((entity.type == EntityType.wall &&
-                      !stageBoundaryWallIds.contains(entity.id)) ||
-                  (entity.type == EntityType.gate && !entity.open)),
+          (entity) => entity.active && entity.id != state.activeBall.id,
         );
 
-        for (final wall in blockers) {
+        for (final object in blockers) {
           final clearance =
               ball.position.distanceTo(
-                wall.hitBounds.nearestPoint(ball.position),
+                object.hitBounds.nearestPoint(ball.position),
               ) -
               ball.hitRadius;
           expect(
             clearance,
-            greaterThanOrEqualTo(defaultMinSpawnWallClearance - 0.001),
+            greaterThanOrEqualTo(defaultMinSpawnObjectClearance - 0.001),
             reason:
-                '${pattern.patternId}/${wall.id}: 시작 공과 벽 사이 빈 공간 $clearance',
+                '${pattern.patternId}/${object.id}: 시작 공과 기물 사이 빈 공간 $clearance',
           );
-          checkedWalls++;
+          checkedObjects++;
         }
       }
     }
 
-    expect(checkedWalls, greaterThan(0));
+    expect(checkedObjects, greaterThan(0));
   });
 }

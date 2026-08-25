@@ -529,6 +529,35 @@ void main() {
       );
     });
 
+    test('production 패턴은 시작 공 주변 72 이내 일반 기물을 거부한다', () {
+      final pattern = _pattern(
+        ballSpawn: const Vec2(100, 300),
+        objects: [
+          _hole(),
+          _object(
+            'near_crate',
+            EntityType.crate,
+            const Vec2(180, 300),
+            size: const Vec2(20, 20),
+          ),
+        ],
+      );
+      final stage = _stage(patterns: [pattern]);
+      final validator = StagePatternValidator();
+
+      final production = validator.validatePattern(stage, pattern);
+      final legacy = validator.validateLegacyStage(stage);
+
+      expect(
+        production.hasCode(ValidationIssueCode.ballSpawnTooCloseToObject),
+        isTrue,
+      );
+      expect(
+        legacy.hasCode(ValidationIssueCode.ballSpawnTooCloseToObject),
+        isFalse,
+      );
+    });
+
     test('기존 공의 시작 홀 포획과 정상 위치를 구분한다', () {
       final captured = _stage(
         patterns: [

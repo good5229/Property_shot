@@ -82,9 +82,7 @@ void main() {
       await tester.ensureVisible(
         find.byKey(const Key('creative_chain_details_tile')),
       );
-      await tester.tap(
-        find.byKey(const Key('creative_chain_details_tile')),
-      );
+      await tester.tap(find.byKey(const Key('creative_chain_details_tile')));
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('홀 진입'), findsOneWidget);
     });
@@ -128,7 +126,10 @@ void main() {
     expect(analysis.totalScore, greaterThanOrEqualTo(1800));
     expect(find.text('연쇄 점수 ${analysis.totalScore}점'), findsOneWidget);
     expect(find.text('홀 진입'), findsOneWidget);
-    expect(find.text('벽 반사 4회'), findsOneWidget);
+    expect(
+      find.text('벽 반사 ${analysis.breakdown.wallReflectionCount}회'),
+      findsOneWidget,
+    );
     expect(find.text('과거 공 1개 활용'), findsOneWidget);
     expect(find.text('준비 샷 1회 기여'), findsOneWidget);
     expect(find.text('+1000점'), findsOneWidget);
@@ -223,9 +224,7 @@ void main() {
           matching: find.byType(Scrollable),
         );
         expect(lastEvidence.hitTestable(), findsNothing);
-        await tester.tap(
-          find.byKey(const Key('creative_chain_details_tile')),
-        );
+        await tester.tap(find.byKey(const Key('creative_chain_details_tile')));
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           lastEvidence,

@@ -17,6 +17,9 @@ const _activeBallHitRadius = 12 * 0.88;
 /// 시작 공과 벽 사이에 공의 시각 지름과 같은 빈 조준 공간을 둔다.
 const defaultMinSpawnWallClearance = 24.0;
 
+/// 첫 조준을 방해하지 않도록 모든 활성 기물과 공 지름 3배의 빈 공간을 둔다.
+const defaultMinSpawnObjectClearance = 72.0;
+
 /// 플레이 영역을 둘러싸는 프레임 벽은 내부 장애물과 구분한다.
 const stageBoundaryWallIds = {'wall_top', 'wall_left', 'wall_right'};
 
@@ -70,6 +73,7 @@ enum ValidationIssueCode {
   existingBallOverlapsHole,
   ballSpawnInsideSolid,
   ballSpawnTooCloseToWall,
+  ballSpawnTooCloseToObject,
   initialObjectOverlap,
   visualObjectOverlap,
   missingLinkedTarget,
@@ -201,6 +205,8 @@ extension ValidationIssueCodeSchema on ValidationIssueCode {
         return 'ball_spawn_inside_solid';
       case ValidationIssueCode.ballSpawnTooCloseToWall:
         return 'ball_spawn_too_close_to_wall';
+      case ValidationIssueCode.ballSpawnTooCloseToObject:
+        return 'ball_spawn_too_close_to_object';
       case ValidationIssueCode.initialObjectOverlap:
         return 'initial_object_overlap';
       case ValidationIssueCode.visualObjectOverlap:
@@ -364,6 +370,7 @@ class StagePatternValidator {
     this.minSolutionFamilyCount = 2,
     this.maxRestitution = 1,
     this.minSpawnWallClearance = defaultMinSpawnWallClearance,
+    this.minSpawnObjectClearance = defaultMinSpawnObjectClearance,
     this.runtimeRulePolicy = const RuntimeValidationRulePolicy(),
   }) : assert(boardSize.x.isFinite && boardSize.x > 0),
        assert(boardSize.y.isFinite && boardSize.y > 0),
@@ -372,7 +379,8 @@ class StagePatternValidator {
        assert(maxObjectCount >= 0),
        assert(minSolutionFamilyCount >= 0),
        assert(maxRestitution.isFinite && maxRestitution >= 0),
-       assert(minSpawnWallClearance.isFinite && minSpawnWallClearance >= 0);
+       assert(minSpawnWallClearance.isFinite && minSpawnWallClearance >= 0),
+       assert(minSpawnObjectClearance.isFinite && minSpawnObjectClearance >= 0);
 
   final Vec2 boardSize;
   final int minPatternCount;
@@ -381,6 +389,7 @@ class StagePatternValidator {
   final int minSolutionFamilyCount;
   final double maxRestitution;
   final double minSpawnWallClearance;
+  final double minSpawnObjectClearance;
   final RuntimeValidationRulePolicy runtimeRulePolicy;
 
   /// production 정책까지 포함해 하나의 스테이지를 검사한다.
@@ -459,6 +468,7 @@ class StagePatternValidator {
       pattern,
       issues,
       enforceSolutionFamilyPolicy: enforceProductionPolicy,
+      enforceSpawnObjectClearance: enforceProductionPolicy,
     );
     return ValidationReport(_sortPatternIssues(issues));
   }
@@ -498,6 +508,7 @@ class StagePatternValidator {
         pattern,
         patternIssues,
         enforceSolutionFamilyPolicy: enforceProductionPolicy,
+        enforceSpawnObjectClearance: enforceProductionPolicy,
       );
       all.addAll(_sortPatternIssues(patternIssues));
     }
@@ -537,6 +548,7 @@ class StagePatternValidator {
     StagePattern pattern,
     List<ValidationIssue> issues, {
     required bool enforceSolutionFamilyPolicy,
+    required bool enforceSpawnObjectClearance,
   }) {
     final stageId = stage.stageId;
     final patternId = pattern.patternId;
@@ -652,7 +664,12 @@ class StagePatternValidator {
 
     _validateHoleRules(stage, pattern, issues);
     if (spawnFinite) {
-      _validateSpawnRules(stage, pattern, issues);
+      _validateSpawnRules(
+        stage,
+        pattern,
+        issues,
+        enforceObjectClearance: enforceSpawnObjectClearance,
+      );
     }
     _validateInitialOverlaps(stage, pattern, issues);
     _validateLinks(stage, pattern, issues);
@@ -982,8 +999,9 @@ class StagePatternValidator {
   void _validateSpawnRules(
     StageDefinition stage,
     StagePattern pattern,
-    List<ValidationIssue> issues,
-  ) {
+    List<ValidationIssue> issues, {
+    required bool enforceObjectClearance,
+  }) {
     final spawn = _Shape.circle(pattern.ballSpawn, 12 * 0.88);
     if (!_isInsideBoard(spawn, width: boardSize.x, height: boardSize.y)) {
       issues.add(
@@ -1040,6 +1058,21 @@ class StagePatternValidator {
             objectIds: ids,
             message:
                 '공 시작점과 벽 사이에 최소 ${minSpawnWallClearance.toStringAsFixed(0)}의 빈 공간이 필요합니다.',
+          ),
+        );
+      }
+      if (enforceObjectClearance &&
+          !_overlaps(spawn, shape) &&
+          _clearanceBetween(spawn, shape) < minSpawnObjectClearance) {
+        final ids = object.id.isEmpty ? const <String>[] : [object.id];
+        issues.add(
+          _issue(
+            ValidationIssueCode.ballSpawnTooCloseToObject,
+            stage.stageId,
+            patternId: pattern.patternId,
+            objectIds: ids,
+            message:
+                '공 시작점 주변 ${minSpawnObjectClearance.toStringAsFixed(0)} 이내에는 기물을 둘 수 없습니다.',
           ),
         );
       }
@@ -2014,6 +2047,8 @@ String _defaultMessage(ValidationIssueCode code) {
       return '공 시작 히트박스가 고체 기물 안에 있습니다.';
     case ValidationIssueCode.ballSpawnTooCloseToWall:
       return '공 시작점과 벽 사이의 조준 공간이 너무 좁습니다.';
+    case ValidationIssueCode.ballSpawnTooCloseToObject:
+      return '공 시작점 주변에 첫 조준을 방해하는 기물이 너무 가깝습니다.';
     case ValidationIssueCode.initialObjectOverlap:
       return '초기 기물 히트박스가 겹칩니다.';
     case ValidationIssueCode.visualObjectOverlap:

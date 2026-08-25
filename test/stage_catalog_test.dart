@@ -13,7 +13,6 @@ import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/validation/stage_pattern_runtime_probe.dart';
 import 'package:property_shot/game/validation/stage_pattern_validator.dart';
 
-import 'fixtures/legacy_levels.dart';
 import '../tool/generate_stage_catalog.dart' as stage_catalog_generator;
 import '../tool/stage_pattern_runtime_manifest.dart';
 
@@ -178,10 +177,12 @@ void main() {
     expect(reorderedCatalog.validate(), isEmpty);
   });
 
-  test('새 levels의 기존 게임 상태와 기준 fixture가 완전히 일치한다', () {
-    expect(legacyLevels, hasLength(4));
-    for (var index = 0; index < legacyLevels.length; index++) {
-      final expected = legacyLevels[index];
+  test('levels의 기준 게임 상태는 카탈로그 baseline과 완전히 일치한다', () {
+    expect(levels, hasLength(sourceCatalog.stages.length));
+    for (var index = 0; index < levels.length; index++) {
+      final expected = sourceCatalog.baselineLevelDefinitionFor(
+        sourceCatalog.stages[index],
+      );
       final actual = levels[index];
 
       expect(actual.id, expected.id, reason: 'stage $index id');
@@ -209,13 +210,14 @@ void main() {
       );
       expect(
         actual.difficultyBand,
-        '튜토리얼',
+        expected.difficultyBand,
         reason: 'stage $index difficultyBand metadata',
       );
-      expect(actual.patternMetadata, {
-        StageCatalog.baselineMetadataKey: StageCatalog.baselineMetadataValue,
-        if (index == 3) 'gimmick_required': 'true',
-      }, reason: 'stage $index baseline metadata');
+      expect(
+        actual.patternMetadata,
+        expected.patternMetadata,
+        reason: 'stage $index baseline metadata',
+      );
       expect(
         actual.entities.map(_entityJson).toList(),
         expected.entities.map(_entityJson).toList(),

@@ -18,7 +18,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
+            "x": 108.0,
             "y": 456.0
           },
           "objects": [
@@ -122,8 +122,8 @@ const generatedStageCatalogJson = r'''
                 "y": 286.0
               },
               "size": {
-                "x": 42.0,
-                "y": 42.0
+                "x": 64.0,
+                "y": 52.0
               },
               "traits": [],
               "movable": true,
@@ -189,7 +189,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 62.0,
+            "x": 108.0,
             "y": 472.0
           },
           "objects": [
@@ -427,7 +427,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58.0,
+            "x": 108.0,
             "y": 468.0
           },
           "objects": [
@@ -642,8 +642,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 74.0,
-            "y": 446.0
+            "x": 108.0,
+            "y": 444.0
           },
           "objects": [
             {
@@ -863,20 +863,20 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58.0,
-            "y": 462.0
+            "x": 108.0,
+            "y": 460.0
           },
           "objects": [
             {
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 298.0,
-                "y": 130.0
+                "x": 296.0,
+                "y": 70.0
               },
               "size": {
-                "x": 74.0,
-                "y": 74.0
+                "x": 80.0,
+                "y": 80.0
               },
               "traits": [],
               "movable": false,
@@ -885,7 +885,7 @@ const generatedStageCatalogJson = r'''
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 1.2,
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
@@ -909,7 +909,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null,
               "movableWhenDrained": false
             },
@@ -932,7 +932,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null,
               "movableWhenDrained": false
             },
@@ -955,7 +955,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null,
               "movableWhenDrained": false
             },
@@ -964,7 +964,7 @@ const generatedStageCatalogJson = r'''
               "type": "wall",
               "position": {
                 "x": 220.0,
-                "y": 270.0
+                "y": 290.0
               },
               "size": {
                 "x": 24.0,
@@ -1009,11 +1009,11 @@ const generatedStageCatalogJson = r'''
               "id": "route_guard_lower",
               "type": "wall",
               "position": {
-                "x": 165.0,
+                "x": 150.0,
                 "y": 350.0
               },
               "size": {
-                "x": 70.0,
+                "x": 60.0,
                 "y": 24.0
               },
               "traits": [],
@@ -1080,16 +1080,16 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58.0,
-            "y": 462.0
+            "x": 108.0,
+            "y": 460.0
           },
           "objects": [
             {
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 300.0,
-                "y": 110.0
+                "x": 240.0,
+                "y": 160.0
               },
               "size": {
                 "x": 60.0,
@@ -1249,8 +1249,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58.0,
-            "y": 462.0
+            "x": 108.0,
+            "y": 216.0
           },
           "objects": [
             {
@@ -1295,7 +1295,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null,
               "movableWhenDrained": false
             },
@@ -1415,6 +1415,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "bouncy_03_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 204.0,
+                "y": 163.0
+              },
+              "size": {
+                "x": 18.0,
+                "y": 100.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -1441,8 +1464,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 300.0,
-            "y": 462.0
+            "x": 252.0,
+            "y": 460.0
           },
           "objects": [
             {
@@ -1616,8 +1639,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 464.0
           },
           "objects": [
             {
@@ -1859,8 +1882,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 300.0,
-            "y": 466.0
+            "x": 252.0,
+            "y": 464.0
           },
           "objects": [
             {
@@ -2102,8 +2125,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 468.0
           },
           "objects": [
             {
@@ -2343,8 +2366,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 300.0,
-            "y": 466.0
+            "x": 252.0,
+            "y": 520.0
           },
           "objects": [
             {
@@ -2590,8 +2613,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 512.0
           },
           "objects": [
             {
@@ -2713,8 +2736,8 @@ const generatedStageCatalogJson = r'''
               "id": "balloon_switch",
               "type": "switch_pad",
               "position": {
-                "x": 214.0,
-                "y": 214.0
+                "x": 208.0,
+                "y": 194.0
               },
               "size": {
                 "x": 62.0,
@@ -2831,8 +2854,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 512.0
           },
           "objects": [
             {
@@ -2931,12 +2954,12 @@ const generatedStageCatalogJson = r'''
               "id": "balloon_gate",
               "type": "gate",
               "position": {
-                "x": 270.0,
-                "y": 176.0
+                "x": 282.0,
+                "y": 200.0
               },
               "size": {
-                "x": 38.0,
-                "y": 74.0
+                "x": 46.0,
+                "y": 110.0
               },
               "traits": [],
               "movable": false,
@@ -3077,12 +3100,11 @@ const generatedStageCatalogJson = r'''
             "spike_source"
           ],
           "solutionFamilies": [
-            "balloon_bounce",
+            "none_bypass",
             "sharp_pop_chain"
           ],
           "optionalChallenges": [
             "one_shot",
-            "ordinary_balloon_bounce",
             "sharp_pop_chain"
           ],
           "metadata": {
@@ -3095,8 +3117,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 484.0
           },
           "objects": [
             {
@@ -3376,6 +3398,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.72,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "balloon_03_bypass_guard",
+              "type": "wall",
+              "position": {
+                "x": 140.0,
+                "y": 180.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 16.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -3404,8 +3449,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 464.0
           },
           "objects": [
             {
@@ -3618,6 +3663,29 @@ const generatedStageCatalogJson = r'''
               "movableWhenDrained": false
             },
             {
+              "id": "direct_route_guard",
+              "type": "wall",
+              "position": {
+                "x": 168.0,
+                "y": 332.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 16.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.0,
+              "restitution": 0.64,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
               "id": "balloon_b",
               "type": "balloon",
               "position": {
@@ -3650,12 +3718,11 @@ const generatedStageCatalogJson = r'''
             "spike_source"
           ],
           "solutionFamilies": [
-            "balloon_bounce",
+            "none_bypass",
             "sharp_single_use"
           ],
           "optionalChallenges": [
             "one_shot",
-            "ordinary_balloon_bounce",
             "two_balloons_one_sharp"
           ],
           "metadata": {
@@ -3674,8 +3741,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "기초 응용",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 520.0
           },
           "objects": [
             {
@@ -3845,12 +3912,12 @@ const generatedStageCatalogJson = r'''
               "id": "drained_01_direct_guard",
               "type": "wall",
               "position": {
-                "x": 82.0,
-                "y": 425.5
+                "x": 123.0,
+                "y": 420.0
               },
               "size": {
-                "x": 12.0,
-                "y": 28.0
+                "x": 100.0,
+                "y": 18.0
               },
               "traits": [],
               "movable": false,
@@ -3891,8 +3958,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "기초 응용",
           "ballSpawn": {
-            "x": 300.0,
-            "y": 466.0
+            "x": 252.0,
+            "y": 464.0
           },
           "objects": [
             {
@@ -4055,6 +4122,52 @@ const generatedStageCatalogJson = r'''
               "visualState": "",
               "hitboxScale": 0.88,
               "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "drained_02_route_guard_a",
+              "type": "wall",
+              "position": {
+                "x": 300.0,
+                "y": 360.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 16.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "drained_02_route_guard_b",
+              "type": "wall",
+              "position": {
+                "x": 60.0,
+                "y": 260.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 16.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
               "linkId": null,
               "movableWhenDrained": false
             }
@@ -4299,7 +4412,7 @@ const generatedStageCatalogJson = r'''
           "difficultyBand": "기초 응용",
           "ballSpawn": {
             "x": 180.0,
-            "y": 478.0
+            "y": 476.0
           },
           "objects": [
             {
@@ -4500,8 +4613,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "기초 응용",
           "ballSpawn": {
-            "x": 56.0,
-            "y": 466.0
+            "x": 104.0,
+            "y": 536.0
           },
           "objects": [
             {
@@ -4654,12 +4767,12 @@ const generatedStageCatalogJson = r'''
               "id": "speed_01_direct_guard",
               "type": "wall",
               "position": {
-                "x": 97.0,
+                "x": 177.0,
                 "y": 437.0
               },
               "size": {
-                "x": 18.0,
-                "y": 36.0
+                "x": 90.0,
+                "y": 18.0
               },
               "traits": [],
               "movable": false,
@@ -4700,8 +4813,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "기초 응용",
           "ballSpawn": {
-            "x": 72.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 464.0
           },
           "objects": [
             {
@@ -4921,8 +5034,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "기초 응용",
           "ballSpawn": {
-            "x": 62.0,
-            "y": 466.0
+            "x": 108.0,
+            "y": 488.0
           },
           "objects": [
             {
@@ -5094,6 +5207,29 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.75,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "speed_03_direct_guard",
+              "type": "wall",
+              "position": {
+                "x": 190.0,
+                "y": 330.0
+              },
+              "size": {
+                "x": 18.0,
+                "y": 100.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -5121,7 +5257,7 @@ const generatedStageCatalogJson = r'''
           "difficultyBand": "기초 응용",
           "ballSpawn": {
             "x": 180.0,
-            "y": 466.0
+            "y": 512.0
           },
           "objects": [
             {
@@ -5355,7 +5491,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 108.0,
             "y": 480.0
           },
           "objects": [
@@ -5501,12 +5637,12 @@ const generatedStageCatalogJson = r'''
               "id": "sequence_switch_p1",
               "type": "switch_pad",
               "position": {
-                "x": 254.0,
-                "y": 544.0
+                "x": 213.0,
+                "y": 466.0
               },
               "size": {
-                "x": 10.0,
-                "y": 10.0
+                "x": 20.0,
+                "y": 20.0
               },
               "traits": [],
               "movable": false,
@@ -5525,11 +5661,11 @@ const generatedStageCatalogJson = r'''
               "type": "gate",
               "position": {
                 "x": 240.0,
-                "y": 500.0
+                "y": 506.0
               },
               "size": {
                 "x": 24.0,
-                "y": 70.0
+                "y": 110.0
               },
               "traits": [],
               "movable": false,
@@ -5570,8 +5706,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 60.0,
-            "y": 480.0
+            "x": 108.0,
+            "y": 516.0
           },
           "objects": [
             {
@@ -5810,7 +5946,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 108.0,
             "y": 480.0
           },
           "objects": [
@@ -6004,7 +6140,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 180.0,
+            "x": 132.0,
             "y": 480.0
           },
           "objects": [
@@ -6016,8 +6152,8 @@ const generatedStageCatalogJson = r'''
                 "y": 274.0
               },
               "size": {
-                "x": 72.0,
-                "y": 72.0
+                "x": 88.0,
+                "y": 88.0
               },
               "traits": [],
               "movable": false,
@@ -6172,6 +6308,29 @@ const generatedStageCatalogJson = r'''
               "movableWhenDrained": false
             },
             {
+              "id": "p4_bypass_guard",
+              "type": "wall",
+              "position": {
+                "x": 320.0,
+                "y": 460.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 16.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
               "id": "p4_bypass_blocker_a",
               "type": "wall",
               "position": {
@@ -6248,8 +6407,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 60.0,
-            "y": 480.0
+            "x": 108.0,
+            "y": 360.0
           },
           "objects": [
             {
@@ -6452,8 +6611,8 @@ const generatedStageCatalogJson = r'''
               "id": "chain_score_01_direct_guard",
               "type": "wall",
               "position": {
-                "x": 103.0,
-                "y": 462.0
+                "x": 202.0,
+                "y": 360.0
               },
               "size": {
                 "x": 18.0,
@@ -6499,8 +6658,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 60.0,
-            "y": 480.0
+            "x": 108.0,
+            "y": 516.0
           },
           "objects": [
             {
@@ -6693,11 +6852,11 @@ const generatedStageCatalogJson = r'''
               "id": "chain_score_02_direct_guard",
               "type": "wall",
               "position": {
-                "x": 62.0,
-                "y": 428.0
+                "x": 100.0,
+                "y": 424.0
               },
               "size": {
-                "x": 34.0,
+                "x": 90.0,
                 "y": 18.0
               },
               "traits": [],
@@ -6711,6 +6870,37 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.8,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "chain_boost",
+              "type": "power_slider",
+              "position": {
+                "x": 70.0,
+                "y": 350.0
+              },
+              "size": {
+                "x": 70.0,
+                "y": 32.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": false,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "ready",
+              "hitboxScale": 0.9,
+              "restitution": 0.72,
+              "linkId": null,
+              "movableWhenDrained": false,
+              "direction": {
+                "x": 0.0,
+                "y": -1.0
+              },
+              "referenceSpeed": 40.0,
+              "allowedTargets": [
+                "ball"
+              ]
             }
           ],
           "copyCharges": 1,
@@ -6740,8 +6930,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 60.0,
-            "y": 480.0
+            "x": 108.0,
+            "y": 492.0
           },
           "objects": [
             {
@@ -6989,8 +7179,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
           "ballSpawn": {
-            "x": 60.0,
-            "y": 480.0
+            "x": 104.0,
+            "y": 524.0
           },
           "objects": [
             {
@@ -7191,12 +7381,12 @@ const generatedStageCatalogJson = r'''
               "id": "chain_score_04_direct_guard",
               "type": "wall",
               "position": {
-                "x": 96.0,
+                "x": 148.0,
                 "y": 423.0
               },
               "size": {
-                "x": 18.0,
-                "y": 28.0
+                "x": 90.0,
+                "y": 18.0
               },
               "traits": [],
               "movable": false,
@@ -7243,7 +7433,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "회전 입문",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 108.0,
             "y": 500.0
           },
           "objects": [
@@ -7439,7 +7629,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "순서 응용",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 108.0,
             "y": 500.0
           },
           "objects": [
@@ -7447,12 +7637,12 @@ const generatedStageCatalogJson = r'''
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 300.0,
-                "y": 110.0
+                "x": 140.0,
+                "y": 150.0
               },
               "size": {
-                "x": 56.0,
-                "y": 56.0
+                "x": 68.0,
+                "y": 68.0
               },
               "traits": [],
               "movable": false,
@@ -7607,6 +7797,52 @@ const generatedStageCatalogJson = r'''
               "restitution": 0.66,
               "linkId": null,
               "movableWhenDrained": false
+            },
+            {
+              "id": "reflector_02_route_guard_a",
+              "type": "wall",
+              "position": {
+                "x": 240.0,
+                "y": 340.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 16.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
+            },
+            {
+              "id": "reflector_02_route_guard_b",
+              "type": "wall",
+              "position": {
+                "x": 300.0,
+                "y": 160.0
+              },
+              "size": {
+                "x": 16.0,
+                "y": 16.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 0.9,
+              "restitution": 0.78,
+              "linkId": null,
+              "movableWhenDrained": false
             }
           ],
           "copyCharges": 0,
@@ -7633,7 +7869,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "과거 공 응용",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 108.0,
             "y": 500.0
           },
           "objects": [
@@ -7785,8 +8021,8 @@ const generatedStageCatalogJson = r'''
                 "y": 270.0
               },
               "size": {
-                "x": 48.0,
-                "y": 32.0
+                "x": 64.0,
+                "y": 40.0
               },
               "traits": [
                 "sticky"
@@ -7852,7 +8088,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "힘 발판 연계",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 108.0,
             "y": 500.0
           },
           "objects": [
@@ -7952,7 +8188,7 @@ const generatedStageCatalogJson = r'''
               "id": "power_lane",
               "type": "power_slider",
               "position": {
-                "x": 118.0,
+                "x": 166.0,
                 "y": 390.0
               },
               "size": {
@@ -7968,7 +8204,7 @@ const generatedStageCatalogJson = r'''
               "visualState": "ready",
               "hitboxScale": 0.9,
               "restitution": 0.72,
-              "linkId": null,
+              "linkId": "direct_route_gate",
               "movableWhenDrained": false,
               "direction": {
                 "x": 1.0,
@@ -7980,10 +8216,33 @@ const generatedStageCatalogJson = r'''
               ]
             },
             {
+              "id": "direct_route_gate",
+              "type": "gate",
+              "position": {
+                "x": 222.0,
+                "y": 260.0
+              },
+              "size": {
+                "x": 18.0,
+                "y": 64.0
+              },
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "open": false,
+              "pressed": false,
+              "visualState": "",
+              "hitboxScale": 1.0,
+              "restitution": 0.64,
+              "linkId": "direct_route_gate",
+              "movableWhenDrained": false
+            },
+            {
               "id": "reflector_a",
               "type": "rotating_reflector",
               "position": {
-                "x": 230.0,
+                "x": 278.0,
                 "y": 300.0
               },
               "size": {
@@ -8008,7 +8267,7 @@ const generatedStageCatalogJson = r'''
               "id": "lane_stone",
               "type": "weight",
               "position": {
-                "x": 280.0,
+                "x": 312.0,
                 "y": 420.0
               },
               "size": {
@@ -8060,7 +8319,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "속성 종합",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 120.0,
             "y": 480.0
           },
           "objects": [
@@ -8284,7 +8543,7 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "속성 종합",
           "ballSpawn": {
-            "x": 60.0,
+            "x": 108.0,
             "y": 500.0
           },
           "objects": [
@@ -8384,7 +8643,7 @@ const generatedStageCatalogJson = r'''
               "id": "b_slider",
               "type": "power_slider",
               "position": {
-                "x": 118.0,
+                "x": 166.0,
                 "y": 390.0
               },
               "size": {
@@ -8415,7 +8674,7 @@ const generatedStageCatalogJson = r'''
               "id": "b_reflector",
               "type": "rotating_reflector",
               "position": {
-                "x": 230.0,
+                "x": 278.0,
                 "y": 300.0
               },
               "size": {
@@ -8440,8 +8699,8 @@ const generatedStageCatalogJson = r'''
               "id": "b_bumper",
               "type": "bumper",
               "position": {
-                "x": 260.0,
-                "y": 150.0
+                "x": 200.0,
+                "y": 140.0
               },
               "size": {
                 "x": 44.0,
@@ -8465,7 +8724,7 @@ const generatedStageCatalogJson = r'''
               "id": "b_stone",
               "type": "weight",
               "position": {
-                "x": 280.0,
+                "x": 312.0,
                 "y": 420.0
               },
               "size": {
@@ -8537,8 +8796,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 3,
           "difficultyBand": "속성 종합",
           "ballSpawn": {
-            "x": 60.0,
-            "y": 480.0
+            "x": 108.0,
+            "y": 396.0
           },
           "objects": [
             {
@@ -8787,8 +9046,8 @@ const generatedStageCatalogJson = r'''
               "id": "c_sticky_target",
               "type": "sticky_surface",
               "position": {
-                "x": 180.0,
-                "y": 480.0
+                "x": 228.0,
+                "y": 398.0
               },
               "size": {
                 "x": 48.0,
@@ -8859,8 +9118,8 @@ const generatedStageCatalogJson = r'''
           "parShots": 2,
           "difficultyBand": "속성 종합",
           "ballSpawn": {
-            "x": 60.0,
-            "y": 480.0
+            "x": 108.0,
+            "y": 500.0
           },
           "objects": [
             {
@@ -8959,7 +9218,7 @@ const generatedStageCatalogJson = r'''
               "id": "d_setup_slider",
               "type": "power_slider",
               "position": {
-                "x": 92.0,
+                "x": 140.0,
                 "y": 390.0
               },
               "size": {
@@ -8990,7 +9249,7 @@ const generatedStageCatalogJson = r'''
               "id": "d_slider",
               "type": "power_slider",
               "position": {
-                "x": 125.0,
+                "x": 173.0,
                 "y": 390.0
               },
               "size": {
@@ -9021,7 +9280,7 @@ const generatedStageCatalogJson = r'''
               "id": "d_stone",
               "type": "weight",
               "position": {
-                "x": 150.0,
+                "x": 198.0,
                 "y": 330.0
               },
               "size": {
@@ -9046,7 +9305,7 @@ const generatedStageCatalogJson = r'''
               "id": "d_wall",
               "type": "wall",
               "position": {
-                "x": 195.0,
+                "x": 243.0,
                 "y": 390.0
               },
               "size": {

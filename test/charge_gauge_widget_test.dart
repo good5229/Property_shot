@@ -15,19 +15,8 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
     final area = find.byKey(const Key('aim_area'));
-    final rect = tester.getRect(area);
-    final scale = rect.width / 360 < rect.height / 560
-        ? rect.width / 360
-        : rect.height / 560;
-    final origin = Offset(
-      rect.left + (rect.width - 360 * scale) / 2,
-      rect.top + (rect.height - 560 * scale) / 2,
-    );
     final gesture = await tester.createGesture();
-    await gesture.down(
-      origin + Offset(56 * scale, 456 * scale),
-      timeStamp: Duration.zero,
-    );
+    await gesture.down(_ballPosition(tester, area), timeStamp: Duration.zero);
     await tester.pump(const Duration(milliseconds: 760));
     await gesture.up(timeStamp: const Duration(milliseconds: 760));
     await tester.pump();
@@ -39,19 +28,8 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
     final area = find.byKey(const Key('aim_area'));
-    final rect = tester.getRect(area);
-    final scale = rect.width / 360 < rect.height / 560
-        ? rect.width / 360
-        : rect.height / 560;
-    final origin = Offset(
-      rect.left + (rect.width - 360 * scale) / 2,
-      rect.top + (rect.height - 560 * scale) / 2,
-    );
     final gesture = await tester.createGesture();
-    await gesture.down(
-      origin + Offset(56 * scale, 456 * scale),
-      timeStamp: Duration.zero,
-    );
+    await gesture.down(_ballPosition(tester, area), timeStamp: Duration.zero);
     await _pumpChargeFrames(tester, const Duration(milliseconds: 2280));
     expect(
       tester
@@ -83,14 +61,7 @@ void main() {
     await tester.pumpWidget(const PropertyShotApp());
     await tester.pump();
     final area = find.byKey(const Key('aim_area'));
-    final rect = tester.getRect(area);
-    final scale = rect.width / 360 < rect.height / 560
-        ? rect.width / 360
-        : rect.height / 560;
-    final ballPosition = Offset(
-      rect.left + (rect.width - 360 * scale) / 2 + 56 * scale,
-      rect.top + (rect.height - 560 * scale) / 2 + 456 * scale,
-    );
+    final ballPosition = _ballPosition(tester, area);
 
     final overcharged = await tester.createGesture(pointer: 71);
     await overcharged.down(ballPosition, timeStamp: Duration.zero);
@@ -419,7 +390,13 @@ Future<void> _pumpChargeFrames(WidgetTester tester, Duration duration) async {
 }
 
 Offset _ballPosition(WidgetTester tester, Finder area) {
-  return _logicalPosition(tester, area, 56, 456);
+  final game = tester
+      .widget<GameWidget<PropertyShotGame>>(
+        find.byType(GameWidget<PropertyShotGame>),
+      )
+      .game!;
+  final position = game.state.activeBall.position;
+  return _logicalPosition(tester, area, position.x, position.y);
 }
 
 Offset _logicalPosition(

@@ -16,6 +16,12 @@ void main(List<String> arguments) {
   const traits = TraitResolver();
   final stage = generatedStageCatalog.stageById('stage_property_shot');
 
+  if (arguments.contains('--D-first')) {
+    final pattern = stage.patternById('stage_property_shot_d');
+    _searchCurrentDFirst(resolver, _state(stage.stageId, stage.title, pattern));
+    return;
+  }
+
   for (final pattern in stage.patterns) {
     final initial = _state(stage.stageId, stage.title, pattern);
     final direct = _findSingle(resolver, initial);
@@ -32,6 +38,11 @@ void main(List<String> arguments) {
         },
       );
       print('${pattern.patternId} bypass=${_describe(bypass)}');
+      _searchCurrentBDirect(resolver, initial);
+      _auditCurrentBNeighborhood(resolver, initial);
+    }
+    if (pattern.patternId == 'stage_property_shot_c') {
+      _searchCurrentCBank(resolver, traits, initial);
     }
 
     if (pattern.patternId == 'stage_property_shot_a') {
@@ -114,6 +125,161 @@ void main(List<String> arguments) {
   }
 }
 
+void _searchCurrentBDirect(ShotResolver resolver, GameState initial) {
+  var found = 0;
+  for (var degree = 0; degree < 360 && found < 12; degree++) {
+    for (var powerIndex = 6; powerIndex <= 50 && found < 12; powerIndex++) {
+      final result = resolver.resolve(initial, _input(degree, powerIndex / 50));
+      final ids = result.impacts.map((impact) => impact.entityId).toSet();
+      if (result.state.phase == GamePhase.success &&
+          result.events.contains('power_slider_activated') &&
+          result.events.contains('slider_gate_opened') &&
+          !ids.contains('b_reflector')) {
+        print(
+          'B_DIRECT degree=$degree power=${powerIndex * 2}% '
+          'events=${result.events} impacts=${ids.join(',')}',
+        );
+        found++;
+      }
+    }
+  }
+}
+
+void _auditCurrentBNeighborhood(ShotResolver resolver, GameState initial) {
+  var matches = 0;
+  for (var firstDegree = 309; firstDegree <= 315; firstDegree++) {
+    for (var firstPower = 6; firstPower <= 9; firstPower++) {
+      final first = resolver.resolve(
+        initial,
+        _input(firstDegree, firstPower / 50),
+      );
+      for (var secondDegree = 291; secondDegree <= 297; secondDegree++) {
+        for (var secondPower = 43; secondPower <= 49; secondPower++) {
+          final second = resolver.resolve(
+            first.state,
+            _input(secondDegree, secondPower / 50),
+          );
+          final ids = second.impacts.map((impact) => impact.entityId).toList();
+          final reflectorIndex = ids.indexOf('b_reflector');
+          final bumperIndex = ids.indexOf('b_bumper');
+          if (first.powerSliderActivations.isNotEmpty &&
+              first.reflectorRotations.isNotEmpty &&
+              second.state.phase == GamePhase.success &&
+              second.events.contains('jelly_bounced') &&
+              reflectorIndex >= 0 &&
+              bumperIndex > reflectorIndex) {
+            if (matches < 20) {
+              print(
+                'B_NEAR first=$firstDegree/${firstPower * 2}% '
+                'second=$secondDegree/${secondPower * 2}%',
+              );
+            }
+            matches++;
+          }
+        }
+      }
+    }
+  }
+  print('B_NEAR total=$matches');
+}
+
+void _searchCurrentCBank(
+  ShotResolver resolver,
+  TraitResolver traits,
+  GameState initial,
+) {
+  final prepared = traits.transferSelectedTrait(
+    traits.selectSource(initial, 'c_sticky'),
+  );
+  final first = resolver.resolve(prepared, _input(0, 0.12, TraitType.sticky));
+  final canonical = resolver.resolve(first.state, _input(12, 0.86));
+  final canonicalIds = canonical.impacts
+      .map((impact) => impact.entityId)
+      .toList();
+  var found = 0;
+  for (var degree = 0; degree < 360 && found < 12; degree++) {
+    for (var powerIndex = 6; powerIndex <= 50 && found < 12; powerIndex++) {
+      final result = resolver.resolve(
+        first.state,
+        _input(degree, powerIndex / 50),
+      );
+      final ids = result.impacts.map((impact) => impact.entityId).toList();
+      if (result.state.phase == GamePhase.success &&
+          !_sameList(ids, canonicalIds)) {
+        print(
+          'C_BANK degree=$degree power=${powerIndex * 2}% '
+          'events=${result.events} impacts=${ids.join(',')}',
+        );
+        found++;
+      }
+    }
+  }
+}
+
+bool _sameList(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var index = 0; index < a.length; index++) {
+    if (a[index] != b[index]) return false;
+  }
+  return true;
+}
+
+void _searchCurrentDFirst(ShotResolver resolver, GameState initial) {
+  final candidates = <({int degree, double power, int local})>[];
+  for (var degree = 260; degree <= 300; degree++) {
+    for (var powerIndex = 15; powerIndex <= 30; powerIndex++) {
+      final power = powerIndex / 50;
+      final centerFirst = resolver.resolve(initial, _input(degree, power));
+      if (centerFirst.state.phase == GamePhase.success) continue;
+      final centerSecond = resolver.resolve(
+        centerFirst.state,
+        _input(307, 0.86),
+      );
+      if (!_matchesCurrentD(centerFirst, centerSecond)) continue;
+      var local = 0;
+      for (final degreeDelta in const [-2, 0, 2]) {
+        for (final powerDelta in const [-0.04, -0.02, 0.0, 0.02, 0.04]) {
+          final first = resolver.resolve(
+            initial,
+            _input(degree + degreeDelta, power + powerDelta),
+          );
+          if (first.state.phase == GamePhase.success) continue;
+          final second = resolver.resolve(first.state, _input(307, 0.86));
+          if (_matchesCurrentD(first, second)) {
+            local++;
+          }
+        }
+      }
+      if (local >= 3) {
+        candidates.add((degree: degree, power: power, local: local));
+      }
+    }
+  }
+  candidates.sort((left, right) => right.local.compareTo(left.local));
+  for (final candidate in candidates.take(20)) {
+    print(
+      'D_FIRST degree=${candidate.degree} '
+      'power=${candidate.power.toStringAsFixed(2)} local=${candidate.local}/15',
+    );
+  }
+}
+
+bool _matchesCurrentD(ShotResult first, ShotResult second) {
+  final ids = [
+    ...first.impacts,
+    ...second.impacts,
+  ].map((impact) => impact.entityId).toSet();
+  final sliders = [
+    ...first.powerSliderActivations,
+    ...second.powerSliderActivations,
+  ];
+  return first.state.phase != GamePhase.success &&
+      second.state.phase == GamePhase.success &&
+      sliders.isNotEmpty &&
+      ids.contains('d_stone') &&
+      ids.contains('spent_ball_1');
+}
+
 void _searchContractA(StageDefinition stage) {
   const resolver = ShotResolver();
   const traits = TraitResolver();
@@ -170,8 +336,8 @@ void _searchContractB(StageDefinition stage) {
   final pattern = stage.patternById('stage_property_shot_b');
   final initial = _state(stage.stageId, stage.title, pattern);
   var found = 0;
-  for (var y = 150; y <= 250 && found < 12; y += 10) {
-    for (var x = 250; x <= 310 && found < 12; x += 10) {
+  for (var y = 100; y <= 260 && found < 12; y += 20) {
+    for (var x = 180; x <= 320 && found < 12; x += 20) {
       final moved = _moveEntity(
         initial,
         'b_bumper',
@@ -183,18 +349,24 @@ void _searchContractB(StageDefinition stage) {
           first.powerSliderActivations.isEmpty) {
         continue;
       }
-      final second = resolver.resolve(first.state, _input(203, 0.70));
-      final ids = second.impacts.map((impact) => impact.entityId).toSet();
-      if (second.state.phase == GamePhase.success &&
-          ids.contains('b_reflector') &&
-          ids.contains('b_bumper') &&
-          second.events.contains('jelly_bounced')) {
-        print(
-          'B_SEARCH bumper=$x,$y second=203/70% events=${second.events} '
-          'impacts=${second.impacts.map((impact) => '${impact.sourceEntityId}>${impact.entityId}@${impact.position.x.toStringAsFixed(0)},${impact.position.y.toStringAsFixed(0)}').join(',')} '
-          'path=${second.path.map((point) => '${point.x.toStringAsFixed(0)},${point.y.toStringAsFixed(0)}').join('>')}',
-        );
-        found++;
+      for (var degree = 0; degree < 360 && found < 12; degree += 2) {
+        for (var power = 6; power <= 50 && found < 12; power += 2) {
+          final second = resolver.resolve(
+            first.state,
+            _input(degree, power / 50),
+          );
+          final ids = second.impacts.map((impact) => impact.entityId).toSet();
+          if (second.state.phase == GamePhase.success &&
+              ids.contains('b_reflector') &&
+              ids.contains('b_bumper') &&
+              second.events.contains('jelly_bounced')) {
+            print(
+              'B_SEARCH bumper=$x,$y second=$degree/${power * 2}% '
+              'events=${second.events} impacts=${second.impacts.map((impact) => '${impact.sourceEntityId}>${impact.entityId}@${impact.position.x.toStringAsFixed(0)},${impact.position.y.toStringAsFixed(0)}').join(',')}',
+            );
+            found++;
+          }
+        }
       }
     }
   }

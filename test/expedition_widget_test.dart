@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +16,8 @@ import 'package:property_shot/main.dart';
 import 'package:property_shot/ui/game_feedback.dart';
 import 'package:property_shot/ui/game_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fixtures/stage_heavy_patterns.dart';
 
 void main() {
   setUpAll(() async {
@@ -170,10 +170,14 @@ void main() {
       'stage_heavy',
       drawPolicy: CampaignStageSelectionPolicy.drawTutorialBaselineFirst,
     );
-    final radians = 62 * math.pi / 180;
+    final representative = stageHeavyRepresentatives.firstWhere(
+      (fixture) =>
+          fixture.patternId == campaignDraw.pattern.patternId &&
+          fixture.strategyId == 'none',
+    );
     final successfulInput = ShotInput(
-      direction: Vec2(math.cos(radians), math.sin(radians)),
-      power: 0.70,
+      direction: representative.direction,
+      power: representative.power,
     );
     final campaignLevel = campaignDraw.pattern.toLevelDefinition(
       stageId: campaignDraw.stageId,

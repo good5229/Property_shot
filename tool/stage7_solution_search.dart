@@ -217,6 +217,18 @@ _ChainCandidate? _findChain(
               !previousBallEvent) {
             continue;
           }
+          if (Platform.environment['STAGE7_ROBUST'] == 'true' &&
+              pattern.patternId == 'stage_persistent_04') {
+            final robustCount = _robustPersistent04Count(
+              base,
+              firstDegree,
+              firstStep / 50,
+              secondDegree,
+              secondStep / 50,
+            );
+            if (robustCount < 3) continue;
+            print('  주변 준비 입력 성공=$robustCount/15');
+          }
           return _ChainCandidate(
             firstDegree: firstDegree,
             firstPower: firstStep / 50,
@@ -233,6 +245,52 @@ _ChainCandidate? _findChain(
     }
   }
   return null;
+}
+
+int _robustPersistent04Count(
+  GameState base,
+  int firstDegree,
+  double firstPower,
+  int secondDegree,
+  double secondPower,
+) {
+  var count = 0;
+  for (final degreeDelta in [-2, 0, 2]) {
+    for (final powerDelta in [-.04, -.02, 0.0, .02, .04]) {
+      final first = resolver.resolve(
+        base,
+        _input(
+          firstDegree + degreeDelta,
+          (firstPower + powerDelta).clamp(0.12, 1),
+          null,
+        ),
+      );
+      if (first.state.phase == GamePhase.success ||
+          !first.impacts.any((impact) => impact.entityId == 'stopper_crate')) {
+        continue;
+      }
+      final second = resolver.resolve(
+        first.state,
+        _input(secondDegree, secondPower, null),
+      );
+      if (second.state.phase != GamePhase.success) continue;
+      final touchedPastBall = second.impacts.any(
+        (impact) =>
+            impact.entityId == 'spent_ball_1' ||
+            impact.sourceEntityId == 'spent_ball_1',
+      );
+      final movedPastBall = second.moves.any(
+        (move) => move.entityId == 'spent_ball_1' && move.from != move.to,
+      );
+      final pastBallEnteredHole = second.impacts.any(
+        (impact) =>
+            impact.entityId == 'hole' &&
+            impact.sourceEntityId == 'spent_ball_1',
+      );
+      if (touchedPastBall && movedPastBall && pastBallEnteredHole) count++;
+    }
+  }
+  return count;
 }
 
 _BypassCandidate? _findBypass(StageDefinition stage, StagePattern pattern) {

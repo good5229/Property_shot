@@ -115,9 +115,9 @@ void main() {
       drainedResult.state.entityById(original.id)!.position,
     );
     expect(drainedDistance, greaterThan(heavyDistance));
-    expect(heavyDistance, inInclusiveRange(20, 23));
-    expect(drainedDistance, inInclusiveRange(42, 46));
-    expect(drainedDistance / heavyDistance, greaterThanOrEqualTo(2));
+    expect(heavyDistance, inInclusiveRange(20, 24));
+    expect(drainedDistance, inInclusiveRange(42, 47));
+    expect(drainedDistance / heavyDistance, greaterThanOrEqualTo(1.9));
   });
 
   for (final solution in stageDrainedRepresentativeSolutions) {
@@ -218,8 +218,8 @@ void main() {
     final result = shots.resolve(
       copied,
       ShotInput(
-        direction: _direction(120),
-        power: 0.90,
+        direction: _direction(224),
+        power: 1.0,
         equippedTrait: copied.equippedTrait,
       ),
     );

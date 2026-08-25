@@ -147,6 +147,11 @@ class PropertyShotGame extends FlameGame {
     return _reflectorRenderOrientation(entity);
   }
 
+  ({double start, double end}) reflectorRotationWindowForTest(String entityId) {
+    final step = _reflectorStepsByEntity[entityId]!.first;
+    return (start: step.start, end: step.end);
+  }
+
   Vec2 animatedEntityPositionForTest(String entityId) {
     return _animatedEntities()
         .firstWhere((candidate) => candidate.id == entityId)
@@ -2550,10 +2555,7 @@ class PropertyShotGame extends FlameGame {
     final center = _project(entity.position);
     final opening = entity.visualState == HiddenMechanicState.opening;
     final progress = opening ? _hiddenMechanicOpeningProgress(entity) : 0.0;
-    final side = math.max(
-      48.0,
-      math.min(56.0, math.max(entity.size.x, entity.size.y) * 0.86),
-    );
+    final side = hiddenMechanicPreviewSide(entity.size);
     if (opening) {
       final burstOpacity = (1 - progress).clamp(0.0, 1.0);
       canvas.drawCircle(

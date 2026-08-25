@@ -9,6 +9,8 @@ class DemoPlaybackPlan {
     required this.patternId,
     required this.visualSeed,
     required this.fixtureId,
+    required this.launchDegree,
+    required this.launchPower,
     required this.expectedEvents,
   });
 
@@ -17,6 +19,8 @@ class DemoPlaybackPlan {
   final String patternId;
   final int visualSeed;
   final String fixtureId;
+  final int launchDegree;
+  final double launchPower;
   final List<String> expectedEvents;
 }
 
@@ -26,5 +30,7 @@ const stageBouncy01DemoPlaybackPlan = DemoPlaybackPlan(
   patternId: 'stage_bouncy_01',
   visualSeed: 0x0b0,
   fixtureId: 'stage_bouncy_01_bouncy_multi_wall_reflection',
+  launchDegree: 114,
+  launchPower: 0.94,
   expectedEvents: ['bounced', 'bounced', 'bounced', 'hole_entered'],
 );

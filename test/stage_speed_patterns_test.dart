@@ -152,7 +152,7 @@ void main() {
   });
 
   test('4번은 왼쪽·오른쪽 발판을 각각 선택할 수 있다', () {
-    final left = _resolve(stageSpeedWeakAlternatives.last);
+    final left = _resolve(stageSpeedChoiceAlternatives.single);
     final right = _resolve(stageSpeedRepresentativeSolutions.last);
     expect(left.powerSliderActivations.single.sliderEntityId, 'left_slider');
     expect(right.powerSliderActivations.single.sliderEntityId, 'right_slider');

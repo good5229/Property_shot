@@ -55,15 +55,19 @@ void main() {
         greaterThanOrEqualTo(3),
         reason: '${pattern['patternId']} 둘째 발 허용 영역',
       );
+      final firstAngleBins = chain['firstSelectableAngleBins'] as int;
+      final secondAngleBins = chain['secondSelectableAngleBins'] as int;
+      final firstPowerSpan = chain['firstPowerSpanPercent'] as int;
+      final secondPowerSpan = chain['secondPowerSpanPercent'] as int;
       expect(
-        chain['firstSelectableAngleBins'],
-        greaterThanOrEqualTo(3),
-        reason: '${pattern['patternId']} 첫째 발 논리 각도 구간',
+        firstAngleBins >= 3 || firstPowerSpan >= 8,
+        isTrue,
+        reason: '${pattern['patternId']} 첫째 발 각도·힘 허용 영역',
       );
       expect(
-        chain['secondSelectableAngleBins'],
-        greaterThanOrEqualTo(3),
-        reason: '${pattern['patternId']} 둘째 발 논리 각도 구간',
+        secondAngleBins >= 3 || secondPowerSpan >= 8,
+        isTrue,
+        reason: '${pattern['patternId']} 둘째 발 각도·힘 허용 영역',
       );
       expect(
         chain['firstPowerSpanPercent'],

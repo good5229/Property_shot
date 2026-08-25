@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
+import 'package:property_shot/game/domain/hidden_mechanic_state.dart';
 import 'package:property_shot/game/domain/stage_pattern.dart';
 
 class StageLayoutOverlap {
@@ -77,18 +78,27 @@ class _LayoutElement {
     isCircle: true,
   );
 
-  factory _LayoutElement.object(PatternObjectDefinition object) =>
-      _LayoutElement(
-        id: object.id,
-        type: object.type,
-        position: object.position,
-        size: object.size,
-        isCircle:
-            object.type == EntityType.ball ||
-            object.type == EntityType.hole ||
-            object.type == EntityType.balloon ||
-            object.type == EntityType.bumper,
-      );
+  factory _LayoutElement.object(PatternObjectDefinition object) {
+    final masksIdentity = HiddenMechanicState.masksIdentity(object.visualState);
+    final hiddenPreviewSide = hiddenMechanicPreviewSide(object.size);
+    // `?` 상자는 schema hitbox보다 큰 정사각 이미지와 아래쪽 blur shadow로
+    // 그려진다. 8px 시각 여백까지 포함해 서로 붙어 보이는 배치도 거부한다.
+    final visualSize = masksIdentity
+        ? Vec2(hiddenPreviewSide + 8, hiddenPreviewSide + 8)
+        : object.size;
+    return _LayoutElement(
+      id: object.id,
+      type: object.type,
+      position: object.position,
+      size: visualSize,
+      isCircle:
+          !masksIdentity &&
+          (object.type == EntityType.ball ||
+              object.type == EntityType.hole ||
+              object.type == EntityType.balloon ||
+              object.type == EntityType.bumper),
+    );
+  }
 
   final String id;
   final EntityType type;
