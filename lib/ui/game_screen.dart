@@ -440,6 +440,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         '${_stageShotResults.length}/${_stageShotInputs.length}',
       );
     }
+    if (_state.phase == GamePhase.success &&
+        widget.objectiveEvidenceEvaluator != null) {
+      _objectiveEvidence = widget.objectiveEvidenceEvaluator!(
+        List<ShotResult>.unmodifiable(_stageShotResults),
+        List<ShotInput>.unmodifiable(_stageShotInputs),
+      );
+    }
     _rewardCandidates = List.of(widget.initialRewardCandidates);
     _selectedRewardId = widget.initialSelectedRewardId;
     _acquiredRewards = Set.of(widget.initialAcquiredRewards);

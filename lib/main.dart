@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/analysis/creative_chain_score.dart';
+import 'game/analysis/first_clear_learning_evidence.dart';
 import 'game/analysis/island_restoration.dart';
 import 'game/analysis/next_goal_recommendation.dart';
 import 'game/analysis/personal_record_qualification.dart';
@@ -1891,6 +1892,22 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         difficulty: _activeDifficulty,
         tutorialVariant: _tutorialVariant,
         showDebugControls: widget.showDebugControls,
+        objectiveEvidenceEvaluator:
+            !_activeIsExpedition &&
+                activeStage < 3 &&
+                !_clearedLevels.contains(activeStage)
+            ? (results, inputs) {
+                final evidence = evaluateFirstClearLearningEvidence(
+                  levelIndex: activeStage,
+                  results: results,
+                  inputs: inputs,
+                );
+                return StageObjectiveEvidence(
+                  satisfied: evidence.satisfied,
+                  guidance: evidence.guidance,
+                );
+              }
+            : null,
       );
     }
     if (_showRunResult) {
