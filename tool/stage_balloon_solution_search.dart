@@ -21,7 +21,17 @@ void main(List<String> arguments) {
     _searchBypassFilterLayouts();
     return;
   }
+  if (arguments.contains('--balloon3-sizes')) {
+    _searchBalloon3Sizes();
+    return;
+  }
+  if (arguments.contains('--balloon3-ui-grid')) {
+    _auditBalloon3UiGrid();
+    return;
+  }
   final noneBypass = arguments.contains('--none-bypass');
+  final sharpPop = arguments.contains('--sharp');
+  final doubleBalloon = arguments.contains('--double-balloon');
   final patternArguments = arguments.where(
     (argument) => !argument.startsWith('--'),
   );
@@ -33,9 +43,15 @@ void main(List<String> arguments) {
   );
   final stage = catalog.stageById('stage_balloon');
   final pattern = stage.patternById(requestedPattern);
-  final state = pattern
+  var state = pattern
       .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
       .createState(3);
+  if (sharpPop) {
+    const traits = TraitResolver();
+    state = traits.transferSelectedTrait(
+      traits.selectSource(state, 'spike_source'),
+    );
+  }
   const resolver = ShotResolver();
   final candidates = <_Candidate>[];
 
@@ -44,9 +60,24 @@ void main(List<String> arguments) {
       final power = powerStep / 100;
       final result = resolver.resolve(
         state,
-        ShotInput(direction: _directionFor(degree), power: power),
+        ShotInput(
+          direction: _directionFor(degree),
+          power: power,
+          equippedTrait: state.equippedTrait,
+        ),
       );
-      final matchesFamily = noneBypass
+      final impactIds = result.impacts
+          .map((impact) => impact.entityId)
+          .toList();
+      final matchesFamily = sharpPop
+          ? result.events.contains('balloon_popped') &&
+                result.events.contains('sharpness_consumed') &&
+                (!doubleBalloon ||
+                    (result.events.contains('balloon_bounced') &&
+                        impactIds.contains('balloon_b') &&
+                        impactIds.indexOf('balloon') >
+                            impactIds.indexOf('balloon_b')))
+          : noneBypass
           ? !result.events.contains('balloon_bounced') &&
                 !result.events.contains('balloon_popped') &&
                 !result.impacts.any((impact) => impact.entityId == 'balloon')
@@ -80,7 +111,11 @@ void main(List<String> arguments) {
     return left.power.compareTo(right.power);
   });
   stdout.writeln(
-    '$requestedPattern: robust ${noneBypass ? "none-bypass" : "balloon-bounce"} '
+    '$requestedPattern: robust ${sharpPop
+        ? "sharp-pop"
+        : noneBypass
+        ? "none-bypass"
+        : "balloon-bounce"} '
     'candidates=${candidates.length}',
   );
   for (final candidate in candidates.take(30)) {
@@ -89,6 +124,89 @@ void main(List<String> arguments) {
       'near=${candidate.neighborhood}/15 '
       'impacts=${candidate.impacts.join(",")}',
     );
+  }
+}
+
+void _auditBalloon3UiGrid() {
+  final catalog = StageCatalog.fromJsonString(
+    File('assets/stages/chapter_1.json').readAsStringSync(),
+  );
+  final stage = catalog.stageById('stage_balloon');
+  final pattern = stage.patternById('stage_balloon_03');
+  final none = pattern
+      .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+      .createState(3, productRules: true);
+  const traits = TraitResolver();
+  final sharp = traits.transferSelectedTrait(
+    traits.selectSource(none, 'spike_source'),
+  );
+  const resolver = ShotResolver();
+  var noneCount = 0;
+  var sharpCount = 0;
+  for (var degree = 0; degree < 360; degree += 4) {
+    for (var tick = 0; tick <= 16; tick++) {
+      final power = (0.12 + 0.055 * tick).clamp(0.12, 1.0).toDouble();
+      final input = ShotInput(direction: _directionFor(degree), power: power);
+      if (resolver.resolve(none, input).state.phase == GamePhase.success) {
+        noneCount++;
+      }
+      if (resolver
+              .resolve(
+                sharp,
+                ShotInput(
+                  direction: input.direction,
+                  power: input.power,
+                  equippedTrait: sharp.equippedTrait,
+                ),
+              )
+              .state
+              .phase ==
+          GamePhase.success) {
+        sharpCount++;
+      }
+    }
+  }
+  stdout.writeln(
+    'stage_balloon_03 UI grid sharp=$sharpCount none=$noneCount '
+    'ratio=${(sharpCount / math.max(1, noneCount)).toStringAsFixed(3)}',
+  );
+}
+
+void _searchBalloon3Sizes() {
+  final catalog = StageCatalog.fromJsonString(
+    File('assets/stages/chapter_1.json').readAsStringSync(),
+  );
+  final stage = catalog.stageById('stage_balloon');
+  final pattern = stage.patternById('stage_balloon_03');
+  final base = pattern
+      .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+      .createState(3, productRules: true);
+  const traits = TraitResolver();
+  const resolver = ShotResolver();
+  for (final width in const [52.0, 58.0, 64.0, 70.0, 76.0, 82.0]) {
+    for (final height in const [58.0, 64.0, 70.0, 76.0, 82.0, 88.0]) {
+      final none = base.copyWith(
+        entities: [
+          for (final entity in base.entities)
+            if (entity.id == 'balloon')
+              entity.copyWith(size: Vec2(width, height))
+            else
+              entity,
+        ],
+      );
+      final sharp = traits.transferSelectedTrait(
+        traits.selectSource(none, 'spike_source'),
+      );
+      final noneCount = _gridSuccesses(resolver, none);
+      final sharpCount = _gridSuccesses(resolver, sharp);
+      final ratio = sharpCount / math.max(1, noneCount);
+      if (sharpCount >= 9 && ratio >= 1.4) {
+        stdout.writeln(
+          'balloon=${width.toInt()}x${height.toInt()} '
+          'sharp=$sharpCount none=$noneCount ratio=${ratio.toStringAsFixed(2)}',
+        );
+      }
+    }
   }
 }
 
@@ -326,6 +444,7 @@ int _neighborhoodSuccesses({
         ShotInput(
           direction: _directionFor((degree + degreeDelta) % 360),
           power: candidatePower,
+          equippedTrait: state.equippedTrait,
         ),
       );
       if (result.state.phase == GamePhase.success) successes++;

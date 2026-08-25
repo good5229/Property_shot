@@ -88,14 +88,16 @@ void main() {
             (event) => event.kind == PhysicsEventKind.reflectorRotation,
           );
           final rotation = rotationEvent.reflectorRotation!;
-          final eventCursor = rotationEvent.pathIndex.toDouble();
-          final duration = PropertyShotGame.reflectorRotationDuration;
+          final rotationWindow = game.reflectorRotationWindowForTest(
+            rotationEvent.targetEntityId,
+          );
           final cursor = switch (variant) {
-            'impact' => math.max(0.0, eventCursor - 0.01),
-            'rotation_progress' => eventCursor + duration / 2,
-            _ => eventCursor + duration,
+            'impact' => math.max(0.0, rotationWindow.start - 0.01),
+            'rotation_progress' =>
+              (rotationWindow.start + rotationWindow.end) / 2,
+            _ => rotationWindow.end,
           };
-          game.setAnimationCursorForTest(cursor);
+          game.setAnimationCursorForReplay(cursor);
           await tester.pump();
           final renderedOrientation = game.reflectorRenderOrientationForTest(
             'reflector',

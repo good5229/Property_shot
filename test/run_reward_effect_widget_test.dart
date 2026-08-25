@@ -36,10 +36,7 @@ void main() {
     );
     await tester.pump();
 
-    final gesture = await _startGesture(
-      tester,
-      _logicalOffset(tester, 56, 456),
-    );
+    final gesture = await _startGesture(tester, _activeBallOffset(tester));
     await tester.pump(const Duration(milliseconds: 760));
     expect(
       find.byKey(const Key('cancel_launch_reward_button')),
@@ -58,7 +55,7 @@ void main() {
     expect(find.bySemanticsLabel('시도 횟수 0'), findsOneWidget);
     final blockedGesture = await _startGesture(
       tester,
-      _logicalOffset(tester, 56, 456),
+      _activeBallOffset(tester),
     );
     await tester.pump(const Duration(milliseconds: 760));
     await blockedGesture.up(timeStamp: const Duration(milliseconds: 2800));
@@ -90,10 +87,7 @@ void main() {
     );
     await tester.pump();
 
-    final gesture = await _startGesture(
-      tester,
-      _logicalOffset(tester, 56, 456),
-    );
+    final gesture = await _startGesture(tester, _activeBallOffset(tester));
     await tester.pump(const Duration(milliseconds: 760));
     tester
         .widget<IconButton>(
@@ -219,7 +213,7 @@ void main() {
     );
     await tester.pump();
 
-    final aim = await _startGesture(tester, _logicalOffset(tester, 56, 456));
+    final aim = await _startGesture(tester, _activeBallOffset(tester));
     await aim.moveTo(
       _logicalOffset(tester, 300, 456),
       timeStamp: const Duration(milliseconds: 1100),
@@ -234,7 +228,7 @@ void main() {
           .label,
       contains('첫 충돌 안내 · 홀'),
     );
-    final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
+    final launch = await _startGesture(tester, _activeBallOffset(tester));
     await tester.pump(const Duration(milliseconds: 920));
     await launch.up(timeStamp: const Duration(milliseconds: 1920));
     await tester.pump();
@@ -276,7 +270,7 @@ void main() {
       hasLength(1),
     );
 
-    final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
+    final launch = await _startGesture(tester, _activeBallOffset(tester));
     await tester.pump(const Duration(milliseconds: 920));
     await launch.up(timeStamp: const Duration(milliseconds: 1920));
     await tester.pump();
@@ -320,7 +314,7 @@ void main() {
     );
     await tester.pump();
 
-    final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
+    final launch = await _startGesture(tester, _activeBallOffset(tester));
     await tester.pump(const Duration(milliseconds: 920));
     await launch.up(timeStamp: const Duration(milliseconds: 1920));
     await _pumpAsync(tester);
@@ -357,7 +351,7 @@ void main() {
     );
     await tester.pump();
 
-    final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
+    final launch = await _startGesture(tester, _activeBallOffset(tester));
     await tester.pump(const Duration(milliseconds: 760));
     await launch.up(timeStamp: const Duration(milliseconds: 1760));
     await tester.pump(const Duration(milliseconds: 6500));
@@ -453,7 +447,7 @@ void main() {
     );
     await tester.pump();
 
-    final launch = await _startGesture(tester, _logicalOffset(tester, 56, 456));
+    final launch = await _startGesture(tester, _activeBallOffset(tester));
     await tester.pump(const Duration(milliseconds: 760));
     await launch.up(timeStamp: const Duration(milliseconds: 1760));
     await tester.pump(const Duration(milliseconds: 6500));
@@ -554,6 +548,16 @@ Future<TestGesture> _startGesture(WidgetTester tester, Offset position) async {
   final gesture = await tester.createGesture();
   await gesture.down(position, timeStamp: _pointerDownAt);
   return gesture;
+}
+
+Offset _activeBallOffset(WidgetTester tester) {
+  final game = tester
+      .widget<GameWidget<PropertyShotGame>>(
+        find.byType(GameWidget<PropertyShotGame>),
+      )
+      .game!;
+  final position = game.state.activeBall.position;
+  return _logicalOffset(tester, position.x, position.y);
 }
 
 Offset _logicalOffset(WidgetTester tester, double x, double y) {

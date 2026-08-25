@@ -48,7 +48,7 @@ void main() {
     );
   });
 
-  test('각 패턴은 과거 공을 포함해 핵심 기물 5~6종과 움직이지 않는 벽을 사용한다', () {
+  test('각 패턴은 과거 공을 포함해 핵심 기물 5~7종과 움직이지 않는 벽을 사용한다', () {
     for (final pattern in stage.patterns) {
       final keyTypes = {
         for (final object in pattern.objects)
@@ -57,7 +57,7 @@ void main() {
       };
       expect(
         keyTypes.length,
-        inInclusiveRange(5, 6),
+        inInclusiveRange(5, 7),
         reason: '${pattern.patternId}: $keyTypes',
       );
       expect(

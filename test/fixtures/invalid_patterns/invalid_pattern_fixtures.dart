@@ -89,9 +89,7 @@ List<InvalidPatternFixture> buildInvalidPatternFixtures() {
       expectedCodes: {ValidationIssueCode.runtimeSliderTunneling},
       pattern: _sliderPattern('invalid_slider_tunneling'),
       resolver: const _NoSliderActivationResolver(),
-      representativeInputs: const [
-        ShotInput(direction: Vec2(1, 0), power: 1),
-      ],
+      representativeInputs: const [ShotInput(direction: Vec2(1, 0), power: 1)],
     ),
     _mutatedRuntimeFixture(
       'invalid_non_deterministic',
@@ -103,7 +101,7 @@ List<InvalidPatternFixture> buildInvalidPatternFixtures() {
       expectedCodes: {ValidationIssueCode.runtimeHolePassThrough},
       resolver: const _HolePassThroughResolver(),
       representativeInputs: [
-        ShotInput(direction: _directionFor(62), power: 0.70),
+        ShotInput(direction: _directionFor(68), power: 0.72),
       ],
     ),
     _staticFixture(
@@ -130,9 +128,7 @@ List<InvalidPatternFixture> buildInvalidPatternFixtures() {
       expectedCodes: {ValidationIssueCode.runtimeRotatorOrder},
       pattern: _reflectorPattern('invalid_rotator_order'),
       resolver: const _MissingReflectorRotationResolver(),
-      representativeInputs: const [
-        ShotInput(direction: Vec2(0, -1), power: 1),
-      ],
+      representativeInputs: const [ShotInput(direction: Vec2(0, -1), power: 1)],
     ),
     _mutatedRuntimeFixture(
       'invalid_soft_lock',

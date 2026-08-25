@@ -16,105 +16,58 @@
       "patternId": "stage_chain_score_01",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 1621,
-        "largestConnectedRegion": 424,
+        "successCount": 1141,
+        "largestConnectedRegion": 270,
         "angleSpanDegrees": 352,
-        "powerSpanPercent": 86
+        "powerSpanPercent": 88
       },
       "chain": {
-        "sampleCount": 5103,
-        "successCount": 345,
-        "largestConnectedRegion": 63,
-        "successfulFirstInputs": 45,
-        "successfulSecondInputs": 35,
+        "sampleCount": 6561,
+        "successCount": 44,
+        "largestConnectedRegion": 44,
+        "successfulFirstInputs": 7,
+        "successfulSecondInputs": 8,
         "successfulFirstAngleDegrees": [
-          156,
-          157,
-          159,
-          160,
-          161
+          40
         ],
         "successfulSecondAngleDegrees": [
-          154,
-          157,
-          158,
-          159,
-          160,
-          161
+          136
         ],
-        "firstAngleSpanDegrees": 2,
-        "firstSelectableAngleBins": 3,
-        "firstPowerSpanPercent": 16,
-        "secondAngleSpanDegrees": 4,
-        "secondSelectableAngleBins": 5,
-        "secondPowerSpanPercent": 12
+        "firstAngleSpanDegrees": 0,
+        "firstSelectableAngleBins": 1,
+        "firstPowerSpanPercent": 12,
+        "secondAngleSpanDegrees": 0,
+        "secondSelectableAngleBins": 1,
+        "secondPowerSpanPercent": 14
       }
     },
     {
       "patternId": "stage_chain_score_02",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 235,
-        "largestConnectedRegion": 142,
-        "angleSpanDegrees": 246,
-        "powerSpanPercent": 82
+        "successCount": 303,
+        "largestConnectedRegion": 130,
+        "angleSpanDegrees": 292,
+        "powerSpanPercent": 66
       },
       "chain": {
         "sampleCount": 6561,
-        "successCount": 524,
-        "largestConnectedRegion": 446,
-        "successfulFirstInputs": 30,
-        "successfulSecondInputs": 45,
+        "successCount": 358,
+        "largestConnectedRegion": 330,
+        "successfulFirstInputs": 35,
+        "successfulSecondInputs": 35,
         "successfulFirstAngleDegrees": [
-          336,
-          340,
-          341,
-          342,
-          343,
-          344
+          257,
+          258,
+          259,
+          260,
+          261
         ],
         "successfulSecondAngleDegrees": [
-          234,
-          235,
-          236,
-          237,
-          238
-        ],
-        "firstAngleSpanDegrees": 4,
-        "firstSelectableAngleBins": 5,
-        "firstPowerSpanPercent": 16,
-        "secondAngleSpanDegrees": 4,
-        "secondSelectableAngleBins": 5,
-        "secondPowerSpanPercent": 16
-      }
-    },
-    {
-      "patternId": "stage_chain_score_03",
-      "direct": {
-        "sampleCount": 8100,
-        "successCount": 17,
-        "largestConnectedRegion": 13,
-        "angleSpanDegrees": 158,
-        "powerSpanPercent": 14
-      },
-      "chain": {
-        "sampleCount": 6561,
-        "successCount": 690,
-        "largestConnectedRegion": 690,
-        "successfulFirstInputs": 38,
-        "successfulSecondInputs": 36,
-        "successfulFirstAngleDegrees": [
-          280,
-          281,
-          282,
-          283,
-          284
-        ],
-        "successfulSecondAngleDegrees": [
-          310,
-          311,
-          312,
-          313
+          114,
+          115,
+          116,
+          117
         ],
         "firstAngleSpanDegrees": 4,
         "firstSelectableAngleBins": 5,
@@ -125,40 +78,68 @@
       }
     },
     {
-      "patternId": "stage_chain_score_04",
+      "patternId": "stage_chain_score_03",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 325,
-        "largestConnectedRegion": 93,
-        "angleSpanDegrees": 280,
-        "powerSpanPercent": 60
+        "successCount": 21,
+        "largestConnectedRegion": 16,
+        "angleSpanDegrees": 268,
+        "powerSpanPercent": 30
       },
       "chain": {
         "sampleCount": 6561,
-        "successCount": 389,
-        "largestConnectedRegion": 248,
-        "successfulFirstInputs": 29,
-        "successfulSecondInputs": 39,
+        "successCount": 203,
+        "largestConnectedRegion": 203,
+        "successfulFirstInputs": 16,
+        "successfulSecondInputs": 18,
         "successfulFirstAngleDegrees": [
-          69,
-          70,
-          71,
-          72,
-          73,
-          74
+          236,
+          237,
+          238,
+          239,
+          240
         ],
         "successfulSecondAngleDegrees": [
-          52,
-          53,
-          54,
-          55,
-          56
+          207,
+          208
         ],
-        "firstAngleSpanDegrees": 5,
-        "firstSelectableAngleBins": 6,
-        "firstPowerSpanPercent": 12,
-        "secondAngleSpanDegrees": 4,
-        "secondSelectableAngleBins": 5,
+        "firstAngleSpanDegrees": 4,
+        "firstSelectableAngleBins": 5,
+        "firstPowerSpanPercent": 6,
+        "secondAngleSpanDegrees": 1,
+        "secondSelectableAngleBins": 2,
+        "secondPowerSpanPercent": 16
+      }
+    },
+    {
+      "patternId": "stage_chain_score_04",
+      "direct": {
+        "sampleCount": 8100,
+        "successCount": 340,
+        "largestConnectedRegion": 125,
+        "angleSpanDegrees": 236,
+        "powerSpanPercent": 52
+      },
+      "chain": {
+        "sampleCount": 6561,
+        "successCount": 103,
+        "largestConnectedRegion": 54,
+        "successfulFirstInputs": 13,
+        "successfulSecondInputs": 9,
+        "successfulFirstAngleDegrees": [
+          317,
+          318,
+          320,
+          321
+        ],
+        "successfulSecondAngleDegrees": [
+          96
+        ],
+        "firstAngleSpanDegrees": 1,
+        "firstSelectableAngleBins": 2,
+        "firstPowerSpanPercent": 10,
+        "secondAngleSpanDegrees": 0,
+        "secondSelectableAngleBins": 1,
         "secondPowerSpanPercent": 16
       }
     }

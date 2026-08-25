@@ -51,22 +51,18 @@ void main() {
         reason: '${scene.patternId}은 입력 전 자동 클리어 상태여서는 안 된다.',
       );
       final blockers = state.entities.where(
-        (entity) =>
-            entity.active &&
-            ((entity.type == EntityType.wall &&
-                    !stageBoundaryWallIds.contains(entity.id)) ||
-                (entity.type == EntityType.gate && !entity.open)),
+        (entity) => entity.active && entity.id != state.activeBall.id,
       );
-      for (final wall in blockers) {
+      for (final object in blockers) {
         final clearance =
             state.activeBall.position.distanceTo(
-              wall.hitBounds.nearestPoint(state.activeBall.position),
+              object.hitBounds.nearestPoint(state.activeBall.position),
             ) -
             state.activeBall.hitRadius;
         expect(
           clearance,
-          greaterThanOrEqualTo(defaultMinSpawnWallClearance - 0.001),
-          reason: '${scene.patternId}/${wall.id}: 시작 공 주변 벽 여유 $clearance',
+          greaterThanOrEqualTo(defaultMinSpawnObjectClearance - 0.001),
+          reason: '${scene.patternId}/${object.id}: 시작 공 주변 기물 여유 $clearance',
         );
       }
     }

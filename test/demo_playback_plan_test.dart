@@ -19,6 +19,8 @@ void main() {
     expect(plan.stageId, 'stage_bouncy');
     expect(plan.patternId, 'stage_bouncy_01');
     expect(plan.fixtureId, 'stage_bouncy_01_bouncy_multi_wall_reflection');
+    expect(plan.launchDegree, 114);
+    expect(plan.launchPower, 0.94);
     expect(plan.expectedEvents, [
       'bounced',
       'bounced',
@@ -42,10 +44,10 @@ void main() {
       prepared,
       ShotInput(
         direction: Vec2(
-          math.cos(48 * math.pi / 180),
-          math.sin(48 * math.pi / 180),
+          math.cos(stageBouncy01DemoPlaybackPlan.launchDegree * math.pi / 180),
+          math.sin(stageBouncy01DemoPlaybackPlan.launchDegree * math.pi / 180),
         ),
-        power: 0.90,
+        power: stageBouncy01DemoPlaybackPlan.launchPower,
         equippedTrait: prepared.equippedTrait,
       ),
     );
@@ -98,10 +100,10 @@ void main() {
     );
     final input = ShotInput(
       direction: Vec2(
-        math.cos(48 * math.pi / 180),
-        math.sin(48 * math.pi / 180),
+        math.cos(stageBouncy01DemoPlaybackPlan.launchDegree * math.pi / 180),
+        math.sin(stageBouncy01DemoPlaybackPlan.launchDegree * math.pi / 180),
       ),
-      power: 0.90,
+      power: stageBouncy01DemoPlaybackPlan.launchPower,
       equippedTrait: TraitType.bouncy,
     );
 

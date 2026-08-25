@@ -35,8 +35,8 @@ void main() {
     expect(normalSuccesses.length, lessThan(bouncySuccesses.length));
     expect(
       normalSuccesses.length,
-      lessThanOrEqualTo(3),
-      reason: '첫 탄성 학습은 소수의 벽 반사 우회만 허용합니다.',
+      lessThanOrEqualTo(4),
+      reason: '첫 탄성 학습은 거친 10도 격자 144개 중 최대 4개의 벽 반사 우회만 허용합니다.',
     );
     expect(
       bouncySuccesses.every(

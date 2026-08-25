@@ -117,13 +117,18 @@ class PropertyShotGame extends FlameGame {
   /// Golden·렌더 계약에서 물리 사건 시점을 재현하기 위한 결정론 cursor다.
   /// 일반 플레이는 Flame update가 이 값을 진행시키며, 제품 입력 경로에서는 사용하지 않는다.
   void setAnimationCursorForTest(double cursor) {
-    _animationCursor = cursor;
+    _animationCursor = _presentationCursorForRaw(cursor);
+    _motionVisualFrameCache.clear();
+    _motionVisualFrameCursor = _animationCursor;
     _emitDueAnimationEvents();
   }
 
   /// 실패 장면처럼 확정된 결과를 다시 그릴 때 사용할 읽기 전용 시작 위치다.
+  /// [cursor]는 이미 화면 재생 시간축(presentation domain)의 값이다.
   void setAnimationCursorForReplay(double cursor) {
     _animationCursor = cursor.clamp(0, _animationEndCursor).toDouble();
+    _motionVisualFrameCache.clear();
+    _motionVisualFrameCursor = _animationCursor;
     _emitDueAnimationEvents();
   }
 
@@ -140,6 +145,11 @@ class PropertyShotGame extends FlameGame {
       (candidate) => candidate.id == entityId,
     );
     return _reflectorRenderOrientation(entity);
+  }
+
+  ({double start, double end}) reflectorRotationWindowForTest(String entityId) {
+    final step = _reflectorStepsByEntity[entityId]!.first;
+    return (start: step.start, end: step.end);
   }
 
   Vec2 animatedEntityPositionForTest(String entityId) {
@@ -159,6 +169,9 @@ class PropertyShotGame extends FlameGame {
 
   double get animationCursorForTest => _animationCursor;
 
+  double get animationSourceCursorForTest =>
+      _sourceCursorForPresentation(_animationCursor);
+
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
   List<ShotAnimationMove> _animationMovesByTrigger = const [];
@@ -166,6 +179,9 @@ class PropertyShotGame extends FlameGame {
   Set<String> _animatedEntityIds = const {};
   Map<ShotAnimationMove, double> _animationMoveDistances = const {};
   Map<ShotAnimationMove, double> _animationMoveDurations = const {};
+  List<double> _animationPathPresentationCursors = const [];
+  List<double> _animationPathPresentationTangents = const [];
+  Map<String, double> _animationEventPresentationCursors = const {};
   List<ShotImpact> _animationImpacts = const [];
   List<ShotImpact> _animationImpactsByPath = const [];
   List<ShotImpact> _bouncyWallImpacts = const [];
@@ -196,6 +212,9 @@ class PropertyShotGame extends FlameGame {
   ui.Picture? _boardPicture;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
   final Map<String, ui.Picture> _movingSpritePictures = {};
+  List<EntityState> _animationRenderOrder = const [];
+  final Map<String, _MotionVisual> _motionVisualFrameCache = {};
+  double _motionVisualFrameCursor = double.nan;
   // 충돌 프레임은 여러 효과를 동시에 그리므로 매 프레임 Paint를 새로
   // 만들지 않는다. Skia/WebGL 래퍼 할당과 GC가 타격 순간에 몰리는 것을
   // 피하기 위해 효과 종류별 Paint를 재사용한다.
@@ -327,9 +346,9 @@ class PropertyShotGame extends FlameGame {
           : physicsEvents;
       _animationPhysicsEvents = [...unsortedPhysicsEvents]
         ..sort(_compareAnimationEvents);
+      _animationStartState = transitionStart;
       _prepareAnimationCaches();
       _nextAnimationEventIndex = 0;
-      _animationStartState = transitionStart;
       _animationCursor = 0;
       _animationUpdateCount = 0;
       _reportedImpactKeys.clear();
@@ -359,6 +378,8 @@ class PropertyShotGame extends FlameGame {
       final boundedDt = dt > 0.5 ? 0.0 : dt.clamp(0.0, 1 / 30).toDouble();
       _animationCursor +=
           boundedDt * animationCursorUnitsPerSecond * playbackSpeed;
+      _motionVisualFrameCache.clear();
+      _motionVisualFrameCursor = _animationCursor;
       _emitDueAnimationEvents();
       if (_animationCursor >= _animationEndCursor) {
         _finishAnimation();
@@ -380,6 +401,9 @@ class PropertyShotGame extends FlameGame {
     _animatedEntityIds = const {};
     _animationMoveDistances = const {};
     _animationMoveDurations = const {};
+    _animationPathPresentationCursors = const [];
+    _animationPathPresentationTangents = const [];
+    _animationEventPresentationCursors = const {};
     _animationImpacts = const [];
     _animationImpactsByPath = const [];
     _bouncyWallImpacts = const [];
@@ -389,6 +413,9 @@ class PropertyShotGame extends FlameGame {
     _animationReflectorSchedule = const [];
     _reflectorStepsByEntity = const {};
     _animationEntityTypes = const {};
+    _animationRenderOrder = const [];
+    _motionVisualFrameCache.clear();
+    _motionVisualFrameCursor = double.nan;
     _activeBallHoleImpact = null;
     _animationEndCursorCached = 0;
     _nextAnimationEventIndex = 0;
@@ -442,7 +469,7 @@ class PropertyShotGame extends FlameGame {
     // 프레임에서 리스트를 복사·정렬해 긴 연쇄 샷일수록 불필요한 할당이 컸다.
     while (_nextAnimationEventIndex < _animationPhysicsEvents.length) {
       final event = _animationPhysicsEvents[_nextAnimationEventIndex];
-      if (event.pathIndex > _animationCursor) break;
+      if (_eventPresentationCursor(event) > _animationCursor) break;
       _nextAnimationEventIndex += 1;
       if (!_reportedImpactKeys.add(event.eventId)) continue;
       onPhysicsEvent?.call(event);
@@ -516,16 +543,14 @@ class PropertyShotGame extends FlameGame {
     }
     _drawBoardWithCache(canvas);
     final animated = _animationPath.isNotEmpty;
-    final renderEntities =
-        [...(animated ? _animatedEntities() : state.entities)]
-          ..sort((first, second) {
+    final renderEntities = animated
+        ? _animatedEntities()
+        : ([...state.entities]..sort((first, second) {
             final firstIsHole = first.type == EntityType.hole;
             final secondIsHole = second.type == EntityType.hole;
-            if (firstIsHole == secondIsHole) {
-              return 0;
-            }
+            if (firstIsHole == secondIsHole) return 0;
             return firstIsHole ? -1 : 1;
-          });
+          }));
     _drawStage4Relations(canvas, renderEntities);
     if (state.phase == GamePhase.planning) {
       _drawPreviousShotPath(canvas);
@@ -741,7 +766,7 @@ class PropertyShotGame extends FlameGame {
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round;
       for (final event in _animationPhysicsEvents) {
-        if (event.pathIndex > _animationCursor ||
+        if (_eventPresentationCursor(event) > _animationCursor ||
             event.kind != PhysicsEventKind.impact) {
           continue;
         }
@@ -826,7 +851,7 @@ class PropertyShotGame extends FlameGame {
       impacts: _cinematicImpacts,
     );
     if (latestImpact == null) return Offset.zero;
-    final elapsed = _animationCursor - latestImpact.pathIndex;
+    final elapsed = _animationCursor - _impactPresentationCursor(latestImpact);
     if (elapsed < 0 || elapsed > screenShakeDurationCursor) {
       return Offset.zero;
     }
@@ -867,11 +892,12 @@ class PropertyShotGame extends FlameGame {
     final useMove =
         latestCausalMove != null &&
         (latest == null ||
-            latestCausalMove.triggerPathIndex >= latest.pathIndex);
+            _movePresentationCursor(latestCausalMove) >=
+                _impactPresentationCursor(latest));
     if (latest == null && !useMove) return;
     final eventIndex = useMove
-        ? latestCausalMove.triggerPathIndex
-        : latest!.pathIndex;
+        ? _movePresentationCursor(latestCausalMove)
+        : _impactPresentationCursor(latest!);
     final elapsed = _animationCursor - eventIndex;
     if (elapsed < 0 || elapsed > 8) return;
 
@@ -1036,8 +1062,8 @@ class PropertyShotGame extends FlameGame {
     );
     for (var index = first; index < _animationMovesByTrigger.length; index++) {
       final move = _animationMovesByTrigger[index];
-      if (move.triggerPathIndex > _animationCursor) break;
-      final elapsed = _animationCursor - move.triggerPathIndex;
+      if (_movePresentationCursor(move) > _animationCursor) break;
+      final elapsed = _animationCursor - _movePresentationCursor(move);
       final progress = reducedMotion ? 0.55 : (elapsed / 16).clamp(0.0, 1.0);
       final center = _project(move.impactPosition ?? move.from);
       final targetType =
@@ -1127,8 +1153,8 @@ class PropertyShotGame extends FlameGame {
     );
     for (var index = first; index < _animationImpactsByPath.length; index++) {
       final impact = _animationImpactsByPath[index];
-      if (impact.pathIndex > _animationCursor) break;
-      final elapsed = _animationCursor - impact.pathIndex;
+      if (_impactPresentationCursor(impact) > _animationCursor) break;
+      final elapsed = _animationCursor - _impactPresentationCursor(impact);
       final progress = reducedMotion ? 0.55 : (elapsed / 14).clamp(0.0, 1.0);
       final center = _project(impact.position);
       final accent = switch (impact.entityType) {
@@ -1294,7 +1320,11 @@ class PropertyShotGame extends FlameGame {
       return state.entities;
     }
     return [
-      for (final entity in start.entities) _entityAtAnimationTime(entity),
+      for (final entity
+          in _animationRenderOrder.isEmpty
+              ? start.entities
+              : _animationRenderOrder)
+        _entityAtAnimationTime(entity),
     ];
   }
 
@@ -1302,7 +1332,7 @@ class PropertyShotGame extends FlameGame {
     var animated = entity;
     final moves = _animationMovesByEntity[entity.id] ?? const [];
     for (final move in moves) {
-      final elapsed = _animationCursor - move.triggerPathIndex;
+      final elapsed = _animationCursor - _movePresentationCursor(move);
       if (elapsed < 0) {
         continue;
       }
@@ -1321,7 +1351,9 @@ class PropertyShotGame extends FlameGame {
     }
     for (final step in _reflectorStepsByEntity[entity.id] ?? const []) {
       final event = step.event;
-      final dueStart = reducedMotion ? event.pathIndex.toDouble() : step.start;
+      final dueStart = reducedMotion
+          ? _eventPresentationCursor(event)
+          : step.start;
       if (_animationCursor < dueStart) continue;
       final rotation = event.reflectorRotation!;
       final complete = reducedMotion || _animationCursor >= step.end;
@@ -1343,6 +1375,8 @@ class PropertyShotGame extends FlameGame {
 
   static const double animationCursorUnitsPerSecond = 34;
   static const double reflectorRotationDuration = 8;
+  static const double _minimumCollisionBeatCursor =
+      animationCursorUnitsPerSecond * 0.05;
 
   double _reflectorRenderOrientation(EntityState entity) {
     var orientation = entity.reflectorOrientation.toDouble();
@@ -1351,7 +1385,9 @@ class PropertyShotGame extends FlameGame {
     }
     for (final step in _reflectorStepsByEntity[entity.id] ?? const []) {
       final event = step.event;
-      final dueStart = reducedMotion ? event.pathIndex.toDouble() : step.start;
+      final dueStart = reducedMotion
+          ? _eventPresentationCursor(event)
+          : step.start;
       if (_animationCursor < dueStart) break;
       final rotation = event.reflectorRotation!;
       if (reducedMotion || _animationCursor >= step.end) {
@@ -1374,7 +1410,7 @@ class PropertyShotGame extends FlameGame {
     if (move.path.length < 2) {
       return 12;
     }
-    final distance = _pathDistance(move.path);
+    final distance = _animationMoveDistances[move] ?? _pathDistance(move.path);
     if (distance <= 0.001) {
       return 12;
     }
@@ -1406,7 +1442,7 @@ class PropertyShotGame extends FlameGame {
       for (final event in rotations)
         () {
           final start = math.max(
-            event.pathIndex.toDouble(),
+            _eventPresentationCursor(event),
             previousEnd[event.targetEntityId] ?? double.negativeInfinity,
           );
           final end = start + reflectorRotationDuration;
@@ -1418,7 +1454,173 @@ class PropertyShotGame extends FlameGame {
 
   double get _animationEndCursor => _animationEndCursorCached;
 
+  /// 물리 판정의 path index는 보존하면서 서로 다른 연쇄 충돌이 한 표시
+  /// 프레임에 압축되지 않도록 별도의 presentation cursor를 만든다.
+  /// 같은 path index의 장식/상태 사건은 하나의 동시 군집으로 유지한다.
+  void _compilePresentationTimeline() {
+    if (_animationPath.isEmpty) {
+      _animationPathPresentationCursors = const [];
+      _animationPathPresentationTangents = const [];
+      _animationEventPresentationCursors = const {};
+      return;
+    }
+    final impactIndices = _animationPhysicsEvents
+        .where((event) => event.kind == PhysicsEventKind.impact)
+        .map((event) => event.pathIndex.clamp(0, _animationPath.length - 1))
+        .toSet();
+    final cursors = List<double>.filled(_animationPath.length, 0);
+    var stretch = 0.0;
+    var previousImpactCursor = double.negativeInfinity;
+    for (var index = 0; index < cursors.length; index++) {
+      var presentation = index + stretch;
+      if (impactIndices.contains(index) &&
+          presentation - previousImpactCursor < _minimumCollisionBeatCursor) {
+        stretch +=
+            _minimumCollisionBeatCursor - (presentation - previousImpactCursor);
+        presentation = index + stretch;
+      }
+      cursors[index] = presentation;
+      if (impactIndices.contains(index)) {
+        previousImpactCursor = presentation;
+      }
+    }
+    _animationPathPresentationCursors = List.unmodifiable(cursors);
+    _animationPathPresentationTangents = List.unmodifiable(
+      _monotonePresentationTangents(cursors),
+    );
+    _animationEventPresentationCursors = Map.unmodifiable({
+      for (final event in _animationPhysicsEvents)
+        event.eventId: _presentationCursorForRaw(event.pathIndex.toDouble()),
+    });
+  }
+
+  double _presentationCursorForRaw(double rawCursor) {
+    final cursors = _animationPathPresentationCursors;
+    if (cursors.isEmpty) return rawCursor;
+    if (rawCursor <= 0) {
+      return cursors.first + rawCursor * _presentationTangentAt(0);
+    }
+    if (rawCursor >= cursors.length - 1) {
+      return cursors.last +
+          (rawCursor - (cursors.length - 1)) *
+              _presentationTangentAt(cursors.length - 1);
+    }
+    final clamped = rawCursor.clamp(0.0, cursors.length - 1.0);
+    final index = clamped.floor();
+    final local = clamped - index;
+    return _samplePresentationSegment(index, local);
+  }
+
+  double _sourceCursorForPresentation(double presentationCursor) {
+    final cursors = _animationPathPresentationCursors;
+    if (cursors.isEmpty) return presentationCursor;
+    if (presentationCursor <= cursors.first) {
+      final tangent = _presentationTangentAt(0);
+      return tangent <= 0 ? 0 : (presentationCursor - cursors.first) / tangent;
+    }
+    if (presentationCursor >= cursors.last) {
+      final tangent = _presentationTangentAt(cursors.length - 1);
+      return cursors.length -
+          1 +
+          (tangent <= 0 ? 0 : (presentationCursor - cursors.last) / tangent);
+    }
+    var low = 0;
+    var high = cursors.length - 1;
+    while (low + 1 < high) {
+      final middle = low + ((high - low) >> 1);
+      if (cursors[middle] <= presentationCursor) {
+        low = middle;
+      } else {
+        high = middle;
+      }
+    }
+    var localLow = 0.0;
+    var localHigh = 1.0;
+    // 단조 cubic Hermite 구간의 역함수를 이분 탐색한다. 화면 프레임당
+    // 한 번만 수행하며, 20회면 sub-pixel보다 훨씬 작은 오차가 된다.
+    for (var iteration = 0; iteration < 20; iteration++) {
+      final middle = (localLow + localHigh) / 2;
+      if (_samplePresentationSegment(low, middle) < presentationCursor) {
+        localLow = middle;
+      } else {
+        localHigh = middle;
+      }
+    }
+    return low + (localLow + localHigh) / 2;
+  }
+
+  List<double> _monotonePresentationTangents(List<double> cursors) {
+    if (cursors.length <= 1) return const [1];
+    final secants = <double>[
+      for (var index = 0; index < cursors.length - 1; index++)
+        cursors[index + 1] - cursors[index],
+    ];
+    final tangents = List<double>.filled(cursors.length, 1);
+    tangents.first = secants.first;
+    tangents.last = secants.last;
+    for (var index = 1; index < cursors.length - 1; index++) {
+      final before = secants[index - 1];
+      final after = secants[index];
+      tangents[index] = before <= 0 || after <= 0
+          ? 0
+          : (2 * before * after) / (before + after);
+    }
+    // Fritsch-Carlson 제한으로 cubic overshoot 없이 단조성을 보장한다.
+    for (var index = 0; index < secants.length; index++) {
+      final secant = secants[index];
+      if (secant <= 0) {
+        tangents[index] = 0;
+        tangents[index + 1] = 0;
+        continue;
+      }
+      final alpha = tangents[index] / secant;
+      final beta = tangents[index + 1] / secant;
+      final magnitude = alpha * alpha + beta * beta;
+      if (magnitude > 9) {
+        final scale = 3 / math.sqrt(magnitude);
+        tangents[index] = scale * alpha * secant;
+        tangents[index + 1] = scale * beta * secant;
+      }
+    }
+    return tangents;
+  }
+
+  double _presentationTangentAt(int index) {
+    final tangents = _animationPathPresentationTangents;
+    if (tangents.isEmpty || index < 0 || index >= tangents.length) return 1;
+    return tangents[index];
+  }
+
+  double _samplePresentationSegment(int index, double local) {
+    final cursors = _animationPathPresentationCursors;
+    if (index < 0 || index >= cursors.length - 1) {
+      return index < 0 ? cursors.first : cursors.last;
+    }
+    final t = local.clamp(0.0, 1.0);
+    final t2 = t * t;
+    final t3 = t2 * t;
+    final h00 = 2 * t3 - 3 * t2 + 1;
+    final h10 = t3 - 2 * t2 + t;
+    final h01 = -2 * t3 + 3 * t2;
+    final h11 = t3 - t2;
+    return h00 * cursors[index] +
+        h10 * _presentationTangentAt(index) +
+        h01 * cursors[index + 1] +
+        h11 * _presentationTangentAt(index + 1);
+  }
+
+  double _eventPresentationCursor(PhysicsEvent event) =>
+      _animationEventPresentationCursors[event.eventId] ??
+      _presentationCursorForRaw(event.pathIndex.toDouble());
+
+  double _impactPresentationCursor(ShotImpact impact) =>
+      _presentationCursorForRaw(impact.pathIndex.toDouble());
+
+  double _movePresentationCursor(ShotAnimationMove move) =>
+      _presentationCursorForRaw(move.triggerPathIndex.toDouble());
+
   void _prepareAnimationCaches() {
+    _compilePresentationTimeline();
     final movesByEntity = <String, List<ShotAnimationMove>>{};
     final distances = <ShotAnimationMove, double>{};
     final durations = <ShotAnimationMove, double>{};
@@ -1491,6 +1693,14 @@ class PropertyShotGame extends FlameGame {
         entry.key: List<_ReflectorAnimationStep>.unmodifiable(entry.value),
     });
     final renderStart = _animationStartState?.entities ?? state.entities;
+    _animationRenderOrder = List<EntityState>.unmodifiable(
+      [...renderStart]..sort((first, second) {
+        final firstIsHole = first.type == EntityType.hole;
+        final secondIsHole = second.type == EntityType.hole;
+        if (firstIsHole == secondIsHole) return 0;
+        return firstIsHole ? -1 : 1;
+      }),
+    );
     _animationEntityTypes = Map<String, EntityType>.unmodifiable({
       for (final entity in renderStart) entity.id: entity.type,
     });
@@ -1509,15 +1719,17 @@ class PropertyShotGame extends FlameGame {
         );
     _animationRenderCacheBuildCount += 1;
 
-    var end = math.max(0, _animationPath.length - 1).toDouble();
+    var end = _presentationCursorForRaw(
+      math.max(0, _animationPath.length - 1).toDouble(),
+    );
     for (final move in _animationMoves) {
-      end = math.max(end, move.triggerPathIndex + _moveDuration(move));
+      end = math.max(end, _movePresentationCursor(move) + _moveDuration(move));
     }
     if (reducedMotion) {
       for (final event in _animationPhysicsEvents.where(
         (event) => event.kind == PhysicsEventKind.reflectorRotation,
       )) {
-        end = math.max(end, event.pathIndex.toDouble());
+        end = math.max(end, _eventPresentationCursor(event));
       }
     } else {
       for (final step in _animationReflectorSchedule) {
@@ -1605,7 +1817,7 @@ class PropertyShotGame extends FlameGame {
     var high = sorted.length;
     while (low < high) {
       final middle = low + ((high - low) >> 1);
-      if (sorted[middle].pathIndex < cursor) {
+      if (_impactPresentationCursor(sorted[middle]) < cursor) {
         low = middle + 1;
       } else {
         high = middle;
@@ -1620,7 +1832,7 @@ class PropertyShotGame extends FlameGame {
     var high = sorted.length;
     while (low < high) {
       final middle = low + ((high - low) >> 1);
-      if (sorted[middle].pathIndex <= cursor) {
+      if (_impactPresentationCursor(sorted[middle]) <= cursor) {
         low = middle + 1;
       } else {
         high = middle;
@@ -1643,7 +1855,7 @@ class PropertyShotGame extends FlameGame {
     var high = moves.length;
     while (low < high) {
       final middle = low + ((high - low) >> 1);
-      if (moves[middle].triggerPathIndex < cursor) {
+      if (_movePresentationCursor(moves[middle]) < cursor) {
         low = middle + 1;
       } else {
         high = middle;
@@ -1660,7 +1872,7 @@ class PropertyShotGame extends FlameGame {
     var high = moves.length;
     while (low < high) {
       final middle = low + ((high - low) >> 1);
-      if (moves[middle].triggerPathIndex <= cursor) {
+      if (_movePresentationCursor(moves[middle]) <= cursor) {
         low = middle + 1;
       } else {
         high = middle;
@@ -2343,10 +2555,7 @@ class PropertyShotGame extends FlameGame {
     final center = _project(entity.position);
     final opening = entity.visualState == HiddenMechanicState.opening;
     final progress = opening ? _hiddenMechanicOpeningProgress(entity) : 0.0;
-    final side = math.max(
-      48.0,
-      math.min(56.0, math.max(entity.size.x, entity.size.y) * 0.86),
-    );
+    final side = hiddenMechanicPreviewSide(entity.size);
     if (opening) {
       final burstOpacity = (1 - progress).clamp(0.0, 1.0);
       canvas.drawCircle(
@@ -2504,7 +2713,7 @@ class PropertyShotGame extends FlameGame {
     ShotAnimationMove? revealMove;
     for (final move in moves) {
       if (move.visualState == HiddenMechanicState.opening &&
-          move.triggerPathIndex <= _animationCursor) {
+          _movePresentationCursor(move) <= _animationCursor) {
         openingMove = move;
       } else if (move.visualState == HiddenMechanicState.revealed &&
           openingMove != null &&
@@ -2514,16 +2723,15 @@ class PropertyShotGame extends FlameGame {
       }
     }
     if (openingMove == null) return 0;
+    final openingCursor = _movePresentationCursor(openingMove);
     final duration = math.max(
       1.0,
-      (revealMove?.triggerPathIndex ??
-              openingMove.triggerPathIndex + _moveDuration(openingMove)) -
-          openingMove.triggerPathIndex,
+      (revealMove == null
+              ? openingCursor + _moveDuration(openingMove)
+              : _movePresentationCursor(revealMove)) -
+          openingCursor,
     );
-    return ((_animationCursor - openingMove.triggerPathIndex) / duration).clamp(
-      0.0,
-      1.0,
-    );
+    return ((_animationCursor - openingCursor) / duration).clamp(0.0, 1.0);
   }
 
   void _drawPowerSlider(Canvas canvas, EntityState entity, Paint stroke) {
@@ -2563,11 +2771,11 @@ class PropertyShotGame extends FlameGame {
     for (final event in _animationPhysicsEvents) {
       if (event.kind != PhysicsEventKind.powerSliderActivation ||
           event.powerSlider == null ||
-          event.pathIndex > _animationCursor) {
+          _eventPresentationCursor(event) > _animationCursor) {
         continue;
       }
       final activation = event.powerSlider!;
-      final elapsed = _animationCursor - event.pathIndex;
+      final elapsed = _animationCursor - _eventPresentationCursor(event);
       final progress = reducedMotion ? 0.45 : (elapsed / 14).clamp(0.0, 1.0);
       final center = _project(activation.position);
       final paint = Paint()
@@ -3548,8 +3756,8 @@ class PropertyShotGame extends FlameGame {
   ) {
     final signature = [
       entity.type.name,
-      target.width,
-      target.height,
+      target.width.toStringAsFixed(3),
+      target.height.toStringAsFixed(3),
       entity.visualState == 'drained',
     ].join('|');
     final cached = _movingSpritePictures[signature];
@@ -3793,6 +4001,18 @@ class PropertyShotGame extends FlameGame {
   }
 
   _MotionVisual _motionVisual(EntityState entity) {
+    if (_motionVisualFrameCursor != _animationCursor) {
+      _motionVisualFrameCache.clear();
+      _motionVisualFrameCursor = _animationCursor;
+    }
+    final cached = _motionVisualFrameCache[entity.id];
+    if (cached != null) return cached;
+    final visual = _computeMotionVisual(entity);
+    _motionVisualFrameCache[entity.id] = visual;
+    return visual;
+  }
+
+  _MotionVisual _computeMotionVisual(EntityState entity) {
     final isCollisionState =
         entity.visualState == 'pushed' ||
         entity.visualState == 'wall_bounced' ||
@@ -3810,7 +4030,7 @@ class PropertyShotGame extends FlameGame {
     ShotAnimationMove? move;
     for (final candidate in _animationMovesByEntity[entity.id] ?? const []) {
       if (candidate.path.length < 2 ||
-          candidate.triggerPathIndex > _animationCursor) {
+          _movePresentationCursor(candidate) > _animationCursor) {
         continue;
       }
       if (move == null || candidate.triggerPathIndex > move.triggerPathIndex) {
@@ -3821,10 +4041,8 @@ class PropertyShotGame extends FlameGame {
       return const _MotionVisual();
     }
     final duration = _moveDuration(move);
-    final local = ((_animationCursor - move.triggerPathIndex) / duration).clamp(
-      0.0,
-      1.0,
-    );
+    final moveCursor = _movePresentationCursor(move);
+    final local = ((_animationCursor - moveCursor) / duration).clamp(0.0, 1.0);
     if (local <= 0 || local >= 1) {
       return const _MotionVisual();
     }
@@ -3832,12 +4050,12 @@ class PropertyShotGame extends FlameGame {
     // easing here would make the sprite arrive before its collision sample.
     final progress = local;
     final delta = move.to - move.from;
-    final distance = _pathDistance(move.path);
+    final distance = _animationMoveDistances[move] ?? _pathDistance(move.path);
     final direction = delta.normalized();
     final angle = math.atan2(direction.y, direction.x);
     final roll =
         distance / math.max(entity.size.x, 1) * (direction.x < 0 ? -1 : 1);
-    final elapsed = _animationCursor - move.triggerPathIndex;
+    final elapsed = _animationCursor - moveCursor;
     final previous = _sampleMovePath(move, elapsed - 0.8);
     final current = _sampleMovePath(move, elapsed);
     final speedRatio = ((current - previous).length / 4.0).clamp(0.0, 1.0);
@@ -4044,7 +4262,7 @@ class PropertyShotGame extends FlameGame {
         );
     final openingProgress = openingMove == null
         ? 1.0
-        : ((_animationCursor - openingMove.triggerPathIndex) / 12)
+        : ((_animationCursor - _movePresentationCursor(openingMove)) / 12)
               .clamp(0.0, 1.0)
               .toDouble();
     final easedOpening = 1 - math.pow(1 - openingProgress, 3).toDouble();
@@ -4133,7 +4351,7 @@ class PropertyShotGame extends FlameGame {
           );
       openingProgress = openingMove == null
           ? 1.0
-          : ((_animationCursor - openingMove.triggerPathIndex) / 12)
+          : ((_animationCursor - _movePresentationCursor(openingMove)) / 12)
                 .clamp(0.0, 1.0)
                 .toDouble();
     }
@@ -4209,7 +4427,7 @@ class PropertyShotGame extends FlameGame {
     if (captureMove == null) {
       return 1;
     }
-    return ((_animationCursor - captureMove.triggerPathIndex) /
+    return ((_animationCursor - _movePresentationCursor(captureMove)) /
             _moveDuration(captureMove))
         .clamp(0.0, 1.0)
         .toDouble();
@@ -4699,10 +4917,14 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawAnimatedBall(Canvas canvas) {
-    final index = _animationCursor.floor().clamp(0, _animationPath.length - 1);
-    final position = _samplePathAtTime(_animationPath, _animationCursor);
+    final sourceCursor = _sourceCursorForPresentation(_animationCursor);
+    final index = sourceCursor.floor().clamp(0, _animationPath.length - 1);
+    final position = _samplePathAtTime(_animationPath, sourceCursor);
     final trait = _animationTrait;
-    final previous = _samplePathAtTime(_animationPath, _animationCursor - 1);
+    final previous = _samplePathAtTime(
+      _animationPath,
+      _sourceCursorForPresentation(_animationCursor - 1),
+    );
     final speedRatio = ((position - previous).length / 8.0).clamp(0.0, 1.0);
     final trailCount = 3 + (speedRatio * 4).round();
     final trailPaint = _animatedTrailPaint
@@ -4716,7 +4938,9 @@ class PropertyShotGame extends FlameGame {
       final trail = _project(
         _samplePathAtTime(
           _animationPath,
-          _animationCursor - i * (1.5 + speedRatio),
+          _sourceCursorForPresentation(
+            _animationCursor - i * (1.5 + speedRatio),
+          ),
         ),
       );
       canvas.drawCircle(
@@ -4743,8 +4967,9 @@ class PropertyShotGame extends FlameGame {
       moveIndex++
     ) {
       final move = _animationMovesByTrigger[moveIndex];
-      if (move.triggerPathIndex > _animationCursor + 5) break;
-      final pulse = (_animationCursor - move.triggerPathIndex).abs();
+      final moveCursor = _movePresentationCursor(move);
+      if (moveCursor > _animationCursor + 5) break;
+      final pulse = (_animationCursor - moveCursor).abs();
       if (pulse < 5) {
         final impact = _project(
           _animationPath[move.triggerPathIndex.clamp(
@@ -4772,13 +4997,15 @@ class PropertyShotGame extends FlameGame {
       visualState: 'moving',
     );
     final holeImpact = _activeBallHoleImpact;
-    if (holeImpact == null || _animationCursor < holeImpact.pathIndex) {
+    if (holeImpact == null ||
+        _animationCursor < _impactPresentationCursor(holeImpact)) {
       _drawAnimatedBallBody(canvas, entity);
       return;
     }
-    final progress = ((_animationCursor - holeImpact.pathIndex) / 8)
-        .clamp(0.0, 1.0)
-        .toDouble();
+    final progress =
+        ((_animationCursor - _impactPresentationCursor(holeImpact)) / 8)
+            .clamp(0.0, 1.0)
+            .toDouble();
     _drawCapturedBall(canvas, entity, progress);
   }
 
@@ -4796,7 +5023,8 @@ class PropertyShotGame extends FlameGame {
       _drawEntity(canvas, entity, false);
       return;
     }
-    final elapsed = _animationCursor - latestWallImpact.pathIndex;
+    final elapsed =
+        _animationCursor - _impactPresentationCursor(latestWallImpact);
     if (elapsed > 6) {
       _drawEntity(canvas, entity, false);
       return;

@@ -284,10 +284,10 @@ class _DemoPlaybackScreenState extends State<_DemoPlaybackScreen> {
     difficulty: PlayerDifficulty.normal,
     demoLaunchInput: ShotInput(
       direction: Vec2(
-        math.cos(48 * math.pi / 180),
-        math.sin(48 * math.pi / 180),
+        math.cos(stageBouncy01DemoPlaybackPlan.launchDegree * math.pi / 180),
+        math.sin(stageBouncy01DemoPlaybackPlan.launchDegree * math.pi / 180),
       ),
-      power: 0.90,
+      power: stageBouncy01DemoPlaybackPlan.launchPower,
     ),
   );
 }

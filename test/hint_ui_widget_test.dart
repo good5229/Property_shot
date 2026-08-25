@@ -140,10 +140,10 @@ void main() {
       hints: entry.hints,
       intentTags: entry.intentTags,
       directClearPolicy: entry.directClearPolicy,
-      key: const HintKeyDefinition(
+      key: HintKeyDefinition(
         id: 'nonblocking_key',
-        position: Vec2(100, 462),
-        size: Vec2(28, 28),
+        position: Vec2(level.ballSpawn.x + 42, level.ballSpawn.y),
+        size: const Vec2(28, 28),
         version: 1,
       ),
     );
@@ -168,7 +168,7 @@ void main() {
     );
     await tester.pump();
 
-    final ball = _logicalOffset(tester, 58, 462);
+    final ball = _logicalOffset(tester, level.ballSpawn.x, level.ballSpawn.y);
     const pointerDownAt = Duration(seconds: 1);
     final gesture = await tester.createGesture();
     await gesture.down(ball, timeStamp: pointerDownAt);

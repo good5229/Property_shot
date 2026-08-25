@@ -23,7 +23,9 @@ void main() {
     for (final candidate in _inputs()) {
       final first = resolver.resolve(initial, candidate.input);
       if (first.state.phase != GamePhase.planning ||
-          first.reflectorRotations.isEmpty) {
+          first.reflectorRotations.isEmpty ||
+          (pattern.patternId.endsWith('_04') &&
+              first.powerSliderActivations.isEmpty)) {
         continue;
       }
       final key = first.state.entities

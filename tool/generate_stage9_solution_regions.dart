@@ -148,6 +148,18 @@ Map<String, Object?> _preparedRegion(
     'largestConnectedRegion': _largestRegion4(successes),
     'successfulFirstInputs': successfulFirst.length,
     'successfulSecondInputs': successfulSecond.length,
+    'successfulFirstAngleDegrees':
+        successfulFirst
+            .map((point) => firstAngles[point.angle])
+            .toSet()
+            .toList()
+          ..sort(),
+    'successfulSecondAngleDegrees':
+        successfulSecond
+            .map((point) => secondAngles[point.angle])
+            .toSet()
+            .toList()
+          ..sort(),
     'firstSelectableAngleBins': _consecutiveSpan(successfulFirst, true, 1) + 1,
     'secondSelectableAngleBins':
         _consecutiveSpan(successfulSecond, true, 1) + 1,

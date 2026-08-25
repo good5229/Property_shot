@@ -8,6 +8,7 @@ import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
+import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/levels/levels.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/simulation/impact_metrics.dart';
@@ -503,6 +504,105 @@ void main() {
     }
   });
 
+  test('3·5·8·12중 연쇄 충돌은 30·45·60 FPS에서 표시 프레임에 압축되지 않는다', () {
+    const resolver = ShotResolver();
+    for (final chainLength in [3, 5, 8, 12]) {
+      final start = _chainAnimationState(chainLength);
+      final result = resolver.resolve(
+        start,
+        const ShotInput(direction: Vec2(1, 0), power: 1),
+      );
+      expect(
+        result.moves.map((move) => move.entityId).toSet().length,
+        greaterThanOrEqualTo(chainLength),
+      );
+      for (final framesPerSecond in [30, 45, 60]) {
+        var currentFrame = 0;
+        final impactPathIndicesByFrame = <int, Set<int>>{};
+        final game = PropertyShotGame(
+          result.state,
+          loadVisualAssets: false,
+          onPhysicsEvent: (event) {
+            if (event.kind == PhysicsEventKind.impact) {
+              impactPathIndicesByFrame
+                  .putIfAbsent(currentFrame, () => <int>{})
+                  .add(event.pathIndex);
+            }
+          },
+        );
+        game.setStateSnapshot(
+          result.state,
+          path: result.path,
+          transitionStart: start,
+          moves: result.moves,
+          impacts: result.impacts,
+          physicsEvents: result.physicsEvents,
+          animationTransaction: true,
+        );
+        var previousSourceCursor = game.animationSourceCursorForTest;
+        double? previousSourceAdvance;
+        for (currentFrame = 0; currentFrame < 4000; currentFrame++) {
+          game.update(1 / framesPerSecond);
+          if (game.animationCursorForTest >= game.animationEndCursorForTest) {
+            break;
+          }
+          final sourceCursor = game.animationSourceCursorForTest;
+          final sourceAdvance = sourceCursor - previousSourceCursor;
+          if (previousSourceAdvance != null &&
+              sourceAdvance > 0 &&
+              previousSourceAdvance > 0) {
+            expect(
+              (sourceAdvance - previousSourceAdvance).abs(),
+              lessThan(0.4),
+              reason:
+                  '$chainLength중·$framesPerSecond FPS에서 충돌 전후 화면 속도가 순간 변화함',
+            );
+          }
+          previousSourceCursor = sourceCursor;
+          previousSourceAdvance = sourceAdvance;
+        }
+        expect(
+          impactPathIndicesByFrame.values.every(
+            (indices) => indices.length <= 1,
+          ),
+          isTrue,
+          reason:
+              '$chainLength중·$framesPerSecond FPS에서 서로 다른 충돌 beat가 한 프레임에 압축됨',
+        );
+        game.onRemove();
+      }
+    }
+  });
+
+  test('실패 리플레이는 화면 시간축 시작점을 이중 변환하지 않는다', () {
+    const resolver = ShotResolver();
+    final start = _chainAnimationState(8);
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final game = PropertyShotGame(result.state, loadVisualAssets: false);
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+    final replayStart = math.max(
+      0,
+      game.animationEndCursorForTest -
+          PropertyShotGame.animationCursorUnitsPerSecond * 3,
+    );
+
+    game.setAnimationCursorForReplay(replayStart.toDouble());
+
+    expect(game.animationCursorForTest, closeTo(replayStart, 0.000001));
+    game.onRemove();
+  });
+
   testWidgets('5중 연쇄의 래스터 본체는 계획 화면 캐시를 재사용한다', (tester) async {
     const resolver = ShotResolver();
     final start = _longChainAnimationState();
@@ -608,54 +708,34 @@ void main() {
 }
 
 GameState _longChainAnimationState() {
-  return const GameState(
+  return _chainAnimationState(5);
+}
+
+GameState _chainAnimationState(int chainLength) {
+  return GameState(
     levelIndex: 992,
     levelName: '다중 연쇄 프레임 회귀',
-    ballSpawn: Vec2(40, 80),
+    ballSpawn: const Vec2(40, 80),
     entities: [
-      EntityState(
+      const EntityState(
         id: 'active_ball',
         type: EntityType.ball,
         position: Vec2(40, 80),
         size: Vec2(24, 24),
+        traits: {TraitType.bouncy},
         movable: true,
+        restitution: 0.95,
       ),
-      EntityState(
-        id: 'crate_a',
-        type: EntityType.crate,
-        position: Vec2(60, 80),
-        size: Vec2(10, 10),
-        movable: true,
-      ),
-      EntityState(
-        id: 'crate_b',
-        type: EntityType.crate,
-        position: Vec2(75, 80),
-        size: Vec2(10, 10),
-        movable: true,
-      ),
-      EntityState(
-        id: 'crate_c',
-        type: EntityType.crate,
-        position: Vec2(90, 80),
-        size: Vec2(10, 10),
-        movable: true,
-      ),
-      EntityState(
-        id: 'crate_d',
-        type: EntityType.crate,
-        position: Vec2(105, 80),
-        size: Vec2(10, 10),
-        movable: true,
-      ),
-      EntityState(
-        id: 'crate_e',
-        type: EntityType.crate,
-        position: Vec2(120, 80),
-        size: Vec2(10, 10),
-        movable: true,
-      ),
-      EntityState(
+      for (var index = 0; index < chainLength; index++)
+        EntityState(
+          id: 'crate_$index',
+          type: EntityType.crate,
+          position: Vec2(60 + index * 15, 80),
+          size: const Vec2(10, 10),
+          movable: true,
+          restitution: 0.95,
+        ),
+      const EntityState(
         id: 'hole',
         type: EntityType.hole,
         position: Vec2(360, 260),

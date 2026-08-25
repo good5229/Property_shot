@@ -11,7 +11,7 @@
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56.0,
+            "x": 108.0,
             "y": 456.0
           },
           "objects": [
@@ -111,8 +111,8 @@
                 "y": 286.0
               },
               "size": {
-                "x": 42.0,
-                "y": 42.0
+                "x": 64.0,
+                "y": 52.0
               },
               "traits": [],
               "movable": true,
@@ -176,7 +176,7 @@
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 62.0,
+            "x": 108.0,
             "y": 472.0
           },
           "objects": [
@@ -399,7 +399,7 @@
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58.0,
+            "x": 108.0,
             "y": 468.0
           },
           "objects": [
@@ -606,8 +606,8 @@
           "parShots": 2,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 74.0,
-            "y": 446.0
+            "x": 108.0,
+            "y": 444.0
           },
           "objects": [
             {
@@ -819,8 +819,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58,
-            "y": 462
+            "x": 108.0,
+            "y": 460.0
           },
           "copyCharges": 0,
           "bonusGoal": "젤리와 한 번 부딪힌 뒤 홀에 넣어 보세요.",
@@ -846,12 +846,12 @@
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 298,
-                "y": 130
+                "x": 296,
+                "y": 70
               },
               "size": {
-                "x": 74,
-                "y": 74
+                "x": 80,
+                "y": 80
               },
               "traits": [],
               "movable": false,
@@ -860,7 +860,7 @@
               "open": false,
               "pressed": false,
               "visualState": "",
-              "hitboxScale": 0.88,
+              "hitboxScale": 1.2,
               "restitution": 0.72,
               "linkId": null
             },
@@ -883,7 +883,7 @@
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null
             },
             {
@@ -905,7 +905,7 @@
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null
             },
             {
@@ -927,7 +927,7 @@
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null
             },
             {
@@ -935,7 +935,7 @@
               "type": "wall",
               "position": {
                 "x": 220,
-                "y": 270
+                "y": 290
               },
               "size": {
                 "x": 24,
@@ -978,11 +978,11 @@
               "id": "route_guard_lower",
               "type": "wall",
               "position": {
-                "x": 165,
+                "x": 150,
                 "y": 350
               },
               "size": {
-                "x": 70,
+                "x": 60,
                 "y": 24
               },
               "traits": [],
@@ -1028,8 +1028,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58,
-            "y": 462
+            "x": 108.0,
+            "y": 460.0
           },
           "copyCharges": 0,
           "bonusGoal": "젤리를 거쳐 벽을 반사하거나 벽을 이용해 홀에 넣어 보세요.",
@@ -1053,8 +1053,8 @@
               "id": "hole",
               "type": "hole",
               "position": {
-                "x": 300,
-                "y": 110
+                "x": 240,
+                "y": 160
               },
               "size": {
                 "x": 60,
@@ -1191,8 +1191,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 58,
-            "y": 462
+            "x": 108.0,
+            "y": 216.0
           },
           "copyCharges": 0,
           "bonusGoal": "젤리의 반발과 열린 통로를 이용해 홀에 넣어 보세요.",
@@ -1253,7 +1253,7 @@
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.08,
               "linkId": null
             },
             {
@@ -1367,6 +1367,18 @@
               "hitboxScale": 0.88,
               "restitution": 0.72,
               "linkId": null
+            },
+            {
+              "id": "bouncy_03_direct_guard",
+              "type": "wall",
+              "position": {"x": 204, "y": 163},
+              "size": {"x": 18, "y": 100},
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "hitboxScale": 0.9,
+              "restitution": 0.78
             }
           ]
         },
@@ -1376,8 +1388,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 300,
-            "y": 462
+            "x": 252.0,
+            "y": 460.0
           },
           "copyCharges": 0,
           "bonusGoal": "젤리와 벽의 반발 각도를 조절해 홀에 넣어 보세요.",
@@ -1539,8 +1551,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56,
-            "y": 466
+            "x": 108.0,
+            "y": 464.0
           },
           "copyCharges": 0,
           "bonusGoal": "스위치를 눌러 문을 열고 홀에 넣어 보세요.",
@@ -1773,8 +1785,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 300,
-            "y": 466
+            "x": 252.0,
+            "y": 464.0
           },
           "copyCharges": 0,
           "bonusGoal": "스위치를 눌러 문을 열고 홀에 넣어 보세요.",
@@ -2007,8 +2019,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56,
-            "y": 466
+            "x": 108.0,
+            "y": 468.0
           },
           "copyCharges": 0,
           "bonusGoal": "스위치를 누르는 길과 벽을 이용하는 길을 모두 찾아보세요.",
@@ -2239,8 +2251,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 300,
-            "y": 466
+            "x": 252.0,
+            "y": 520.0
           },
           "copyCharges": 0,
           "bonusGoal": "문을 여는 길과 문을 피해 가는 길을 모두 찾아보세요.",
@@ -2477,8 +2489,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56,
-            "y": 466
+            "x": 108.0,
+            "y": 512.0
           },
           "copyCharges": 0,
           "bonusGoal": "풍선을 건드린 뒤 ? 상자와 문까지 이어지는 길을 완성하세요.",
@@ -2615,8 +2627,8 @@
               "id": "balloon_switch",
               "type": "switch_pad",
               "position": {
-                "x": 214,
-                "y": 214
+                "x": 208,
+                "y": 194
               },
               "size": {
                 "x": 62,
@@ -2709,8 +2721,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56,
-            "y": 466
+            "x": 108.0,
+            "y": 512.0
           },
           "copyCharges": 0,
           "bonusGoal": "풍선을 쿠션으로 쓰거나 ? 상자를 열어 다른 길을 완성하세요.",
@@ -2721,12 +2733,11 @@
             "spike_source"
           ],
           "solutionFamilies": [
-            "balloon_bounce",
+            "none_bypass",
             "sharp_pop_chain"
           ],
           "optionalChallenges": [
             "one_shot",
-            "ordinary_balloon_bounce",
             "sharp_pop_chain"
           ],
           "metadata": {
@@ -2825,12 +2836,12 @@
               "id": "balloon_gate",
               "type": "gate",
               "position": {
-                "x": 270,
-                "y": 176
+                "x": 282,
+                "y": 200
               },
               "size": {
-                "x": 38,
-                "y": 74
+                "x": 46,
+                "y": 110
               },
               "traits": [],
               "movable": false,
@@ -2957,8 +2968,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56,
-            "y": 466
+            "x": 108.0,
+            "y": 484.0
           },
           "copyCharges": 0,
           "bonusGoal": "풍선을 터뜨려 ? 상자의 변화를 확인한 뒤 홀에 도착하세요.",
@@ -3227,6 +3238,18 @@
               "hitboxScale": 0.88,
               "restitution": 0.72,
               "linkId": null
+            },
+            {
+              "id": "balloon_03_bypass_guard",
+              "type": "wall",
+              "position": {"x": 140, "y": 180},
+              "size": {"x": 16, "y": 16},
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "hitboxScale": 0.9,
+              "restitution": 0.78
             }
           ]
         },
@@ -3236,8 +3259,8 @@
           "parShots": 3,
           "difficultyBand": "튜토리얼",
           "ballSpawn": {
-            "x": 56,
-            "y": 466
+            "x": 108.0,
+            "y": 464.0
           },
           "copyCharges": 0,
           "bonusGoal": "두 풍선 중 하나를 골라 ? 상자와 홀까지 길을 이어 보세요.",
@@ -3248,12 +3271,11 @@
             "spike_source"
           ],
           "solutionFamilies": [
-            "balloon_bounce",
+            "none_bypass",
             "sharp_single_use"
           ],
           "optionalChallenges": [
             "one_shot",
-            "ordinary_balloon_bounce",
             "two_balloons_one_sharp"
           ],
           "metadata": {
@@ -3461,6 +3483,18 @@
               "linkId": null
             },
             {
+              "id": "direct_route_guard",
+              "type": "wall",
+              "position": {"x": 168, "y": 332},
+              "size": {"x": 16, "y": 16},
+              "traits": [],
+              "movable": false,
+              "solid": true,
+              "active": true,
+              "hitboxScale": 1.0,
+              "restitution": 0.64
+            },
+            {
               "id": "balloon_b",
               "type": "balloon",
               "position": {
@@ -3495,7 +3529,7 @@
           "weight": 1,
           "parShots": 3,
           "difficultyBand": "기초 응용",
-          "ballSpawn": {"x": 56, "y": 466},
+          "ballSpawn": {"x": 108, "y": 520},
           "copyCharges": 0,
           "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
           "copyCoreReward": 0,
@@ -3512,7 +3546,7 @@
             {"id":"drain_weight","type":"weight","position":{"x":178,"y":286},"size":{"x":56,"y":52},"traits":["heavy"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.86,"restitution":0.62,"linkId":null,"movableWhenDrained":true},
             {"id":"weight_route_ball","type":"ball","position":{"x":178,"y":205},"size":{"x":24,"y":24},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"spent","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"side_crate","type":"crate","position":{"x":286,"y":330},"size":{"x":50,"y":50},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.68,"linkId":null},
-            {"id":"drained_01_direct_guard","type":"wall","position":{"x":82,"y":425.5},"size":{"x":12,"y":28},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
+            {"id":"drained_01_direct_guard","type":"wall","position":{"x":123,"y":420},"size":{"x":100,"y":18},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
           ]
         },
         {
@@ -3520,7 +3554,7 @@
           "weight": 1,
           "parShots": 3,
           "difficultyBand": "기초 응용",
-          "ballSpawn": {"x": 300, "y": 466},
+          "ballSpawn": {"x": 252, "y": 464},
           "copyCharges": 0,
           "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
           "copyCoreReward": 0,
@@ -3536,7 +3570,9 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"drain_jelly","type":"bumper","position":{"x":180,"y":286},"size":{"x":58,"y":62},"traits":["bouncy"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.86,"restitution":0.9,"linkId":null,"movableWhenDrained":true},
             {"id":"lane_crate","type":"crate","position":{"x":74,"y":330},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null},
-            {"id":"drained_02_bypass_blocker","type":"wall","position":{"x":205,"y":170},"size":{"x":70,"y":110},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null}
+            {"id":"drained_02_bypass_blocker","type":"wall","position":{"x":205,"y":170},"size":{"x":70,"y":110},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
+            {"id":"drained_02_route_guard_a","type":"wall","position":{"x":300,"y":360},"size":{"x":16,"y":16},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.78},
+            {"id":"drained_02_route_guard_b","type":"wall","position":{"x":60,"y":260},"size":{"x":16,"y":16},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.78}
           ]
         },
         {
@@ -3569,7 +3605,7 @@
           "weight": 1,
           "parShots": 3,
           "difficultyBand": "기초 응용",
-          "ballSpawn": {"x": 180, "y": 478},
+          "ballSpawn": {"x": 180, "y": 476},
           "copyCharges": 0,
           "bonusGoal": "비워진 원본을 움직인 뒤 홀에 넣어 보세요.",
           "copyCoreReward": 0,
@@ -3599,7 +3635,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "기초 응용",
-          "ballSpawn": {"x": 56, "y": 466},
+          "ballSpawn": {"x": 104, "y": 536},
           "copyCharges": 0,
           "bonusGoal": "약한 발사로 발판에 들어가 속도를 되살려 보세요.",
           "copyCoreReward": 0,
@@ -3615,7 +3651,7 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"last_slider","type":"power_slider","position":{"x":180,"y":370},"size":{"x":112,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},
             {"id":"quiet_crate","type":"crate","position":{"x":76,"y":210},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null},
-            {"id":"speed_01_direct_guard","type":"wall","position":{"x":97,"y":437},"size":{"x":18,"y":36},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
+            {"id":"speed_01_direct_guard","type":"wall","position":{"x":177,"y":437},"size":{"x":90,"y":18},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.9,"restitution":0.78,"linkId":null}
           ]
         },
         {
@@ -3623,7 +3659,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "기초 응용",
-          "ballSpawn": {"x": 72, "y": 466},
+          "ballSpawn": {"x": 108, "y": 464},
           "copyCharges": 0,
           "bonusGoal": "벽에 맞은 뒤 발판에 들어가는 각도를 찾아 보세요.",
           "copyCoreReward": 0,
@@ -3648,7 +3684,7 @@
           "weight": 1,
           "parShots": 3,
           "difficultyBand": "기초 응용",
-          "ballSpawn": {"x": 62, "y": 466},
+          "ballSpawn": {"x": 108, "y": 488},
           "copyCharges": 0,
           "bonusGoal": "상자를 건드린 뒤 이어지는 발판의 힘을 활용해 보세요.",
           "copyCoreReward": 0,
@@ -3664,7 +3700,8 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"push_crate","type":"crate","position":{"x":118,"y":390},"size":{"x":36,"y":36},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.84,"restitution":0.66,"linkId":null},
             {"id":"crate_slider","type":"power_slider","position":{"x":118,"y":330},"size":{"x":94,"y":46},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":0,"y":-1},"referenceSpeed":44,"allowedTargets":["ball","crate"]},
-            {"id":"side_wall","type":"wall","position":{"x":300,"y":300},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.75,"linkId":null}
+            {"id":"side_wall","type":"wall","position":{"x":300,"y":300},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.75,"linkId":null},
+            {"id":"speed_03_direct_guard","type":"wall","position":{"x":190,"y":330},"size":{"x":18,"y":100},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.78}
           ]
         },
         {
@@ -3672,7 +3709,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "기초 응용",
-          "ballSpawn": {"x": 180, "y": 466},
+          "ballSpawn": {"x": 180, "y": 512},
           "copyCharges": 0,
           "bonusGoal": "서로 다른 발판을 골라 같은 홀에 도달해 보세요.",
           "copyCoreReward": 0,
@@ -3703,7 +3740,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x": 60, "y": 480},
+          "ballSpawn": {"x": 108, "y": 480},
           "copyCharges": 0,
           "bonusGoal": "첫 번째 공을 쿠션처럼 이용해 두 공으로 홀에 들어가 보세요.",
           "copyCoreReward": 0,
@@ -3719,8 +3756,8 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"cushion_wall","type":"wall","position":{"x":236,"y":360},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true,"restitution":0.8},
             {"id":"cushion_crate","type":"crate","position":{"x":154,"y":300},"size":{"x":50,"y":50},"traits":[],"movable":true,"solid":true},
-            {"id":"sequence_switch_p1","type":"switch_pad","position":{"x":254,"y":544},"size":{"x":10,"y":10},"traits":[],"movable":false,"solid":true,"active":true,"linkId":"p1_setup_gate"},
-            {"id":"p1_setup_gate","type":"gate","position":{"x":240,"y":500},"size":{"x":24,"y":70},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"linkId":"p1_setup_gate"}
+            {"id":"sequence_switch_p1","type":"switch_pad","position":{"x":213,"y":466},"size":{"x":20,"y":20},"traits":[],"movable":false,"solid":true,"active":true,"linkId":"p1_setup_gate"},
+            {"id":"p1_setup_gate","type":"gate","position":{"x":240,"y":506},"size":{"x":24,"y":110},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"linkId":"p1_setup_gate"}
           ]
         },
         {
@@ -3728,7 +3765,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x": 60, "y": 480},
+          "ballSpawn": {"x": 108, "y": 516},
           "copyCharges": 0,
           "bonusGoal": "첫 번째 공을 스위치에 남겨 열린 길을 유지해 보세요.",
           "copyCoreReward": 0,
@@ -3754,7 +3791,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x": 60, "y":480},
+          "ballSpawn": {"x": 108, "y":480},
           "copyCharges": 0,
           "bonusGoal": "점착으로 남긴 공을 범퍼처럼 맞혀 홀을 향해 튕겨 보세요.",
           "copyCoreReward": 0,
@@ -3778,7 +3815,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x":180,"y":480},
+          "ballSpawn": {"x":132,"y":480},
           "copyCharges": 0,
           "bonusGoal": "첫 번째 공과 상자를 함께 스토퍼로 삼아 홀을 열어 보세요.",
           "copyCoreReward": 0,
@@ -3788,13 +3825,14 @@
           "optionalChallenges": ["previous_ball_stopper", "single_shot_bypass"],
           "metadata": {},
           "objects": [
-            {"id":"hole","type":"hole","position":{"x":230,"y":274},"size":{"x":72,"y":72},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":0.9},
+            {"id":"hole","type":"hole","position":{"x":230,"y":274},"size":{"x":88,"y":88},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":0.9},
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"stopper_crate","type":"crate","position":{"x":180,"y":352},"size":{"x":58,"y":58},"traits":[],"movable":true,"solid":true},
             {"id":"stopper_wall","type":"wall","position":{"x":112,"y":260},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true},
             {"id":"stopper_bumper","type":"bumper","position":{"x":300,"y":210},"size":{"x":58,"y":58},"traits":["bouncy"],"movable":false,"solid":true},
+            {"id":"p4_bypass_guard","type":"wall","position":{"x":320,"y":460},"size":{"x":16,"y":16},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.78},
             {"id":"p4_bypass_blocker_a","type":"wall","position":{"x":230,"y":430},"size":{"x":32,"y":110},"traits":[],"movable":false,"solid":true},
             {"id":"p4_bypass_blocker_b","type":"wall","position":{"x":292,"y":330},"size":{"x":22,"y":100},"traits":[],"movable":false,"solid":true}
           ]
@@ -3810,7 +3848,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x":60,"y":480},
+          "ballSpawn": {"x":108,"y":360},
           "copyCharges": 0,
           "bonusGoal": "벽 쿠션과 첫 번째 공을 정해진 순서로 이어 보세요.",
           "copyCoreReward": 0,
@@ -3828,7 +3866,7 @@
             {"id":"three_balloon","type":"balloon","position":{"x":72,"y":230},"size":{"x":46,"y":46},"traits":[],"movable":false,"solid":true,"restitution":0.82},
             {"id":"cushion_slider","type":"power_slider","position":{"x":220,"y":460},"size":{"x":104,"y":42},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":40,"allowedTargets":["ball"]},
             {"id":"three_sticky","type":"sticky_surface","position":{"x":204,"y":540},"size":{"x":32,"y":40},"traits":["sticky"],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12},
-            {"id":"chain_score_01_direct_guard","type":"wall","position":{"x":103,"y":462},"size":{"x":18,"y":36},"traits":[],"movable":false,"solid":true,"restitution":0.8}
+            {"id":"chain_score_01_direct_guard","type":"wall","position":{"x":202,"y":360},"size":{"x":18,"y":36},"traits":[],"movable":false,"solid":true,"restitution":0.8}
           ]
         },
         {
@@ -3836,7 +3874,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x":60,"y":480},
+          "ballSpawn": {"x":108,"y":516},
           "copyCharges": 1,
           "bonusGoal": "차단벽을 여러 번 튕긴 뒤 첫 번째 공까지 힘을 이어 보세요.",
           "copyCoreReward": 0,
@@ -3854,7 +3892,8 @@
             {"id":"chain_stone","type":"weight","position":{"x":250,"y":80},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
             {"id":"chain_switch","type":"switch_pad","position":{"x":300,"y":460},"size":{"x":48,"y":32},"traits":[],"movable":false,"solid":true,"linkId":"chain_gate"},
             {"id":"chain_gate","type":"gate","position":{"x":300,"y":160},"size":{"x":24,"y":140},"traits":[],"movable":false,"solid":true,"linkId":"chain_gate"},
-            {"id":"chain_score_02_direct_guard","type":"wall","position":{"x":62,"y":428},"size":{"x":34,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8}
+            {"id":"chain_score_02_direct_guard","type":"wall","position":{"x":100,"y":424},"size":{"x":90,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8},
+            {"id":"chain_boost","type":"power_slider","position":{"x":70,"y":350},"size":{"x":70,"y":32},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":0,"y":-1},"referenceSpeed":40,"allowedTargets":["ball"]}
           ]
         },
         {
@@ -3862,7 +3901,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x":60,"y":480},
+          "ballSpawn": {"x":108,"y":492},
           "copyCharges": 0,
           "bonusGoal": "힘 발판에서 돌과 벽, 첫 번째 공까지 충돌 순서를 이어 보세요.",
           "copyCoreReward": 0,
@@ -3888,7 +3927,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "연쇄 응용",
-          "ballSpawn": {"x":60,"y":480},
+          "ballSpawn": {"x":104,"y":524},
           "copyCharges": 0,
           "bonusGoal": "같은 홀의 짧은 길과 여러 기물을 잇는 긴 길을 비교해 보세요.",
           "copyCoreReward": 0,
@@ -3906,7 +3945,7 @@
             {"id":"score_jelly","type":"bumper","position":{"x":146.5,"y":180.6},"size":{"x":76,"y":76},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
             {"id":"score_balloon","type":"balloon","position":{"x":57.6,"y":297.4},"size":{"x":64,"y":64},"traits":[],"movable":false,"solid":true,"restitution":0.82},
             {"id":"score_slider","type":"power_slider","position":{"x":280,"y":240},"size":{"x":100,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},
-            {"id":"chain_score_04_direct_guard","type":"wall","position":{"x":96,"y":423},"size":{"x":18,"y":28},"traits":[],"movable":false,"solid":true,"restitution":0.8}
+            {"id":"chain_score_04_direct_guard","type":"wall","position":{"x":148,"y":423},"size":{"x":90,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8}
           ]
         }
       ]
@@ -3920,7 +3959,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "회전 입문",
-          "ballSpawn": {"x":60,"y":500},
+          "ballSpawn": {"x":108,"y":500},
           "copyCharges": 0,
           "bonusGoal": "첫 번째 샷으로 반사판을 한 번 돌린 뒤 다음 샷의 방향을 바꿔 보세요.",
           "copyCoreReward": 0,
@@ -3944,7 +3983,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "순서 응용",
-          "ballSpawn": {"x":60,"y":500},
+          "ballSpawn": {"x":108,"y":500},
           "copyCharges": 0,
           "bonusGoal": "두 반사판을 차례로 돌리면 다음 샷의 길이 달라집니다.",
           "copyCoreReward": 0,
@@ -3954,13 +3993,15 @@
           "optionalChallenges": ["ordered_rotation", "direct_low_score"],
           "metadata": {},
           "objects": [
-            {"id":"hole","type":"hole","position":{"x":300,"y":110},"size":{"x":56,"y":56},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
+            {"id":"hole","type":"hole","position":{"x":140,"y":150},"size":{"x":68,"y":68},"traits":[],"movable":false,"solid":false,"active":true,"hitboxScale":1.06},
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"reflector_a","type":"rotating_reflector","position":{"x":150,"y":360},"size":{"x":82,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":0,"reflectorRotationCount":0},
             {"id":"reflector_b","type":"rotating_reflector","position":{"x":250,"y":260},"size":{"x":82,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":2,"reflectorRotationCount":0},
-            {"id":"order_crate","type":"crate","position":{"x":90,"y":250},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"restitution":0.66}
+            {"id":"order_crate","type":"crate","position":{"x":90,"y":250},"size":{"x":48,"y":48},"traits":[],"movable":true,"solid":true,"restitution":0.66},
+            {"id":"reflector_02_route_guard_a","type":"wall","position":{"x":240,"y":340},"size":{"x":16,"y":16},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.78},
+            {"id":"reflector_02_route_guard_b","type":"wall","position":{"x":300,"y":160},"size":{"x":16,"y":16},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.78}
           ]
         },
         {
@@ -3968,7 +4009,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "과거 공 응용",
-          "ballSpawn": {"x":60,"y":500},
+          "ballSpawn": {"x":108,"y":500},
           "copyCharges": 0,
           "bonusGoal": "남겨 둔 첫 공이 반사판을 작동시키는 순서를 찾아 보세요.",
           "copyCoreReward": 0,
@@ -3984,7 +4025,7 @@
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"reflector_a","type":"rotating_reflector","position":{"x":100,"y":330},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":0,"reflectorRotationCount":0},
             {"id":"rotation_gate","type":"gate","position":{"x":220,"y":225},"size":{"x":24,"y":150},"traits":[],"movable":false,"solid":true,"open":false,"visualState":"locked","restitution":0.08,"linkId":"rotation_gate"},
-            {"id":"past_anchor","type":"sticky_surface","position":{"x":70,"y":270},"size":{"x":48,"y":32},"traits":["sticky"],"movable":false,"solid":true,"active":true,"hitboxScale":0.94,"restitution":0.12},
+            {"id":"past_anchor","type":"sticky_surface","position":{"x":70,"y":270},"size":{"x":64,"y":40},"traits":["sticky"],"movable":false,"solid":true,"active":true,"hitboxScale":0.94,"restitution":0.12},
             {"id":"past_bumper","type":"bumper","position":{"x":285,"y":350},"size":{"x":54,"y":54},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92}
           ]
         },
@@ -3993,7 +4034,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "힘 발판 연계",
-          "ballSpawn": {"x":60,"y":500},
+          "ballSpawn": {"x":108,"y":500},
           "copyCharges": 0,
           "bonusGoal": "힘 발판을 지난 뒤 회전 반사판의 새 방향을 활용해 보세요.",
           "copyCoreReward": 0,
@@ -4007,9 +4048,10 @@
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
-            {"id":"power_lane","type":"power_slider","position":{"x":118,"y":390},"size":{"x":76,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"]},
-            {"id":"reflector_a","type":"rotating_reflector","position":{"x":230,"y":300},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":1,"reflectorRotationCount":0},
-            {"id":"lane_stone","type":"weight","position":{"x":280,"y":420},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68}
+            {"id":"power_lane","type":"power_slider","position":{"x":166,"y":390},"size":{"x":76,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"],"linkId":"direct_route_gate"},
+            {"id":"direct_route_gate","type":"gate","position":{"x":222,"y":260},"size":{"x":18,"y":64},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"hitboxScale":1.0,"restitution":0.64,"linkId":"direct_route_gate"},
+            {"id":"reflector_a","type":"rotating_reflector","position":{"x":278,"y":300},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":1,"reflectorRotationCount":0},
+            {"id":"lane_stone","type":"weight","position":{"x":312,"y":420},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68}
           ]
         }
       ]
@@ -4023,7 +4065,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "속성 종합",
-          "ballSpawn": {"x":60,"y":480},
+          "ballSpawn": {"x":120,"y":480},
           "copyCharges": 0,
           "bonusGoal": "무거움을 옮긴 뒤 비워진 돌과 상자, 스위치의 변화를 살펴보세요.",
           "copyCoreReward": 0,
@@ -4048,7 +4090,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "속성 종합",
-          "ballSpawn": {"x":60,"y":500},
+          "ballSpawn": {"x":108,"y":500},
           "copyCharges": 0,
           "bonusGoal": "슬라이더와 탄성 물체를 거친 뒤 회전판의 새 면을 활용해 보세요.",
           "copyCoreReward": 0,
@@ -4062,10 +4104,10 @@
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
-            {"id":"b_slider","type":"power_slider","position":{"x":118,"y":390},"size":{"x":76,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"],"linkId":"sequence_gate_b"},
-            {"id":"b_reflector","type":"rotating_reflector","position":{"x":230,"y":300},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":1,"reflectorRotationCount":0},
-            {"id":"b_bumper","type":"bumper","position":{"x":260,"y":150},"size":{"x":44,"y":44},"traits":["bouncy"],"movable":false,"solid":true,"hitboxScale":1.08,"restitution":0.92},
-            {"id":"b_stone","type":"weight","position":{"x":280,"y":420},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
+            {"id":"b_slider","type":"power_slider","position":{"x":166,"y":390},"size":{"x":76,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"],"linkId":"sequence_gate_b"},
+            {"id":"b_reflector","type":"rotating_reflector","position":{"x":278,"y":300},"size":{"x":88,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.82,"reflectorOrientation":1,"reflectorRotationCount":0},
+            {"id":"b_bumper","type":"bumper","position":{"x":200,"y":140},"size":{"x":44,"y":44},"traits":["bouncy"],"movable":false,"solid":true,"hitboxScale":1.08,"restitution":0.92},
+            {"id":"b_stone","type":"weight","position":{"x":312,"y":420},"size":{"x":44,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
             {"id":"sequence_gate_b","type":"gate","position":{"x":295,"y":185},"size":{"x":70,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"linkId":"sequence_gate_b"}
           ]
         },
@@ -4074,7 +4116,7 @@
           "weight": 1,
           "parShots": 3,
           "difficultyBand": "속성 종합",
-          "ballSpawn": {"x":60,"y":480},
+          "ballSpawn": {"x":108,"y":396},
           "copyCharges": 0,
           "bonusGoal": "점착으로 남긴 과거 공과 풍선, 상자를 여러 샷으로 이어 보세요.",
           "copyCoreReward": 0,
@@ -4094,7 +4136,7 @@
             {"id":"c_slider","type":"power_slider","position":{"x":280,"y":240},"size":{"x":100,"y":48},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":42,"allowedTargets":["ball"]},
             {"id":"c_direct_blocker","type":"wall","position":{"x":200,"y":240},"size":{"x":24,"y":60},"traits":[],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":1.0,"restitution":0.64},
             {"id":"c_sticky","type":"sticky_surface","position":{"x":310,"y":500},"size":{"x":32,"y":40},"traits":["sticky"],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12},
-            {"id":"c_sticky_target","type":"sticky_surface","position":{"x":180,"y":480},"size":{"x":48,"y":32},"traits":["sticky"],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12,"linkId":"sequence_gate_c"},
+            {"id":"c_sticky_target","type":"sticky_surface","position":{"x":228,"y":398},"size":{"x":48,"y":32},"traits":["sticky"],"movable":false,"solid":true,"active":true,"visualState":"ready","hitboxScale":0.94,"restitution":0.12,"linkId":"sequence_gate_c"},
             {"id":"sequence_gate_c","type":"gate","position":{"x":250,"y":170},"size":{"x":100,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"linkId":"sequence_gate_c"}
           ]
         },
@@ -4103,7 +4145,7 @@
           "weight": 1,
           "parShots": 2,
           "difficultyBand": "속성 종합",
-          "ballSpawn": {"x":60,"y":480},
+          "ballSpawn": {"x":108,"y":500},
           "copyCharges": 0,
           "bonusGoal": "벽과 돌, 슬라이더를 이어 남겨 둔 공까지 한 번에 흔들어 보세요.",
           "copyCoreReward": 0,
@@ -4117,10 +4159,10 @@
             {"id":"wall_top","type":"wall","position":{"x":180,"y":12},"size":{"x":340,"y":24},"traits":[],"movable":false,"solid":true},
             {"id":"wall_left","type":"wall","position":{"x":12,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
             {"id":"wall_right","type":"wall","position":{"x":348,"y":280},"size":{"x":24,"y":520},"traits":[],"movable":false,"solid":true},
-            {"id":"d_setup_slider","type":"power_slider","position":{"x":92,"y":390},"size":{"x":16,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":1,"allowedTargets":["ball"],"linkId":"sequence_gate_d"},
-            {"id":"d_slider","type":"power_slider","position":{"x":125,"y":390},"size":{"x":50,"y":27},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":1.2,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"]},
-            {"id":"d_stone","type":"weight","position":{"x":150,"y":330},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
-            {"id":"d_wall","type":"wall","position":{"x":195,"y":390},"size":{"x":60,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8},
+            {"id":"d_setup_slider","type":"power_slider","position":{"x":140,"y":390},"size":{"x":16,"y":36},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":0.9,"direction":{"x":1,"y":0},"referenceSpeed":1,"allowedTargets":["ball"],"linkId":"sequence_gate_d"},
+            {"id":"d_slider","type":"power_slider","position":{"x":173,"y":390},"size":{"x":50,"y":27},"traits":[],"movable":false,"solid":false,"active":true,"visualState":"ready","hitboxScale":1.2,"direction":{"x":1,"y":0},"referenceSpeed":44,"allowedTargets":["ball"]},
+            {"id":"d_stone","type":"weight","position":{"x":198,"y":330},"size":{"x":52,"y":44},"traits":["heavy"],"movable":false,"solid":true,"restitution":0.68},
+            {"id":"d_wall","type":"wall","position":{"x":243,"y":390},"size":{"x":60,"y":18},"traits":[],"movable":false,"solid":true,"restitution":0.8},
             {"id":"d_bumper","type":"bumper","position":{"x":300,"y":440},"size":{"x":58,"y":58},"traits":["bouncy"],"movable":false,"solid":true,"restitution":0.92},
             {"id":"sequence_gate_d","type":"gate","position":{"x":180,"y":130},"size":{"x":300,"y":14},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"linkId":"sequence_gate_d"}
           ]

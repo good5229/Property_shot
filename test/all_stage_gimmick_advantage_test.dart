@@ -434,7 +434,9 @@ _TypedAdvantage _persistentSequenceAdvantage(
   final bypass = _countGrid(
     initial,
     resolver,
-    (result) => result.state.phase == GamePhase.success,
+    (result) =>
+        result.state.phase == GamePhase.success &&
+        !_usesPersistentGimmick(pattern.patternId, result),
   );
   var localSetupClears = 0;
   for (final firstInput in _localInputs(solution.firstInput)) {
@@ -492,6 +494,34 @@ _TypedAdvantage _persistentSequenceAdvantage(
     bypassSamples: 900,
     minimumRatio: 1.4,
   );
+}
+
+bool _usesPersistentGimmick(String patternId, ShotResult result) {
+  final touched = <String>{
+    for (final impact in result.impacts) ...[
+      impact.entityId,
+      impact.sourceEntityId,
+    ],
+  };
+  return switch (patternId) {
+    'stage_persistent_01' =>
+      result.events.contains('switch_pressed') ||
+          touched.contains('sequence_switch_p1'),
+    'stage_persistent_02' =>
+      result.events.contains('switch_pressed') ||
+          touched.contains('switch_hold'),
+    'stage_persistent_03' =>
+      result.events.contains('sticky_attached') ||
+          result.events.contains('jelly_bounced') ||
+          touched.contains('sticky_pad') ||
+          touched.contains('elastic_bumper'),
+    'stage_persistent_04' =>
+      result.events.contains('crate_pushed') ||
+          result.events.contains('jelly_bounced') ||
+          touched.contains('stopper_crate') ||
+          touched.contains('stopper_bumper'),
+    _ => false,
+  };
 }
 
 bool _isPersistentPreparation(

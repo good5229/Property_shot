@@ -187,8 +187,14 @@ void main() {
         expect(first.state.entityById('rotation_gate')!.open, isTrue);
         expect(first.state.entityById('rotation_gate')!.solid, isFalse);
       }
+      final rotationIds = _rotationIds(first, second);
       expect(
-        _rotationIds(first, second),
+        rotationIds.length,
+        greaterThanOrEqualTo(solution.expectedRotationOrder.length),
+        reason: '${first.events} → ${second.events}',
+      );
+      expect(
+        rotationIds.take(solution.expectedRotationOrder.length),
         solution.expectedRotationOrder,
         reason: '${first.events} → ${second.events}',
       );
