@@ -14,6 +14,19 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [x] 충돌·로딩·스폰·복구 보상 총체 QA
+  - branch: codex/collision-loading-system-qa
+  - issue: 없음
+  - summary: Terra 역할별 웹 기반 감사로 다중 충돌 프레임 정지, 초기 로딩 피드백, 전 스테이지 시작 안전영역, 관측소·등대·다리 지원 반영을 재검증하고 공통 원인부터 개선한다.
+  - notes: 성능/물리, 레벨/운영, UI/접근성 Terra 감사 결과를 통합하고 Sol 최종 재검수에서 P0/P1 없음으로 PASS했다. 전체 1,483개 테스트, 정적 분석, 생산 40패턴 런타임, Wasm 빌드, 다해상도 Golden과 로컬 브라우저를 통과했다. 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다.
+  - progress:
+    - [x] Terra 역할별 웹 레퍼런스 및 코드 감사
+    - [x] 다중 충돌 프레임 정지 원인 제거
+    - [x] 초기 로딩 페이즈 UI와 로딩 비용 개선
+    - [x] 공 지름 3~5배 시작 안전영역 전수 검증
+    - [x] 관측소·등대·다리 지원 효과 연결 검증
+    - [x] Sol 구현 묶음별 독립 검수와 전체 회귀
+
 - [x] 3~N중 연쇄 충돌 프레임 페이싱
   - branch: codex/chain-collision-frame-pacing
   - issue: 없음
