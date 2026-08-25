@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:property_shot/game/analysis/island_restoration.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
+import 'package:property_shot/game/domain/trait.dart';
 import 'package:property_shot/game/input/intent_assist_resolver.dart';
 import 'package:property_shot/ui/feedback_cue.dart';
 import 'package:property_shot/ui/game_feedback.dart';
@@ -115,15 +117,71 @@ void main() {
 
     feedback.discoveryMilestone();
     feedback.rewardActivated();
-    feedback.restorationCompleted();
+    feedback.restorationCompleted(IslandLandmark.observatory);
     feedback.labCompleted();
     await _flushFeedback();
 
     expect(cues, [
       FeedbackCue.discovery,
       FeedbackCue.rewardActivated,
-      FeedbackCue.restoration,
+      FeedbackCue.observatoryRestored,
       FeedbackCue.labComplete,
+    ]);
+  });
+
+  test('같은 벽 충돌도 공의 속성에 따라 네 가지 재질 큐를 구분한다', () async {
+    final cues = <FeedbackCue>[];
+    GameFeedback materialFeedback() => GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+
+    materialFeedback().collision(
+      EntityType.wall,
+      impactStrength: 0.4,
+      sourceTraits: const {TraitType.heavy},
+    );
+    materialFeedback().collision(
+      EntityType.wall,
+      impactStrength: 0.4,
+      sourceTraits: const {TraitType.bouncy},
+    );
+    materialFeedback().collision(
+      EntityType.wall,
+      impactStrength: 0.4,
+      sourceTraits: const {TraitType.sticky},
+    );
+    materialFeedback().collision(
+      EntityType.wall,
+      impactStrength: 0.4,
+      sourceTraits: const {TraitType.sharp},
+    );
+    await _flushFeedback();
+
+    expect(cues, [
+      FeedbackCue.heavyCollision,
+      FeedbackCue.bouncyCollision,
+      FeedbackCue.stickyCollision,
+      FeedbackCue.sharpCollision,
+    ]);
+  });
+
+  test('관측소·등대·다리 복구는 서로 다른 완료 패턴을 낸다', () async {
+    final cues = <FeedbackCue>[];
+    final feedback = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+    );
+
+    feedback.restorationCompleted(IslandLandmark.observatory);
+    feedback.restorationCompleted(IslandLandmark.lighthouse);
+    feedback.restorationCompleted(IslandLandmark.bridge);
+    await _flushFeedback();
+
+    expect(cues, [
+      FeedbackCue.observatoryRestored,
+      FeedbackCue.lighthouseRestored,
+      FeedbackCue.bridgeRestored,
     ]);
   });
 

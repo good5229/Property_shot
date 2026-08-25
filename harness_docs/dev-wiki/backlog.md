@@ -24,7 +24,7 @@ GitHub Issues own task status. This file owns planning context.
     - [x] 로컬 세션 역할별 평가기
     - [x] 최신 Web 성능·접근성 릴리스 게이트
     - [x] 복구 시설 통합 피날레
-    - [ ] 재질·복구 상태 기반 사운드 패스
+    - [x] 재질·복구 상태 기반 사운드 패스
     - [ ] 16:9 썸네일과 제출 패키지 동결
 
 - [x] OpenAI Game Builders Seoul Track 1 대응

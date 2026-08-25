@@ -2968,6 +2968,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       impact.entityType,
       emphasizeJelly: impact.entityType == EntityType.bumper,
       impactStrength: impact.impulse,
+      sourceTraits: impact.sourceTraits,
     );
     _telemetry.record(
       '충돌',

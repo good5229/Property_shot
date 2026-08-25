@@ -1595,7 +1595,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           );
         }
         if (restoredLandmark != null) {
-          _feedback.restorationCompleted();
+          _feedback.restorationCompleted(restoredLandmark);
           unawaited(_showIslandRestorationCelebration(restoredLandmark));
         }
       }

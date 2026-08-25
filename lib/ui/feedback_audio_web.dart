@@ -3,168 +3,18 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
 import 'feedback_cue.dart';
+import 'feedback_sound_spec.dart';
 
 Future<void> playFeedbackCue(FeedbackCue cue) async {
   try {
     final constructor =
         globalContext['AudioContext'] ?? globalContext['webkitAudioContext'];
-    if (constructor == null || !constructor.isA<JSFunction>()) {
-      return;
-    }
+    if (constructor == null || !constructor.isA<JSFunction>()) return;
 
     final context = (constructor as JSFunction).callAsConstructor<JSObject>();
-    final resume = context.callMethodVarArgs<JSAny?>('resume'.toJS);
-    await _awaitPromise(resume);
-
+    await _awaitPromise(context.callMethodVarArgs<JSAny?>('resume'.toJS));
     final destination = context['destination'];
     if (destination == null || !destination.isA<JSObject>()) {
-      await _close(context);
-      return;
-    }
-
-    final spec = switch (cue) {
-      FeedbackCue.ui => (
-        frequency: 620.0,
-        duration: 0.045,
-        volume: 0.045,
-        wave: 'sine',
-      ),
-      FeedbackCue.trait => (
-        frequency: 740.0,
-        duration: 0.09,
-        volume: 0.055,
-        wave: 'sine',
-      ),
-      FeedbackCue.copy => (
-        frequency: 880.0,
-        duration: 0.14,
-        volume: 0.06,
-        wave: 'triangle',
-      ),
-      FeedbackCue.copyCoreAwarded => (
-        frequency: 960.0,
-        duration: 0.22,
-        volume: 0.065,
-        wave: 'triangle',
-      ),
-      FeedbackCue.aimCharge => (
-        frequency: 320.0,
-        duration: 0.08,
-        volume: 0.035,
-        wave: 'sine',
-      ),
-      FeedbackCue.launch => (
-        frequency: 190.0,
-        duration: 0.11,
-        volume: 0.08,
-        wave: 'sawtooth',
-      ),
-      FeedbackCue.lightCollision => (
-        frequency: 520.0,
-        duration: 0.07,
-        volume: 0.05,
-        wave: 'triangle',
-      ),
-      FeedbackCue.heavyCollision => (
-        frequency: 110.0,
-        duration: 0.16,
-        volume: 0.09,
-        wave: 'sawtooth',
-      ),
-      FeedbackCue.bouncyCollision => (
-        frequency: 760.0,
-        duration: 0.18,
-        volume: 0.06,
-        wave: 'sine',
-      ),
-      FeedbackCue.stickyCollision => (
-        frequency: 260.0,
-        duration: 0.2,
-        volume: 0.055,
-        wave: 'triangle',
-      ),
-      FeedbackCue.jellyCollision => (
-        frequency: 680.0,
-        duration: 0.13,
-        volume: 0.06,
-        wave: 'sine',
-      ),
-      FeedbackCue.mysteryReveal => (
-        frequency: 880.0,
-        duration: 0.19,
-        volume: 0.065,
-        wave: 'triangle',
-      ),
-      FeedbackCue.switchPressed => (
-        frequency: 420.0,
-        duration: 0.12,
-        volume: 0.065,
-        wave: 'square',
-      ),
-      FeedbackCue.gateOpened => (
-        frequency: 300.0,
-        duration: 0.22,
-        volume: 0.07,
-        wave: 'sine',
-      ),
-      FeedbackCue.holeEntered => (
-        frequency: 520.0,
-        duration: 0.32,
-        volume: 0.075,
-        wave: 'sine',
-      ),
-      FeedbackCue.clear => (
-        frequency: 660.0,
-        duration: 0.28,
-        volume: 0.07,
-        wave: 'sine',
-      ),
-      FeedbackCue.medal => (
-        frequency: 1040.0,
-        duration: 0.2,
-        volume: 0.055,
-        wave: 'triangle',
-      ),
-      FeedbackCue.discovery => (
-        frequency: 920.0,
-        duration: 0.18,
-        volume: 0.055,
-        wave: 'triangle',
-      ),
-      FeedbackCue.rewardActivated => (
-        frequency: 820.0,
-        duration: 0.16,
-        volume: 0.06,
-        wave: 'sine',
-      ),
-      FeedbackCue.restoration => (
-        frequency: 560.0,
-        duration: 0.34,
-        volume: 0.07,
-        wave: 'triangle',
-      ),
-      FeedbackCue.labComplete => (
-        frequency: 700.0,
-        duration: 0.24,
-        volume: 0.06,
-        wave: 'sine',
-      ),
-      FeedbackCue.fail => (
-        frequency: 180.0,
-        duration: 0.16,
-        volume: 0.06,
-        wave: 'triangle',
-      ),
-    };
-
-    final oscillator = context.callMethodVarArgs<JSAny?>(
-      'createOscillator'.toJS,
-    );
-    final gain = context.callMethodVarArgs<JSAny?>('createGain'.toJS);
-    if (oscillator == null ||
-        !oscillator.isA<JSObject>() ||
-        gain == null ||
-        !gain.isA<JSObject>()) {
       await _close(context);
       return;
     }
@@ -173,51 +23,83 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
     final now = currentTime?.isA<JSNumber>() == true
         ? (currentTime as JSNumber).toDartDouble
         : 0.0;
-    final oscillatorObject = oscillator as JSObject;
-    final gainObject = gain as JSObject;
-    oscillatorObject['type'] = spec.wave.toJS;
-    final frequency = oscillatorObject['frequency'];
-    final gainParam = gainObject['gain'];
-    if (frequency == null ||
-        !frequency.isA<JSObject>() ||
-        gainParam == null ||
-        !gainParam.isA<JSObject>()) {
-      await _close(context);
-      return;
+    var cursor = now;
+    for (final tone in feedbackTonesFor(cue)) {
+      if (!_scheduleTone(
+        context: context,
+        destination: destination as JSObject,
+        tone: tone,
+        startTime: cursor,
+      )) {
+        await _close(context);
+        return;
+      }
+      cursor +=
+          (tone.milliseconds + tone.gapAfterMilliseconds).toDouble() / 1000;
     }
 
-    final frequencyObject = frequency as JSObject;
-    final gainParamObject = gainParam as JSObject;
-    frequencyObject.callMethodVarArgs<JSAny?>('setValueAtTime'.toJS, [
-      spec.frequency.toJS,
-      now.toJS,
-    ]);
-    gainParamObject.callMethodVarArgs<JSAny?>('setValueAtTime'.toJS, [
-      0.0001.toJS,
-      now.toJS,
-    ]);
-    gainParamObject.callMethodVarArgs<JSAny?>(
-      'exponentialRampToValueAtTime'.toJS,
-      [spec.volume.toJS, (now + 0.008).toJS],
-    );
-    gainParamObject.callMethodVarArgs<JSAny?>(
-      'exponentialRampToValueAtTime'.toJS,
-      [0.0001.toJS, (now + spec.duration).toJS],
-    );
-    oscillatorObject.callMethodVarArgs<JSAny?>('connect'.toJS, [gainObject]);
-    gainObject.callMethodVarArgs<JSAny?>('connect'.toJS, [destination]);
-    oscillatorObject.callMethodVarArgs<JSAny?>('start'.toJS, [now.toJS]);
-    oscillatorObject.callMethodVarArgs<JSAny?>('stop'.toJS, [
-      (now + spec.duration + 0.02).toJS,
-    ]);
-
     await Future<void>.delayed(
-      Duration(milliseconds: ((spec.duration + 0.04) * 1000).round()),
+      Duration(milliseconds: feedbackPatternDurationMilliseconds(cue) + 45),
     );
     await _close(context);
   } catch (_) {
     // 브라우저 자동 재생 정책이나 지원 여부로 실패해도 플레이는 계속한다.
   }
+}
+
+bool _scheduleTone({
+  required JSObject context,
+  required JSObject destination,
+  required FeedbackTone tone,
+  required double startTime,
+}) {
+  final oscillator = context.callMethodVarArgs<JSAny?>('createOscillator'.toJS);
+  final gain = context.callMethodVarArgs<JSAny?>('createGain'.toJS);
+  if (oscillator == null ||
+      !oscillator.isA<JSObject>() ||
+      gain == null ||
+      !gain.isA<JSObject>()) {
+    return false;
+  }
+
+  final oscillatorObject = oscillator as JSObject;
+  final gainObject = gain as JSObject;
+  oscillatorObject['type'] = tone.wave.name.toJS;
+  final frequency = oscillatorObject['frequency'];
+  final gainParam = gainObject['gain'];
+  if (frequency == null ||
+      !frequency.isA<JSObject>() ||
+      gainParam == null ||
+      !gainParam.isA<JSObject>()) {
+    return false;
+  }
+
+  final frequencyObject = frequency as JSObject;
+  final gainParamObject = gainParam as JSObject;
+  final endTime = startTime + tone.milliseconds / 1000;
+  frequencyObject.callMethodVarArgs<JSAny?>('setValueAtTime'.toJS, [
+    tone.frequency.toJS,
+    startTime.toJS,
+  ]);
+  gainParamObject.callMethodVarArgs<JSAny?>('setValueAtTime'.toJS, [
+    0.0001.toJS,
+    startTime.toJS,
+  ]);
+  gainParamObject.callMethodVarArgs<JSAny?>(
+    'exponentialRampToValueAtTime'.toJS,
+    [tone.volume.toJS, (startTime + 0.008).toJS],
+  );
+  gainParamObject.callMethodVarArgs<JSAny?>(
+    'exponentialRampToValueAtTime'.toJS,
+    [0.0001.toJS, endTime.toJS],
+  );
+  oscillatorObject.callMethodVarArgs<JSAny?>('connect'.toJS, [gainObject]);
+  gainObject.callMethodVarArgs<JSAny?>('connect'.toJS, [destination]);
+  oscillatorObject.callMethodVarArgs<JSAny?>('start'.toJS, [startTime.toJS]);
+  oscillatorObject.callMethodVarArgs<JSAny?>('stop'.toJS, [
+    (endTime + 0.02).toJS,
+  ]);
+  return true;
 }
 
 Future<void> _awaitPromise(JSAny? value) async {

@@ -14,4 +14,27 @@ void main() {
     expect(clear.length, isNot(launch.length));
     expect(heavy, isNot(equals(launch)));
   });
+
+  test('속성 충돌과 세 시설 복구 패턴은 모두 고유한 PCM 결과를 만든다', () {
+    final cues = [
+      FeedbackCue.heavyCollision,
+      FeedbackCue.bouncyCollision,
+      FeedbackCue.stickyCollision,
+      FeedbackCue.sharpCollision,
+      FeedbackCue.observatoryRestored,
+      FeedbackCue.lighthouseRestored,
+      FeedbackCue.bridgeRestored,
+    ];
+    final fingerprints = <String>{};
+    for (final cue in cues) {
+      final bytes = feedbackCueBytesForTesting(cue);
+      expect(String.fromCharCodes(bytes.take(4)), 'RIFF');
+      expect(bytes.length, greaterThan(44));
+      fingerprints.add('${bytes.length}:${_checksum(bytes)}');
+    }
+    expect(fingerprints.length, cues.length);
+  });
 }
+
+int _checksum(Iterable<int> bytes) =>
+    bytes.fold(0, (hash, byte) => ((hash * 16777619) ^ byte) & 0x7fffffff);

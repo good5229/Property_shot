@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'feedback_cue.dart';
+import 'feedback_sound_spec.dart';
 
 /// Web Audio를 사용할 수 없는 Android/iOS/desktop에서도 사건별 피드백을
 /// 구분할 수 있도록 짧은 PCM 톤을 메모리에서 만든다. 외부 파일 로딩이나
@@ -17,11 +18,10 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
   )) {
     return;
   }
-  final spec = _specFor(cue);
   final player = AudioPlayer();
   try {
     await player.setReleaseMode(ReleaseMode.release);
-    await player.play(BytesSource(_wavTone(spec)));
+    await player.play(BytesSource(_wavTone(feedbackTonesFor(cue))));
     await player.onPlayerComplete.first.timeout(
       const Duration(seconds: 1),
       onTimeout: () {},
@@ -35,75 +35,18 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
 
 @visibleForTesting
 Uint8List feedbackCueBytesForTesting(FeedbackCue cue) =>
-    _wavTone(_specFor(cue));
+    _wavTone(feedbackTonesFor(cue));
 
-({double frequency, int milliseconds, double volume}) _specFor(
-  FeedbackCue cue,
-) => switch (cue) {
-  FeedbackCue.ui => (frequency: 620, milliseconds: 45, volume: 0.16),
-  FeedbackCue.trait => (frequency: 740, milliseconds: 90, volume: 0.18),
-  FeedbackCue.copy => (frequency: 880, milliseconds: 140, volume: 0.2),
-  FeedbackCue.copyCoreAwarded => (
-    frequency: 960,
-    milliseconds: 220,
-    volume: 0.2,
-  ),
-  FeedbackCue.aimCharge => (frequency: 320, milliseconds: 80, volume: 0.13),
-  FeedbackCue.launch => (frequency: 190, milliseconds: 110, volume: 0.24),
-  FeedbackCue.lightCollision => (
-    frequency: 520,
-    milliseconds: 70,
-    volume: 0.18,
-  ),
-  FeedbackCue.heavyCollision => (
-    frequency: 110,
-    milliseconds: 160,
-    volume: 0.28,
-  ),
-  FeedbackCue.bouncyCollision => (
-    frequency: 760,
-    milliseconds: 180,
-    volume: 0.2,
-  ),
-  FeedbackCue.stickyCollision => (
-    frequency: 260,
-    milliseconds: 200,
-    volume: 0.18,
-  ),
-  FeedbackCue.jellyCollision => (
-    frequency: 680,
-    milliseconds: 130,
-    volume: 0.2,
-  ),
-  FeedbackCue.mysteryReveal => (
-    frequency: 880,
-    milliseconds: 190,
-    volume: 0.22,
-  ),
-  FeedbackCue.switchPressed => (
-    frequency: 420,
-    milliseconds: 120,
-    volume: 0.22,
-  ),
-  FeedbackCue.gateOpened => (frequency: 300, milliseconds: 220, volume: 0.22),
-  FeedbackCue.holeEntered => (frequency: 520, milliseconds: 320, volume: 0.24),
-  FeedbackCue.clear => (frequency: 660, milliseconds: 280, volume: 0.24),
-  FeedbackCue.medal => (frequency: 1040, milliseconds: 200, volume: 0.2),
-  FeedbackCue.discovery => (frequency: 920, milliseconds: 180, volume: 0.2),
-  FeedbackCue.rewardActivated => (
-    frequency: 820,
-    milliseconds: 160,
-    volume: 0.2,
-  ),
-  FeedbackCue.restoration => (frequency: 560, milliseconds: 340, volume: 0.24),
-  FeedbackCue.labComplete => (frequency: 700, milliseconds: 240, volume: 0.22),
-  FeedbackCue.fail => (frequency: 180, milliseconds: 160, volume: 0.18),
-};
-
-Uint8List _wavTone(({double frequency, int milliseconds, double volume}) spec) {
+Uint8List _wavTone(List<FeedbackTone> tones) {
   const sampleRate = 12000;
   const headerLength = 44;
-  final sampleCount = (sampleRate * spec.milliseconds / 1000).round();
+  final sampleCount = tones.fold<int>(
+    0,
+    (sum, tone) =>
+        sum +
+        (sampleRate * tone.milliseconds / 1000).round() +
+        (sampleRate * tone.gapAfterMilliseconds / 1000).round(),
+  );
   final dataLength = sampleCount * 2;
   final bytes = ByteData(headerLength + dataLength);
 
@@ -127,12 +70,26 @@ Uint8List _wavTone(({double frequency, int milliseconds, double volume}) spec) {
   ascii(36, 'data');
   bytes.setUint32(40, dataLength, Endian.little);
 
-  for (var index = 0; index < sampleCount; index++) {
-    final progress = index / sampleCount;
-    final envelope = math.min(1.0, progress * 12) * (1 - progress);
-    final wave = math.sin(2 * math.pi * spec.frequency * index / sampleRate);
-    final sample = (wave * envelope * spec.volume * 32767).round();
-    bytes.setInt16(headerLength + index * 2, sample, Endian.little);
+  var outputIndex = 0;
+  for (final tone in tones) {
+    final toneSamples = (sampleRate * tone.milliseconds / 1000).round();
+    for (var index = 0; index < toneSamples; index++) {
+      final progress = index / toneSamples;
+      final envelope = math.min(1.0, progress * 14) * (1 - progress);
+      final phase = 2 * math.pi * tone.frequency * index / sampleRate;
+      final wave = switch (tone.wave) {
+        FeedbackWave.sine => math.sin(phase),
+        FeedbackWave.triangle => 2 / math.pi * math.asin(math.sin(phase)),
+        FeedbackWave.square => math.sin(phase) >= 0 ? 1.0 : -1.0,
+        FeedbackWave.sawtooth =>
+          2 * (tone.frequency * index / sampleRate % 1) - 1,
+      };
+      final nativeVolume = (tone.volume * 3.2).clamp(0.0, 0.32);
+      final sample = (wave * envelope * nativeVolume * 32767).round();
+      bytes.setInt16(headerLength + outputIndex * 2, sample, Endian.little);
+      outputIndex++;
+    }
+    outputIndex += (sampleRate * tone.gapAfterMilliseconds / 1000).round();
   }
   return bytes.buffer.asUint8List();
 }

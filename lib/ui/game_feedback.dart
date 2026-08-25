@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/domain/entity_state.dart';
+import '../game/domain/trait.dart';
+import '../game/analysis/island_restoration.dart';
 import '../game/input/intent_assist_resolver.dart';
 import '../game/simulation/impact_metrics.dart';
 import 'background_music.dart';
@@ -514,6 +516,7 @@ class GameFeedback {
     EntityType type, {
     bool emphasizeJelly = false,
     double impactStrength = 0,
+    Set<TraitType> sourceTraits = const {},
   }) {
     final effectiveStrength = impactStrength > 0
         ? impactStrength
@@ -545,18 +548,12 @@ class GameFeedback {
       'collision_${type.name}',
       minimumInterval: const Duration(milliseconds: 70),
       haptic: haptic,
-      cue: switch (type) {
-        EntityType.bumper =>
-          emphasizeJelly
-              ? FeedbackCue.jellyCollision
-              : FeedbackCue.bouncyCollision,
-        EntityType.stickySurface => FeedbackCue.stickyCollision,
-        EntityType.hole => FeedbackCue.holeEntered,
-        _ =>
-          tier == ImpactTier.heavy || tier == ImpactTier.critical
-              ? FeedbackCue.heavyCollision
-              : FeedbackCue.lightCollision,
-      },
+      cue: _collisionCue(
+        type: type,
+        tier: tier,
+        emphasizeJelly: emphasizeJelly,
+        sourceTraits: sourceTraits,
+      ),
       alert:
           type == EntityType.hole ||
           tier == ImpactTier.heavy ||
@@ -660,14 +657,48 @@ class GameFeedback {
     );
   }
 
-  void restorationCompleted() {
+  void restorationCompleted([IslandLandmark? landmark]) {
     _emit(
-      'restoration_completed',
+      'restoration_completed_${landmark?.name ?? 'generic'}',
       minimumInterval: const Duration(milliseconds: 400),
       haptic: HapticFeedback.heavyImpact,
-      cue: FeedbackCue.restoration,
+      cue: switch (landmark) {
+        IslandLandmark.observatory => FeedbackCue.observatoryRestored,
+        IslandLandmark.lighthouse => FeedbackCue.lighthouseRestored,
+        IslandLandmark.bridge => FeedbackCue.bridgeRestored,
+        null => FeedbackCue.restoration,
+      },
       alert: true,
     );
+  }
+
+  FeedbackCue _collisionCue({
+    required EntityType type,
+    required ImpactTier tier,
+    required bool emphasizeJelly,
+    required Set<TraitType> sourceTraits,
+  }) {
+    if (type == EntityType.hole) return FeedbackCue.holeEntered;
+    if (type == EntityType.stickySurface ||
+        sourceTraits.contains(TraitType.sticky)) {
+      return FeedbackCue.stickyCollision;
+    }
+    if (type == EntityType.bumper && emphasizeJelly) {
+      return FeedbackCue.jellyCollision;
+    }
+    if (sourceTraits.contains(TraitType.heavy)) {
+      return FeedbackCue.heavyCollision;
+    }
+    if (sourceTraits.contains(TraitType.bouncy)) {
+      return FeedbackCue.bouncyCollision;
+    }
+    if (sourceTraits.contains(TraitType.sharp)) {
+      return FeedbackCue.sharpCollision;
+    }
+    if (type == EntityType.bumper) return FeedbackCue.bouncyCollision;
+    return tier == ImpactTier.heavy || tier == ImpactTier.critical
+        ? FeedbackCue.heavyCollision
+        : FeedbackCue.lightCollision;
   }
 
   void labCompleted() {
