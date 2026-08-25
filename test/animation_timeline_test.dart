@@ -5,6 +5,7 @@ import 'package:flame/game.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
+import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/levels/levels.dart';
@@ -453,4 +454,214 @@ void main() {
     expect(eventIds, result.physicsEvents.map((event) => event.eventId));
     expect(eventIds.toSet(), hasLength(eventIds.length));
   });
+
+  test('5개 오브젝트 연쇄 이동은 30·45·60 FPS에서 순간이동이 없다', () {
+    const resolver = ShotResolver();
+    final start = _longChainAnimationState();
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final movingIds = result.moves
+        .map((move) => move.entityId)
+        .where((id) => start.entityById(id) != null)
+        .toSet();
+    expect(movingIds.length, greaterThanOrEqualTo(5));
+
+    for (final framesPerSecond in [30, 45, 60]) {
+      final game = PropertyShotGame(result.state, loadVisualAssets: false);
+      game.setStateSnapshot(
+        result.state,
+        path: result.path,
+        transitionStart: start,
+        moves: result.moves,
+        impacts: result.impacts,
+        physicsEvents: result.physicsEvents,
+        animationTransaction: true,
+      );
+      final previous = <String, Vec2>{
+        for (final id in movingIds) id: game.animatedEntityPositionForTest(id),
+      };
+
+      for (var frame = 0; frame < 4000; frame++) {
+        game.update(1 / framesPerSecond);
+        for (final id in movingIds) {
+          final current = game.animatedEntityPositionForTest(id);
+          final delta = current - previous[id]!;
+          expect(
+            delta.length,
+            lessThanOrEqualTo(4.55),
+            reason: '$framesPerSecond FPS에서 $id가 한 프레임에 순간이동함',
+          );
+          previous[id] = current;
+        }
+        if (game.animationCursorForTest >= game.animationEndCursorForTest) {
+          break;
+        }
+      }
+      game.onRemove();
+    }
+  });
+
+  testWidgets('5중 연쇄의 래스터 본체는 계획 화면 캐시를 재사용한다', (tester) async {
+    const resolver = ShotResolver();
+    final start = _longChainAnimationState();
+    final result = resolver.resolve(
+      start,
+      const ShotInput(direction: Vec2(1, 0), power: 1),
+    );
+    final game = PropertyShotGame(start);
+    await tester.runAsync(game.onLoad);
+    game.onGameResize(Vector2(390, 560));
+    final planningRecorder = ui.PictureRecorder();
+    game.render(ui.Canvas(planningRecorder));
+    planningRecorder.endRecording().dispose();
+    final prewarmedPictures = game.movingSpritePictureBuildCountForTest;
+    expect(prewarmedPictures, greaterThan(0));
+
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: start,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+    for (var frame = 0; frame < 60; frame++) {
+      game.update(1 / 60);
+      final recorder = ui.PictureRecorder();
+      game.render(ui.Canvas(recorder));
+      recorder.endRecording().dispose();
+    }
+
+    expect(
+      game.movingSpritePictureBuildCountForTest,
+      prewarmedPictures,
+      reason: '연쇄 충돌 중 crate 본체 그림을 프레임마다 다시 기록함',
+    );
+    game.onRemove();
+  });
+
+  test('불균일한 연쇄 경로도 위치와 재질 변형이 같은 거리 시간축을 사용한다', () {
+    const start = GameState(
+      levelIndex: 991,
+      levelName: '연쇄 변형 시간축 회귀',
+      ballSpawn: Vec2(20, 80),
+      entities: [
+        EntityState(
+          id: 'active_ball',
+          type: EntityType.ball,
+          position: Vec2(20, 80),
+          size: Vec2(24, 24),
+          movable: true,
+        ),
+        EntityState(
+          id: 'crate',
+          type: EntityType.crate,
+          position: Vec2(40, 80),
+          size: Vec2(20, 20),
+          movable: true,
+        ),
+      ],
+    );
+    const move = ShotAnimationMove(
+      entityId: 'crate',
+      from: Vec2(40, 80),
+      to: Vec2(100, 80),
+      triggerPathIndex: 1,
+      path: [
+        Vec2(40, 80),
+        Vec2(40.1, 80),
+        Vec2(60, 80),
+        Vec2(60.1, 80),
+        Vec2(100, 80),
+      ],
+    );
+
+    for (final framesPerSecond in [30, 45, 60]) {
+      final game = PropertyShotGame(start, loadVisualAssets: false);
+      game.setStateSnapshot(
+        start,
+        path: const [Vec2(20, 80), Vec2(24, 80)],
+        transitionStart: start,
+        moves: const [move],
+        animationTransaction: true,
+      );
+      game.setAnimationCursorForTest(1.75);
+      var previous = game.animatedEntityMotionImpactForTest('crate');
+      var maximumStep = 0.0;
+      while (game.animationCursorForTest < 15.25) {
+        game.update(1 / framesPerSecond);
+        final current = game.animatedEntityMotionImpactForTest('crate');
+        maximumStep = math.max(maximumStep, (current - previous).abs());
+        previous = current;
+      }
+      expect(
+        maximumStep,
+        lessThan(0.2),
+        reason: '$framesPerSecond FPS에서 불균일 경로 변형이 튐',
+      );
+      game.onRemove();
+    }
+  });
+}
+
+GameState _longChainAnimationState() {
+  return const GameState(
+    levelIndex: 992,
+    levelName: '다중 연쇄 프레임 회귀',
+    ballSpawn: Vec2(40, 80),
+    entities: [
+      EntityState(
+        id: 'active_ball',
+        type: EntityType.ball,
+        position: Vec2(40, 80),
+        size: Vec2(24, 24),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(60, 80),
+        size: Vec2(10, 10),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_b',
+        type: EntityType.crate,
+        position: Vec2(75, 80),
+        size: Vec2(10, 10),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_c',
+        type: EntityType.crate,
+        position: Vec2(90, 80),
+        size: Vec2(10, 10),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_d',
+        type: EntityType.crate,
+        position: Vec2(105, 80),
+        size: Vec2(10, 10),
+        movable: true,
+      ),
+      EntityState(
+        id: 'crate_e',
+        type: EntityType.crate,
+        position: Vec2(120, 80),
+        size: Vec2(10, 10),
+        movable: true,
+      ),
+      EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(360, 260),
+        size: Vec2(34, 34),
+        solid: false,
+      ),
+    ],
+  );
 }

@@ -254,6 +254,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final _launchInputLatency = LaunchInputLatencyTracker();
   final _framePerformance = FramePerformanceTracker();
   late final LocalPlayTelemetry _telemetry;
+  final List<VoidCallback> _deferredAnimationTelemetry = <VoidCallback>[];
+  bool _animationTelemetryFlushScheduled = false;
   late final PlayerDifficulty _difficulty;
   late final IntentAssistStrength _intentAssistStrength;
   late GameState _state;
@@ -2841,6 +2843,40 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _deferAnimationTelemetry(VoidCallback record) {
+    _deferredAnimationTelemetry.add(record);
+    _scheduleAnimationTelemetryFlush();
+  }
+
+  void _scheduleAnimationTelemetryFlush() {
+    if (_animationTelemetryFlushScheduled ||
+        _deferredAnimationTelemetry.isEmpty) {
+      return;
+    }
+    _animationTelemetryFlushScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _animationTelemetryFlushScheduled = false;
+      final batchSize = math.min(4, _deferredAnimationTelemetry.length);
+      final batch = _deferredAnimationTelemetry.sublist(0, batchSize);
+      _deferredAnimationTelemetry.removeRange(0, batchSize);
+      for (final record in batch) {
+        record();
+      }
+      if (_deferredAnimationTelemetry.isNotEmpty) {
+        _scheduleAnimationTelemetryFlush();
+        SchedulerBinding.instance.scheduleFrame();
+      }
+    });
+  }
+
+  void _flushAnimationTelemetry() {
+    final pending = List<VoidCallback>.of(_deferredAnimationTelemetry);
+    _deferredAnimationTelemetry.clear();
+    for (final record in pending) {
+      record();
+    }
+  }
+
   void _onAnimationImpact(ShotAnimationMove move) {
     if (!mounted || !_isAnimatingShot) {
       return;
@@ -2854,112 +2890,114 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     } else if (move.visualState == 'popped') {
       _feedback.balloonPopped();
     }
-    final entity = _state.entityById(move.entityId);
-    final objectType = entity?.type.name;
-    if (move.visualState == HiddenMechanicState.opening) {
+    _deferAnimationTelemetry(() {
+      final entity = _state.entityById(move.entityId);
+      final objectType = entity?.type.name;
+      if (move.visualState == HiddenMechanicState.opening) {
+        _telemetry.record(
+          '미스터리 상자 개방',
+          stage: _state.levelIndex,
+          target: move.entityId,
+          result: HiddenMechanicState.revealed,
+          eventCode: 'hidden_mechanic_revealed',
+          objectId: move.entityId,
+          objectType: objectType,
+          position: move.impactPosition,
+          collisionNormal: move.impactNormal,
+        );
+      } else if (move.visualState == 'pressed' &&
+          entity?.type == EntityType.switchPad) {
+        _telemetry.record(
+          '스위치 작동',
+          stage: _state.levelIndex,
+          target: move.entityId,
+          result: move.visualState,
+          objectId: move.entityId,
+          objectType: objectType,
+          position: move.impactPosition,
+          collisionNormal: move.impactNormal,
+        );
+      } else if (move.visualState == 'pressed' &&
+          entity?.type == EntityType.balloon) {
+        _telemetry.record(
+          '풍선 변형',
+          stage: _state.levelIndex,
+          target: move.entityId,
+          result: move.visualState,
+          objectId: move.entityId,
+          objectType: objectType,
+          position: move.impactPosition,
+          collisionNormal: move.impactNormal,
+        );
+      } else if (move.visualState == 'opening' &&
+          entity?.type == EntityType.gate) {
+        _telemetry.record(
+          '문 열림',
+          stage: _state.levelIndex,
+          target: move.entityId,
+          result: move.visualState,
+          objectId: move.entityId,
+          objectType: objectType,
+          position: move.impactPosition,
+          collisionNormal: move.impactNormal,
+        );
+      } else if (move.visualState == 'popped' &&
+          entity?.type == EntityType.balloon) {
+        _telemetry.record(
+          '풍선 터짐',
+          stage: _state.levelIndex,
+          target: move.entityId,
+          result: move.visualState,
+          objectId: move.entityId,
+          objectType: objectType,
+          position: move.impactPosition,
+          collisionNormal: move.impactNormal,
+        );
+        _telemetry.record(
+          '속성 소모',
+          stage: _state.levelIndex,
+          target: '뾰족함',
+          result: '풍선 충돌로 소모',
+          objectId: _currentBallTelemetryId(),
+          objectType: EntityType.ball.name,
+          attributeBefore: '뾰족함',
+        );
+      } else if (move.visualState == 'stuck') {
+        _telemetry.record(
+          '점착 정지',
+          stage: _state.levelIndex,
+          target: move.entityId,
+          result: move.visualState,
+          objectId: move.entityId,
+          objectType: objectType,
+          position: move.impactPosition,
+          collisionNormal: move.impactNormal,
+        );
+        _telemetry.record(
+          '물체 정지',
+          stage: _state.levelIndex,
+          target: move.entityId,
+          result: move.visualState,
+          objectId: move.entityId,
+          objectType: objectType,
+          position: move.to,
+        );
+      }
+      if (move.from.distanceTo(move.to) <= 0.001 &&
+          move.visualState != 'stuck' &&
+          move.visualState != 'hole_captured') {
+        return;
+      }
       _telemetry.record(
-        '미스터리 상자 개방',
-        stage: _state.levelIndex,
-        target: move.entityId,
-        result: HiddenMechanicState.revealed,
-        eventCode: 'hidden_mechanic_revealed',
-        objectId: move.entityId,
-        objectType: objectType,
-        position: move.impactPosition,
-        collisionNormal: move.impactNormal,
-      );
-    } else if (move.visualState == 'pressed' &&
-        entity?.type == EntityType.switchPad) {
-      _telemetry.record(
-        '스위치 작동',
+        '연쇄 이동',
         stage: _state.levelIndex,
         target: move.entityId,
         result: move.visualState,
+        eventCode: 'object_started_moving',
         objectId: move.entityId,
-        objectType: objectType,
         position: move.impactPosition,
-        collisionNormal: move.impactNormal,
       );
-    } else if (move.visualState == 'pressed' &&
-        entity?.type == EntityType.balloon) {
-      _telemetry.record(
-        '풍선 변형',
-        stage: _state.levelIndex,
-        target: move.entityId,
-        result: move.visualState,
-        objectId: move.entityId,
-        objectType: objectType,
-        position: move.impactPosition,
-        collisionNormal: move.impactNormal,
-      );
-    } else if (move.visualState == 'opening' &&
-        entity?.type == EntityType.gate) {
-      _telemetry.record(
-        '문 열림',
-        stage: _state.levelIndex,
-        target: move.entityId,
-        result: move.visualState,
-        objectId: move.entityId,
-        objectType: objectType,
-        position: move.impactPosition,
-        collisionNormal: move.impactNormal,
-      );
-    } else if (move.visualState == 'popped' &&
-        entity?.type == EntityType.balloon) {
-      _telemetry.record(
-        '풍선 터짐',
-        stage: _state.levelIndex,
-        target: move.entityId,
-        result: move.visualState,
-        objectId: move.entityId,
-        objectType: objectType,
-        position: move.impactPosition,
-        collisionNormal: move.impactNormal,
-      );
-      _telemetry.record(
-        '속성 소모',
-        stage: _state.levelIndex,
-        target: '뾰족함',
-        result: '풍선 충돌로 소모',
-        objectId: _currentBallTelemetryId(),
-        objectType: EntityType.ball.name,
-        attributeBefore: '뾰족함',
-      );
-    } else if (move.visualState == 'stuck') {
-      _telemetry.record(
-        '점착 정지',
-        stage: _state.levelIndex,
-        target: move.entityId,
-        result: move.visualState,
-        objectId: move.entityId,
-        objectType: objectType,
-        position: move.impactPosition,
-        collisionNormal: move.impactNormal,
-      );
-      _telemetry.record(
-        '물체 정지',
-        stage: _state.levelIndex,
-        target: move.entityId,
-        result: move.visualState,
-        objectId: move.entityId,
-        objectType: objectType,
-        position: move.to,
-      );
-    }
-    if (move.from.distanceTo(move.to) <= 0.001 &&
-        move.visualState != 'stuck' &&
-        move.visualState != 'hole_captured') {
-      return;
-    }
-    _telemetry.record(
-      '연쇄 이동',
-      stage: _state.levelIndex,
-      target: move.entityId,
-      result: move.visualState,
-      eventCode: 'object_started_moving',
-      objectId: move.entityId,
-      position: move.impactPosition,
-    );
+    });
   }
 
   void _onShotImpact(ShotImpact impact) {
@@ -2972,42 +3010,44 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       impactStrength: impact.impulse,
       sourceTraits: impact.sourceTraits,
     );
-    _telemetry.record(
-      '충돌',
-      stage: _state.levelIndex,
-      target: impact.entityType.name,
-      eventCode: 'collision_resolved',
-      shotId: _state.shotCount,
-      objectId: impact.entityId,
-      objectType: impact.entityType.name,
-      position: impact.position,
-      collisionNormal: impact.normal,
-      speed: impact.relativeNormalSpeed,
-      impulse: impact.impulse,
-    );
-    if (impact.entityType == EntityType.hole) {
+    _deferAnimationTelemetry(() {
       _telemetry.record(
-        '홀 진입',
+        '충돌',
         stage: _state.levelIndex,
-        target: impact.entityId,
-        result: '공 포획',
-        objectId: impact.sourceEntityId,
-        objectType: EntityType.ball.name,
+        target: impact.entityType.name,
+        eventCode: 'collision_resolved',
+        shotId: _state.shotCount,
+        objectId: impact.entityId,
+        objectType: impact.entityType.name,
         position: impact.position,
         collisionNormal: impact.normal,
         speed: impact.relativeNormalSpeed,
         impulse: impact.impulse,
       );
-      _telemetry.record(
-        '물체 정지',
-        stage: _state.levelIndex,
-        target: impact.sourceEntityId,
-        result: '홀 안에서 정지',
-        objectId: impact.sourceEntityId,
-        objectType: EntityType.ball.name,
-        position: impact.position,
-      );
-    }
+      if (impact.entityType == EntityType.hole) {
+        _telemetry.record(
+          '홀 진입',
+          stage: _state.levelIndex,
+          target: impact.entityId,
+          result: '공 포획',
+          objectId: impact.sourceEntityId,
+          objectType: EntityType.ball.name,
+          position: impact.position,
+          collisionNormal: impact.normal,
+          speed: impact.relativeNormalSpeed,
+          impulse: impact.impulse,
+        );
+        _telemetry.record(
+          '물체 정지',
+          stage: _state.levelIndex,
+          target: impact.sourceEntityId,
+          result: '홀 안에서 정지',
+          objectId: impact.sourceEntityId,
+          objectType: EntityType.ball.name,
+          position: impact.position,
+        );
+      }
+    });
   }
 
   void _onPhysicsEvent(PhysicsEvent event) {
@@ -3023,23 +3063,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         event.powerSlider != null) {
       final activation = event.powerSlider!;
       _feedback.powerSliderActivated();
-      _telemetry.record(
-        '파워 슬라이더 작동',
-        stage: _state.levelIndex,
-        target: activation.sliderEntityId,
-        result: '진행 방향 유지',
-        eventCode: 'power_slider_activated',
-        shotId: _state.shotCount,
-        objectId: activation.sourceEntityId,
-        objectType: EntityType.powerSlider.name,
-        contactId: activation.contactId,
-        position: activation.position,
-        velocity: activation.velocityAfter,
-        speed: activation.speedAfter,
-        speedBefore: activation.speedBefore,
-        speedAfter: activation.speedAfter,
-        referenceSpeed: activation.referenceSpeed,
-      );
+      _deferAnimationTelemetry(() {
+        _telemetry.record(
+          '파워 슬라이더 작동',
+          stage: _state.levelIndex,
+          target: activation.sliderEntityId,
+          result: '진행 방향 유지',
+          eventCode: 'power_slider_activated',
+          shotId: _state.shotCount,
+          objectId: activation.sourceEntityId,
+          objectType: EntityType.powerSlider.name,
+          contactId: activation.contactId,
+          position: activation.position,
+          velocity: activation.velocityAfter,
+          speed: activation.speedAfter,
+          speedBefore: activation.speedBefore,
+          speedAfter: activation.speedAfter,
+          referenceSpeed: activation.referenceSpeed,
+        );
+      });
     }
     if (mounted &&
         _isAnimatingShot &&
@@ -3047,36 +3089,40 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         event.reflectorRotation != null) {
       final rotation = event.reflectorRotation!;
       _feedback.reflectorRotated();
-      _telemetry.record(
-        '회전 반사판 회전',
-        stage: _state.levelIndex,
-        target: rotation.reflectorEntityId,
-        result:
-            '${rotation.orientationBefore}에서 ${rotation.orientationAfter}로 회전',
-        eventCode: 'reflector_rotated',
-        shotId: _state.shotCount,
-        objectId: rotation.sourceEntityId,
-        objectType: EntityType.rotatingReflector.name,
-        contactId: rotation.contactId,
-        position: event.position,
-        velocity: rotation.velocityAfter,
-        speedBefore: rotation.velocityBefore.length,
-        speedAfter: rotation.velocityAfter.length,
-        collisionNormal: rotation.collisionNormal,
-      );
+      _deferAnimationTelemetry(() {
+        _telemetry.record(
+          '회전 반사판 회전',
+          stage: _state.levelIndex,
+          target: rotation.reflectorEntityId,
+          result:
+              '${rotation.orientationBefore}에서 ${rotation.orientationAfter}로 회전',
+          eventCode: 'reflector_rotated',
+          shotId: _state.shotCount,
+          objectId: rotation.sourceEntityId,
+          objectType: EntityType.rotatingReflector.name,
+          contactId: rotation.contactId,
+          position: event.position,
+          velocity: rotation.velocityAfter,
+          speedBefore: rotation.velocityBefore.length,
+          speedAfter: rotation.velocityAfter.length,
+          collisionNormal: rotation.collisionNormal,
+        );
+      });
     }
     if (!mounted ||
         !_isAnimatingShot ||
         event.kind != PhysicsEventKind.chainSafetyStop) {
       return;
     }
-    _telemetry.record(
-      '연쇄 안전 중단',
-      stage: _state.levelIndex,
-      target: event.targetEntityId,
-      result:
-          '반복 ${event.iterations ?? 0}회·잔여 속도 ${(event.remainingSpeed ?? 0).toStringAsFixed(2)}',
-    );
+    _deferAnimationTelemetry(() {
+      _telemetry.record(
+        '연쇄 안전 중단',
+        stage: _state.levelIndex,
+        target: event.targetEntityId,
+        result:
+            '반복 ${event.iterations ?? 0}회·잔여 속도 ${(event.remainingSpeed ?? 0).toStringAsFixed(2)}',
+      );
+    });
   }
 
   void _openDebugMenu() {
@@ -4360,6 +4406,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     _framePerformance.stop();
+    _flushAnimationTelemetry();
     _telemetry.sessionEnd(stage: _state.levelIndex);
     unawaited(_telemetry.close());
     WidgetsBinding.instance.removeObserver(this);

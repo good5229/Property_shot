@@ -128,6 +128,8 @@ class GameFeedback {
   final Map<String, DateTime> _lastPlayed = <String, DateTime>{};
   Future<void>? _audioTail;
   DateTime? _lastBackgroundMusicRequest;
+  _PendingDeviceFeedback? _pendingCollisionFeedback;
+  bool _collisionFeedbackFlushScheduled = false;
 
   static Future<void> _playSystemSound(SystemSoundType type) {
     // Web에서는 전용 Web Audio 큐가 같은 신호를 재생한다. 플랫폼 사운드
@@ -563,21 +565,35 @@ class GameFeedback {
       EntityType.hole => HapticFeedback.heavyImpact,
       _ => strengthHaptic,
     };
+    final cue = _collisionCue(
+      type: type,
+      tier: tier,
+      emphasizeJelly: emphasizeJelly,
+      sourceTraits: sourceTraits,
+    );
     _emit(
       'collision_${type.name}',
       minimumInterval: const Duration(milliseconds: 70),
       haptic: haptic,
-      cue: _collisionCue(
-        type: type,
-        tier: tier,
-        emphasizeJelly: emphasizeJelly,
-        sourceTraits: sourceTraits,
-      ),
+      cue: cue,
       alert:
           type == EntityType.hole ||
           tier == ImpactTier.heavy ||
           tier == ImpactTier.critical,
+      coalesceDeferredCollision: true,
+      feedbackPriority: type == EntityType.hole
+          ? 100
+          : tier.index * 10 + _collisionCuePriority(cue),
     );
+  }
+
+  int _collisionCuePriority(FeedbackCue cue) {
+    return switch (cue) {
+      FeedbackCue.stickyCollision || FeedbackCue.jellyCollision => 4,
+      FeedbackCue.heavyCollision => 3,
+      FeedbackCue.bouncyCollision || FeedbackCue.sharpCollision => 2,
+      _ => 1,
+    };
   }
 
   void powerSliderActivated() {
@@ -779,6 +795,8 @@ class GameFeedback {
     bool sound = true,
     bool alert = false,
     FeedbackCue cue = FeedbackCue.ui,
+    bool coalesceDeferredCollision = false,
+    int feedbackPriority = 0,
   }) {
     final now = DateTime.now();
     final previous = _lastPlayed[key];
@@ -799,25 +817,54 @@ class GameFeedback {
     }
     if (!shouldPlayHaptic && !shouldPlaySound && !shouldResumeMusic) return;
 
-    void playDeviceFeedback() {
-      if (shouldPlayHaptic) {
-        unawaited(_safe(haptic));
-      }
-      if (shouldPlaySound) {
-        _queueAudio(cue: cue, alert: alert);
-      }
-      if (shouldResumeMusic) {
-        unawaited(setBackgroundMusicPlayback(true));
-      }
-    }
+    final feedback = _PendingDeviceFeedback(
+      haptic: haptic,
+      shouldPlayHaptic: shouldPlayHaptic,
+      shouldPlaySound: shouldPlaySound,
+      shouldResumeMusic: shouldResumeMusic,
+      cue: cue,
+      alert: alert,
+      priority: feedbackPriority,
+    );
 
     if (deferDeviceFeedback) {
       // Web Audio 노드 생성과 햅틱 플랫폼 채널 호출을 충돌을 그리는 현재
       // 프레임에서 분리한다. 한 프레임 뒤의 피드백은 지각상 동시성을
       // 유지하면서도 충돌 순간의 메인 스레드 경쟁을 피한다.
-      _deviceFeedbackScheduler(playDeviceFeedback);
+      if (coalesceDeferredCollision) {
+        _pendingCollisionFeedback = _pendingCollisionFeedback == null
+            ? feedback
+            : _pendingCollisionFeedback!.merge(feedback);
+        if (!_collisionFeedbackFlushScheduled) {
+          _collisionFeedbackFlushScheduled = true;
+          _deviceFeedbackScheduler(_flushCollisionFeedback);
+        }
+      } else {
+        _deviceFeedbackScheduler(() => _playDeviceFeedback(feedback));
+      }
     } else {
-      playDeviceFeedback();
+      _playDeviceFeedback(feedback);
+    }
+  }
+
+  void _flushCollisionFeedback() {
+    _collisionFeedbackFlushScheduled = false;
+    final feedback = _pendingCollisionFeedback;
+    _pendingCollisionFeedback = null;
+    if (feedback != null) {
+      _playDeviceFeedback(feedback);
+    }
+  }
+
+  void _playDeviceFeedback(_PendingDeviceFeedback feedback) {
+    if (feedback.shouldPlayHaptic && feedback.haptic != null) {
+      unawaited(_safe(feedback.haptic!));
+    }
+    if (feedback.shouldPlaySound) {
+      _queueAudio(cue: feedback.cue, alert: feedback.alert);
+    }
+    if (feedback.shouldResumeMusic) {
+      unawaited(setBackgroundMusicPlayback(true));
     }
   }
 
@@ -856,5 +903,38 @@ class GameFeedback {
     } on StateError {
       // 오디오 세션이 준비되지 않은 짧은 초기화 구간을 허용한다.
     }
+  }
+}
+
+class _PendingDeviceFeedback {
+  const _PendingDeviceFeedback({
+    required this.haptic,
+    required this.shouldPlayHaptic,
+    required this.shouldPlaySound,
+    required this.shouldResumeMusic,
+    required this.cue,
+    required this.alert,
+    required this.priority,
+  });
+
+  final Future<void> Function()? haptic;
+  final bool shouldPlayHaptic;
+  final bool shouldPlaySound;
+  final bool shouldResumeMusic;
+  final FeedbackCue cue;
+  final bool alert;
+  final int priority;
+
+  _PendingDeviceFeedback merge(_PendingDeviceFeedback next) {
+    final strongest = next.priority >= priority ? next : this;
+    return _PendingDeviceFeedback(
+      haptic: strongest.haptic,
+      shouldPlayHaptic: shouldPlayHaptic || next.shouldPlayHaptic,
+      shouldPlaySound: shouldPlaySound || next.shouldPlaySound,
+      shouldResumeMusic: shouldResumeMusic || next.shouldResumeMusic,
+      cue: strongest.cue,
+      alert: strongest.alert,
+      priority: strongest.priority,
+    );
   }
 }

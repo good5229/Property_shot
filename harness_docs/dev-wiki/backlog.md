@@ -14,6 +14,12 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [x] 3~N중 연쇄 충돌 프레임 페이싱
+  - branch: codex/chain-collision-frame-pacing
+  - issue: 없음
+  - summary: 연쇄 충돌 한 프레임에 몰리는 Web 피드백과 시각 효과를 합성하고, 이동 위치와 재질 변형의 시간축을 통일해 30·45·60 FPS에서 다중 오브젝트 이동을 안정화한다.
+  - notes: 같은 프레임 Web 충돌 피드백 합성, 프레임당 텔레메트리 4건 분산, 거리 기반 위치·변형 통일, 최근 효과 예산, 계획 화면 래스터 본체 캐시를 적용했다. 전체 직렬 1,476개 테스트와 후속 캐시 관련 69건, 정적 분석, 생산 40패턴 런타임, Wasm 빌드를 통과했다. 390×844 Chromium headless 3회에서 콘솔 오류 0, 발사 p95 17.5~17.6ms였고 포인터 해제 뒤 충돌 구간의 50ms 초과 장기 작업은 없었다. 실제 기기 체감은 배포 후 확인 대상으로 남기며 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다.
+
 - [x] 관리자 도구 격리와 고주사율 Web 애니메이션 최적화
   - branch: codex/admin-tools-smooth-motion
   - issue: 없음

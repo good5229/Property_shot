@@ -264,6 +264,29 @@ void main() {
     expect(cues, [FeedbackCue.heavyCollision]);
   });
 
+  test('같은 프레임의 3~N중 충돌은 가장 중요한 Web 피드백 하나로 합성한다', () async {
+    final scheduled = <void Function()>[];
+    final cues = <FeedbackCue>[];
+    final feedback = GameFeedback(
+      soundPlayer: (_) async {},
+      cuePlayer: (cue) async => cues.add(cue),
+      deferDeviceFeedback: true,
+      deviceFeedbackScheduler: scheduled.add,
+    );
+
+    feedback.collision(EntityType.wall, impactStrength: 0.18);
+    feedback.collision(EntityType.crate, impactStrength: 0.55);
+    feedback.collision(EntityType.bumper, impactStrength: 0.92);
+    feedback.collision(EntityType.stickySurface, impactStrength: 0.45);
+    feedback.collision(EntityType.hole, impactStrength: 0.8);
+
+    expect(cues, isEmpty);
+    expect(scheduled, hasLength(1));
+    scheduled.single();
+    await _flushFeedback();
+    expect(cues, [FeedbackCue.holeEntered]);
+  });
+
   test('소리와 진동 설정을 로컬 저장소에서 복원한다', () async {
     SharedPreferences.setMockInitialValues({
       GameFeedback.soundPreferenceKey: false,

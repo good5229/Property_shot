@@ -142,6 +142,19 @@ class PropertyShotGame extends FlameGame {
     return _reflectorRenderOrientation(entity);
   }
 
+  Vec2 animatedEntityPositionForTest(String entityId) {
+    return _animatedEntities()
+        .firstWhere((candidate) => candidate.id == entityId)
+        .position;
+  }
+
+  double animatedEntityMotionImpactForTest(String entityId) {
+    final entity = _animatedEntities().firstWhere(
+      (candidate) => candidate.id == entityId,
+    );
+    return _motionVisual(entity).impact;
+  }
+
   double get animationEndCursorForTest => _animationEndCursor;
 
   double get animationCursorForTest => _animationCursor;
@@ -182,6 +195,7 @@ class PropertyShotGame extends FlameGame {
   ui.Image? _hiddenMechanicImage;
   ui.Picture? _boardPicture;
   final Map<String, _StaticEntityPicture> _staticEntityPictures = {};
+  final Map<String, ui.Picture> _movingSpritePictures = {};
   // 충돌 프레임은 여러 효과를 동시에 그리므로 매 프레임 Paint를 새로
   // 만들지 않는다. Skia/WebGL 래퍼 할당과 GC가 타격 순간에 몰리는 것을
   // 피하기 위해 효과 종류별 Paint를 재사용한다.
@@ -197,8 +211,11 @@ class PropertyShotGame extends FlameGame {
   final Paint _goalConvergencePaint = Paint();
   final Paint _animatedTrailPaint = Paint();
   final Paint _animatedPulsePaint = Paint();
+  final Paint _movingSpriteShadowPaint = Paint()
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
   int _boardPictureBuildCount = 0;
   int _animationRenderCacheBuildCount = 0;
+  int _movingSpritePictureBuildCount = 0;
   static const int _runtimeAssetDecodeSize = 384;
   static const int _runtimeWallAssetDecodeSize = 768;
   static const FilterQuality _runtimeFilterQuality = FilterQuality.high;
@@ -209,6 +226,9 @@ class PropertyShotGame extends FlameGame {
       _animationRenderCacheBuildCount;
 
   int get animationRenderEntityCountForTest => _animationEntityTypes.length;
+
+  int get movingSpritePictureBuildCountForTest =>
+      _movingSpritePictureBuildCount;
 
   // 화면 전체가 같은 방향에서 비추는 듯 보이도록 광원 기준을 고정한다.
   static const Offset _lightDirection = Offset(-0.72, -0.69);
@@ -470,6 +490,10 @@ class PropertyShotGame extends FlameGame {
       cached.picture.dispose();
     }
     _staticEntityPictures.clear();
+    for (final picture in _movingSpritePictures.values) {
+      picture.dispose();
+    }
+    _movingSpritePictures.clear();
     super.onRemove();
   }
 
@@ -997,9 +1021,18 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawImpactFeedback(Canvas canvas) {
-    final first = _firstMoveAtOrAfter(
+    const maxConcurrentMoveEffects = 4;
+    final visibleWindowStart = _firstMoveAtOrAfter(
       _animationMovesByTrigger,
       _animationCursor - 16,
+    );
+    final dueEnd = _firstMoveAtOrAfter(
+      _animationMovesByTrigger,
+      _animationCursor + 0.000001,
+    );
+    final first = math.max(
+      visibleWindowStart,
+      dueEnd - maxConcurrentMoveEffects,
     );
     for (var index = first; index < _animationMovesByTrigger.length; index++) {
       final move = _animationMovesByTrigger[index];
@@ -1085,7 +1118,13 @@ class PropertyShotGame extends FlameGame {
   }
 
   void _drawDirectImpactFeedback(Canvas canvas) {
-    final first = _firstImpactAtOrAfter(_animationCursor - 14);
+    const maxConcurrentImpactEffects = 5;
+    final visibleWindowStart = _firstImpactAtOrAfter(_animationCursor - 14);
+    final dueEnd = _firstImpactAtOrAfter(_animationCursor + 0.000001);
+    final first = math.max(
+      visibleWindowStart,
+      dueEnd - maxConcurrentImpactEffects,
+    );
     for (var index = first; index < _animationImpactsByPath.length; index++) {
       final impact = _animationImpactsByPath[index];
       if (impact.pathIndex > _animationCursor) break;
@@ -3456,9 +3495,8 @@ class PropertyShotGame extends FlameGame {
   ) {
     final center = _project(entity.position);
     final motion = _motionVisual(entity);
-    final shadow = Paint()
-      ..color = Color.fromRGBO(48, 52, 42, 0.22 + motion.impact * 0.08)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+    final shadow = _movingSpriteShadowPaint
+      ..color = Color.fromRGBO(48, 52, 42, 0.22 + motion.impact * 0.08);
     canvas.drawOval(
       Rect.fromCenter(
         center: center.translate(0, entity.size.y * 0.44),
@@ -3489,6 +3527,37 @@ class PropertyShotGame extends FlameGame {
             width: sprite.width,
             height: sprite.height,
           );
+    canvas.drawPicture(_movingSpritePicture(entity, image, source, target));
+    canvas.restore();
+    if (entity.type == EntityType.bumper &&
+        entity.traits.contains(TraitType.bouncy) &&
+        motion.impact > 0.04) {
+      _drawJellySpriteImpact(canvas, center, target, motion.impact);
+    }
+    _drawSpriteGleam(canvas, entity, target, motion);
+    if (entity.visualState == 'drained' && entity.drainedTraits.isNotEmpty) {
+      _drawDrainedTraitBadge(canvas, entity, target, motion);
+    }
+  }
+
+  ui.Picture _movingSpritePicture(
+    EntityState entity,
+    ui.Image image,
+    Rect source,
+    Rect target,
+  ) {
+    final signature = [
+      entity.type.name,
+      target.width,
+      target.height,
+      entity.visualState == 'drained',
+    ].join('|');
+    final cached = _movingSpritePictures[signature];
+    if (cached != null) {
+      return cached;
+    }
+    final recorder = ui.PictureRecorder();
+    final pictureCanvas = Canvas(recorder);
     final extrusion = switch (entity.type) {
       EntityType.weight => 8.0,
       EntityType.bumper => 4.0,
@@ -3499,7 +3568,7 @@ class PropertyShotGame extends FlameGame {
       ..colorFilter = const ColorFilter.mode(Color(0xFF17231E), BlendMode.srcIn)
       ..filterQuality = _runtimeFilterQuality;
     for (var depth = extrusion; depth >= 2; depth -= 2) {
-      canvas.drawImageRect(
+      pictureCanvas.drawImageRect(
         image,
         source,
         target.shift(Offset(0, depth)),
@@ -3515,25 +3584,24 @@ class PropertyShotGame extends FlameGame {
       Offset(0, -1.5),
       Offset(0, 1.5),
     ]) {
-      canvas.drawImageRect(image, source, target.shift(offset), outlinePaint);
+      pictureCanvas.drawImageRect(
+        image,
+        source,
+        target.shift(offset),
+        outlinePaint,
+      );
     }
-    canvas.drawImageRect(
+    pictureCanvas.drawImageRect(
       image,
       source,
       target,
       Paint()..filterQuality = _runtimeFilterQuality,
     );
-    _drawRasterSurfaceFinish(canvas, entity, target);
-    canvas.restore();
-    if (entity.type == EntityType.bumper &&
-        entity.traits.contains(TraitType.bouncy) &&
-        motion.impact > 0.04) {
-      _drawJellySpriteImpact(canvas, center, target, motion.impact);
-    }
-    _drawSpriteGleam(canvas, entity, target, motion);
-    if (entity.visualState == 'drained' && entity.drainedTraits.isNotEmpty) {
-      _drawDrainedTraitBadge(canvas, entity, target, motion);
-    }
+    _drawRasterSurfaceFinish(pictureCanvas, entity, target);
+    final picture = recorder.endRecording();
+    _movingSpritePictures[signature] = picture;
+    _movingSpritePictureBuildCount += 1;
+    return picture;
   }
 
   void _drawDrainedTraitBadge(
@@ -3770,8 +3838,8 @@ class PropertyShotGame extends FlameGame {
     final roll =
         distance / math.max(entity.size.x, 1) * (direction.x < 0 ? -1 : 1);
     final elapsed = _animationCursor - move.triggerPathIndex;
-    final previous = _samplePathAtTime(move.path, elapsed - 0.8);
-    final current = _samplePathAtTime(move.path, elapsed);
+    final previous = _sampleMovePath(move, elapsed - 0.8);
+    final current = _sampleMovePath(move, elapsed);
     final speedRatio = ((current - previous).length / 4.0).clamp(0.0, 1.0);
     final impact = (math.sin(progress * math.pi) * 0.72 + speedRatio * 0.28)
         .clamp(0.0, 1.0);
