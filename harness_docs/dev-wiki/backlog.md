@@ -14,19 +14,6 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
-- [ ] 난도·학습·반복 루프 튜닝
-  - branch: codex/difficulty-learning-loop
-  - issue: 없음
-  - summary: Stage 10 런타임 증거 공백을 닫고, 가상 플레이에서 과도한 난도로 분류된 패턴을 조정하며, 캠페인 난도 곡선·시각적 실패 학습·복구 시설과 개인 기록의 반복 동기를 순차적으로 강화한다.
-  - notes: 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 범위 밖으로 보존한다. 새 모드·화폐·외부 자산은 추가하지 않고, 결정론적 물리·기믹 우위·보정 선택권을 유지한다.
-  - progress:
-    - [x] Stage 10 런타임 대표 해법·무보상 경로 증거 동기화
-    - [x] 과도한 난도 패턴 조정과 가상 플레이 임계 검증
-    - [x] 학습→확인→응용→숙련 캠페인 난도 곡선
-    - [x] 보드 위 첫 방향 변화·첫/마지막 충돌 실패 학습 피드백
-    - [x] 복구 시설·개인 기록 주간 목표와 상태 가시화
-    - [ ] 전체 검증·커밋·푸시·배포
-
 - [x] OpenAI Game Builders Seoul Track 1 대응
   - branch: main (사용자 요청으로 별도 브랜치 없음)
   - issue: 없음
@@ -49,6 +36,12 @@ GitHub Issues own task status. This file owns planning context.
   - notes: 결정론적 물리와 기존 테스트를 보존한다. 복사 자원의 최종 모델은 사용자 결정 전까지 확정하지 않는다.
 
 ## Recently Closed
+
+- [x] 난도·학습·반복 루프 튜닝
+  - branch: codex/difficulty-learning-loop
+  - issue: 없음
+  - summary: Stage 10 런타임 증거 공백, 과난도 탄성 패턴, 캠페인 학습 파동, 보드 위 실패 학습 표식, 복구 시설 주간 목표를 순차 구현했다.
+  - notes: 다섯 기능 커밋을 각각 집중 검증한 뒤 전체 1,426개 테스트, 정적 분석, 생산 40패턴 런타임 검증, 생성본 동기화와 Web Release 빌드를 통과했다. 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 범위 밖으로 보존했다.
 
 - [x] 반복 플레이·섬 지원 확장
   - branch: codex/island-progression

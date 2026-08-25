@@ -4,6 +4,14 @@ Append-only chronology.
 
 Use consistent headings so entries are easy to grep.
 
+## [2026-08-25] release | difficulty learning loop final pass
+
+- 첫 전체 회귀에서 320×568의 주간 목표 한 줄이 첫 스테이지 카드 시작점을 화면 아래로 22.5px 밀어내는 회귀를 발견했다. 주간 목표를 기존 축약 한 줄과 통합해 정보는 유지하면서 카드 높이를 원래 수준으로 되돌렸다.
+- 해당 재현 테스트와 320×568 기준 이미지를 먼저 통과시킨 뒤, 320×568·390×844·768×1024·1024×768·1440×900·1920×1080 섬 지도 Golden을 다시 통과시켰다.
+- 최종 `flutter test --reporter compact`는 1,426개 전부 통과했고 `flutter analyze`는 이슈 0건이었다.
+- `generate_stage_catalog --check --validate-runtime`의 생산 40패턴, 힌트 카탈로그, Puzzle Forge 생성 요약, `git diff --check`, GitHub Pages base href를 적용한 Web Release 빌드가 모두 통과했다.
+- 사용자 소유의 게임소개서 PPT/PDF, 미리보기 파일과 보고서 생성 스크립트는 스테이징하지 않고 그대로 보존했다.
+
 ## [2026-08-25] progression | restoration weekly research goals
 
 - 별도 화폐나 저장 키를 늘리지 않고 기존 개인 기록을 활용해, KST 주차마다 관측소·등대·다리가 한 캠페인 스테이지의 숙련 목표를 제안하도록 연결했다. 같은 주에는 진행 상태가 바뀌어도 목표가 바뀌지 않는다.

@@ -73,3 +73,18 @@
 - 320×568, 390×844, 768×1024, 1024×768, 1440×900, 1920×1080 섬 지도 Golden에서 겹침·잘림·오버플로가 없음을 확인했다.
 - 320×568에서는 주간 목표를 두 줄 축약형으로 표시하고, 390×844에서는 설명 밀도를 줄여 첫 항해 진행이 초기 뷰 아래에서 계속 이어짐을 확인했다.
 - 관련 모델·기록·물리 실험실·복구 효과 테스트 21개와 섬 지도 Golden 6개, `flutter analyze`가 통과했다.
+
+## 최종 통합 게이트
+
+| 검사 | 결과 |
+|---|---|
+| `flutter test --reporter compact` | 1,426개 통과 |
+| `flutter analyze` | 이슈 0건 |
+| `dart run tool/generate_stage_catalog.dart --check --validate-runtime` | 생산 40패턴 통과, 생성본 최신 |
+| `dart run tool/generate_hint_catalog.dart --check` | 최신 |
+| `dart run tool/generate_puzzle_forge_summary.dart --check` | 최신 |
+| 섬 지도 Golden 6종 | 통과 |
+| `flutter build web --release --base-href /Property_shot/` | 성공 |
+| `git diff --check` | 통과 |
+
+첫 전체 회귀에서 320×568의 첫 스테이지 시작점이 590.5px로 화면 높이 568px을 벗어난 것을 검출했다. 주간 목표를 기존 축약 한 줄과 통합한 뒤 같은 검사는 통과했고 전체 회귀를 처음부터 다시 실행했다.
