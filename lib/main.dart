@@ -11,6 +11,7 @@ import 'game/analysis/first_clear_learning_evidence.dart';
 import 'game/analysis/island_restoration.dart';
 import 'game/analysis/next_goal_recommendation.dart';
 import 'game/analysis/personal_record_qualification.dart';
+import 'game/analysis/session_role_review.dart';
 import 'game/analysis/solution_mastery.dart';
 import 'game/analysis/stage_chain_challenge.dart';
 import 'game/analysis/stage_discovery.dart';
@@ -3479,6 +3480,31 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
     }
   }
 
+  Future<void> _exportRoleReview() async {
+    if (_exportingSession) return;
+    setState(() => _exportingSession = true);
+    try {
+      final json = await widget.telemetry.exportPrivacySafeSessionJson();
+      final markdown = SessionRoleEvaluation.fromPrivacySafeJson(
+        json,
+      ).toMarkdown();
+      await Clipboard.setData(ClipboardData(text: markdown));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('역할별 세션 평가를 Markdown으로 복사했습니다.')),
+        );
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('세션 평가를 만들지 못했습니다. 다시 시도해 주세요.')),
+      );
+    } finally {
+      if (mounted) setState(() => _exportingSession = false);
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -3644,6 +3670,14 @@ class _FeedbackSettingsDialogState extends State<_FeedbackSettingsDialog> {
                   title: const Text('세션 JSON 복사'),
                   subtitle: const Text('시간·내부 ID를 제거한 분석용 기록'),
                   onTap: _exportingSession ? null : _exportSession,
+                ),
+                ListTile(
+                  key: const Key('local_session_role_review_button'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.fact_check_outlined),
+                  title: const Text('역할별 평가 복사'),
+                  subtitle: const Text('심사자·모바일·숙련자·접근성 관점의 Markdown'),
+                  onTap: _exportingSession ? null : _exportRoleReview,
                 ),
                 _sectionHeader(
                   key: const Key('settings_preset_section'),

@@ -3482,6 +3482,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final next = current + radians;
     _aimStartedForShot = true;
     _pendingLaunchDirection = Vec2(math.cos(next), math.sin(next)).normalized();
+    _telemetry.record(
+      '정밀 조작',
+      stage: _state.levelIndex,
+      eventCode: 'precision_control_adjusted',
+      action: 'angle',
+      angle: next,
+    );
     _setState(
       _state.copyWith(
         aimDirection: Vec2(math.cos(next), math.sin(next)),
@@ -3495,6 +3502,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
     final nextPower = (_state.aimPower + delta).clamp(0.12, 1.0);
+    _telemetry.record(
+      '정밀 조작',
+      stage: _state.levelIndex,
+      eventCode: 'precision_control_adjusted',
+      action: 'power',
+      power: nextPower,
+    );
     _setState(
       _state.copyWith(
         aimPower: nextPower,
@@ -4390,17 +4404,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               // 영역을 하나의 조작 콘솔처럼 유지한다.
               final heightBoundConsoleWidth =
                   (math.max(0, safeSize.height - 150) *
-                          logicalSize.x /
-                          logicalSize.y +
-                      240)
-                  .clamp(600.0, 840.0)
-                  .toDouble();
+                              logicalSize.x /
+                              logicalSize.y +
+                          240)
+                      .clamp(600.0, 840.0)
+                      .toDouble();
               final contentWidth = compactLayout
                   ? safeSize.width
-                  : math.min(
-                      safeSize.width * 0.86,
-                      heightBoundConsoleWidth,
-                    );
+                  : math.min(safeSize.width * 0.86, heightBoundConsoleWidth);
               return Stack(
                 children: [
                   const Positioned.fill(child: _GameplayBackdrop()),
