@@ -7,6 +7,9 @@ import 'package:flutter/widgets.dart';
 import 'feedback_cue.dart';
 import 'feedback_sound_spec.dart';
 
+AudioPlayer? _sharedFeedbackPlayer;
+Future<void>? _sharedFeedbackPlayerSetup;
+
 /// Web Audio를 사용할 수 없는 Android/iOS/desktop에서도 사건별 피드백을
 /// 구분할 수 있도록 짧은 PCM 톤을 메모리에서 만든다. 외부 파일 로딩이나
 /// 네트워크가 없고, 재생 실패는 게임 진행에 영향을 주지 않는다.
@@ -18,9 +21,11 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
   )) {
     return;
   }
-  final player = AudioPlayer();
+  final player = _sharedFeedbackPlayer ??= AudioPlayer();
   try {
-    await player.setReleaseMode(ReleaseMode.release);
+    await (_sharedFeedbackPlayerSetup ??= player.setReleaseMode(
+      ReleaseMode.release,
+    ));
     await player.play(BytesSource(_wavTone(feedbackTonesFor(cue))));
     await player.onPlayerComplete.first.timeout(
       const Duration(seconds: 1),
@@ -28,7 +33,10 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
     );
   } catch (_) {
     // 무음 모드, 지원하지 않는 플랫폼 또는 테스트 환경에서는 안전하게 무시한다.
-  } finally {
+    if (identical(_sharedFeedbackPlayer, player)) {
+      _sharedFeedbackPlayer = null;
+      _sharedFeedbackPlayerSetup = null;
+    }
     await player.dispose();
   }
 }

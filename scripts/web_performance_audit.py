@@ -17,8 +17,9 @@ from playwright.sync_api import sync_playwright
 
 VIEWPORTS = ((390, 844), (768, 1024), (320, 568), (1440, 900), (1920, 1080))
 INTERACTIVE_VIEWPORTS = {(390, 844), (768, 1024)}
-# 390x844 핵심 체험에서 검증된 입력점을 게임판 비율로 보존한다.
-LAUNCH_POINT_RATIO = (60 / 390, (580 - 106) / 606.65625)
+# 체험 전용 첫 장면의 공은 보드 가로 중앙·세로 84% 지점에 있다.
+# 반응형 화면에서도 같은 실제 공에서 입력을 시작하도록 비율로 보존한다.
+LAUNCH_POINT_RATIO = (0.5, 470 / 560)
 CORE_EXPERIENCE_POINTS = {
     (320, 568): (160.0, 376.0),
     (390, 844): (195.0, 537.0),
@@ -45,6 +46,18 @@ def _measure_frames(page, duration_ms: int) -> list[float]:
         })
         """,
         duration_ms,
+    )
+
+
+def _disable_audio_for_diagnostic(context) -> None:
+    context.add_init_script(
+        """
+        localStorage.setItem('flutter.property_shot_sound_enabled', 'false');
+        localStorage.setItem(
+          'flutter.property_shot_background_music_enabled',
+          'false'
+        );
+        """
     )
 
 
@@ -182,9 +195,17 @@ def _viewport(value: str) -> tuple[int, int]:
     return viewport
 
 
-def _gameplay_bounds(browser, url: str, viewport: tuple[int, int]) -> dict[str, float]:
+def _gameplay_bounds(
+    browser,
+    url: str,
+    viewport: tuple[int, int],
+    *,
+    disable_audio: bool = False,
+) -> dict[str, float]:
     width, height = viewport
     context = browser.new_context(viewport={"width": width, "height": height})
+    if disable_audio:
+        _disable_audio_for_diagnostic(context)
     try:
         page = context.new_page()
         page.goto(url)
@@ -224,6 +245,11 @@ def main() -> int:
         type=_viewport,
         help="특정 뷰포트만 격리 재측정합니다. 여러 번 지정할 수 있습니다.",
     )
+    parser.add_argument(
+        "--disable-audio",
+        action="store_true",
+        help="오디오 비용을 격리하는 진단 측정입니다. 제품 성능 증거로 쓰지 않습니다.",
+    )
     args = parser.parse_args()
     if args.repetitions < 1:
         parser.error("반복 횟수는 1 이상이어야 합니다.")
@@ -233,7 +259,12 @@ def main() -> int:
         browser = playwright.chromium.launch(headless=True)
         for width, height in args.viewport or VIEWPORTS:
             viewport = (width, height)
-            gameplay_bounds = _gameplay_bounds(browser, args.url, viewport)
+            gameplay_bounds = _gameplay_bounds(
+                browser,
+                args.url,
+                viewport,
+                disable_audio=args.disable_audio,
+            )
             launch_point = None
             if viewport in INTERACTIVE_VIEWPORTS:
                 launch_point = (
@@ -248,6 +279,8 @@ def main() -> int:
                     viewport={"width": width, "height": height},
                     device_scale_factor=1,
                 )
+                if args.disable_audio:
+                    _disable_audio_for_diagnostic(context)
                 page = context.new_page()
                 errors: list[str] = []
                 page.on(
@@ -341,6 +374,7 @@ def main() -> int:
         "measured_at": datetime.now(timezone.utc).isoformat(),
         "url": args.url,
         "runtime": "Chromium headless Web release proxy; not a physical-device result",
+        "audio_enabled": not args.disable_audio,
         "flow_target": "60-second core experience scene 1",
         "frame_metric": (
             "requestAnimationFrame callback interval; includes browser display "

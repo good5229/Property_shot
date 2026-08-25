@@ -202,6 +202,7 @@ class LocalPlayTelemetry {
   final List<Map<String, Object?>> _events = [];
   final List<Map<String, Object?>> _pendingPersistence = [];
   Timer? _persistTimer;
+  static const persistenceIdleDelay = Duration(seconds: 3);
 
   List<Map<String, Object?>> get events => List.unmodifiable(_events);
 
@@ -341,10 +342,11 @@ class LocalPlayTelemetry {
   Future<void> close() => flush();
 
   void _schedulePersistence() {
-    if (_persistTimer != null) {
-      return;
-    }
-    _persistTimer = Timer(const Duration(milliseconds: 250), () {
+    // 충돌·문 개방·홀 진입처럼 연속되는 사건 도중 JSON 전체 로그를 다시
+    // 인코딩하면 Web 메인 프레임과 경쟁한다. 마지막 사건 뒤의 유휴 구간으로
+    // 저장을 디바운스하고, 내보내기·종료처럼 명시적 flush는 즉시 보존한다.
+    _persistTimer?.cancel();
+    _persistTimer = Timer(persistenceIdleDelay, () {
       _persistTimer = null;
       unawaited(_persistPending());
     });

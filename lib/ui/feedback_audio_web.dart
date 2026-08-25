@@ -5,19 +5,16 @@ import 'dart:js_interop_unsafe';
 import 'feedback_cue.dart';
 import 'feedback_sound_spec.dart';
 
+JSObject? _sharedContext;
+JSObject? _sharedDestination;
+
 Future<void> playFeedbackCue(FeedbackCue cue) async {
   try {
-    final constructor =
-        globalContext['AudioContext'] ?? globalContext['webkitAudioContext'];
-    if (constructor == null || !constructor.isA<JSFunction>()) return;
-
-    final context = (constructor as JSFunction).callAsConstructor<JSObject>();
+    final context = _sharedAudioContext();
+    if (context == null) return;
     await _awaitPromise(context.callMethodVarArgs<JSAny?>('resume'.toJS));
-    final destination = context['destination'];
-    if (destination == null || !destination.isA<JSObject>()) {
-      await _close(context);
-      return;
-    }
+    final destination = _sharedDestination;
+    if (destination == null) return;
 
     final currentTime = context['currentTime'];
     final now = currentTime?.isA<JSNumber>() == true
@@ -27,11 +24,10 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
     for (final tone in feedbackTonesFor(cue)) {
       if (!_scheduleTone(
         context: context,
-        destination: destination as JSObject,
+        destination: destination,
         tone: tone,
         startTime: cursor,
       )) {
-        await _close(context);
         return;
       }
       cursor +=
@@ -41,10 +37,26 @@ Future<void> playFeedbackCue(FeedbackCue cue) async {
     await Future<void>.delayed(
       Duration(milliseconds: feedbackPatternDurationMilliseconds(cue) + 45),
     );
-    await _close(context);
   } catch (_) {
     // 브라우저 자동 재생 정책이나 지원 여부로 실패해도 플레이는 계속한다.
   }
+}
+
+/// 충돌마다 AudioContext를 만들고 닫으면 브라우저 오디오 스레드 초기화가
+/// 메인 프레임과 겹칠 수 있다. 페이지 수명 동안 한 컨텍스트를 재사용하고
+/// 사건별로 짧은 oscillator만 예약한다.
+JSObject? _sharedAudioContext() {
+  final existing = _sharedContext;
+  if (existing != null && _sharedDestination != null) return existing;
+  final constructor =
+      globalContext['AudioContext'] ?? globalContext['webkitAudioContext'];
+  if (constructor == null || !constructor.isA<JSFunction>()) return null;
+  final context = (constructor as JSFunction).callAsConstructor<JSObject>();
+  final destination = context['destination'];
+  if (destination == null || !destination.isA<JSObject>()) return null;
+  _sharedContext = context;
+  _sharedDestination = destination as JSObject;
+  return context;
 }
 
 bool _scheduleTone({
@@ -106,9 +118,4 @@ Future<void> _awaitPromise(JSAny? value) async {
   if (value != null && value.isA<JSPromise>()) {
     await (value as JSPromise).toDart;
   }
-}
-
-Future<void> _close(JSObject context) async {
-  final result = context.callMethodVarArgs<JSAny?>('close'.toJS);
-  await _awaitPromise(result);
 }

@@ -771,4 +771,11 @@ void main() {
     expect(restored, hasLength(1));
     expect(restored.single['event_code'], 'collision_resolved');
   });
+
+  test('연속 사건 로그는 애니메이션 프레임과 겹치지 않게 유휴 저장한다', () {
+    expect(
+      LocalPlayTelemetry.persistenceIdleDelay,
+      greaterThanOrEqualTo(const Duration(seconds: 3)),
+    );
+  });
 }

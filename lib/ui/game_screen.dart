@@ -132,6 +132,7 @@ class GameScreen extends StatefulWidget {
     this.showTutorialFailureHints = true,
     this.difficulty,
     this.intentAssistStrength,
+    this.intentAssistPolicyOverride,
     this.showDebugControls = false,
     this.progressStore,
     this.progressPersistencePolicy = GameProgressPersistencePolicy.enabled,
@@ -198,6 +199,7 @@ class GameScreen extends StatefulWidget {
   final bool showTutorialFailureHints;
   final PlayerDifficulty? difficulty;
   final IntentAssistStrength? intentAssistStrength;
+  final IntentAssistPolicy? intentAssistPolicyOverride;
   final bool showDebugControls;
   final ProgressStore? progressStore;
 
@@ -4178,7 +4180,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         strength: _intentAssistStrength,
         compactPointer: MediaQuery.sizeOf(context).shortestSide < 600,
         repeatedNearMisses: _repeatedNearMisses,
-        policy: IntentAssistPolicy.forStage(_currentLevel.stageId),
+        policy:
+            widget.intentAssistPolicyOverride ??
+            IntentAssistPolicy.forStage(_currentLevel.stageId),
         rawResultHint: _cachedPreviewForLaunch(_state, rawLaunchInput),
       );
       var launchInput = decision.appliedInput;

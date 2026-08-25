@@ -116,7 +116,11 @@ class IntentAssistResolver {
       repeatedNearMisses: repeatedNearMisses,
     );
     if (policy.preserveRawTrajectory) {
-      return _decision(raw, _preserveRawIntent(raw, holeForgiveness));
+      return _decision(
+        raw,
+        _preserveRawIntent(raw, holeForgiveness),
+        resolvedResult: rawResultHint,
+      );
     }
 
     final stableDirection = quantizeAimDirection(raw.direction);
