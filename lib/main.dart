@@ -3966,7 +3966,7 @@ class _StageSelectScreen extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact =
-            constraints.maxWidth <= 360 || constraints.maxHeight < 700;
+            constraints.maxWidth <= 430 || constraints.maxHeight < 700;
         final wide = constraints.maxWidth >= 600;
         final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
         final navigationArtSize = wide ? 52.0 : 44.0;

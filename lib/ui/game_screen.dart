@@ -3925,21 +3925,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             entity.id != _state.activeBall.id &&
             _entityContainsTap(entity, logical),
       );
-      if (!onInspectableEntity &&
-          _invalidLaunchNoticeShot != _state.shotCount) {
-        _invalidLaunchNoticeShot = _state.shotCount;
-        _telemetry.record(
-          '잘못된 발사 시작',
-          stage: _state.levelIndex,
-          attempt: _state.shotCount + 1,
-          result: '공 바깥에서 시작',
-          eventCode: 'invalid_launch_start',
-          position: logical,
-          routeTag: widget.sequencePosition == null ? null : 'core_experience',
-        );
-        _setState(_state.copyWith(message: '발사는 공을 누른 상태에서 시작해 주세요.'));
+      if (!onInspectableEntity) {
+        if (_invalidLaunchNoticeShot != _state.shotCount) {
+          _invalidLaunchNoticeShot = _state.shotCount;
+          _telemetry.record(
+            '잘못된 발사 시작',
+            stage: _state.levelIndex,
+            attempt: _state.shotCount + 1,
+            result: '공 바깥에서 시작',
+            eventCode: 'invalid_launch_start',
+            position: logical,
+            routeTag: widget.sequencePosition == null
+                ? null
+                : 'core_experience',
+          );
+          _setState(_state.copyWith(message: '발사는 공을 누른 상태에서 시작해 주세요.'));
+        }
+        return;
       }
-      return;
     }
     _launchInputSession.chargeRateScale =
         _rewardInventory.precisionChargeEnabled ? 0.75 : 1.0;

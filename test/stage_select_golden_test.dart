@@ -27,6 +27,7 @@ void main() {
     (name: '1920x1080', width: 1920.0, height: 1080.0),
   ]) {
     testWidgets('섬 지도 Golden ${fixture.name}', (tester) async {
+      final compactFixture = fixture.width <= 430;
       SharedPreferences.setMockInitialValues(
         fixture.name == '390x844'
             ? <String, Object>{
@@ -114,11 +115,11 @@ void main() {
       expect(find.byKey(const Key('island_restoration_card')), findsOneWidget);
       expect(
         find.byKey(const Key('weekly_research_goal_compact')),
-        fixture.name == '320x568' ? findsOneWidget : findsNothing,
+        compactFixture ? findsOneWidget : findsNothing,
       );
       expect(
         find.byKey(const Key('weekly_research_goal')),
-        fixture.name == '320x568' ? findsNothing : findsOneWidget,
+        compactFixture ? findsNothing : findsOneWidget,
       );
       for (final landmark in const ['observatory', 'lighthouse', 'bridge']) {
         expect(
@@ -126,7 +127,7 @@ void main() {
           findsOneWidget,
         );
       }
-      final expectedLandmarkArt = fixture.name == '320x568'
+      final expectedLandmarkArt = compactFixture
           ? 44.0
           : fixture.width >= 600
           ? 78.0
@@ -156,7 +157,7 @@ void main() {
         observatorySemantics,
         contains(fixture.name == '390x844' ? '복구 완료' : '폐허'),
       );
-      if (fixture.name == '320x568') {
+      if (compactFixture) {
         expect(
           find.byKey(const Key('island_restoration_expand')),
           findsOneWidget,
@@ -178,11 +179,11 @@ void main() {
       }
       expect(
         find.byKey(const Key('island_benefit_observatory')),
-        fixture.name == '390x844' ? findsOneWidget : findsNothing,
+        findsNothing,
       );
       expect(
         find.textContaining('실패 원인과 충돌 순서를 자세히'),
-        fixture.name == '390x844' ? findsOneWidget : findsNothing,
+        findsNothing,
       );
       await expectLater(
         find.byKey(const Key('stage_select_golden')),
