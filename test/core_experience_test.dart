@@ -156,7 +156,10 @@ void main() {
   });
 
   testWidgets('홈의 최상위 핵심 체험 버튼이 저장과 분리된 실제 게임 화면을 연다', (tester) async {
-    await tester.pumpWidget(const PropertyShotApp(showHome: true));
+    final telemetry = LocalPlayTelemetry(persistLocally: false);
+    await tester.pumpWidget(
+      PropertyShotApp(showHome: true, telemetry: telemetry),
+    );
     await tester.pump();
 
     expect(find.byKey(const Key('core_experience_button')), findsOneWidget);
@@ -176,6 +179,26 @@ void main() {
     expect(game.sequenceLength, 3);
     expect(game.objectiveOverride, contains('핵심 체험 1/3'));
     expect(game.showDiscoveryHud, isFalse);
+    expect(
+      telemetry.events.any(
+        (event) => event['event_code'] == 'judge_journey_started',
+      ),
+      isTrue,
+    );
+  });
+
+  testWidgets('핵심 체험 완료 뒤 첫 항해와 섬 변화 순서를 이미지로 안내한다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: buildJudgeJourneyStepsForTesting())),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('judge_journey_steps')), findsOneWidget);
+    expect(find.text('핵심 규칙'), findsOneWidget);
+    expect(find.text('첫 항해'), findsOneWidget);
+    expect(find.text('섬 변화'), findsOneWidget);
+    expect(find.byType(Image), findsNWidgets(3));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('각 핵심 장면은 현재 순서와 다음 행동을 명확히 표시한다', (tester) async {

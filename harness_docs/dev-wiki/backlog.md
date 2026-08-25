@@ -14,6 +14,19 @@ GitHub Issues own task status. This file owns planning context.
 
 ## Active Queue
 
+- [ ] OpenAI Game Builders 심사 준비 릴리스
+  - branch: codex/judge-ready-release
+  - issue: 없음
+  - summary: 첫 3분 심사 경로, 역할별 세션 평가기, 최신 Web 품질 게이트, 통합 피날레, 사운드 패스, 제출 패키지를 순차 완성한다.
+  - notes: 접수 마감 직전 범위이므로 신규 재화·온라인 기능보다 심사자가 설명 없이 코어 재미와 복구 보상을 확인하는 흐름을 우선한다. 각 단계는 독립 검증·커밋하며 기존 제출용 PPT/PDF와 보고서 생성 스크립트의 미커밋 변경은 스테이징하지 않고 보존한다. 실제 사람의 재미는 에이전트 세션 평가로 입증했다고 표현하지 않는다.
+  - progress:
+    - [x] 첫 3분 심사 경로와 자동 합격 계약
+    - [ ] 로컬 세션 역할별 평가기
+    - [ ] 최신 Web 성능·접근성 릴리스 게이트
+    - [ ] 복구 시설 통합 피날레
+    - [ ] 재질·복구 상태 기반 사운드 패스
+    - [ ] 16:9 썸네일과 제출 패키지 동결
+
 - [x] OpenAI Game Builders Seoul Track 1 대응
   - branch: main (사용자 요청으로 별도 브랜치 없음)
   - issue: 없음

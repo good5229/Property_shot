@@ -198,6 +198,7 @@ class LocalPlayTelemetry {
   final bool persistLocally;
   final int maxMemoryEvents;
   final LocalPlayTelemetryStore _store;
+  final Stopwatch _sessionElapsed = Stopwatch()..start();
   final List<Map<String, Object?>> _events = [];
   final List<Map<String, Object?>> _pendingPersistence = [];
   Timer? _persistTimer;
@@ -238,6 +239,7 @@ class LocalPlayTelemetry {
   }) {
     final event = <String, Object?>{
       '시간': DateTime.now().toUtc().toIso8601String(),
+      'session_elapsed_ms': _sessionElapsed.elapsedMilliseconds,
       '유형': type,
       '단계': stage + 1,
       'stage_id': _stageId(stage),
@@ -284,6 +286,7 @@ class LocalPlayTelemetry {
     final result = typedEvent.result ?? typedEvent.shot?.result;
     final event = <String, Object?>{
       '시간': DateTime.now().toUtc().toIso8601String(),
+      'session_elapsed_ms': _sessionElapsed.elapsedMilliseconds,
       '유형': typedEvent.type.displayName,
       '단계': context.stageIndex + 1,
       'stage_id': context.stageId,
@@ -504,6 +507,7 @@ class LocalPlayTelemetry {
       'power_gauge_charge_stage',
       'power_gauge_power',
       'power_gauge_cancelled',
+      'session_elapsed_ms',
     ];
     final rows = <String>[columns.join(',')];
     for (final event in _events) {

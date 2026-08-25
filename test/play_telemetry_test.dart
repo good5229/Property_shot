@@ -67,6 +67,7 @@ void main() {
     final decoded = jsonDecode(exported) as Map<String, Object?>;
     final events = (decoded['events'] as List).cast<Map<String, Object?>>();
     expect(events.every((event) => !event.containsKey('시간')), isTrue);
+    expect(events.every((event) => event['session_elapsed_ms'] is int), isTrue);
     expect(exported, isNot(contains('http')));
     expect(exported, contains('"순서": 1'));
   });

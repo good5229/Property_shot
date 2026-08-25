@@ -447,6 +447,8 @@ class _CoreExperienceComplete extends StatelessWidget {
                           ],
                         ),
                       const SizedBox(height: 24),
+                      _JudgeJourneySteps(language: language),
+                      const SizedBox(height: 18),
                       SizedBox(
                         width: mathMin(constraints.maxWidth, 420),
                         child: Column(
@@ -456,7 +458,10 @@ class _CoreExperienceComplete extends StatelessWidget {
                               key: const Key('core_continue_campaign_button'),
                               onPressed: onContinueCampaign,
                               child: Text(
-                                language.pick('전체 탐사 시작', 'START FULL VOYAGE'),
+                                language.pick(
+                                  '첫 항해로 이어가기',
+                                  'CONTINUE TO FIRST VOYAGE',
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -485,6 +490,115 @@ class _CoreExperienceComplete extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _JudgeJourneySteps extends StatelessWidget {
+  const _JudgeJourneySteps({required this.language});
+
+  final AppLanguage language;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (
+        asset: 'assets/generated/stage-icon-property-transfer-v1.png',
+        label: language.pick('핵심 규칙', 'CORE RULES'),
+        completed: true,
+      ),
+      (
+        asset: 'assets/generated/nav-helm-v1.png',
+        label: language.pick('첫 항해', 'FIRST VOYAGE'),
+        completed: false,
+      ),
+      (
+        asset: 'assets/generated/island-observatory-v2.png',
+        label: language.pick('섬 변화', 'ISLAND CHANGE'),
+        completed: false,
+      ),
+    ];
+    return Semantics(
+      container: true,
+      label: language.pick(
+        '심사 경로. 핵심 규칙 완료, 다음 첫 항해, 이후 섬 변화',
+        'Judge route. Core rules complete, then first voyage, then island change.',
+      ),
+      child: Row(
+        key: const Key('judge_journey_steps'),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var index = 0; index < items.length; index++) ...[
+            Flexible(
+              child: _JudgeJourneyStep(
+                asset: items[index].asset,
+                label: items[index].label,
+                completed: items[index].completed,
+              ),
+            ),
+            if (index < items.length - 1)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 5),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 20,
+                  color: Color(0xFF397172),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+@visibleForTesting
+Widget buildJudgeJourneyStepsForTesting({
+  AppLanguage language = AppLanguage.korean,
+}) => _JudgeJourneySteps(language: language);
+
+class _JudgeJourneyStep extends StatelessWidget {
+  const _JudgeJourneyStep({
+    required this.asset,
+    required this.label,
+    required this.completed,
+  });
+
+  final String asset;
+  final String label;
+  final bool completed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 76, maxWidth: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: completed ? const Color(0xFFE0F4DE) : const Color(0xFFF7FAF3),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: completed ? const Color(0xFF4A8B66) : const Color(0xFF8CA8A1),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            asset,
+            width: 42,
+            height: 42,
+            filterQuality: FilterQuality.high,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+          ),
+        ],
       ),
     );
   }

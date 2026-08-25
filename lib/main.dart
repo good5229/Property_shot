@@ -337,6 +337,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _showExpedition = false;
   bool _showCoreExperience = false;
   bool _showPuzzleForge = false;
+  Stopwatch? _judgeJourneyElapsed;
+  bool _judgeJourneyCompleted = false;
   Future<Set<String>>? _rewardInventoryFuture;
   bool _selectingStage = false;
   int _copyCoreCount = 0;
@@ -578,6 +580,33 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   void _changeSurface(VoidCallback change) {
     _dismissTransientMessages();
     setState(change);
+  }
+
+  void _startJudgeJourney() {
+    _judgeJourneyElapsed = Stopwatch()..start();
+    _judgeJourneyCompleted = false;
+    _telemetry.record(
+      '심사 경로 시작',
+      stage: 0,
+      eventCode: 'judge_journey_started',
+      routeTag: 'judge_first_three_minutes',
+    );
+    _changeSurface(() => _showCoreExperience = true);
+  }
+
+  void _continueJudgeJourney() {
+    final elapsed = _judgeJourneyElapsed;
+    if (elapsed != null && !_judgeJourneyCompleted) {
+      _telemetry.record(
+        '심사 경로 첫 항해 연결',
+        stage: 0,
+        eventCode: 'judge_campaign_continued',
+        routeTag: 'judge_first_three_minutes',
+        elapsedMs: elapsed.elapsedMilliseconds,
+      );
+    }
+    _changeSurface(() => _showCoreExperience = false);
+    unawaited(_startOrResume());
   }
 
   void _openRewardInventory() {
@@ -1115,6 +1144,19 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         _activeAcquiredRewards = session.state?.acquiredRewards ?? const {};
       });
     }
+    if (!_activeIsExpedition &&
+        levelIndex == 0 &&
+        _judgeJourneyElapsed != null &&
+        !_judgeJourneyCompleted) {
+      _telemetry.record(
+        '심사 경로 첫 스테이지 클리어',
+        stage: levelIndex,
+        eventCode: 'judge_first_stage_cleared',
+        routeTag: 'judge_first_three_minutes',
+        elapsedMs: _judgeJourneyElapsed!.elapsedMilliseconds,
+        result: completion.shotCount.toString(),
+      );
+    }
     return completion;
   }
 
@@ -1537,6 +1579,20 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         setState(() {
           _discoveriesByStageId = updated;
         });
+        if (activeStage == 0 &&
+            _judgeJourneyElapsed != null &&
+            !_judgeJourneyCompleted) {
+          _judgeJourneyCompleted = true;
+          _judgeJourneyElapsed!.stop();
+          _telemetry.record(
+            '심사 경로 섬 발견 기록',
+            stage: 0,
+            eventCode: 'judge_island_discovery_recorded',
+            routeTag: 'judge_first_three_minutes',
+            elapsedMs: _judgeJourneyElapsed!.elapsedMilliseconds,
+            result: milestoneIds.length.toString(),
+          );
+        }
         if (restoredLandmark != null) {
           _feedback.restorationCompleted();
           unawaited(_showIslandRestorationCelebration(restoredLandmark));
@@ -1832,10 +1888,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       return CoreExperienceScreen(
         telemetry: _telemetry,
         onExit: () => _changeSurface(() => _showCoreExperience = false),
-        onContinueCampaign: () {
-          _changeSurface(() => _showCoreExperience = false);
-          unawaited(_startOrResume());
-        },
+        onContinueCampaign: _continueJudgeJourney,
         language: _language,
       );
     }
@@ -1944,7 +1997,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       hasCompletedFirstStage: _clearedLevels.isNotEmpty,
       advancedActivitiesUnlocked: _clearedLevels.length >= 3,
       telemetry: _telemetry,
-      onCoreExperience: () => _changeSurface(() => _showCoreExperience = true),
+      onCoreExperience: _startJudgeJourney,
       onPuzzleForge: () => _changeSurface(() => _showPuzzleForge = true),
       onStart: () => unawaited(_startOrResume()),
       onStageSelect: () => _changeSurface(() => _showStageSelect = true),
