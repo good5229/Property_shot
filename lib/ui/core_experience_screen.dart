@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../game/domain/level_definition.dart';
+import '../game/domain/entity_state.dart';
+import '../game/domain/geometry.dart';
 import '../game/domain/shot_input.dart';
 import '../game/domain/trait.dart';
+import '../game/input/intent_assist_resolver.dart';
 import '../game/levels/generated_stage_catalog.dart';
 import '../game/simulation/shot_resolver.dart';
 import 'app_language.dart';
@@ -19,6 +22,7 @@ class CoreExperienceScene {
     required this.title,
     required this.objective,
     required this.startMessage,
+    this.initialAimDirection = const Vec2(1, 0),
   });
 
   final String stageId;
@@ -27,15 +31,19 @@ class CoreExperienceScene {
   final String title;
   final String objective;
   final String startMessage;
+  final Vec2 initialAimDirection;
 
   LevelDefinition createLevel({AppLanguage language = AppLanguage.korean}) {
     final stage = generatedStageCatalog.stageById(stageId);
-    return stage
+    final level = stage
         .patternById(patternId)
         .toLevelDefinition(
           stageId: stageId,
           stageTitle: _sceneCopy(id: patternId, language: language).title,
         );
+    return patternId == 'stage_heavy_01'
+        ? _coreHeavyCrateGateLevel(level)
+        : level;
   }
 
   StageObjectiveEvidence evaluateObjective(
@@ -74,13 +82,82 @@ class CoreExperienceScene {
     return StageObjectiveEvidence(
       satisfied: satisfied,
       guidance: switch (patternId) {
-        'stage_heavy_01' => '바위의 무거움을 옮긴 공으로 상자를 움직인 뒤 홀에 넣어 보세요.',
+        'stage_heavy_01' => '무거움을 옮긴 공으로 상자를 위쪽 스위치까지 밀어 문을 여세요.',
         'stage_drained_01' => '무거움을 옮겨 가벼워진 원본 돌을 실제로 움직인 뒤 홀에 넣어 보세요.',
         'stage_persistent_01' => '첫 공을 남긴 뒤 새 공으로 그 공을 맞혀 홀까지 이어 보세요.',
         _ => '장면 목표를 수행한 뒤 다시 홀에 넣어 보세요.',
       },
     );
   }
+}
+
+/// 60초 체험 첫 장면은 캠페인용 자유 해법 패턴과 달리, 무거운 공으로
+/// 상자를 밀어 스위치를 누르는 한 가지 인과를 짧고 분명하게 가르친다.
+/// 닫힌 문이 보드 폭을 막으므로 무속성 뱅크 샷으로 홀만 먼저 맞힐 수 없다.
+LevelDefinition _coreHeavyCrateGateLevel(LevelDefinition base) {
+  final boundaryWalls = base.entities.where(
+    (entity) =>
+        entity.type == EntityType.wall &&
+        (entity.id == 'wall_top' ||
+            entity.id == 'wall_left' ||
+            entity.id == 'wall_right'),
+  );
+  return LevelDefinition(
+    id: '${base.id}_core',
+    name: base.name,
+    ballSpawn: const Vec2(180, 470),
+    entities: [
+      ...boundaryWalls,
+      const EntityState(
+        id: 'hole',
+        type: EntityType.hole,
+        position: Vec2(180, 104),
+        size: Vec2(60, 60),
+        solid: false,
+      ),
+      const EntityState(
+        id: 'core_gate',
+        type: EntityType.gate,
+        position: Vec2(180, 220),
+        size: Vec2(340, 30),
+      ),
+      const EntityState(
+        id: 'core_weight_switch',
+        type: EntityType.switchPad,
+        position: Vec2(180, 286),
+        size: Vec2(62, 24),
+        linkId: 'core_gate',
+      ),
+      const EntityState(
+        id: 'crate_a',
+        type: EntityType.crate,
+        position: Vec2(180, 350),
+        size: Vec2(46, 46),
+        movable: true,
+        restitution: 0.62,
+      ),
+      const EntityState(
+        id: 'anvil',
+        type: EntityType.weight,
+        position: Vec2(76, 414),
+        size: Vec2(52, 38),
+        traits: {TraitType.heavy},
+      ),
+    ],
+    copyCharges: base.copyCharges,
+    parShots: 2,
+    bonusGoal: '무거운 공으로 상자를 밀어 문을 열고 2회 안에 홀에 넣으세요.',
+    copyCoreReward: base.copyCoreReward,
+    intendedStrategyId: 'anvil',
+    acceptedStrategyIds: const {'anvil'},
+    stageId: base.stageId,
+    patternId: base.patternId,
+    patternWeight: base.patternWeight,
+    difficultyBand: base.difficultyBand,
+    solutionFamilies: const {'heavy_crate_switch'},
+    optionalChallenges: const {},
+    patternMetadata: {...base.patternMetadata, 'coreExperience': 'true'},
+  );
 }
 
 ({String title, String objective, String startMessage}) _sceneCopy({
@@ -100,8 +177,8 @@ class CoreExperienceScene {
   return switch (id) {
     'stage_heavy_01' => (
       title: 'Scene 1 · Steal Weight',
-      objective: 'Move weight into the ball and push the crate aside',
-      startMessage: 'Tap the stone, transfer Weight, then launch the ball.',
+      objective: 'Use a heavy ball to push the crate onto the switch',
+      startMessage: 'Transfer Weight, then push the crate up to open the gate.',
     ),
     'stage_drained_01' => (
       title: 'Scene 2 · The Drained Source',
@@ -123,8 +200,9 @@ const coreExperienceScenes = <CoreExperienceScene>[
     patternId: 'stage_heavy_01',
     levelIndex: 0,
     title: '장면 1 · 무거움 강탈',
-    objective: '무거움을 공에 옮겨 상자를 밀어 길을 만드세요',
-    startMessage: '돌을 눌러 무거움을 옮긴 뒤 공을 발사하세요.',
+    objective: '무거운 공으로 상자를 스위치까지 밀어 문을 여세요',
+    startMessage: '돌의 무거움을 옮긴 뒤 상자를 위쪽 스위치로 밀어 보세요.',
+    initialAimDirection: Vec2(0, -1),
   ),
   CoreExperienceScene(
     stageId: 'stage_drained',
@@ -273,7 +351,10 @@ class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
     final level = scene.createLevel(language: widget.language);
     final initialState = level
         .createState(scene.levelIndex, productRules: true)
-        .copyWith(message: copy.startMessage);
+        .copyWith(
+          aimDirection: scene.initialAimDirection,
+          message: copy.startMessage,
+        );
     final isLast = _sceneIndex == coreExperienceScenes.length - 1;
 
     return GameScreen(
@@ -286,6 +367,10 @@ class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
       exitToMainMenu: true,
       progressPersistencePolicy: GameProgressPersistencePolicy.disabled,
       difficulty: PlayerDifficulty.easy,
+      intentAssistPolicyOverride: const IntentAssistPolicy(
+        preserveBoundaryIntent: true,
+        preserveRawTrajectory: true,
+      ),
       loadGameAssets: widget.loadGameAssets,
       showTutorialFailureHints: true,
       showDiscoveryHud: false,

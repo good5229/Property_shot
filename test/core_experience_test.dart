@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
+import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/simulation/trait_resolver.dart';
@@ -12,7 +15,6 @@ import 'package:property_shot/ui/play_telemetry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fixtures/stage_drained_patterns.dart';
-import 'fixtures/stage_heavy_patterns.dart';
 import 'fixtures/stage_persistent_patterns.dart';
 
 void main() {
@@ -60,13 +62,9 @@ void main() {
       heavyScene.levelIndex,
       productRules: true,
     );
-    final heavyBypass = stageHeavyRepresentatives[0];
-    final heavyBypassInput = ShotInput(
-      direction: heavyBypass.direction,
-      power: heavyBypass.power,
-    );
+    const heavyBypassInput = ShotInput(direction: Vec2(0, -1), power: 1);
     final heavyBypassResult = resolver.resolve(heavyBase, heavyBypassInput);
-    expect(heavyBypassResult.state.phase, GamePhase.success);
+    expect(heavyBypassResult.state.phase, isNot(GamePhase.success));
     expect(
       heavyScene
           .evaluateObjective([heavyBypassResult], [heavyBypassInput])
@@ -76,14 +74,20 @@ void main() {
     final heavyPrepared = traits.transferSelectedTrait(
       traits.selectSource(heavyBase, 'anvil'),
     );
-    final heavySolve = stageHeavyRepresentatives[1];
     final heavyInput = ShotInput(
-      direction: heavySolve.direction,
-      power: heavySolve.power,
+      direction: const Vec2(0, -1),
+      power: 1,
       equippedTrait: heavyPrepared.equippedTrait,
     );
     final heavyResult = resolver.resolve(heavyPrepared, heavyInput);
-    expect(heavyResult.state.phase, GamePhase.success);
+    expect(
+      heavyResult.state.phase,
+      GamePhase.success,
+      reason: 'events=${heavyResult.events}, path=${heavyResult.path.last}',
+    );
+    expect(heavyResult.events, containsAll(['crate_pushed', 'switch_pressed']));
+    expect(heavyResult.state.entityById('core_weight_switch')!.pressed, isTrue);
+    expect(heavyResult.state.entityById('core_gate')!.open, isTrue);
     expect(
       heavyScene.evaluateObjective([heavyResult], [heavyInput]).satisfied,
       isTrue,
@@ -155,6 +159,30 @@ void main() {
     );
   });
 
+  test('첫 장면은 UI 전체 조준 격자에서 무속성 홀 우회를 허용하지 않는다', () {
+    const resolver = ShotResolver();
+    final scene = coreExperienceScenes.first;
+    final initial = scene.createLevel().createState(
+      scene.levelIndex,
+      productRules: true,
+    );
+    var clearCount = 0;
+
+    for (var degree = 0; degree < 360; degree += 2) {
+      final radians = degree * math.pi / 180;
+      final direction = Vec2(math.cos(radians), math.sin(radians));
+      for (var powerPercent = 12; powerPercent <= 100; powerPercent += 2) {
+        final result = resolver.resolve(
+          initial,
+          ShotInput(direction: direction, power: powerPercent / 100),
+        );
+        if (result.state.phase == GamePhase.success) clearCount += 1;
+      }
+    }
+
+    expect(clearCount, 0);
+  });
+
   testWidgets('홈의 최상위 핵심 체험 버튼이 저장과 분리된 실제 게임 화면을 연다', (tester) async {
     final telemetry = LocalPlayTelemetry(persistLocally: false);
     await tester.pumpWidget(
@@ -177,6 +205,8 @@ void main() {
     );
     expect(game.sequencePosition, 0);
     expect(game.sequenceLength, 3);
+    expect(game.intentAssistPolicyOverride?.preserveRawTrajectory, isTrue);
+    expect(game.initialState?.aimDirection, const Vec2(0, -1));
     expect(game.objectiveOverride, contains('핵심 체험 1/3'));
     expect(game.showDiscoveryHud, isFalse);
     expect(
