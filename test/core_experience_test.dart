@@ -6,6 +6,7 @@ import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
+import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/simulation/shot_resolver.dart';
 import 'package:property_shot/game/simulation/trait_resolver.dart';
 import 'package:property_shot/game/validation/stage_pattern_validator.dart';
@@ -173,6 +174,86 @@ void main() {
           .satisfied,
       isTrue,
     );
+  });
+
+  test('무거운 공이 같은 상자를 연속해서 밀 때 정지·순간이동·역주행이 없다', () {
+    const resolver = ShotResolver();
+    const traits = TraitResolver();
+    final scene = coreExperienceScenes.first;
+    final base = scene.createLevel().createState(
+      scene.levelIndex,
+      productRules: true,
+    );
+    final prepared = traits.transferSelectedTrait(
+      traits.selectSource(base, 'anvil'),
+    );
+    final result = resolver.resolve(
+      prepared,
+      ShotInput(
+        direction: scene.initialAimDirection,
+        power: 1,
+        equippedTrait: prepared.equippedTrait,
+      ),
+    );
+    final crateMoves = result.moves
+        .where((move) => move.entityId == 'crate_a')
+        .toList();
+    expect(crateMoves.length, greaterThanOrEqualTo(3));
+
+    for (final framesPerSecond in [30, 45, 60]) {
+      var finished = false;
+      final game = PropertyShotGame(
+        result.state,
+        loadVisualAssets: false,
+        onAnimationFinished: () => finished = true,
+      );
+      game.setStateSnapshot(
+        result.state,
+        path: result.path,
+        transitionStart: prepared,
+        moves: result.moves,
+        impacts: result.impacts,
+        physicsEvents: result.physicsEvents,
+        animationTransaction: true,
+      );
+      var previous = game.animatedEntityPositionForTest('crate_a');
+      var maximumFrameStep = 0.0;
+      var started = false;
+      var stoppedBeforeFinish = false;
+
+      for (var frame = 0; frame < 4000 && !finished; frame++) {
+        game.update(1 / framesPerSecond);
+        final current = game.animatedEntityPositionForTest('crate_a');
+        final step = current.distanceTo(previous);
+        maximumFrameStep = math.max(maximumFrameStep, step);
+        expect(
+          current.y,
+          lessThanOrEqualTo(previous.y + 0.05),
+          reason: '$framesPerSecond FPS에서 상자가 충돌 분리 좌표로 역주행함',
+        );
+        if (step > 0.05) {
+          expect(
+            stoppedBeforeFinish,
+            isFalse,
+            reason: '$framesPerSecond FPS에서 멈춘 상자가 다시 움직임',
+          );
+          started = true;
+        } else if (started &&
+            current.distanceTo(result.state.entityById('crate_a')!.position) >
+                0.2) {
+          stoppedBeforeFinish = true;
+        }
+        previous = current;
+      }
+
+      expect(finished, isTrue);
+      expect(maximumFrameStep, lessThanOrEqualTo(10));
+      expect(
+        previous.distanceTo(result.state.entityById('crate_a')!.position),
+        lessThan(0.01),
+      );
+      game.onRemove();
+    }
   });
 
   test('첫 장면은 UI 전체 조준 격자에서 무속성 홀 우회를 허용하지 않는다', () {

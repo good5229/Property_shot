@@ -31,6 +31,20 @@ class _ReflectorAnimationStep {
   final double end;
 }
 
+class _AnimationMoveTrack {
+  const _AnimationMoveTrack({
+    required this.move,
+    required this.distance,
+    required this.duration,
+    required this.decelerates,
+  });
+
+  final ShotAnimationMove move;
+  final double distance;
+  final double duration;
+  final bool decelerates;
+}
+
 class PropertyShotGame extends FlameGame {
   PropertyShotGame(
     this.state, {
@@ -179,6 +193,7 @@ class PropertyShotGame extends FlameGame {
   Set<String> _animatedEntityIds = const {};
   Map<ShotAnimationMove, double> _animationMoveDistances = const {};
   Map<ShotAnimationMove, double> _animationMoveDurations = const {};
+  Set<ShotAnimationMove> _deceleratingAnimationMoves = const {};
   List<double> _animationPathPresentationCursors = const [];
   List<double> _animationPathPresentationTangents = const [];
   Map<String, double> _animationEventPresentationCursors = const {};
@@ -401,6 +416,7 @@ class PropertyShotGame extends FlameGame {
     _animatedEntityIds = const {};
     _animationMoveDistances = const {};
     _animationMoveDurations = const {};
+    _deceleratingAnimationMoves = const {};
     _animationPathPresentationCursors = const [];
     _animationPathPresentationTangents = const [];
     _animationEventPresentationCursors = const {};
@@ -1419,6 +1435,150 @@ class PropertyShotGame extends FlameGame {
     return math.max(1, distance / 4.0);
   }
 
+  double _naturalMoveDuration(ShotAnimationMove move, double distance) {
+    if (move.path.length < 2 || distance <= 0.001) {
+      return 12;
+    }
+    return math.max(1, distance / 4.0).toDouble();
+  }
+
+  List<_AnimationMoveTrack> _compileEntityMoveTracks(
+    List<ShotAnimationMove> sourceMoves,
+    EntityType? entityType,
+  ) {
+    const joinDistance = 2.5;
+    const joinSlackCursor = 0.75;
+    const momentumEaseExponent = 1.25;
+    const momentumPixelsPerCursor = 4.0;
+    final tracks = <_AnimationMoveTrack>[];
+
+    for (final source in sourceMoves) {
+      final normalizedPath = _normalizedTranslationPath(
+        source.path.length >= 2 ? source.path : [source.from, source.to],
+        entityType: entityType,
+        visualState: source.visualState,
+      );
+      final move = ShotAnimationMove(
+        entityId: source.entityId,
+        from: source.from,
+        to: source.to,
+        triggerPathIndex: source.triggerPathIndex,
+        visualState: source.visualState,
+        path: normalizedPath,
+        impactPosition: source.impactPosition,
+        impactNormal: source.impactNormal,
+      );
+      final distance = _pathDistance(normalizedPath);
+      final decelerates =
+          distance > 0.001 &&
+          source.visualState == 'pushed' &&
+          (entityType == EntityType.crate || entityType == EntityType.weight);
+      final naturalDuration = _naturalMoveDuration(move, distance);
+      final duration = decelerates
+          ? naturalDuration * momentumEaseExponent
+          : naturalDuration;
+
+      if (tracks.isNotEmpty) {
+        final previous = tracks.last;
+        final previousMove = previous.move;
+        final previousStart = _movePresentationCursor(previousMove);
+        final nextStart = _movePresentationCursor(move);
+        final spatiallyContinuous =
+            previousMove.to.distanceTo(move.from) <= joinDistance;
+        final overlapsPreviousMotion =
+            nextStart <= previousStart + previous.duration + joinSlackCursor;
+        final samePushState =
+            previousMove.visualState == 'pushed' &&
+            move.visualState == 'pushed';
+        final supportsContinuousPush =
+            entityType == EntityType.crate || entityType == EntityType.weight;
+
+        if (supportsContinuousPush &&
+            samePushState &&
+            spatiallyContinuous &&
+            overlapsPreviousMotion &&
+            previous.distance > 0.001 &&
+            distance > 0.001) {
+          final mergedPath = _normalizedTranslationPath(
+            [...previousMove.path, ...move.path.skip(1)],
+            entityType: entityType,
+            visualState: 'pushed',
+          );
+          final mergedDistance = _pathDistance(mergedPath);
+          final previousEnd = previousStart + previous.duration;
+          final nextEnd = nextStart + duration;
+          final mergedDuration = math.max(
+            math.max(previousEnd, nextEnd) - previousStart,
+            mergedDistance / momentumPixelsPerCursor * momentumEaseExponent,
+          );
+          tracks[tracks.length - 1] = _AnimationMoveTrack(
+            move: ShotAnimationMove(
+              entityId: previousMove.entityId,
+              from: previousMove.from,
+              to: move.to,
+              triggerPathIndex: previousMove.triggerPathIndex,
+              visualState: 'pushed',
+              path: mergedPath,
+              impactPosition: previousMove.impactPosition,
+              impactNormal: previousMove.impactNormal,
+            ),
+            distance: mergedDistance,
+            duration: mergedDuration,
+            decelerates: true,
+          );
+          continue;
+        }
+      }
+
+      tracks.add(
+        _AnimationMoveTrack(
+          move: move,
+          distance: distance,
+          duration: duration,
+          decelerates: decelerates,
+        ),
+      );
+    }
+    return tracks;
+  }
+
+  List<Vec2> _normalizedTranslationPath(
+    List<Vec2> points, {
+    required EntityType? entityType,
+    required String visualState,
+  }) {
+    if (points.length < 2 ||
+        visualState != 'pushed' ||
+        (entityType != EntityType.crate && entityType != EntityType.weight)) {
+      return List<Vec2>.unmodifiable(points);
+    }
+
+    final direction = (points.last - points.first).normalized();
+    if (direction == Vec2.zero) {
+      return List<Vec2>.unmodifiable(points);
+    }
+    final normalized = <Vec2>[points.first];
+    var furthestProjection = 0.0;
+    for (final point in points.skip(1)) {
+      final projection = (point - points.first).dot(direction);
+      final isSmallSolverBacktrack =
+          projection < furthestProjection - 0.25 &&
+          normalized.last.distanceTo(point) <= 6.0;
+      if (isSmallSolverBacktrack) {
+        continue;
+      }
+      if (normalized.last.distanceTo(point) <= 0.05) {
+        continue;
+      }
+      normalized.add(point);
+      furthestProjection = math.max(furthestProjection, projection);
+    }
+    if (normalized.length == 1) {
+      normalized.add(points.last);
+    }
+    return List<Vec2>.unmodifiable(normalized);
+  }
+
   List<_ReflectorAnimationStep> _reflectorAnimationSchedule() {
     final rotations =
         _animationPhysicsEvents
@@ -1624,6 +1784,11 @@ class PropertyShotGame extends FlameGame {
     final movesByEntity = <String, List<ShotAnimationMove>>{};
     final distances = <ShotAnimationMove, double>{};
     final durations = <ShotAnimationMove, double>{};
+    final deceleratingMoves = <ShotAnimationMove>{};
+    final renderStart = _animationStartState?.entities ?? state.entities;
+    _animationEntityTypes = Map<String, EntityType>.unmodifiable({
+      for (final entity in renderStart) entity.id: entity.type,
+    });
     for (final move in _animationMoves) {
       movesByEntity
           .putIfAbsent(move.entityId, () => <ShotAnimationMove>[])
@@ -1631,9 +1796,7 @@ class PropertyShotGame extends FlameGame {
       final points = move.path.length >= 2 ? move.path : [move.from, move.to];
       final distance = _pathDistance(points);
       distances[move] = distance;
-      durations[move] = move.path.length < 2 || distance <= 0.001
-          ? 12
-          : math.max(1, distance / 4.0).toDouble();
+      durations[move] = _naturalMoveDuration(move, distance);
     }
     for (final moves in movesByEntity.values) {
       moves.sort(
@@ -1641,9 +1804,26 @@ class PropertyShotGame extends FlameGame {
             first.triggerPathIndex.compareTo(second.triggerPathIndex),
       );
     }
+    final presentationMovesByEntity = <String, List<ShotAnimationMove>>{};
+    for (final entry in movesByEntity.entries) {
+      final tracks = _compileEntityMoveTracks(
+        entry.value,
+        _animationEntityTypes[entry.key],
+      );
+      presentationMovesByEntity[entry.key] = [
+        for (final track in tracks) track.move,
+      ];
+      for (final track in tracks) {
+        distances[track.move] = track.distance;
+        durations[track.move] = track.duration;
+        if (track.decelerates) {
+          deceleratingMoves.add(track.move);
+        }
+      }
+    }
     _animationMovesByEntity =
         Map<String, List<ShotAnimationMove>>.unmodifiable({
-          for (final entry in movesByEntity.entries)
+          for (final entry in presentationMovesByEntity.entries)
             entry.key: List<ShotAnimationMove>.unmodifiable(entry.value),
         });
     _animationMovesByTrigger = List<ShotAnimationMove>.unmodifiable(
@@ -1676,6 +1856,7 @@ class PropertyShotGame extends FlameGame {
     _animatedEntityIds = Set<String>.unmodifiable(movesByEntity.keys);
     _animationMoveDistances = Map.unmodifiable(distances);
     _animationMoveDurations = Map.unmodifiable(durations);
+    _deceleratingAnimationMoves = Set.unmodifiable(deceleratingMoves);
     _animationReflectorSchedule = List.unmodifiable(
       _reflectorAnimationSchedule(),
     );
@@ -1692,7 +1873,6 @@ class PropertyShotGame extends FlameGame {
       for (final entry in reflectorStepsByEntity.entries)
         entry.key: List<_ReflectorAnimationStep>.unmodifiable(entry.value),
     });
-    final renderStart = _animationStartState?.entities ?? state.entities;
     _animationRenderOrder = List<EntityState>.unmodifiable(
       [...renderStart]..sort((first, second) {
         final firstIsHole = first.type == EntityType.hole;
@@ -1701,9 +1881,6 @@ class PropertyShotGame extends FlameGame {
         return firstIsHole ? -1 : 1;
       }),
     );
-    _animationEntityTypes = Map<String, EntityType>.unmodifiable({
-      for (final entity in renderStart) entity.id: entity.type,
-    });
     _activeBallHoleImpact = _animationImpacts
         .where(
           (impact) =>
@@ -1722,8 +1899,13 @@ class PropertyShotGame extends FlameGame {
     var end = _presentationCursorForRaw(
       math.max(0, _animationPath.length - 1).toDouble(),
     );
-    for (final move in _animationMoves) {
-      end = math.max(end, _movePresentationCursor(move) + _moveDuration(move));
+    for (final moves in _animationMovesByEntity.values) {
+      for (final move in moves) {
+        end = math.max(
+          end,
+          _movePresentationCursor(move) + _moveDuration(move),
+        );
+      }
     }
     if (reducedMotion) {
       for (final event in _animationPhysicsEvents.where(
@@ -1742,7 +1924,10 @@ class PropertyShotGame extends FlameGame {
   Vec2 _sampleMovePath(ShotAnimationMove move, double elapsed) {
     final points = move.path.length >= 2 ? move.path : [move.from, move.to];
     final duration = _moveDuration(move);
-    final progress = (elapsed / duration).clamp(0.0, 1.0);
+    final linearProgress = (elapsed / duration).clamp(0.0, 1.0);
+    final progress = _deceleratingAnimationMoves.contains(move)
+        ? 1 - math.pow(1 - linearProgress, 1.25).toDouble()
+        : linearProgress;
     final distance = _animationMoveDistances[move] ?? _pathDistance(points);
     return _samplePathByDistance(
       points,
