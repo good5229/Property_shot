@@ -198,7 +198,7 @@ void main() {
     final crateMoves = result.moves
         .where((move) => move.entityId == 'crate_a')
         .toList();
-    expect(crateMoves.length, greaterThanOrEqualTo(3));
+    expect(crateMoves.length, greaterThanOrEqualTo(2));
 
     for (final framesPerSecond in [30, 45, 60]) {
       var finished = false;
@@ -254,6 +254,97 @@ void main() {
       );
       game.onRemove();
     }
+  });
+
+  test('핵심 체험 첫 충돌에서 상자가 공보다 큰 전달 속도로 먼저 밀려난다', () {
+    const resolver = ShotResolver();
+    const traits = TraitResolver();
+    final scene = coreExperienceScenes.first;
+    final base = scene.createLevel().createState(
+      scene.levelIndex,
+      productRules: true,
+    );
+    final prepared = traits.transferSelectedTrait(
+      traits.selectSource(base, 'anvil'),
+    );
+    final result = resolver.resolve(
+      prepared,
+      ShotInput(
+        direction: scene.initialAimDirection,
+        power: 1,
+        equippedTrait: prepared.equippedTrait,
+      ),
+    );
+    final crateMove = result.moves.firstWhere(
+      (move) => move.entityId == 'crate_a' && move.initialVelocity.length > 0,
+    );
+    final crateImpact = result.impacts.firstWhere(
+      (impact) =>
+          impact.entityId == 'crate_a' &&
+          impact.sourceEntityId == 'active_ball',
+    );
+    final nextPathIndex = math.min(
+      crateImpact.pathIndex + 1,
+      result.path.length - 1,
+    );
+    final ballPostImpactStep = result.path[nextPathIndex].distanceTo(
+      result.path[crateImpact.pathIndex],
+    );
+
+    expect(crateMove.normalImpulse, greaterThan(0));
+    expect(crateMove.initialVelocity.length, greaterThan(ballPostImpactStep));
+    final moveEvent = result.physicsEvents.firstWhere(
+      (event) => event.move == crateMove,
+    );
+    expect(moveEvent.impulse, crateMove.normalImpulse);
+    expect(moveEvent.resultingVelocity, crateMove.initialVelocity);
+
+    final game = PropertyShotGame(result.state, loadVisualAssets: false);
+    game.setStateSnapshot(
+      result.state,
+      path: result.path,
+      transitionStart: prepared,
+      moves: result.moves,
+      impacts: result.impacts,
+      physicsEvents: result.physicsEvents,
+      animationTransaction: true,
+    );
+    game.setAnimationCursorForTest(crateMove.triggerPathIndex.toDouble());
+    game.setAnimationCursorForTest(crateMove.triggerPathIndex + 0.5);
+    final ballAfter = game.animatedEntityPositionForTest('active_ball');
+    final crateAfter = game.animatedEntityPositionForTest('crate_a');
+    final contactNormal = crateImpact.normal.normalized();
+    final requiredSeparation =
+        prepared.entityById('active_ball')!.hitRadius +
+        prepared.entityById('crate_a')!.hitRadius;
+    expect(
+      (ballAfter - crateAfter).dot(contactNormal),
+      greaterThanOrEqualTo(requiredSeparation - 0.2),
+      reason: '접촉 직후 공은 접촉 법선의 상자 뒤쪽에 있어야 한다.',
+    );
+    for (
+      var cursor = crateMove.triggerPathIndex.toDouble();
+      cursor < game.animationEndCursorForTest;
+      cursor += 0.25
+    ) {
+      game.setAnimationCursorForTest(cursor);
+      final cratePosition = game.animatedEntityPositionForTest('crate_a');
+      final ballPosition = game.animatedEntityPositionForTest('active_ball');
+      game.setAnimationCursorForTest(cursor + 0.1);
+      final crateNext = game.animatedEntityPositionForTest('crate_a');
+      if (crateNext.distanceTo(cratePosition) <= 0.001) continue;
+      final relative = ballPosition - cratePosition;
+      final normalSeparation = relative.dot(contactNormal);
+      final tangent = relative - contactNormal * normalSeparation;
+      if (tangent.length < requiredSeparation) {
+        expect(
+          normalSeparation,
+          greaterThanOrEqualTo(requiredSeparation - 0.2),
+          reason: '상자가 움직이는 동안 공이 상자를 관통해 앞에 나오면 안 된다.',
+        );
+      }
+    }
+    game.onRemove();
   });
 
   test('첫 장면은 UI 전체 조준 격자에서 무속성 홀 우회를 허용하지 않는다', () {

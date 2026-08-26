@@ -167,6 +167,9 @@ class PropertyShotGame extends FlameGame {
   }
 
   Vec2 animatedEntityPositionForTest(String entityId) {
+    if (entityId == 'active_ball' && _animationPath.isNotEmpty) {
+      return _animatedBallPosition();
+    }
     return _animatedEntities()
         .firstWhere((candidate) => candidate.id == entityId)
         .position;
@@ -1467,6 +1470,8 @@ class PropertyShotGame extends FlameGame {
         path: normalizedPath,
         impactPosition: source.impactPosition,
         impactNormal: source.impactNormal,
+        initialVelocity: source.initialVelocity,
+        normalImpulse: source.normalImpulse,
       );
       final distance = _pathDistance(normalizedPath);
       final decelerates =
@@ -1507,9 +1512,11 @@ class PropertyShotGame extends FlameGame {
           final mergedDistance = _pathDistance(mergedPath);
           final previousEnd = previousStart + previous.duration;
           final nextEnd = nextStart + duration;
+          final momentumDuration =
+              mergedDistance / momentumPixelsPerCursor * momentumEaseExponent;
           final mergedDuration = math.max(
             math.max(previousEnd, nextEnd) - previousStart,
-            mergedDistance / momentumPixelsPerCursor * momentumEaseExponent,
+            momentumDuration,
           );
           tracks[tracks.length - 1] = _AnimationMoveTrack(
             move: ShotAnimationMove(
@@ -1521,6 +1528,8 @@ class PropertyShotGame extends FlameGame {
               path: mergedPath,
               impactPosition: previousMove.impactPosition,
               impactNormal: previousMove.impactNormal,
+              initialVelocity: previousMove.initialVelocity,
+              normalImpulse: previousMove.normalImpulse,
             ),
             distance: mergedDistance,
             duration: mergedDuration,
@@ -5104,7 +5113,7 @@ class PropertyShotGame extends FlameGame {
   void _drawAnimatedBall(Canvas canvas) {
     final sourceCursor = _sourceCursorForPresentation(_animationCursor);
     final index = sourceCursor.floor().clamp(0, _animationPath.length - 1);
-    final position = _samplePathAtTime(_animationPath, sourceCursor);
+    final position = _animatedBallPosition();
     final trait = _animationTrait;
     final previous = _samplePathAtTime(
       _animationPath,
@@ -5192,6 +5201,57 @@ class PropertyShotGame extends FlameGame {
             .clamp(0.0, 1.0)
             .toDouble();
     _drawCapturedBall(canvas, entity, progress);
+  }
+
+  /// 활성 공과 운동량을 받은 상자는 접촉 중 서로를 관통해 그려지지 않는다.
+  ///
+  /// 판정 경로는 기존 스테이지 해법을 보존하지만, 접촉 해석기가 산출한
+  /// 충격량으로 상자가 움직이는 동안에는 접촉 법선과 두 히트 반지름을
+  /// 화면 제약으로 적용한다. 따라서 공이 상자보다 먼저 튀어나오거나
+  /// 겹친 채 앞뒤가 뒤집히는 연출이 생기지 않는다.
+  Vec2 _animatedBallPosition() {
+    final sourceCursor = _sourceCursorForPresentation(_animationCursor);
+    var position = _samplePathAtTime(_animationPath, sourceCursor);
+    final start = _animationStartState;
+    if (start == null) return position;
+    final ball = start.entityById('active_ball');
+    if (ball == null) return position;
+
+    for (final event in _animationPhysicsEvents) {
+      if (event.kind != PhysicsEventKind.impact ||
+          event.sourceEntityId != 'active_ball' ||
+          event.targetType != EntityType.crate ||
+          event.normal.length <= 0.001) {
+        continue;
+      }
+      final targetMoves = _animationMovesByEntity[event.targetEntityId];
+      if (targetMoves == null || targetMoves.isEmpty) continue;
+      ShotAnimationMove? momentumMove;
+      for (final move in targetMoves) {
+        if (move.normalImpulse > 0 &&
+            move.triggerPathIndex >= event.pathIndex - 1) {
+          momentumMove = move;
+          break;
+        }
+      }
+      if (momentumMove == null) continue;
+      final moveStart = _movePresentationCursor(momentumMove);
+      final moveEnd = moveStart + _moveDuration(momentumMove);
+      if (_animationCursor < moveStart || _animationCursor > moveEnd) continue;
+      final targetBase = start.entityById(event.targetEntityId);
+      if (targetBase == null) continue;
+      final target = _entityAtAnimationTime(targetBase);
+      final normal = event.normal.normalized();
+      final relative = position - target.position;
+      final normalSeparation = relative.dot(normal);
+      final tangent = relative - normal * normalSeparation;
+      final requiredSeparation = ball.hitRadius + target.hitRadius;
+      if (tangent.length < requiredSeparation &&
+          normalSeparation < requiredSeparation) {
+        position = target.position + tangent + normal * requiredSeparation;
+      }
+    }
+    return position;
   }
 
   void _drawAnimatedBallBody(Canvas canvas, EntityState entity) {

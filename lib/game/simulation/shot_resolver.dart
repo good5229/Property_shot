@@ -7,6 +7,7 @@ import '../domain/hidden_mechanic_state.dart';
 import '../domain/shot_input.dart';
 import '../domain/trait.dart';
 import '../levels/levels.dart';
+import 'contact_impulse_solver.dart';
 import 'impact_metrics.dart';
 
 class ShotResult {
@@ -260,6 +261,8 @@ class ShotAnimationMove {
     this.path = const [],
     this.impactPosition,
     this.impactNormal,
+    this.initialVelocity = Vec2.zero,
+    this.normalImpulse = 0,
   });
 
   final String entityId;
@@ -270,6 +273,13 @@ class ShotAnimationMove {
   final List<Vec2> path;
   final Vec2? impactPosition;
   final Vec2? impactNormal;
+
+  /// 접촉 충격으로 이 물체가 얻은 충돌 직후 속도다.
+  /// 화면 보간과 물리 이벤트가 같은 운동량 전달 결과를 사용한다.
+  final Vec2 initialVelocity;
+
+  /// 이 이동을 시작시킨 접촉 법선 충격량이다.
+  final double normalImpulse;
 }
 
 List<PhysicsEvent> buildPhysicsEvents({
@@ -447,8 +457,10 @@ List<PhysicsEvent> buildPhysicsEvents({
       targetType: parent?.targetType ?? EntityType.ball,
       position: move.impactPosition ?? move.from,
       normal: move.impactNormal ?? Vec2.zero,
-      impulse: 0,
-      resultingVelocity: _observedVelocity(move.path, 0),
+      impulse: move.normalImpulse,
+      resultingVelocity: move.initialVelocity.length > 0.001
+          ? move.initialVelocity
+          : _observedVelocity(move.path, 0),
       visualState: move.visualState,
       move: move,
     );
@@ -710,6 +722,9 @@ class _ReflectorSatContact {
 
 class ShotResolver {
   const ShotResolver();
+
+  static const ContactImpulseSolver _contactImpulseSolver =
+      ContactImpulseSolver();
 
   /// 탄성 속성은 첫 충돌 연출이 아니라 발사 전체에 적용되는 물성이다.
   /// 일반 벽(0.72)과 두 번 이상 반사한 뒤에도 플레이어가 차이를
@@ -1413,6 +1428,15 @@ class ShotResolver {
       if (hit.type == EntityType.crate) {
         final heavy = ball.traits.contains(TraitType.heavy);
         if (heavy || input.power >= 0.55) {
+          // 접촉 충격량은 질량과 상대 법선 속도로 계산한다. 스테이지의
+          // 이동 거리 튜닝은 그대로 유지하되, 연출과 진단은 실제 충돌 직후
+          // 속도를 공유해 공이 상자를 관통해 보이지 않도록 한다.
+          final contactResponse = _dynamicContactResponse(
+            ball,
+            hit,
+            direction * speed,
+            collision.normal,
+          );
           final impactSpeedRatio = (speed / (8.0 + input.power * 16.0)).clamp(
             0.25,
             1.0,
@@ -1439,6 +1463,8 @@ class ShotResolver {
             powerSliderActivations,
             reflectorContacts,
             reflectorRotations,
+            contactResponse.targetVelocity,
+            contactResponse.normalImpulse,
           );
           final pushedCrate =
               entities
@@ -1524,6 +1550,12 @@ class ShotResolver {
 
       if (hit.type == EntityType.ball && hit.movable) {
         final targetMass = _massOf(hit);
+        final contactResponse = _dynamicContactResponse(
+          ball,
+          hit,
+          direction * speed,
+          collision.normal,
+        );
         final transferRatio = (movingMass * 2 / (movingMass + targetMass))
             .clamp(0.35, 2.4);
         entities = _pushWithMomentum(
@@ -1545,6 +1577,8 @@ class ShotResolver {
           powerSliderActivations,
           reflectorContacts,
           reflectorRotations,
+          contactResponse.targetVelocity,
+          contactResponse.normalImpulse,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -1609,6 +1643,12 @@ class ShotResolver {
       }
 
       if (hit.movable && hit.type != EntityType.wall) {
+        final contactResponse = _dynamicContactResponse(
+          ball,
+          hit,
+          direction * speed,
+          collision.normal,
+        );
         final impactSpeedRatio = (speed / (8.0 + input.power * 16.0)).clamp(
           0.25,
           1.0,
@@ -1637,6 +1677,8 @@ class ShotResolver {
           powerSliderActivations,
           reflectorContacts,
           reflectorRotations,
+          contactResponse.targetVelocity,
+          contactResponse.normalImpulse,
         );
         if (_anyBallInHole(entities) ||
             _anyBallMoveEnteredHole(entities, moves)) {
@@ -2953,6 +2995,35 @@ class ShotResolver {
     return tangent + n * (normalSpeed * normalCoefficient);
   }
 
+  ContactImpulseResult _dynamicContactResponse(
+    EntityState moving,
+    EntityState target,
+    Vec2 incomingVelocity,
+    Vec2 normal, {
+    Vec2 targetVelocity = Vec2.zero,
+  }) {
+    return _contactImpulseSolver.solve(
+      movingVelocity: incomingVelocity,
+      targetVelocity: targetVelocity,
+      normal: normal,
+      movingMass: _massOf(moving),
+      targetMass: _massOf(target),
+      restitution: _collisionRestitution(moving, target),
+      friction: _collisionFriction(moving, target),
+    );
+  }
+
+  double _collisionFriction(EntityState moving, EntityState target) {
+    double coefficient(EntityState entity) => switch (entity.type) {
+      EntityType.ball => 0.04,
+      EntityType.crate => 0.14,
+      EntityType.weight => 0.18,
+      EntityType.balloon => 0.02,
+      _ => 0.08,
+    };
+    return math.min(coefficient(moving), coefficient(target));
+  }
+
   Vec2 _wallBounceVelocity(
     Vec2 incoming,
     Vec2 normal,
@@ -3360,6 +3431,8 @@ class ShotResolver {
     List<PowerSliderActivation>? powerSliderActivations,
     _ReflectorContactLedger? reflectorContacts,
     List<ReflectorRotation>? reflectorRotations,
+    Vec2 initialVelocity = Vec2.zero,
+    double normalImpulse = 0,
   ]) {
     // 연쇄 깊이를 임의의 상수로 자르면 물체 수가 많은 스테이지에서
     // 충돌 이벤트가 누락된다. 한 번의 연쇄에서 같은 엔티티를 계속
@@ -3386,18 +3459,21 @@ class ShotResolver {
 
     final strength = math.max(0.22, -direction.normalized().dot(contactNormal));
     final travelDirection = direction.normalized();
-    final normalImpulse = contactNormal == Vec2.zero
+    final normalImpulseDirection = contactNormal == Vec2.zero
         ? travelDirection
         : (-contactNormal).normalized();
-    var impulseDirection = travelDirection.dot(normalImpulse) < 0
+    var impulseDirection = travelDirection.dot(normalImpulseDirection) < 0
         ? travelDirection
-        : normalImpulse;
+        : normalImpulseDirection;
     var current = target;
     // 직전 부모만 제외한다. 전체 연쇄에서 충돌한 대상을 영구 제외하면
     // 반사 후 다시 닿는 합법적인 충돌 이벤트가 누락된다.
     final temporarilyIgnoredIds = Set<String>.from(chainIds);
     var remaining = distance * strength;
     var velocity = impulseDirection * remaining;
+    final launchVelocity = initialVelocity.length > _physicsEpsilon
+        ? initialVelocity
+        : impulseDirection * math.min(remaining, 24.0);
     var iterations = 0;
     final path = <Vec2>[target.position];
 
@@ -4049,6 +4125,12 @@ class ShotResolver {
         // 재귀 연쇄가 시작되기 전에 현재 물체를 공유 상태에 반영한다.
         // 그렇지 않으면 다음 물체가 이전 위치의 조상 물체를 후보로 보게 된다.
         entities = _replace(entities, current);
+        final contactResponse = _dynamicContactResponse(
+          current,
+          hit,
+          velocity,
+          normal,
+        );
         final transferRatio = (targetMass * 2 / (targetMass + hitMass)).clamp(
           0.25,
           2.2,
@@ -4075,6 +4157,8 @@ class ShotResolver {
           powerSliderActivations,
           reflectorContacts,
           reflectorRotations,
+          contactResponse.targetVelocity,
+          contactResponse.normalImpulse,
         );
         events.add('chain_push');
         if (_anyBallInHole(entities)) {
@@ -4174,6 +4258,8 @@ class ShotResolver {
           path: path,
           impactPosition: path.length >= 2 ? path[path.length - 2] : null,
           impactNormal: contactNormal == Vec2.zero ? null : contactNormal,
+          initialVelocity: launchVelocity,
+          normalImpulse: normalImpulse,
         ),
       );
     }

@@ -88,12 +88,12 @@
         ],
         "expectedFingerprints": [
           "28f3e40084f75adc",
-          "484321502f01daa7"
+          "58f592d7394745d0"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1918,
-      "expectedReplaySignature": "55f36818683525c5",
+      "expectedReplaySignature": "e81adc5453cbc338",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1918,
@@ -228,12 +228,12 @@
         ],
         "expectedFingerprints": [
           "8cb21788caf761a7",
-          "400fb88c60d6bfe1"
+          "3c63de2670c8f921"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1953,
-      "expectedReplaySignature": "a008abd8f397702c",
+      "expectedReplaySignature": "3e192e4967701b71",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1953,
@@ -369,12 +369,12 @@
         ],
         "expectedFingerprints": [
           "83442f9ede57e8ca",
-          "ab69b7251dc9d31a"
+          "1bab3fbf0490275d"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 2031,
-      "expectedReplaySignature": "cb8650b97a88677d",
+      "expectedReplaySignature": "66b99a9a8cec9325",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 2031,
@@ -510,12 +510,12 @@
         ],
         "expectedFingerprints": [
           "c73ce22a137a329f",
-          "62875a1b281f09c2"
+          "24bdee939b2ce97e"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 2009,
-      "expectedReplaySignature": "a5c47e4adbdf9681",
+      "expectedReplaySignature": "bbc7cec2b958371e",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 2009,
