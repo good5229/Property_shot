@@ -47,6 +47,9 @@ class _AnimationMoveTrack {
 }
 
 class PropertyShotGame extends FlameGame {
+  static const double ballSpriteDiameterFactor = 2.28;
+  static const double holeToBallVisualDiameterRatio = 1.5;
+
   PropertyShotGame(
     this.state, {
     this.onAnimationFinished,
@@ -205,6 +208,16 @@ class PropertyShotGame extends FlameGame {
 
   double get animationSourceCursorForTest =>
       _sourceCursorForPresentation(_animationCursor);
+
+  double get activeBallVisualDiameterForTest =>
+      state.activeBall.radius * ballSpriteDiameterFactor;
+
+  double get holeVisualDiameterForTest {
+    final hole = state.entities.firstWhere(
+      (entity) => entity.type == EntityType.hole,
+    );
+    return _holeVisualExtent(hole);
+  }
 
   List<Vec2> _animationPath = const [];
   List<ShotAnimationMove> _animationMoves = const [];
@@ -3745,7 +3758,7 @@ class PropertyShotGame extends FlameGame {
     );
     final diameter = entity.traits.contains(TraitType.sharp)
         ? entity.radius * 2.52
-        : entity.radius * 2.28;
+        : entity.radius * ballSpriteDiameterFactor;
     final target = Rect.fromCenter(
       center: center,
       width: diameter,
@@ -3780,9 +3793,9 @@ class PropertyShotGame extends FlameGame {
       image.width.toDouble(),
       image.height.toDouble(),
     );
-    final extent = entity.radius * 3.15;
+    final extent = _holeVisualExtent(entity);
     final target = Rect.fromCenter(
-      center: center.translate(0, -entity.radius * 0.34),
+      center: center.translate(0, -extent * 0.1),
       width: extent,
       height: extent,
     );
@@ -3900,32 +3913,43 @@ class PropertyShotGame extends FlameGame {
 
   void _drawGoalBeacon(Canvas canvas, EntityState entity) {
     final center = _project(entity.position);
+    final visualRadius = _holeVisualExtent(entity) / 2;
     final pulse = reducedMotion || !strongFlash
         ? 0.5
         : (math.sin(_pulseClock * math.pi * 1.4) + 1) / 2;
     canvas.drawCircle(
       center,
-      entity.radius + 13 + pulse * 4,
+      visualRadius + 6 + pulse * 2,
       Paint()
         ..color = const Color(0x33FFD76A)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
     );
     final target = Paint()
       ..color = const Color(0xFFFFD76A).withValues(alpha: 0.52 - pulse * 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2;
-    canvas.drawCircle(center, entity.radius + 9 + pulse * 5, target);
+    canvas.drawCircle(center, visualRadius + 4 + pulse * 2.5, target);
     for (var index = 0; index < 4; index++) {
       final angle = index * math.pi / 2 + math.pi / 4;
       final from =
           center +
-          Offset(math.cos(angle), math.sin(angle)) * (entity.radius + 14);
+          Offset(math.cos(angle), math.sin(angle)) * (visualRadius + 7);
       final to =
           center +
           Offset(math.cos(angle), math.sin(angle)) *
-              (entity.radius + 19 + pulse * 3);
+              (visualRadius + 11 + pulse * 2);
       canvas.drawLine(from, to, target);
     }
+  }
+
+  double _holeVisualExtent(EntityState hole) {
+    final ball =
+        _animationStartState?.entityById('active_ball') ??
+        state.entityById('active_ball');
+    final ballRadius = ball?.radius ?? hole.radius / 1.5;
+    return ballRadius *
+        ballSpriteDiameterFactor *
+        holeToBallVisualDiameterRatio;
   }
 
   void _drawSelectablePulse(Canvas canvas, EntityState entity) {

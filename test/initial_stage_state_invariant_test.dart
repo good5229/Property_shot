@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/levels/generated_stage_catalog.dart';
+import 'package:property_shot/game/property_shot_game.dart';
 import 'package:property_shot/game/validation/stage_pattern_validator.dart';
 
 void main() {
@@ -101,5 +102,34 @@ void main() {
     }
 
     expect(checkedObjects, greaterThan(0));
+  });
+
+  test('40개 모든 패턴의 홀 표시 지름은 공 표시 지름의 정확히 1.5배다', () {
+    var checkedPatterns = 0;
+
+    for (
+      var stageIndex = 0;
+      stageIndex < generatedStageCatalog.stages.length;
+      stageIndex++
+    ) {
+      final stage = generatedStageCatalog.stages[stageIndex];
+      for (final pattern in stage.patterns) {
+        final state = pattern
+            .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+            .createState(stageIndex, productRules: true);
+        final game = PropertyShotGame(state, loadVisualAssets: false);
+
+        expect(
+          game.holeVisualDiameterForTest /
+              game.activeBallVisualDiameterForTest,
+          closeTo(PropertyShotGame.holeToBallVisualDiameterRatio, 0.000001),
+          reason: '${pattern.patternId}: 홀/공 표시 지름 비율',
+        );
+        game.onRemove();
+        checkedPatterns++;
+      }
+    }
+
+    expect(checkedPatterns, 40);
   });
 }
