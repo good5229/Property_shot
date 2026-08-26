@@ -13,6 +13,7 @@ import 'domain/hidden_mechanic_state.dart';
 import 'domain/shot_input.dart';
 import 'domain/trait.dart';
 import 'levels/levels.dart';
+import 'simulation/coupled_motion_timeline.dart';
 import 'simulation/shot_resolver.dart';
 import 'simulation/impact_metrics.dart';
 import 'analysis/failure_replay.dart';
@@ -219,6 +220,7 @@ class PropertyShotGame extends FlameGame {
   List<_ReflectorAnimationStep> _animationReflectorSchedule = const [];
   Map<String, List<_ReflectorAnimationStep>> _reflectorStepsByEntity = const {};
   Map<String, EntityType> _animationEntityTypes = const {};
+  CoupledMotionTimeline? _coupledMotionTimeline;
   ShotImpact? _activeBallHoleImpact;
   double _animationEndCursorCached = 0;
   int _nextAnimationEventIndex = 0;
@@ -442,6 +444,7 @@ class PropertyShotGame extends FlameGame {
     _animationReflectorSchedule = const [];
     _reflectorStepsByEntity = const {};
     _animationEntityTypes = const {};
+    _coupledMotionTimeline = null;
     _animationRenderOrder = const [];
     _motionVisualFrameCache.clear();
     _motionVisualFrameCursor = double.nan;
@@ -1358,10 +1361,21 @@ class PropertyShotGame extends FlameGame {
   }
 
   EntityState _entityAtAnimationTime(EntityState entity) {
+    final animated = _rawEntityAtAnimationTime(entity, _animationCursor);
+    final coupledPosition = _coupledMotionTimeline?.positionAt(
+      entity.id,
+      _animationCursor,
+    );
+    return coupledPosition == null
+        ? animated
+        : animated.copyWith(position: coupledPosition);
+  }
+
+  EntityState _rawEntityAtAnimationTime(EntityState entity, double cursor) {
     var animated = entity;
     final moves = _animationMovesByEntity[entity.id] ?? const [];
     for (final move in moves) {
-      final elapsed = _animationCursor - _movePresentationCursor(move);
+      final elapsed = cursor - _movePresentationCursor(move);
       if (elapsed < 0) {
         continue;
       }
@@ -1383,9 +1397,9 @@ class PropertyShotGame extends FlameGame {
       final dueStart = reducedMotion
           ? _eventPresentationCursor(event)
           : step.start;
-      if (_animationCursor < dueStart) continue;
+      if (cursor < dueStart) continue;
       final rotation = event.reflectorRotation!;
-      final complete = reducedMotion || _animationCursor >= step.end;
+      final complete = reducedMotion || cursor >= step.end;
       if (!complete) {
         animated = animated.copyWith(
           reflectorOrientation: rotation.orientationBefore,
@@ -1938,6 +1952,114 @@ class PropertyShotGame extends FlameGame {
       }
     }
     _animationEndCursorCached = end;
+    _prepareCoupledMotionTimeline();
+  }
+
+  void _prepareCoupledMotionTimeline() {
+    final start = _animationStartState;
+    if (start == null || _animationPath.length < 2) {
+      _coupledMotionTimeline = null;
+      return;
+    }
+    final startEntities = <String, EntityState>{
+      for (final entity in start.entities) entity.id: entity,
+    };
+    final dynamicIds = <String>{'active_ball'};
+    for (final entry in _animationMovesByEntity.entries) {
+      final entity = startEntities[entry.key];
+      if (entity != null && entity.movable && _supportsCoupledMotion(entity)) {
+        dynamicIds.add(entry.key);
+      }
+    }
+
+    final contacts = <CoupledMotionContact>[];
+    for (final event in _animationPhysicsEvents) {
+      if (event.kind != PhysicsEventKind.impact ||
+          event.normal.length <= 0.0001) {
+        continue;
+      }
+      final source = startEntities[event.sourceEntityId];
+      final target = startEntities[event.targetEntityId];
+      if (source == null ||
+          target == null ||
+          !source.movable ||
+          !target.movable ||
+          !_supportsCoupledMotion(source) ||
+          !_supportsCoupledMotion(target)) {
+        continue;
+      }
+      dynamicIds
+        ..add(source.id)
+        ..add(target.id);
+      final contactStart = _eventPresentationCursor(event);
+      var contactEnd = _animationEndCursorCached;
+      for (final next in _animationPhysicsEvents) {
+        if (next.kind != PhysicsEventKind.impact ||
+            next.pathIndex <= event.pathIndex) {
+          continue;
+        }
+        final samePair =
+            (next.sourceEntityId == event.sourceEntityId &&
+                next.targetEntityId == event.targetEntityId) ||
+            (next.sourceEntityId == event.targetEntityId &&
+                next.targetEntityId == event.sourceEntityId);
+        if (samePair) {
+          contactEnd = math.max(
+            contactStart,
+            _eventPresentationCursor(next) - 0.25,
+          );
+          break;
+        }
+      }
+      contacts.add(
+        CoupledMotionContact(
+          sourceEntityId: source.id,
+          targetEntityId: target.id,
+          normal: event.normal,
+          separation: source.hitRadius + target.hitRadius,
+          sourceCorrectionWeight: 1 / ShotResolver.massOf(source),
+          // target의 판정 경로에는 이미 전달 운동량이 반영되어 있다. 위치
+          // 제약이 같은 운동량을 다시 더하지 않도록 목표 경로를 강한 구동체로
+          // 두고 작은 순응도만 허용한다. source도 함께 보정되므로 접촉은
+          // 유지되지만 상자가 이중 가속되는 현상은 사라진다.
+          targetCorrectionWeight: 0.01 / ShotResolver.massOf(target),
+          startCursor: contactStart,
+          endCursor: contactEnd,
+        ),
+      );
+    }
+
+    if (contacts.isEmpty) {
+      _coupledMotionTimeline = null;
+      return;
+    }
+    _coupledMotionTimeline = CoupledMotionTimeline.build(
+      entityIds: dynamicIds,
+      contacts: contacts,
+      sampleRawPosition: _rawAnimationPosition,
+      endCursor: _animationEndCursorCached,
+      cursorUnitsPerSecond: animationCursorUnitsPerSecond,
+    );
+  }
+
+  bool _supportsCoupledMotion(EntityState entity) => switch (entity.type) {
+    EntityType.ball ||
+    EntityType.crate ||
+    EntityType.weight ||
+    EntityType.bumper => true,
+    _ => false,
+  };
+
+  Vec2 _rawAnimationPosition(String entityId, double cursor) {
+    if (entityId == 'active_ball') {
+      return _samplePathAtTime(
+        _animationPath,
+        _sourceCursorForPresentation(cursor),
+      );
+    }
+    final entity = _animationStartState?.entityById(entityId);
+    if (entity == null) return Vec2.zero;
+    return _rawEntityAtAnimationTime(entity, cursor).position;
   }
 
   Vec2 _sampleMovePath(ShotAnimationMove move, double elapsed) {
@@ -5125,10 +5247,7 @@ class PropertyShotGame extends FlameGame {
     final index = sourceCursor.floor().clamp(0, _animationPath.length - 1);
     final position = _animatedBallPosition();
     final trait = _animationTrait;
-    final previous = _samplePathAtTime(
-      _animationPath,
-      _sourceCursorForPresentation(_animationCursor - 1),
-    );
+    final previous = _animatedBallPositionAt(_animationCursor - 1);
     final speedRatio = ((position - previous).length / 8.0).clamp(0.0, 1.0);
     final trailCount = 3 + (speedRatio * 4).round();
     final trailPaint = _animatedTrailPaint
@@ -5140,12 +5259,7 @@ class PropertyShotGame extends FlameGame {
       ..strokeCap = StrokeCap.round;
     for (var i = 1; i <= trailCount; i++) {
       final trail = _project(
-        _samplePathAtTime(
-          _animationPath,
-          _sourceCursorForPresentation(
-            _animationCursor - i * (1.5 + speedRatio),
-          ),
-        ),
+        _animatedBallPositionAt(_animationCursor - i * (1.5 + speedRatio)),
       );
       canvas.drawCircle(
         trail,
@@ -5221,55 +5335,13 @@ class PropertyShotGame extends FlameGame {
     return ((_animationCursor - impactCursor) / 8).clamp(0.0, 1.0).toDouble();
   }
 
-  /// 활성 공과 운동량을 받은 상자는 접촉 중 서로를 관통해 그려지지 않는다.
-  ///
-  /// 판정 경로는 기존 스테이지 해법을 보존하지만, 접촉 해석기가 산출한
-  /// 충격량으로 상자가 움직이는 동안에는 접촉 법선과 두 히트 반지름을
-  /// 화면 제약으로 적용한다. 따라서 공이 상자보다 먼저 튀어나오거나
-  /// 겹친 채 앞뒤가 뒤집히는 연출이 생기지 않는다.
   Vec2 _animatedBallPosition() {
-    final sourceCursor = _sourceCursorForPresentation(_animationCursor);
-    var position = _samplePathAtTime(_animationPath, sourceCursor);
-    final start = _animationStartState;
-    if (start == null) return position;
-    final ball = start.entityById('active_ball');
-    if (ball == null) return position;
+    return _animatedBallPositionAt(_animationCursor);
+  }
 
-    for (final event in _animationPhysicsEvents) {
-      if (event.kind != PhysicsEventKind.impact ||
-          event.sourceEntityId != 'active_ball' ||
-          event.targetType != EntityType.crate ||
-          event.normal.length <= 0.001) {
-        continue;
-      }
-      final targetMoves = _animationMovesByEntity[event.targetEntityId];
-      if (targetMoves == null || targetMoves.isEmpty) continue;
-      ShotAnimationMove? momentumMove;
-      for (final move in targetMoves) {
-        if (move.normalImpulse > 0 &&
-            move.triggerPathIndex >= event.pathIndex - 1) {
-          momentumMove = move;
-          break;
-        }
-      }
-      if (momentumMove == null) continue;
-      final moveStart = _movePresentationCursor(momentumMove);
-      final moveEnd = moveStart + _moveDuration(momentumMove);
-      if (_animationCursor < moveStart || _animationCursor > moveEnd) continue;
-      final targetBase = start.entityById(event.targetEntityId);
-      if (targetBase == null) continue;
-      final target = _entityAtAnimationTime(targetBase);
-      final normal = event.normal.normalized();
-      final relative = position - target.position;
-      final normalSeparation = relative.dot(normal);
-      final tangent = relative - normal * normalSeparation;
-      final requiredSeparation = ball.hitRadius + target.hitRadius;
-      if (tangent.length < requiredSeparation &&
-          normalSeparation < requiredSeparation) {
-        position = target.position + tangent + normal * requiredSeparation;
-      }
-    }
-    return position;
+  Vec2 _animatedBallPositionAt(double cursor) {
+    final coupled = _coupledMotionTimeline?.positionAt('active_ball', cursor);
+    return coupled ?? _rawAnimationPosition('active_ball', cursor);
   }
 
   void _drawAnimatedBallBody(Canvas canvas, EntityState entity) {

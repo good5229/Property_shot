@@ -218,6 +218,8 @@ void main() {
       );
       var previous = game.animatedEntityPositionForTest('crate_a');
       var maximumFrameStep = 0.0;
+      var maximumFrameStepDelta = 0.0;
+      double? previousFrameStep;
       var started = false;
       var stoppedBeforeFinish = false;
 
@@ -226,6 +228,13 @@ void main() {
         final current = game.animatedEntityPositionForTest('crate_a');
         final step = current.distanceTo(previous);
         maximumFrameStep = math.max(maximumFrameStep, step);
+        if (previousFrameStep != null) {
+          maximumFrameStepDelta = math.max(
+            maximumFrameStepDelta,
+            (step - previousFrameStep).abs(),
+          );
+        }
+        previousFrameStep = step;
         expect(
           current.y,
           lessThanOrEqualTo(previous.y + 0.05),
@@ -248,6 +257,11 @@ void main() {
 
       expect(finished, isTrue);
       expect(maximumFrameStep, lessThanOrEqualTo(10));
+      expect(
+        maximumFrameStepDelta,
+        lessThanOrEqualTo(6),
+        reason: '$framesPerSecond FPS에서 접촉 on/off로 프레임 이동량이 튐',
+      );
       expect(
         previous.distanceTo(result.state.entityById('crate_a')!.position),
         lessThan(0.01),
@@ -335,9 +349,9 @@ void main() {
     );
     game.setAnimationCursorForReplay(game.animationEndCursorForTest);
     expect(
-      game.animatedEntityPositionForTest('active_ball').distanceTo(
-        result.state.entityById('hole')!.position,
-      ),
+      game
+          .animatedEntityPositionForTest('active_ball')
+          .distanceTo(result.state.entityById('hole')!.position),
       lessThanOrEqualTo(0.5),
     );
     expect(
