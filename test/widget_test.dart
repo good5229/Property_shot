@@ -100,6 +100,39 @@ void main() {
     expect(find.byKey(const Key('start_game_button')), findsOneWidget);
   });
 
+  testWidgets('로딩 화면은 메인이 아니라 스테이지 구성 중에만 표시된다', (tester) async {
+    final progressStore = _DelayedLoadProgressStore(
+      stageCount: levels.length,
+      stageIds: levels.map((level) => level.id),
+    );
+    await tester.pumpWidget(
+      PropertyShotApp(
+        showHome: true,
+        loadGameAssets: false,
+        progressStore: progressStore,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('start_game_button')), findsOneWidget);
+    expect(find.byKey(const Key('stage_loading_screen')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('stage_select_button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('stage_tile_0')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('stage_loading_screen')), findsOneWidget);
+    expect(find.byKey(const Key('stage_loading_progress')), findsOneWidget);
+    expect(find.text('항해 준비 중'), findsOneWidget);
+    expect(find.textContaining('지형과 기믹을 배치'), findsOneWidget);
+    expect(find.byKey(const Key('home_screen_golden')), findsNothing);
+
+    progressStore.release();
+    await _pumpUntilFound(tester, find.byKey(const Key('aim_area')));
+    expect(find.byKey(const Key('stage_loading_screen')), findsNothing);
+  });
+
   testWidgets('홈의 내 런 보상은 선택 이력과 실제 도움 상태를 보여준다', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'unlocked_level': 1,
@@ -2923,6 +2956,25 @@ class _FailOnceBestShotProgressStore extends ProgressStore {
       throw StateError('최고 기록 저장 실패 주입');
     }
     await super.recordBestShot(levelIndex, shotCount);
+  }
+}
+
+class _DelayedLoadProgressStore extends ProgressStore {
+  _DelayedLoadProgressStore({
+    required super.stageCount,
+    required super.stageIds,
+  });
+
+  final Completer<void> _release = Completer<void>();
+
+  void release() {
+    if (!_release.isCompleted) _release.complete();
+  }
+
+  @override
+  Future<ProgressSnapshot> load() async {
+    await _release.future;
+    return super.load();
   }
 }
 

@@ -309,6 +309,42 @@ void main() {
       physicsEvents: result.physicsEvents,
       animationTransaction: true,
     );
+    final holeImpactCursor = game.activeBallHoleImpactCursorForTest;
+    expect(holeImpactCursor, greaterThanOrEqualTo(0));
+    var verifiedDelayedVisualCapture = false;
+    for (
+      var cursor = holeImpactCursor + 0.25;
+      cursor < math.min(holeImpactCursor + 8, game.animationEndCursorForTest);
+      cursor += 0.25
+    ) {
+      game.setAnimationCursorForReplay(cursor);
+      final ballPosition = game.animatedEntityPositionForTest('active_ball');
+      final holePosition = result.state.entityById('hole')!.position;
+      if (ballPosition.distanceTo(holePosition) <= 0.5) continue;
+      verifiedDelayedVisualCapture = true;
+      expect(
+        game.animatedBallCaptureProgressForTest,
+        0,
+        reason: '상자를 밀며 홀에 아직 도착하지 않은 공은 작아지면 안 된다.',
+      );
+    }
+    expect(
+      verifiedDelayedVisualCapture,
+      isTrue,
+      reason: '판정상 홀 접촉 뒤에도 상자를 미는 화면 구간을 회귀 검증해야 한다.',
+    );
+    game.setAnimationCursorForReplay(game.animationEndCursorForTest);
+    expect(
+      game.animatedEntityPositionForTest('active_ball').distanceTo(
+        result.state.entityById('hole')!.position,
+      ),
+      lessThanOrEqualTo(0.5),
+    );
+    expect(
+      game.animatedBallCaptureProgressForTest,
+      greaterThan(0),
+      reason: '공이 화면상 홀에 도착한 뒤의 포획 축소 연출은 유지해야 한다.',
+    );
     game.setAnimationCursorForTest(crateMove.triggerPathIndex.toDouble());
     game.setAnimationCursorForTest(crateMove.triggerPathIndex + 0.5);
     final ballAfter = game.animatedEntityPositionForTest('active_ball');

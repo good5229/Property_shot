@@ -349,6 +349,7 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
   bool _judgeJourneyCompleted = false;
   Future<Set<String>>? _rewardInventoryFuture;
   bool _selectingStage = false;
+  int? _loadingStageIndex;
   int _copyCoreCount = 0;
   bool _copyCoreRewarded = false;
   bool _legacyCopyCoreRewarded = false;
@@ -652,7 +653,15 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       return;
     }
     _dismissTransientMessages();
-    _selectingStage = true;
+    if (mounted) {
+      setState(() {
+        _selectingStage = true;
+        _loadingStageIndex = index;
+      });
+    } else {
+      _selectingStage = true;
+      _loadingStageIndex = index;
+    }
     try {
       await _progressLoadFuture;
       _activeDifficulty = GameFeedback.playerDifficulty;
@@ -871,6 +880,8 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       );
       if (!mounted) return;
       setState(() {
+        _selectingStage = false;
+        _loadingStageIndex = null;
         _activeIsExpedition = expedition;
         _copyCoreCount = session.state?.cloneCoreCount ?? _copyCoreCount;
         _activeStage = index;
@@ -928,7 +939,17 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
         );
       }
     } finally {
-      _selectingStage = false;
+      if (_selectingStage || _loadingStageIndex != null) {
+        if (mounted) {
+          setState(() {
+            _selectingStage = false;
+            _loadingStageIndex = null;
+          });
+        } else {
+          _selectingStage = false;
+          _loadingStageIndex = null;
+        }
+      }
     }
   }
 
@@ -1797,6 +1818,13 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
       discoveryCount: restorationProgress.discoveryCount,
       personalRecords: _personalRecords,
     );
+    final loadingStageIndex = _loadingStageIndex;
+    if (_selectingStage && loadingStageIndex != null) {
+      return _StageLoadingScreen(
+        stageNumber: loadingStageIndex + 1,
+        stageName: levels[loadingStageIndex].name,
+      );
+    }
     if (_showRewardInventory) {
       return FutureBuilder<Set<String>>(
         future: _rewardInventoryFuture,
@@ -2040,6 +2068,102 @@ class _PropertyShotRouterState extends State<_PropertyShotRouter> {
           _changeSurface(() => _showPuzzleForge = true);
         }
       },
+    );
+  }
+}
+
+class _StageLoadingScreen extends StatelessWidget {
+  const _StageLoadingScreen({
+    required this.stageNumber,
+    required this.stageName,
+  });
+
+  final int stageNumber;
+  final String stageName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      key: const Key('stage_loading_screen'),
+      backgroundColor: const Color(0xFFBFE8E3),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Semantics(
+              liveRegion: true,
+              label: '$stageNumber단계 $stageName 구성 중',
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFAE8),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFF31473D),
+                      width: 2,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x2A24352D),
+                        blurRadius: 28,
+                        offset: Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(28, 30, 28, 26),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/generated/nav-stage-map-v1.png',
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.contain,
+                          semanticLabel: '스테이지 지도',
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          '항해 준비 중',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$stageNumber단계 · $stageName',
+                          key: const Key('stage_loading_title'),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '지형과 기믹을 배치하고 진행 기록을 복원하고 있어요.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 22),
+                        SizedBox(
+                          width: 34,
+                          height: 34,
+                          child: CircularProgressIndicator(
+                            key: const Key('stage_loading_progress'),
+                            strokeWidth: 4,
+                            color: colorScheme.primary,
+                            semanticsLabel: '스테이지 구성 중',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

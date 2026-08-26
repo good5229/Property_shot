@@ -182,6 +182,16 @@ class PropertyShotGame extends FlameGame {
     return _motionVisual(entity).impact;
   }
 
+  /// 현재 화면 위치를 기준으로 활성 공에 적용되는 홀 포획 축소 진행도다.
+  /// 상자 접촉 보정 중인 공에는 0이 유지되어야 한다.
+  double get animatedBallCaptureProgressForTest =>
+      _animatedBallCaptureProgress(_animatedBallPosition());
+
+  double get activeBallHoleImpactCursorForTest {
+    final impact = _activeBallHoleImpact;
+    return impact == null ? -1 : _impactPresentationCursor(impact);
+  }
+
   double get animationEndCursorForTest => _animationEndCursor;
 
   double get animationCursorForTest => _animationCursor;
@@ -5190,17 +5200,25 @@ class PropertyShotGame extends FlameGame {
       movable: true,
       visualState: 'moving',
     );
-    final holeImpact = _activeBallHoleImpact;
-    if (holeImpact == null ||
-        _animationCursor < _impactPresentationCursor(holeImpact)) {
+    final captureProgress = _animatedBallCaptureProgress(position);
+    if (captureProgress <= 0) {
       _drawAnimatedBallBody(canvas, entity);
       return;
     }
-    final progress =
-        ((_animationCursor - _impactPresentationCursor(holeImpact)) / 8)
-            .clamp(0.0, 1.0)
-            .toDouble();
-    _drawCapturedBall(canvas, entity, progress);
+    _drawCapturedBall(canvas, entity, captureProgress);
+  }
+
+  double _animatedBallCaptureProgress(Vec2 visualPosition) {
+    final holeImpact = _activeBallHoleImpact;
+    if (holeImpact == null) return 0;
+    final impactCursor = _impactPresentationCursor(holeImpact);
+    if (_animationCursor < impactCursor) return 0;
+
+    // 충돌 관통 방지 때문에 화면의 공 위치가 판정 경로보다 뒤에 있을 수
+    // 있다. 타이머만 보고 포획 축소를 적용하면 상자를 미는 공이 매 프레임
+    // 작아지므로, 실제 화면 중심이 홀 중심에 도착했을 때만 연출을 시작한다.
+    if (visualPosition.distanceTo(holeImpact.position) > 0.5) return 0;
+    return ((_animationCursor - impactCursor) / 8).clamp(0.0, 1.0).toDouble();
   }
 
   /// 활성 공과 운동량을 받은 상자는 접촉 중 서로를 관통해 그려지지 않는다.
