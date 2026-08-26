@@ -188,6 +188,12 @@ class PropertyShotGame extends FlameGame {
   double get animatedBallCaptureProgressForTest =>
       _animatedBallCaptureProgress(_animatedBallPosition());
 
+  double get animatedBallRollAngleForTest =>
+      _animatedBallRollAngleAt(_animationCursor);
+
+  int get animatedBallTrailCountForTest =>
+      _animatedBallTrailCount(_animatedBallSpeedRatioAt(_animationCursor));
+
   double get activeBallHoleImpactCursorForTest {
     final impact = _activeBallHoleImpact;
     return impact == null ? -1 : _impactPresentationCursor(impact);
@@ -2029,10 +2035,6 @@ class PropertyShotGame extends FlameGame {
       );
     }
 
-    if (contacts.isEmpty) {
-      _coupledMotionTimeline = null;
-      return;
-    }
     _coupledMotionTimeline = CoupledMotionTimeline.build(
       entityIds: dynamicIds,
       contacts: contacts,
@@ -3734,6 +3736,7 @@ class PropertyShotGame extends FlameGame {
 
   void _drawBallSprite(Canvas canvas, EntityState entity, ui.Image image) {
     final center = _project(entity.position);
+    final motion = _motionVisual(entity);
     final source = Rect.fromLTWH(
       0,
       0,
@@ -3748,12 +3751,25 @@ class PropertyShotGame extends FlameGame {
       width: diameter,
       height: diameter,
     );
+    if (motion.rotation.abs() <= 0.0001) {
+      canvas.drawImageRect(
+        image,
+        source,
+        target,
+        Paint()..filterQuality = _runtimeFilterQuality,
+      );
+      return;
+    }
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(motion.rotation);
     canvas.drawImageRect(
       image,
       source,
-      target,
+      target.translate(-center.dx, -center.dy),
       Paint()..filterQuality = _runtimeFilterQuality,
     );
+    canvas.restore();
   }
 
   void _drawHoleSprite(Canvas canvas, EntityState entity, ui.Image image) {
@@ -4352,6 +4368,12 @@ class PropertyShotGame extends FlameGame {
     }
     if (!entity.movable && !isCollisionState) {
       return const _MotionVisual();
+    }
+    if (entity.type == EntityType.ball && entity.visualState == 'moving') {
+      return _MotionVisual(
+        rotation: _animatedBallRollAngleAt(_animationCursor),
+        impact: _animatedBallSpeedRatioAt(_animationCursor) * 0.16,
+      );
     }
     ShotAnimationMove? move;
     for (final candidate in _animationMovesByEntity[entity.id] ?? const []) {
@@ -5247,9 +5269,8 @@ class PropertyShotGame extends FlameGame {
     final index = sourceCursor.floor().clamp(0, _animationPath.length - 1);
     final position = _animatedBallPosition();
     final trait = _animationTrait;
-    final previous = _animatedBallPositionAt(_animationCursor - 1);
-    final speedRatio = ((position - previous).length / 8.0).clamp(0.0, 1.0);
-    final trailCount = 3 + (speedRatio * 4).round();
+    final speedRatio = _animatedBallSpeedRatioAt(_animationCursor);
+    final trailCount = _animatedBallTrailCount(speedRatio);
     final trailPaint = _animatedTrailPaint
       ..color = ballRewardAppearance
           ? const Color(0x994EE7D5)
@@ -5271,7 +5292,9 @@ class PropertyShotGame extends FlameGame {
                             ? const Color(0xFFFFD86B)
                             : const Color(0xFF4EE7D5))
                       : const Color(0xFFFFFFFF))
-                  .withValues(alpha: (0.44 - i * 0.045).clamp(0.08, 0.44)),
+                  .withValues(
+                    alpha: ((0.44 - i * 0.055) * speedRatio).clamp(0.06, 0.38),
+                  ),
       );
     }
     _drawCueStrike(canvas, index, position);
@@ -5342,6 +5365,28 @@ class PropertyShotGame extends FlameGame {
   Vec2 _animatedBallPositionAt(double cursor) {
     final coupled = _coupledMotionTimeline?.positionAt('active_ball', cursor);
     return coupled ?? _rawAnimationPosition('active_ball', cursor);
+  }
+
+  double _animatedBallSpeedRatioAt(double cursor) {
+    final current = _animatedBallPositionAt(cursor);
+    final previous = _animatedBallPositionAt(cursor - 1);
+    return (current.distanceTo(previous) / 8.0).clamp(0.0, 1.0);
+  }
+
+  int _animatedBallTrailCount(double speedRatio) {
+    if (reducedMotion || speedRatio < 0.2) return 0;
+    return 1 + (((speedRatio - 0.2) / 0.8) * 4).round().clamp(0, 4);
+  }
+
+  double _animatedBallRollAngleAt(double cursor) {
+    if (reducedMotion) return 0;
+    final distance = _coupledMotionTimeline?.travelDistanceAt(
+      'active_ball',
+      cursor,
+    );
+    if (distance == null) return 0;
+    const visualRadius = 12.0;
+    return (distance / visualRadius) % (math.pi * 2);
   }
 
   void _drawAnimatedBallBody(Canvas canvas, EntityState entity) {

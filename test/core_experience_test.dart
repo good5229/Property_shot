@@ -394,6 +394,27 @@ void main() {
         );
       }
     }
+    game.setReducedMotion(false);
+    game.setAnimationCursorForReplay(0);
+    expect(game.animatedBallRollAngleForTest, 0);
+    expect(game.animatedBallTrailCountForTest, 0);
+    var sawVisibleRoll = false;
+    var sawSpeedTrail = false;
+    for (
+      var cursor = 0.25;
+      cursor < game.animationEndCursorForTest;
+      cursor += 0.25
+    ) {
+      game.setAnimationCursorForReplay(cursor);
+      sawVisibleRoll =
+          sawVisibleRoll || game.animatedBallRollAngleForTest.abs() > 0.02;
+      sawSpeedTrail = sawSpeedTrail || game.animatedBallTrailCountForTest > 0;
+    }
+    expect(sawVisibleRoll, isTrue, reason: '이동하는 공 이미지는 누적 이동거리만큼 굴러야 한다.');
+    expect(sawSpeedTrail, isTrue, reason: '잔상은 실제 고속 이동 구간에만 나타나야 한다.');
+    game.setReducedMotion(true);
+    expect(game.animatedBallRollAngleForTest, 0);
+    expect(game.animatedBallTrailCountForTest, 0);
     game.onRemove();
   });
 

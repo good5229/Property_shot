@@ -43,6 +43,7 @@ class CoupledMotionTimeline {
     required this.stepCursor,
     required this.endCursor,
     required this.samplesByEntity,
+    required this.travelDistancesByEntity,
   });
 
   static const int simulationHertz = 60;
@@ -57,6 +58,7 @@ class CoupledMotionTimeline {
   final double stepCursor;
   final double endCursor;
   final Map<String, List<Vec2>> samplesByEntity;
+  final Map<String, List<double>> travelDistancesByEntity;
 
   static CoupledMotionTimeline build({
     required Iterable<String> entityIds,
@@ -78,6 +80,9 @@ class CoupledMotionTimeline {
     final stepCursor = cursorUnitsPerSecond * stepSeconds;
     final sampleCount = math.max(2, (endCursor / stepCursor).ceil() + 1);
     final samples = <String, List<Vec2>>{for (final id in ids) id: <Vec2>[]};
+    final travelDistances = <String, List<double>>{
+      for (final id in ids) id: <double>[],
+    };
     final offsets = <String, Vec2>{for (final id in ids) id: Vec2.zero};
 
     for (var sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
@@ -149,7 +154,17 @@ class CoupledMotionTimeline {
         offsets[id] = constrainedIds.contains(id)
             ? nextOffset
             : nextOffset * positionDecay;
-        samples[id]!.add(raw[id]! + offsets[id]!);
+        final position = raw[id]! + offsets[id]!;
+        final entitySamples = samples[id]!;
+        final entityDistances = travelDistances[id]!;
+        final previousDistance = entityDistances.isEmpty
+            ? 0.0
+            : entityDistances.last;
+        final stepDistance = entitySamples.isEmpty
+            ? 0.0
+            : entitySamples.last.distanceTo(position);
+        entitySamples.add(position);
+        entityDistances.add(previousDistance + stepDistance);
       }
     }
 
@@ -157,7 +172,16 @@ class CoupledMotionTimeline {
     // 남은 화면 오차가 다음 프레임의 state 교체에서 한꺼번에 사라지거나,
     // 홀 중심에서 수 픽셀 벗어나 포획 연출을 막지 않도록 한다.
     for (final id in ids) {
-      samples[id]![samples[id]!.length - 1] = sampleRawPosition(id, endCursor);
+      final entitySamples = samples[id]!;
+      final entityDistances = travelDistances[id]!;
+      final finalPosition = sampleRawPosition(id, endCursor);
+      entitySamples[entitySamples.length - 1] = finalPosition;
+      entityDistances[entityDistances.length - 1] = entitySamples.length < 2
+          ? 0
+          : entityDistances[entityDistances.length - 2] +
+                entitySamples[entitySamples.length - 2].distanceTo(
+                  finalPosition,
+                );
     }
 
     return CoupledMotionTimeline._(
@@ -167,6 +191,10 @@ class CoupledMotionTimeline {
       samplesByEntity: Map.unmodifiable({
         for (final entry in samples.entries)
           entry.key: List<Vec2>.unmodifiable(entry.value),
+      }),
+      travelDistancesByEntity: Map.unmodifiable({
+        for (final entry in travelDistances.entries)
+          entry.key: List<double>.unmodifiable(entry.value),
       }),
     );
   }
@@ -188,5 +216,21 @@ class CoupledMotionTimeline {
       from.x + (to.x - from.x) * local,
       from.y + (to.y - from.y) * local,
     );
+  }
+
+  /// 실제 보간 궤적을 따라 누적된 이동거리다. 위치 제약으로 공이 판정 경로보다
+  /// 늦게 움직일 때도 화면에 보인 거리만 반환하므로 구름 회전이 미끄러지지 않는다.
+  double? travelDistanceAt(String entityId, double cursor) {
+    final distances = travelDistancesByEntity[entityId];
+    if (distances == null || distances.isEmpty) return null;
+    if (cursor >= endCursor) return distances.last;
+    final sample = (cursor.clamp(0.0, endCursor) / stepCursor).clamp(
+      0.0,
+      distances.length - 1.0,
+    );
+    final index = sample.floor();
+    if (index >= distances.length - 1) return distances.last;
+    final local = sample - index;
+    return distances[index] + (distances[index + 1] - distances[index]) * local;
   }
 }

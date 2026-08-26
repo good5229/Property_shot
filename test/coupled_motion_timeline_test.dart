@@ -37,6 +37,7 @@ void main() {
     for (final framesPerSecond in [30, 45, 60]) {
       final frameCursor = 34 / framesPerSecond;
       Vec2? previousBall;
+      var previousTravelDistance = 0.0;
       var maximumStep = 0.0;
       var maximumStepDelta = 0.0;
       double? previousStep;
@@ -47,6 +48,13 @@ void main() {
       ) {
         final ball = timeline.positionAt('ball', cursor)!;
         final crate = timeline.positionAt('crate', cursor)!;
+        final travelDistance = timeline.travelDistanceAt('ball', cursor)!;
+        expect(
+          travelDistance,
+          greaterThanOrEqualTo(previousTravelDistance),
+          reason: '$framesPerSecond FPS에서 구름 누적 거리가 역행함',
+        );
+        previousTravelDistance = travelDistance;
         final rawBall = rawPosition('ball', cursor);
         final rawCrate = rawPosition('crate', cursor);
         if ((rawBall - rawCrate).y <= separation) {
@@ -81,6 +89,21 @@ void main() {
       timeline.positionAt('crate', endCursor),
       rawPosition('crate', endCursor),
     );
+    expect(timeline.travelDistanceAt('ball', endCursor), greaterThan(0));
+  });
+
+  test('누적 이동거리는 보간된 위치가 실제로 이동한 길이와 일치한다', () {
+    final timeline = CoupledMotionTimeline.build(
+      entityIds: const ['ball'],
+      contacts: const [],
+      sampleRawPosition: (_, cursor) => Vec2(cursor * 3, cursor * 4),
+      endCursor: 10,
+      cursorUnitsPerSecond: 34,
+    );
+
+    expect(timeline.travelDistanceAt('ball', 0), 0);
+    expect(timeline.travelDistanceAt('ball', 5), closeTo(25, 0.02));
+    expect(timeline.travelDistanceAt('ball', 10), closeTo(50, 0.02));
   });
 
   test('12개 연쇄의 240Hz 타임라인은 재생 전에 짧은 시간 안에 완성된다', () {
