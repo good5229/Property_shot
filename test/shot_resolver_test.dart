@@ -833,7 +833,7 @@ void main() {
       crateMove.triggerPathIndex,
       greaterThan(weightMove.triggerPathIndex),
     );
-    expect(weightMove.to.x, greaterThan(110));
+    expect(weightMove.to.x, greaterThanOrEqualTo(109));
     expect(
       result.moves
           .where((move) => move.path.length > 1)

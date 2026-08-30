@@ -218,8 +218,8 @@ void main() {
     final result = shots.resolve(
       copied,
       ShotInput(
-        direction: _direction(224),
-        power: 1.0,
+        direction: _direction(230),
+        power: 0.70,
         equippedTrait: copied.equippedTrait,
       ),
     );

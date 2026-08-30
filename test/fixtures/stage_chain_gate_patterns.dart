@@ -60,8 +60,8 @@ const stageChainGateRepresentatives = <StageChainGateRepresentative>[
   StageChainGateRepresentative(
     patternId: 'stage_chain_gate_01',
     strategyId: 'steel',
-    degree: 294,
-    power: 0.34,
+    degree: 76,
+    power: 0.94,
     familyId: 'steel_switch',
   ),
   StageChainGateRepresentative(
@@ -74,8 +74,8 @@ const stageChainGateRepresentatives = <StageChainGateRepresentative>[
   StageChainGateRepresentative(
     patternId: 'stage_chain_gate_02',
     strategyId: 'steel',
-    degree: 246,
-    power: 0.50,
+    degree: 308,
+    power: 0.64,
     familyId: 'steel_switch',
   ),
   StageChainGateRepresentative(
@@ -88,8 +88,8 @@ const stageChainGateRepresentatives = <StageChainGateRepresentative>[
   StageChainGateRepresentative(
     patternId: 'stage_chain_gate_03',
     strategyId: 'steel',
-    degree: 218,
-    power: 0.96,
+    degree: 216,
+    power: 0.54,
     familyId: 'steel_switch',
   ),
   StageChainGateRepresentative(
@@ -102,8 +102,8 @@ const stageChainGateRepresentatives = <StageChainGateRepresentative>[
   StageChainGateRepresentative(
     patternId: 'stage_chain_gate_04',
     strategyId: 'steel',
-    degree: 82,
-    power: 0.56,
+    degree: 84,
+    power: 0.50,
     familyId: 'steel_switch',
   ),
 ];
@@ -125,9 +125,9 @@ const stageChainGatePreparedShots = <StageChainGatePreparedShot>[
   ),
   StageChainGatePreparedShot(
     patternId: 'stage_chain_gate_02',
-    firstDegree: 4,
+    firstDegree: 5,
     firstPower: 0.23,
-    secondDegree: 348,
-    secondPower: 0.56,
+    secondDegree: 350,
+    secondPower: 0.67,
   ),
 ];

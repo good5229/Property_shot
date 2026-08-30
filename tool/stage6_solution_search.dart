@@ -14,6 +14,19 @@ void main() {
   );
   const resolver = ShotResolver();
   final stage = catalog.stageById('stage_speed');
+  if (const bool.fromEnvironment('GUARD_SEARCH') ||
+      const bool.fromEnvironment('ADVANTAGE_AUDIT')) {
+    final pattern = stage.patternById('stage_speed_03');
+    final state = pattern
+        .toLevelDefinition(stageId: stage.stageId, stageTitle: stage.title)
+        .createState(5, productRules: true);
+    if (const bool.fromEnvironment('GUARD_SEARCH')) {
+      _searchStage3Guard(state, resolver);
+    } else {
+      _auditStage3Advantage(state, resolver);
+    }
+    return;
+  }
 
   for (final pattern in stage.patterns) {
     final state = pattern
@@ -62,6 +75,9 @@ void main() {
           impacts: result.impacts.map((impact) => impact.entityId).toSet(),
           moves: result.moves.map((move) => move.entityId).toSet(),
           events: result.events.toSet(),
+          contactIds: result.powerSliderActivations
+              .map((activation) => activation.contactId)
+              .toList(growable: false),
         );
         all.add(shot);
         if (shot.sliderIds.isEmpty) {
@@ -90,7 +106,8 @@ void main() {
         return shot.impacts.contains('bank_wall');
       }
       if (pattern.patternId.endsWith('_03')) {
-        return shot.events.contains('crate_pushed');
+        return shot.events.contains('crate_pushed') &&
+            !shot.events.contains('chain_safety_stop');
       }
       return true;
     });
@@ -107,6 +124,18 @@ void main() {
           for (final entry in sliderIds.entries) entry.key: entry.value.length,
         },
         'sliderSources': sliderSources,
+        'leftSlider': _firstBy(
+          sliderShots,
+          (shot) =>
+              shot.sliderIds.length == 1 &&
+              shot.sliderIds.contains('left_slider'),
+        )?.toJson(),
+        'rightSlider': _firstBy(
+          sliderShots,
+          (shot) =>
+              shot.sliderIds.length == 1 &&
+              shot.sliderIds.contains('right_slider'),
+        )?.toJson(),
         'representative': representative?.toJson(),
         'weak': _firstBy(
           weakSliderShots,
@@ -123,6 +152,76 @@ void main() {
         )?.toJson(),
       }),
     );
+  }
+}
+
+void _searchStage3Guard(GameState state, ShotResolver resolver) {
+  for (final restitution in const [0.68, 0.72, 0.76, 0.78, 0.84, 0.92, 1.0]) {
+    final variant = state.copyWith(
+      entities: [
+        for (final entity in state.entities)
+          if (entity.id == 'speed_03_direct_guard')
+            entity.copyWith(restitution: restitution)
+          else
+            entity,
+      ],
+    );
+    var slider = 0;
+    var bypass = 0;
+    for (var degree = 0; degree < 360; degree += 4) {
+      final radians = degree * math.pi / 180;
+      for (var powerStep = 1; powerStep <= 10; powerStep++) {
+        final result = resolver.resolve(
+          variant,
+          ShotInput(
+            direction: Vec2(math.cos(radians), math.sin(radians)),
+            power: powerStep / 10,
+          ),
+        );
+        if (result.state.phase != GamePhase.success) continue;
+        if (result.powerSliderActivations.isEmpty) {
+          bypass++;
+        } else {
+          slider++;
+        }
+      }
+    }
+    final alternative = resolver.resolve(
+      variant,
+      ShotInput(
+        direction: Vec2(
+          math.cos(68 * math.pi / 180),
+          math.sin(68 * math.pi / 180),
+        ),
+        power: 0.70,
+      ),
+    );
+    stdout.writeln(
+      'guard restitution=$restitution slider=$slider bypass=$bypass '
+      'ratio=${(slider / math.max(1, bypass)).toStringAsFixed(2)} '
+      'alternative=${alternative.state.phase.name}',
+    );
+  }
+}
+
+void _auditStage3Advantage(GameState state, ShotResolver resolver) {
+  for (var degree = 0; degree < 360; degree += 4) {
+    final radians = degree * math.pi / 180;
+    for (var powerStep = 1; powerStep <= 10; powerStep++) {
+      final result = resolver.resolve(
+        state,
+        ShotInput(
+          direction: Vec2(math.cos(radians), math.sin(radians)),
+          power: powerStep / 10,
+        ),
+      );
+      if (result.state.phase != GamePhase.success) continue;
+      stdout.writeln(
+        '${result.powerSliderActivations.isEmpty ? 'BYPASS' : 'SLIDER'} '
+        '$degree/${powerStep * 10}% '
+        '${result.impacts.map((impact) => impact.entityId).join('>')}',
+      );
+    }
   }
 }
 
@@ -144,6 +243,7 @@ class _Shot {
     required this.impacts,
     required this.moves,
     required this.events,
+    required this.contactIds,
   });
 
   final int degree;
@@ -155,6 +255,7 @@ class _Shot {
   final Set<String> impacts;
   final Set<String> moves;
   final Set<String> events;
+  final List<String> contactIds;
 
   Map<String, Object> toJson() => {
     'degree': degree,
@@ -166,5 +267,6 @@ class _Shot {
     'impacts': impacts.toList()..sort(),
     'moves': moves.toList()..sort(),
     'events': events.toList()..sort(),
+    'contactIds': contactIds,
   };
 }

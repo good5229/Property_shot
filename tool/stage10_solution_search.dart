@@ -66,6 +66,7 @@ void main(List<String> arguments) {
           'impacts=${result.impacts.map((i) => i.entityId).join(',')}',
         );
       }
+      _searchCurrentABank(resolver, transferred);
     }
     for (final candidate in _knownCandidates[pattern.patternId] ?? const []) {
       var state = initial;
@@ -122,6 +123,35 @@ void main(List<String> arguments) {
   }
   if (arguments.contains('--배치-탐색') || arguments.contains('--C-탐색')) {
     _searchContractC(stage);
+  }
+}
+
+void _searchCurrentABank(ShotResolver resolver, GameState prepared) {
+  final first = resolver.resolve(
+    prepared,
+    _input(10, 0.56, TraitType.heavy),
+  );
+  final canonical = resolver.resolve(first.state, _input(9, 0.94));
+  final canonicalIds = canonical.impacts
+      .map((impact) => impact.entityId)
+      .toList();
+  var found = 0;
+  for (var degree = 0; degree < 360 && found < 12; degree++) {
+    for (var powerIndex = 6; powerIndex <= 50 && found < 12; powerIndex++) {
+      final result = resolver.resolve(
+        first.state,
+        _input(degree, powerIndex / 50),
+      );
+      final ids = result.impacts.map((impact) => impact.entityId).toList();
+      if (result.state.phase == GamePhase.success &&
+          !_sameList(ids, canonicalIds)) {
+        print(
+          'A_BANK degree=$degree power=${powerIndex * 2}% '
+          'events=${result.events} impacts=${ids.join(',')}',
+        );
+        found++;
+      }
+    }
   }
 }
 

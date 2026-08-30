@@ -28,6 +28,11 @@ void _inspectPattern(StagePattern pattern, String stageTitle) {
   );
   final base = level.createState(4, productRules: true);
   final copyBase = level.createState(4, productRules: true, copyCoreCount: 1);
+  if (pattern.patternId == 'stage_drained_03' &&
+      const bool.fromEnvironment('BLOCKER_SEARCH')) {
+    _searchBlockerRestitution(base);
+    return;
+  }
   final strategies = <({String id, GameState state, String? sourceId})>[
     (id: 'none', state: base, sourceId: null),
     for (final source in base.traitSources)
@@ -47,6 +52,10 @@ void _inspectPattern(StagePattern pattern, String stageTitle) {
         sourceId: null,
       ),
   ];
+
+  if (pattern.patternId == 'stage_drained_03') {
+    _auditAdvantageGrid(strategies);
+  }
 
   print('\n${pattern.patternId}');
   for (final strategy in strategies) {
@@ -106,6 +115,96 @@ void _inspectPattern(StagePattern pattern, String stageTitle) {
         '원본 ${direct.state.entityById(strategy.sourceId!)?.position}, '
         '공 ${direct.state.entities.where((entity) => entity.type.name == 'ball').map((entity) => '${entity.id}:${entity.position}').join('|')}',
       );
+    }
+  }
+}
+
+void _searchBlockerRestitution(GameState base) {
+  for (final restitution in const [0.12, 0.2, 0.28, 0.36, 0.44, 0.52, 0.6]) {
+    final moved = base.copyWith(
+      entities: [
+        for (final entity in base.entities)
+          if (entity.id == 'drained_03_bypass_blocker')
+            entity.copyWith(restitution: restitution)
+          else
+            entity,
+      ],
+    );
+    final gimmick = _traits.transferSelectedTrait(
+      _traits.selectSource(moved, 'drain_glue'),
+    );
+    var bypassCount = 0;
+    var gimmickCount = 0;
+    final bypassSamples = <String>[];
+    for (var degree = 0; degree < 360; degree += 4) {
+      final radians = degree * math.pi / 180;
+      for (var powerStep = 1; powerStep <= 10; powerStep++) {
+        final direction = Vec2(math.cos(radians), math.sin(radians));
+        final bypass = _shots.resolve(
+          moved,
+          ShotInput(direction: direction, power: powerStep / 10),
+        );
+        if (bypass.state.phase == GamePhase.success) {
+          bypassCount++;
+          if (restitution == 0.2 && bypassSamples.length < 12) {
+            bypassSamples.add('$degree/${powerStep * 10}%');
+          }
+        }
+        final withTrait = _shots.resolve(
+          gimmick,
+          ShotInput(
+            direction: direction,
+            power: powerStep / 10,
+            equippedTrait: gimmick.equippedTrait,
+          ),
+        );
+        if (withTrait.state.phase == GamePhase.success) gimmickCount++;
+      }
+    }
+    final alternative = _shots.resolve(
+      moved,
+      ShotInput(
+        direction: Vec2(
+          math.cos(102 * math.pi / 180),
+          math.sin(102 * math.pi / 180),
+        ),
+        power: 1,
+      ),
+    );
+    print(
+      'blocker restitution=$restitution gimmick=$gimmickCount '
+      'bypass=$bypassCount ratio='
+      '${(gimmickCount / math.max(1, bypassCount)).toStringAsFixed(2)} '
+      'alternative=${alternative.state.phase.name}',
+    );
+    if (bypassSamples.isNotEmpty) print('  samples=${bypassSamples.join(',')}');
+  }
+}
+
+void _auditAdvantageGrid(
+  List<({String id, GameState state, String? sourceId})> strategies,
+) {
+  for (final strategy in strategies.where(
+    (item) => item.id == 'none' || item.id == 'drain_glue',
+  )) {
+    print('  ${strategy.id} 4도·10% 성공 입력:');
+    for (var degree = 0; degree < 360; degree += 4) {
+      final radians = degree * math.pi / 180;
+      for (var powerStep = 1; powerStep <= 10; powerStep++) {
+        final result = _shots.resolve(
+          strategy.state,
+          ShotInput(
+            direction: Vec2(math.cos(radians), math.sin(radians)),
+            power: powerStep / 10,
+            equippedTrait: strategy.state.equippedTrait,
+          ),
+        );
+        if (result.state.phase != GamePhase.success) continue;
+        print(
+          '    $degree/${powerStep * 10}% '
+          '${result.impacts.map((impact) => impact.entityId).join('>')}',
+        );
+      }
     }
   }
 }

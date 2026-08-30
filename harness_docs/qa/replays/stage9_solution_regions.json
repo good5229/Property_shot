@@ -18,11 +18,12 @@
       },
       "prepared": {
         "sampleCount": 3645,
-        "successCount": 1000,
-        "largestConnectedRegion": 1000,
-        "successfulFirstInputs": 40,
-        "successfulSecondInputs": 25,
+        "successCount": 1068,
+        "largestConnectedRegion": 1067,
+        "successfulFirstInputs": 43,
+        "successfulSecondInputs": 57,
         "successfulFirstAngleDegrees": [
+          298,
           299,
           300,
           301,
@@ -33,12 +34,18 @@
           306
         ],
         "successfulSecondAngleDegrees": [
+          122,
+          123,
           124,
           125,
-          126
+          126,
+          127,
+          128,
+          129,
+          130
         ],
-        "firstSelectableAngleBins": 8,
-        "secondSelectableAngleBins": 3,
+        "firstSelectableAngleBins": 9,
+        "secondSelectableAngleBins": 9,
         "firstPowerSpanPercent": 8,
         "secondPowerSpanPercent": 16
       }
@@ -47,15 +54,15 @@
       "patternId": "stage_rotating_reflector_02",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 127,
-        "largestConnectedRegion": 73
+        "successCount": 145,
+        "largestConnectedRegion": 91
       },
       "prepared": {
         "sampleCount": 3645,
-        "successCount": 56,
+        "successCount": 74,
         "largestConnectedRegion": 48,
-        "successfulFirstInputs": 7,
-        "successfulSecondInputs": 8,
+        "successfulFirstInputs": 9,
+        "successfulSecondInputs": 26,
         "successfulFirstAngleDegrees": [
           70,
           74,
@@ -65,12 +72,14 @@
           78
         ],
         "successfulSecondAngleDegrees": [
+          326,
+          329,
           330
         ],
         "firstSelectableAngleBins": 5,
-        "secondSelectableAngleBins": 1,
+        "secondSelectableAngleBins": 2,
         "firstPowerSpanPercent": 2,
-        "secondPowerSpanPercent": 14
+        "secondPowerSpanPercent": 16
       }
     },
     {
@@ -82,21 +91,26 @@
       },
       "prepared": {
         "sampleCount": 6561,
-        "successCount": 16,
-        "largestConnectedRegion": 9,
-        "successfulFirstInputs": 3,
-        "successfulSecondInputs": 16,
+        "successCount": 102,
+        "largestConnectedRegion": 36,
+        "successfulFirstInputs": 9,
+        "successfulSecondInputs": 57,
         "successfulFirstAngleDegrees": [
+          270,
           271
         ],
         "successfulSecondAngleDegrees": [
+          278,
+          279,
+          280,
+          281,
           282,
-          284,
-          285
+          283,
+          284
         ],
-        "firstSelectableAngleBins": 1,
-        "secondSelectableAngleBins": 2,
-        "firstPowerSpanPercent": 2,
+        "firstSelectableAngleBins": 2,
+        "secondSelectableAngleBins": 7,
+        "firstPowerSpanPercent": 8,
         "secondPowerSpanPercent": 16
       }
     },

@@ -1435,8 +1435,11 @@ class PropertyShotGame extends FlameGame {
     return animated;
   }
 
-  static const double animationCursorUnitsPerSecond = 34;
+  static const double animationCursorUnitsPerSecond = 30;
   static const double reflectorRotationDuration = 8;
+  // 일정 감속 곡선 p=1-(1-t)^2의 시작 속도가 기존 4 unit/cursor를
+  // 넘지 않으려면 재생 시간은 이동거리/2 이상이어야 한다.
+  static const double _momentumContinuityScale = 2.0;
   static const double _minimumCollisionBeatCursor =
       animationCursorUnitsPerSecond * 0.05;
 
@@ -1485,6 +1488,22 @@ class PropertyShotGame extends FlameGame {
     if (move.path.length < 2 || distance <= 0.001) {
       return 12;
     }
+    if (move.visualState == 'pushed' && move.initialVelocity.length > 0.001) {
+      // 수평면의 일정 마찰 감속에서는 평균 속도가 초기 속도의 절반이다.
+      // 충격량이 만든 실제 초기 속도로 재생 시간을 계산해야 상자가
+      // 일정 속도로 질질 끌리거나 충돌 뒤 늦게 출발해 보이지 않는다.
+      final physicalDuration = distance * 2 / move.initialVelocity.length;
+      // 같은 물체가 한 충돌 동안 여러 move로 나뉘어도 다음 트랙이
+      // 시작되기 전에 앞 트랙이 끝나 정지 프레임이 생기지 않게 한다.
+      final continuityDuration = distance / 4.0 * _momentumContinuityScale;
+      final cappedPhysicalDuration = math.min(
+        physicalDuration,
+        continuityDuration * 1.25,
+      );
+      return math
+          .max(1, math.max(cappedPhysicalDuration, continuityDuration))
+          .toDouble();
+    }
     return math.max(1, distance / 4.0).toDouble();
   }
 
@@ -1494,8 +1513,6 @@ class PropertyShotGame extends FlameGame {
   ) {
     const joinDistance = 2.5;
     const joinSlackCursor = 0.75;
-    const momentumEaseExponent = 1.25;
-    const momentumPixelsPerCursor = 4.0;
     final tracks = <_AnimationMoveTrack>[];
 
     for (final source in sourceMoves) {
@@ -1520,11 +1537,11 @@ class PropertyShotGame extends FlameGame {
       final decelerates =
           distance > 0.001 &&
           source.visualState == 'pushed' &&
-          (entityType == EntityType.crate || entityType == EntityType.weight);
+          (entityType == EntityType.ball ||
+              entityType == EntityType.crate ||
+              entityType == EntityType.weight);
       final naturalDuration = _naturalMoveDuration(move, distance);
-      final duration = decelerates
-          ? naturalDuration * momentumEaseExponent
-          : naturalDuration;
+      final duration = naturalDuration;
 
       if (tracks.isNotEmpty) {
         final previous = tracks.last;
@@ -1555,8 +1572,19 @@ class PropertyShotGame extends FlameGame {
           final mergedDistance = _pathDistance(mergedPath);
           final previousEnd = previousStart + previous.duration;
           final nextEnd = nextStart + duration;
-          final momentumDuration =
-              mergedDistance / momentumPixelsPerCursor * momentumEaseExponent;
+          final launchSpeed = previousMove.initialVelocity.length;
+          final physicalMomentumDuration = launchSpeed > 0.001
+              ? mergedDistance * 2 / launchSpeed
+              : mergedDistance / 4.0;
+          final continuityMomentumDuration =
+              mergedDistance / 4.0 * _momentumContinuityScale;
+          final momentumDuration = math.max(
+            math.min(
+              physicalMomentumDuration,
+              continuityMomentumDuration * 1.25,
+            ),
+            continuityMomentumDuration,
+          );
           final mergedDuration = math.max(
             math.max(previousEnd, nextEnd) - previousStart,
             momentumDuration,
@@ -1614,7 +1642,7 @@ class PropertyShotGame extends FlameGame {
     for (final point in points.skip(1)) {
       final projection = (point - points.first).dot(direction);
       final isSmallSolverBacktrack =
-          projection < furthestProjection - 0.25 &&
+          projection < furthestProjection - 0.04 &&
           normalized.last.distanceTo(point) <= 6.0;
       if (isSmallSolverBacktrack) {
         continue;
@@ -2054,6 +2082,10 @@ class PropertyShotGame extends FlameGame {
       sampleRawPosition: _rawAnimationPosition,
       endCursor: _animationEndCursorCached,
       cursorUnitsPerSecond: animationCursorUnitsPerSecond,
+      monotonicEntityIds: dynamicIds.where((id) {
+        final type = startEntities[id]?.type;
+        return type == EntityType.crate || type == EntityType.weight;
+      }),
     );
   }
 
@@ -2082,7 +2114,7 @@ class PropertyShotGame extends FlameGame {
     final duration = _moveDuration(move);
     final linearProgress = (elapsed / duration).clamp(0.0, 1.0);
     final progress = _deceleratingAnimationMoves.contains(move)
-        ? 1 - math.pow(1 - linearProgress, 1.25).toDouble()
+        ? 1 - math.pow(1 - linearProgress, 2.0).toDouble()
         : linearProgress;
     final distance = _animationMoveDistances[move] ?? _pathDistance(points);
     return _samplePathByDistance(

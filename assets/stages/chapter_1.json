@@ -3597,7 +3597,7 @@
             {"id":"drain_glue","type":"sticky_surface","position":{"x":179,"y":286},"size":{"x":80,"y":50},"traits":["sticky"],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.28,"linkId":null,"movableWhenDrained":true},
             {"id":"glue_route_ball","type":"ball","position":{"x":179,"y":240},"size":{"x":40,"y":40},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"spent","hitboxScale":0.88,"restitution":0.72,"linkId":null},
             {"id":"bypass_crate","type":"crate","position":{"x":282,"y":360},"size":{"x":46,"y":46},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.86,"restitution":0.66,"linkId":null},
-            {"id":"drained_03_bypass_blocker","type":"wall","position":{"x":62,"y":320},"size":{"x":26,"y":70},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.72,"linkId":null}
+            {"id":"drained_03_bypass_blocker","type":"wall","position":{"x":62,"y":320},"size":{"x":26,"y":70},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.2,"linkId":null}
           ]
         },
         {
@@ -3701,7 +3701,7 @@
             {"id":"push_crate","type":"crate","position":{"x":118,"y":390},"size":{"x":36,"y":36},"traits":[],"movable":true,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.84,"restitution":0.66,"linkId":null},
             {"id":"crate_slider","type":"power_slider","position":{"x":118,"y":330},"size":{"x":94,"y":46},"traits":[],"movable":false,"solid":false,"active":true,"open":false,"pressed":false,"visualState":"ready","hitboxScale":0.9,"restitution":0.72,"linkId":null,"direction":{"x":0,"y":-1},"referenceSpeed":44,"allowedTargets":["ball","crate"]},
             {"id":"side_wall","type":"wall","position":{"x":300,"y":300},"size":{"x":18,"y":180},"traits":[],"movable":false,"solid":true,"active":true,"open":false,"pressed":false,"visualState":"","hitboxScale":0.88,"restitution":0.75,"linkId":null},
-            {"id":"speed_03_direct_guard","type":"wall","position":{"x":190,"y":330},"size":{"x":18,"y":100},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":0.78}
+            {"id":"speed_03_direct_guard","type":"wall","position":{"x":190,"y":330},"size":{"x":18,"y":100},"traits":[],"movable":false,"solid":true,"active":true,"hitboxScale":0.9,"restitution":1.0}
           ]
         },
         {

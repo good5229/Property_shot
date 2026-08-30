@@ -4382,7 +4382,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.88,
-              "restitution": 0.72,
+              "restitution": 0.2,
               "linkId": null,
               "movableWhenDrained": false
             }
@@ -5227,7 +5227,7 @@ const generatedStageCatalogJson = r'''
               "pressed": false,
               "visualState": "",
               "hitboxScale": 0.9,
-              "restitution": 0.78,
+              "restitution": 1.0,
               "linkId": null,
               "movableWhenDrained": false
             }

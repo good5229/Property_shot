@@ -54,19 +54,11 @@ void main() {
         isTrue,
         reason: '${pattern['patternId']} 첫째 발 각도·파워 허용 영역',
       );
-      if (pattern['patternId'] == 'stage_rotating_reflector_02') {
-        // 두 반사판을 A→B로 잇는 둘째 샷은 1도 단위 한 칸이지만,
-        // 같은 각도에서 파워 14% 폭을 허용한다. 각도 보정은 게임의 기본
-        // 의도 보정(표준 ±3도, 편안함 ±5도)이 담당한다.
-        expect(prepared['secondSelectableAngleBins'], 1);
-        expect(prepared['secondPowerSpanPercent'], greaterThanOrEqualTo(12));
-      } else {
-        expect(
-          prepared['secondSelectableAngleBins'],
-          greaterThanOrEqualTo(2),
-          reason: '${pattern['patternId']} 둘째 발 연속 각도',
-        );
-      }
+      expect(
+        prepared['secondSelectableAngleBins'],
+        greaterThanOrEqualTo(2),
+        reason: '${pattern['patternId']} 둘째 발 연속 각도',
+      );
     }
   });
 }

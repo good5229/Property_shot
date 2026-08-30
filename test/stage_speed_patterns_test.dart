@@ -140,7 +140,9 @@ void main() {
     final pushed = result.impacts.firstWhere(
       (impact) => impact.entityId == 'push_crate',
     );
-    final activation = result.powerSliderActivations.single;
+    final activation = result.powerSliderActivations.firstWhere(
+      (item) => item.sourceEntityId == 'push_crate',
+    );
     expect(
       result.moves.any(
         (move) => move.entityId == 'push_crate' && move.from != move.to,

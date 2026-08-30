@@ -76,36 +76,36 @@
         "copyCoreCount": 0,
         "shots": [
           {
-            "angleRadians": 0.6981317007977318,
+            "angleRadians": 0.17453292519943295,
             "power": 0.44,
             "equippedTrait": null
           },
           {
-            "angleRadians": 2.3736477827122884,
-            "power": 0.6,
+            "angleRadians": 3.979350694547071,
+            "power": 0.92,
             "equippedTrait": null
           }
         ],
         "expectedFingerprints": [
-          "28f3e40084f75adc",
-          "58f592d7394745d0"
+          "6bd1fb0cb8295907",
+          "f5a303865d493fb9"
         ],
         "expectedPhase": "success"
       },
-      "expectedScore": 1918,
-      "expectedReplaySignature": "e81adc5453cbc338",
+      "expectedScore": 2045,
+      "expectedReplaySignature": "5efb6271ff49cdd7",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
-        "totalPoints": 1918,
-        "causalDepth": 5,
-        "causalEventCount": 6,
-        "distinctEntityTypes": 3,
-        "wallReflectionCount": 3,
+        "totalPoints": 2045,
+        "causalDepth": 6,
+        "causalEventCount": 8,
+        "distinctEntityTypes": 4,
+        "wallReflectionCount": 4,
         "pastBallCount": 1,
         "powerSliderCount": 1,
         "movedEntityCount": 1,
         "preparationShotCount": 1,
-        "qualifiedImpactCount": 4
+        "qualifiedImpactCount": 6
       },
       "expectedSafety": {
         "deterministic": true,
@@ -122,16 +122,18 @@
         "multiShotNoSoftlock": true,
         "terminalSuccess": true,
         "shotCount": 2,
-        "physicsEventCount": 17,
+        "physicsEventCount": 22,
         "safetyEvidence": {
           "checkedStateCount": 3,
           "dynamicObjectCount": 4,
-          "checkedMovementSegmentCount": 69,
-          "tunnelingCandidateCount": 11,
+          "checkedMovementSegmentCount": 166,
+          "tunnelingCandidateCount": 10,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 1,
           "verifiedFollowUpShotCount": 1,
           "terminalWallContactIds": [
+            "spent_ball_1:chain_score_01_direct_guard",
+            "spent_ball_1:wall_left",
             "spent_ball_2:wall_left",
             "spent_ball_2:wall_right"
           ],
@@ -228,12 +230,12 @@
         ],
         "expectedFingerprints": [
           "8cb21788caf761a7",
-          "3c63de2670c8f921"
+          "c8ce74176e1814f2"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 1953,
-      "expectedReplaySignature": "3e192e4967701b71",
+      "expectedReplaySignature": "1e4fce553ee298a2",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 1953,
@@ -369,12 +371,12 @@
         ],
         "expectedFingerprints": [
           "83442f9ede57e8ca",
-          "1bab3fbf0490275d"
+          "fa322e5c409b620b"
         ],
         "expectedPhase": "success"
       },
       "expectedScore": 2031,
-      "expectedReplaySignature": "66b99a9a8cec9325",
+      "expectedReplaySignature": "262e37203b432c93",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
         "totalPoints": 2031,
@@ -407,7 +409,7 @@
         "safetyEvidence": {
           "checkedStateCount": 3,
           "dynamicObjectCount": 3,
-          "checkedMovementSegmentCount": 133,
+          "checkedMovementSegmentCount": 136,
           "tunnelingCandidateCount": 3,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 1,
@@ -498,36 +500,36 @@
         "copyCoreCount": 0,
         "shots": [
           {
-            "angleRadians": 5.585053606381854,
-            "power": 0.44,
+            "angleRadians": 4.014257279586958,
+            "power": 0.12,
             "equippedTrait": null
           },
           {
-            "angleRadians": 1.6755160819145563,
+            "angleRadians": 2.0943951023931953,
             "power": 0.92,
             "equippedTrait": null
           }
         ],
         "expectedFingerprints": [
-          "c73ce22a137a329f",
-          "24bdee939b2ce97e"
+          "4f39cf37a0b41cb6",
+          "2467e00a065629bd"
         ],
         "expectedPhase": "success"
       },
-      "expectedScore": 2009,
-      "expectedReplaySignature": "bbc7cec2b958371e",
+      "expectedScore": 2153,
+      "expectedReplaySignature": "3174b041ef000477",
       "expectedChallengeAchieved": true,
       "expectedBreakdown": {
-        "totalPoints": 2009,
-        "causalDepth": 6,
-        "causalEventCount": 7,
+        "totalPoints": 2153,
+        "causalDepth": 7,
+        "causalEventCount": 8,
         "distinctEntityTypes": 5,
-        "wallReflectionCount": 2,
+        "wallReflectionCount": 3,
         "pastBallCount": 1,
         "powerSliderCount": 1,
-        "movedEntityCount": 1,
+        "movedEntityCount": 2,
         "preparationShotCount": 1,
-        "qualifiedImpactCount": 5
+        "qualifiedImpactCount": 6
       },
       "expectedSafety": {
         "deterministic": true,
@@ -544,18 +546,19 @@
         "multiShotNoSoftlock": true,
         "terminalSuccess": true,
         "shotCount": 2,
-        "physicsEventCount": 20,
+        "physicsEventCount": 17,
         "safetyEvidence": {
           "checkedStateCount": 3,
           "dynamicObjectCount": 7,
-          "checkedMovementSegmentCount": 145,
-          "tunnelingCandidateCount": 4,
+          "checkedMovementSegmentCount": 139,
+          "tunnelingCandidateCount": 2,
           "capturedBallCount": 1,
           "nonSuccessShotCount": 1,
           "verifiedFollowUpShotCount": 1,
           "terminalWallContactIds": [
-            "spent_ball_1:wall_right",
-            "spent_ball_2:chain_score_04_direct_guard"
+            "spent_ball_1:wall_left",
+            "spent_ball_2:wall_left",
+            "spent_ball_2:wall_top"
           ],
           "terminalBallId": "spent_ball_2"
         }

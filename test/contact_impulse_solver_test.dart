@@ -46,6 +46,24 @@ void main() {
     expect(result.targetVelocity.x, closeTo(12, 1e-9));
   });
 
+  test('알까기식 빗겨 충돌은 법선 속도만 전달하고 접선 속도를 유지한다', () {
+    final result = solver.solve(
+      movingVelocity: const Vec2(12, 5),
+      targetVelocity: Vec2.zero,
+      normal: const Vec2(-1, 0),
+      movingMass: 1,
+      targetMass: 1,
+      restitution: 1,
+      friction: 0,
+    );
+
+    expect(result.movingVelocity.x, closeTo(0, 1e-9));
+    expect(result.movingVelocity.y, closeTo(5, 1e-9));
+    expect(result.targetVelocity.x, closeTo(12, 1e-9));
+    expect(result.targetVelocity.y, closeTo(0, 1e-9));
+    expect(result.movingVelocity + result.targetVelocity, const Vec2(12, 5));
+  });
+
   test('순차 충격량을 적용하면 세 번째 물체까지 운동량이 전달된다', () {
     final first = solver.solve(
       movingVelocity: const Vec2(18, 0),

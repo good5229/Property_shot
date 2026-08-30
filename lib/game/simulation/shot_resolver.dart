@@ -669,13 +669,22 @@ class _SliderEntryPoint {
 }
 
 /// 한 resolve와 그 안에서 재귀로 발생한 전체 연쇄가 공유하는 접촉 원장이다.
-/// 경계에 계속 걸린 동안은 재발동하지 않고 완전히 빠져나온 뒤 재진입만 허용한다.
+/// 같은 물체-발판 쌍은 접촉이 이어지는 동안 한 번만 작동하고, 완전히 이탈한
+/// 뒤 다시 들어온 사용자의 활성 공은 새 접촉으로 작동한다. 상자·추·과거 공
+/// 같은 연쇄 기물은 벽과 발판 사이에서 외부 에너지를 무한히 받지 않도록 한
+/// 발에 한 번만 작동한다. 전체 연쇄의 반복 상한도 별도로 유지한다.
 class _SliderContactLedger {
   final Set<String> _inside = <String>{};
+  final Set<String> _activated = <String>{};
 
   bool isInside(String contactId) => _inside.contains(contactId);
 
-  void markEntered(String contactId) => _inside.add(contactId);
+  bool wasActivated(String contactId) => _activated.contains(contactId);
+
+  void markEntered(String contactId) {
+    _inside.add(contactId);
+    _activated.add(contactId);
+  }
 
   void markExited(String contactId) => _inside.remove(contactId);
 }
@@ -1477,7 +1486,6 @@ class ShotResolver {
           } else {
             events.add('crate_blocked');
           }
-          speed *= (heavy ? 0.78 : 0.56) * _restitutionMultiplier(ball, hit);
           if (_anyBallInHole(entities) ||
               _anyBallMoveEnteredHole(entities, moves)) {
             events.add('existing_ball_hole_entered');
@@ -1491,12 +1499,17 @@ class ShotResolver {
             collision.normal,
           );
           path[path.length - 1] = position;
-          direction = _postImpactDirection(
-            direction,
-            collision.normal,
-            movingMass,
-            _massOf(hit),
-          );
+          final postImpactVelocity = contactResponse.movingVelocity;
+          // `speed`는 메인 샷 루프에서 남은 이동 예산으로도 쓰인다.
+          // 실제 m/s에 해당하는 충격량 속도로 덮어쓰면 기존 스테이지의
+          // 도달 거리가 질량 단위에 종속된다. 방향은 충격량 해석을 따르고,
+          // 이동 예산은 기존 퍼즐 튜닝의 재질별 보존율로 감쇠한다.
+          speed *= (heavy ? 0.78 : 0.56) * _restitutionMultiplier(ball, hit);
+          if (speed <= 0.001 || postImpactVelocity.length <= 0.001) {
+            stopped = true;
+          } else {
+            direction = postImpactVelocity.normalized();
+          }
           continue;
         }
         events.add('crate_blocked');
@@ -1597,21 +1610,18 @@ class ShotResolver {
             (movingMass - targetMass).abs() < 0.05 &&
             collision.normal.dot(direction) < -0.9;
         if (equalMassHeadOn) {
-          speed = 0;
-          stopped = true;
           events.add('equal_mass_exchange');
-          events.add('momentum_transfer');
-          break;
         }
-        direction = _postImpactDirection(
-          direction,
-          collision.normal,
-          movingMass,
-          targetMass,
-        );
-        speed *=
-            _postImpactSpeedFactor(movingMass, targetMass) *
-            _restitutionMultiplier(ball, hit);
+        final postImpactVelocity = contactResponse.movingVelocity;
+        // 같은 질량의 정면 충돌은 알까기처럼 속도를 거의 교환한다.
+        // 이 경우 기존 이동 예산을 남기면 타격 공이 표적을 관통해 멀리
+        // 달아나므로, 공-공 접촉만은 충격량 속도를 그대로 채택한다.
+        speed = postImpactVelocity.length;
+        if (speed <= 0.001) {
+          stopped = true;
+        } else {
+          direction = postImpactVelocity.normalized();
+        }
         events.add('momentum_transfer');
         continue;
       }
@@ -1693,8 +1703,13 @@ class ShotResolver {
           collision.normal,
         );
         path[path.length - 1] = position;
-        direction = _reflect(direction, collision.normal);
-        speed *= 0.68 * _restitutionMultiplier(ball, hit);
+        final postImpactVelocity = contactResponse.movingVelocity;
+        speed = postImpactVelocity.length;
+        if (speed <= 0.001) {
+          stopped = true;
+        } else {
+          direction = postImpactVelocity.normalized();
+        }
         events.add('momentum_transfer');
         continue;
       }
@@ -2636,6 +2651,9 @@ class ShotResolver {
         continue;
       }
       final contactId = '${mover.id}:${slider.id}';
+      if (mover.id != 'active_ball' && ledger.wasActivated(contactId)) {
+        continue;
+      }
       if (ledger.isInside(contactId)) {
         final exit = _firstPowerSliderExit(slider, mover, from, to);
         if (exit == null) {
@@ -3082,6 +3100,15 @@ class ShotResolver {
   // 서로 다른 값이다. 기본 재질의 0.72를 1.0으로 올려 쓰면
   // 벽·공·물체 연쇄가 탄성 충돌처럼 에너지를 과도하게 보존한다.
   double _collisionRestitution(EntityState moving, EntityState hit) {
+    if (moving.type == EntityType.ball && hit.type == EntityType.ball) {
+      // 알까기처럼 같은 재질의 원형 기물끼리는 정면 충돌에서 속도를
+      // 거의 교환한다. 낮은 반발값은 타격한 공이 표적을 따라 미끄러지는
+      // 부자연스러운 결과를 만들므로 원형-원형 접촉에만 높은 하한을 둔다.
+      return math.max(
+        0.92,
+        (_effectiveRestitution(moving) + _effectiveRestitution(hit)) / 2,
+      );
+    }
     return ((_effectiveRestitution(moving) + _effectiveRestitution(hit)) / 2)
         .clamp(0.12, 0.98)
         .toDouble();
@@ -3469,19 +3496,31 @@ class ShotResolver {
     // 직전 부모만 제외한다. 전체 연쇄에서 충돌한 대상을 영구 제외하면
     // 반사 후 다시 닿는 합법적인 충돌 이벤트가 누락된다.
     final temporarilyIgnoredIds = Set<String>.from(chainIds);
-    var remaining = distance * strength;
-    var velocity = impulseDirection * remaining;
+    final travelLimit = math.max(0.0, distance) * strength;
     final launchVelocity = initialVelocity.length > _physicsEpsilon
         ? initialVelocity
-        : impulseDirection * math.min(remaining, 24.0);
+        : impulseDirection * math.min(travelLimit, 24.0);
+    final launchSpeed = launchVelocity.length;
+    // 기존 퍼즐의 유효 이동 거리는 보존하되, 그 거리를 매 반복마다
+    // 속도에서 잘라내지 않는다. 알까기 기물처럼 일정한 테이블 마찰에서
+    // `v² = v₀² - 2as`로 0에 수렴하도록 감속도를 역산한다.
+    final rollingDeceleration =
+        launchSpeed <= _physicsEpsilon || travelLimit <= _physicsEpsilon
+        ? double.infinity
+        : launchSpeed * launchSpeed / (2 * travelLimit);
+    var velocity = launchVelocity;
+    var remaining = travelLimit;
     var iterations = 0;
     final path = <Vec2>[target.position];
 
-    final maxIterations = entities.length * 2 + 16;
-    while (velocity.length > 0.8 && iterations < maxIterations) {
+    var maxIterations = math.max(
+      entities.length * 4 + 24,
+      (travelLimit / 4).ceil() + 24,
+    );
+    while (velocity.length > 0.18 && iterations < maxIterations) {
       iterations += 1;
       final availableSpeed = velocity.length;
-      final step = math.min(availableSpeed, 4.0);
+      final step = math.min(math.min(availableSpeed, remaining), 4.0);
       final stepDirection = availableSpeed <= 0.001
           ? impulseDirection
           : velocity.normalized();
@@ -3531,6 +3570,11 @@ class ShotResolver {
           sliderProgress < collisionProgress - _physicsEpsilon &&
           sliderProgress < holeProgress - _physicsEpsilon) {
         final entry = sliderEntries.first;
+        velocity = _velocityAfterRolling(
+          velocity,
+          current.position.distanceTo(entry.position),
+          rollingDeceleration,
+        );
         final speedBefore = velocity.length;
         final motionDirection = velocity.normalized();
         final referenceSpeed = sliderEntries.fold<double>(
@@ -3558,7 +3602,17 @@ class ShotResolver {
         _appendMovePoint(path, entry.position);
         velocity = velocity.normalized() * speedAfter;
         impulseDirection = velocity.normalized();
-        remaining = velocity.length;
+        remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
+        // 발판은 외부 에너지를 주입하므로 시작 이동거리로 계산한 반복
+        // 예산도 함께 확장한다. 물리적으로 감속 중인 경로를 임의로 자르지
+        // 않되 비정상적인 초저마찰 입력은 유한 상한으로 보호한다.
+        maxIterations = math.min(
+          2048,
+          math.max(
+            maxIterations,
+            iterations + (remaining / 4).ceil() + entities.length * 4 + 24,
+          ),
+        );
         for (final sliderEntry in sliderEntries) {
           powerSliderActivations?.add(
             PowerSliderActivation(
@@ -3658,9 +3712,20 @@ class ShotResolver {
           sliderContacts!,
         );
         current = candidate;
-        velocity = stepDirection * math.max(0.0, availableSpeed - step);
+        final nextSpeed = rollingDeceleration.isFinite
+            ? math.sqrt(
+                math.max(
+                  0.0,
+                  availableSpeed * availableSpeed -
+                      2 * rollingDeceleration * step,
+                ),
+              )
+            : 0.0;
+        velocity = stepDirection * nextSpeed;
         impulseDirection = stepDirection;
-        remaining = velocity.length;
+        remaining = rollingDeceleration.isFinite
+            ? nextSpeed * nextSpeed / (2 * rollingDeceleration)
+            : 0.0;
         _appendMovePoint(path, current.position);
         continue;
       }
@@ -3679,6 +3744,17 @@ class ShotResolver {
         collision.position,
         reflectorContacts!,
       );
+
+      // 충돌이 스텝 중간에서 일어나도 접촉점까지 이동한 거리만큼 테이블
+      // 마찰을 먼저 적용한다. 벽 사이를 반복 반사할 때 충돌 프레임에서는
+      // 감속하지 않던 문제가 N중 추돌의 safety stop과 끊김을 만들었다.
+      final distanceToContact = current.position.distanceTo(collision.position);
+      velocity = _velocityAfterRolling(
+        velocity,
+        distanceToContact,
+        rollingDeceleration,
+      );
+      remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
 
       final hit = collision.entity;
       final collisionEntity = candidate.copyWith(position: collision.position);
@@ -3839,7 +3915,7 @@ class ShotResolver {
           ),
         );
         velocity = bounced;
-        remaining = velocity.length;
+        remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
         if (remaining > 0.001) {
           impulseDirection = velocity.normalized();
         }
@@ -3944,7 +4020,7 @@ class ShotResolver {
             events.add('balloon_switch_revealed');
           }
           velocity *= 0.86;
-          remaining = velocity.length;
+          remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
           if (remaining > 0.001) {
             impulseDirection = velocity.normalized();
           }
@@ -3960,7 +4036,7 @@ class ShotResolver {
               _collisionRestitution(current, hit),
             ) *
             0.8;
-        remaining = velocity.length;
+        remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
         if (remaining > 0.001) {
           impulseDirection = velocity.normalized();
         }
@@ -4085,7 +4161,7 @@ class ShotResolver {
           events.add('balloon_switch_pressed');
         }
         velocity *= 0.72;
-        remaining = velocity.length;
+        remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
         continue;
       }
 
@@ -4111,7 +4187,7 @@ class ShotResolver {
         );
         final jellyScale = target.type == EntityType.ball ? 0.7 : 0.28;
         velocity *= jellyScale;
-        remaining = velocity.length;
+        remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
         if (remaining > 0.001) {
           impulseDirection = velocity.normalized();
         }
@@ -4139,8 +4215,8 @@ class ShotResolver {
           entities,
           hit,
           impulseDirection,
-          velocity.length *
-              0.68 *
+          remaining *
+              0.78 *
               transferRatio *
               _restitutionMultiplier(current, hit),
           events,
@@ -4164,15 +4240,10 @@ class ShotResolver {
         if (_anyBallInHole(entities)) {
           break;
         }
-        final postVelocity = _collisionVelocity(
-          velocity,
-          normal,
-          targetMass,
-          hitMass,
-          _collisionRestitution(current, hit),
-        );
-        velocity = postVelocity * 0.76;
-        remaining = velocity.length;
+        velocity = contactResponse.movingVelocity;
+        remaining = rollingDeceleration.isFinite
+            ? velocity.length * velocity.length / (2 * rollingDeceleration)
+            : 0.0;
         if (remaining > 0.001) {
           impulseDirection = velocity.normalized();
         }
@@ -4194,7 +4265,7 @@ class ShotResolver {
         // 무한 질량 반사식을 사용한다. 임의의 wallScale로 줄이면
         // 같은 입사각·재질인데 충돌 주체에 따라 물리 결과가 달라진다.
         velocity = _wallBounceVelocity(velocity, normal, current, hit);
-        remaining = velocity.length;
+        remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
         if (remaining > 0.001) {
           impulseDirection = velocity.normalized();
         }
@@ -4218,7 +4289,7 @@ class ShotResolver {
               0.72 *
               _restitutionMultiplier(current, hit);
           velocity = postDirection * postSpeed;
-          remaining = velocity.length;
+          remaining = _stoppingDistanceFor(velocity, rollingDeceleration);
           impulseDirection = postDirection;
           continue;
         }
@@ -4245,6 +4316,12 @@ class ShotResolver {
     }
 
     if (current.position != target.position) {
+      // 마지막 감속 스텝이 경로 점 병합 임계값(1.2)보다 작아도 판정의
+      // 최종 좌표를 반드시 기록한다. 그렇지 않으면 재생 종료 시 state
+      // 좌표로 짧게 순간이동한다.
+      if (path.last.distanceTo(current.position) > _physicsEpsilon) {
+        path.add(current.position);
+      }
       if (target.type == EntityType.crate && !events.contains('crate_pushed')) {
         events.add('crate_pushed');
       }
@@ -4264,6 +4341,29 @@ class ShotResolver {
       );
     }
     return _replace(entities, current);
+  }
+
+  double _stoppingDistanceFor(Vec2 velocity, double deceleration) {
+    if (!deceleration.isFinite || deceleration <= _physicsEpsilon) return 0;
+    return velocity.length * velocity.length / (2 * deceleration);
+  }
+
+  Vec2 _velocityAfterRolling(
+    Vec2 velocity,
+    double distance,
+    double deceleration,
+  ) {
+    if (velocity.length <= _physicsEpsilon || distance <= _physicsEpsilon) {
+      return velocity;
+    }
+    if (!deceleration.isFinite) return Vec2.zero;
+    final nextSpeed = math.sqrt(
+      math.max(
+        0.0,
+        velocity.length * velocity.length - 2 * deceleration * distance,
+      ),
+    );
+    return velocity.normalized() * nextSpeed;
   }
 
   void _appendMovePoint(List<Vec2> path, Vec2 point) {

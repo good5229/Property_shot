@@ -50,8 +50,8 @@ const stageSpeedRepresentativeSolutions = <StageSpeedSolution>[
   ),
   StageSpeedSolution(
     patternId: 'stage_speed_03',
-    degree: 208,
-    power: 0.56,
+    degree: 122,
+    power: 0.68,
     familyId: 'crate_push_reacceleration',
     expectedSliderId: 'crate_slider',
     expectedMoveId: 'push_crate',
@@ -77,7 +77,7 @@ const stageSpeedWeakAlternatives = <StageSpeedSolution>[
   StageSpeedSolution(
     patternId: 'stage_speed_02',
     degree: 264,
-    power: 0.36,
+    power: 0.38,
     familyId: 'wall_reflection_slider',
     expectedSliderId: 'after_bank_slider',
     expectedImpactId: 'bank_wall',
@@ -96,8 +96,8 @@ const stageSpeedWeakAlternatives = <StageSpeedSolution>[
 const stageSpeedChoiceAlternatives = <StageSpeedSolution>[
   StageSpeedSolution(
     patternId: 'stage_speed_04',
-    degree: 98,
-    power: 0.70,
+    degree: 116,
+    power: 0.58,
     familyId: 'multiple_slider_choice_left',
     expectedSliderId: 'left_slider',
   ),
@@ -120,8 +120,8 @@ const stageSpeedBypassSolutions = <StageSpeedSolution>[
   ),
   StageSpeedSolution(
     patternId: 'stage_speed_03',
-    degree: 42,
-    power: 0.76,
+    degree: 68,
+    power: 0.70,
     familyId: 'outer_wall_bypass',
     bypass: true,
   ),

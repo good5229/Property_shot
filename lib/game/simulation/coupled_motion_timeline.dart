@@ -66,8 +66,10 @@ class CoupledMotionTimeline {
     required MotionPositionSampler sampleRawPosition,
     required double endCursor,
     required double cursorUnitsPerSecond,
+    Iterable<String> monotonicEntityIds = const <String>[],
   }) {
     final ids = List<String>.unmodifiable(entityIds.toSet());
+    final monotonicIds = monotonicEntityIds.toSet();
     final orderedContacts = List<CoupledMotionContact>.from(contacts)
       ..sort((first, second) {
         final byStart = first.startCursor.compareTo(second.startCursor);
@@ -79,6 +81,17 @@ class CoupledMotionTimeline {
     final stepSeconds = 1 / (simulationHertz * subSteps);
     final stepCursor = cursorUnitsPerSecond * stepSeconds;
     final sampleCount = math.max(2, (endCursor / stepCursor).ceil() + 1);
+    if (orderedContacts.isEmpty ||
+        _movesAsRigidFormation(orderedContacts, sampleRawPosition, endCursor)) {
+      return _buildUnconstrained(
+        ids: ids,
+        sampleRawPosition: sampleRawPosition,
+        sampleCount: sampleCount,
+        stepCursor: stepCursor,
+        endCursor: endCursor,
+        cursorUnitsPerSecond: cursorUnitsPerSecond,
+      );
+    }
     final samples = <String, List<Vec2>>{for (final id in ids) id: <Vec2>[]};
     final travelDistances = <String, List<double>>{
       for (final id in ids) id: <double>[],
@@ -96,6 +109,7 @@ class CoupledMotionTimeline {
       final constrainedIds = <String>{};
 
       for (var iteration = 0; iteration < solverIterations; iteration++) {
+        var correctedAnyContact = false;
         for (final contact in orderedContacts) {
           // 기록된 충돌 직전에도 형상 간격을 검사한다. 판정 경로의 한 점이
           // 이미 접촉면 안쪽에 들어온 뒤 제약을 켜면 첫 프레임에 큰 위치
@@ -139,6 +153,9 @@ class CoupledMotionTimeline {
           if (penetration <= 0 && !maintainsRecordedContact) continue;
           final correction =
               penetration * _positionCorrection / correctionWeightSum;
+          if (correction.abs() > 0.000001) {
+            correctedAnyContact = true;
+          }
           positions[contact.sourceEntityId] =
               sourcePosition +
               normal * (correction * contact.sourceCorrectionWeight);
@@ -146,6 +163,10 @@ class CoupledMotionTimeline {
               targetPosition -
               normal * (correction * contact.targetCorrectionWeight);
         }
+        // 모든 접촉이 이미 비관통 조건을 만족하면 같은 좌표로 남은
+        // 반복을 수행할 필요가 없다. N중 추돌의 시작 프레임 계산 비용을
+        // 줄여 입력 직후의 메인 스레드 정지를 피한다.
+        if (!correctedAnyContact) break;
       }
 
       final positionDecay = math.exp(-_positionErrorDecay * stepSeconds);
@@ -175,13 +196,36 @@ class CoupledMotionTimeline {
       final entitySamples = samples[id]!;
       final entityDistances = travelDistances[id]!;
       final finalPosition = sampleRawPosition(id, endCursor);
+
+      // 상자·추처럼 한 방향으로 계속 밀리는 대상은 접촉 위치 보정이 판정
+      // 종점보다 앞서 나가지 않게 한다. 마지막 샘플에서 종점으로 되감기는
+      // 0.1~0.2px 역주행도 30 FPS에서는 떨림으로 보일 수 있다.
+      if (monotonicIds.contains(id) && entitySamples.length >= 2) {
+        final origin = entitySamples.first;
+        final axis = (finalPosition - origin).normalized();
+        final totalProjection = (finalPosition - origin).dot(axis);
+        if (axis != Vec2.zero && totalProjection > 0.0001) {
+          var previousProjection = 0.0;
+          for (var index = 1; index < entitySamples.length - 1; index++) {
+            final point = entitySamples[index];
+            final projection = (point - origin).dot(axis);
+            final clampedProjection = projection
+                .clamp(previousProjection, totalProjection)
+                .toDouble();
+            entitySamples[index] =
+                point + axis * (clampedProjection - projection);
+            previousProjection = clampedProjection;
+          }
+        }
+      }
       entitySamples[entitySamples.length - 1] = finalPosition;
-      entityDistances[entityDistances.length - 1] = entitySamples.length < 2
-          ? 0
-          : entityDistances[entityDistances.length - 2] +
-                entitySamples[entitySamples.length - 2].distanceTo(
-                  finalPosition,
-                );
+      // 위치 보정 및 단조화가 끝난 화면 궤적으로 누적 거리를 다시 만든다.
+      entityDistances[0] = 0;
+      for (var index = 1; index < entitySamples.length; index++) {
+        entityDistances[index] =
+            entityDistances[index - 1] +
+            entitySamples[index - 1].distanceTo(entitySamples[index]);
+      }
     }
 
     return CoupledMotionTimeline._(
@@ -196,6 +240,68 @@ class CoupledMotionTimeline {
         for (final entry in travelDistances.entries)
           entry.key: List<double>.unmodifiable(entry.value),
       }),
+    );
+  }
+
+  static bool _movesAsRigidFormation(
+    List<CoupledMotionContact> contacts,
+    MotionPositionSampler sampleRawPosition,
+    double endCursor,
+  ) {
+    for (final contact in contacts) {
+      final relativeAtStart =
+          sampleRawPosition(contact.sourceEntityId, 0) -
+          sampleRawPosition(contact.targetEntityId, 0);
+      // 접촉 구간만 우연히 같은 속도인 실제 추돌을 빠른 경로로 오인하지
+      // 않도록 전체 타임라인을 촘촘히 표본화해 동일한 강체 병진인지 확인한다.
+      for (var sample = 1; sample <= 32; sample++) {
+        final cursor = endCursor * sample / 32;
+        final relative =
+            sampleRawPosition(contact.sourceEntityId, cursor) -
+            sampleRawPosition(contact.targetEntityId, cursor);
+        if (relative.distanceTo(relativeAtStart) > 0.0001) return false;
+      }
+      final normal = contact.normal.normalized();
+      if (normal != Vec2.zero &&
+          relativeAtStart.dot(normal) < contact.separation - _contactSlop) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static CoupledMotionTimeline _buildUnconstrained({
+    required List<String> ids,
+    required MotionPositionSampler sampleRawPosition,
+    required int sampleCount,
+    required double stepCursor,
+    required double endCursor,
+    required double cursorUnitsPerSecond,
+  }) {
+    final samples = <String, List<Vec2>>{};
+    final travelDistances = <String, List<double>>{};
+    for (final id in ids) {
+      final entitySamples = List<Vec2>.generate(sampleCount, (index) {
+        final cursor = math.min(endCursor, index * stepCursor);
+        return sampleRawPosition(id, cursor);
+      }, growable: false);
+      final distances = List<double>.filled(sampleCount, 0, growable: false);
+      for (var index = 1; index < sampleCount; index++) {
+        distances[index] =
+            distances[index - 1] +
+            entitySamples[index - 1].distanceTo(entitySamples[index]);
+      }
+      samples[id] = List<Vec2>.unmodifiable(entitySamples);
+      travelDistances[id] = List<double>.unmodifiable(distances);
+    }
+    return CoupledMotionTimeline._(
+      cursorUnitsPerSecond: cursorUnitsPerSecond,
+      stepCursor: stepCursor,
+      endCursor: endCursor,
+      samplesByEntity: Map<String, List<Vec2>>.unmodifiable(samples),
+      travelDistancesByEntity: Map<String, List<double>>.unmodifiable(
+        travelDistances,
+      ),
     );
   }
 

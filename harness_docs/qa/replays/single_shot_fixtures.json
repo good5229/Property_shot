@@ -9,12 +9,12 @@
       "shots": [
         {
           "angleRadians": -2.5307274153917776,
-          "power": 0.35,
+          "power": 0.75,
           "equippedTrait": "heavy"
         }
       ],
       "expectedFingerprints": [
-        "8d8b37eff931f530"
+        "c42f0a000dce4243"
       ],
       "expectedPhase": "success"
     },
@@ -26,12 +26,12 @@
       "shots": [
         {
           "angleRadians": -2.5307274153917776,
-          "power": 0.4,
+          "power": 0.8,
           "equippedTrait": "heavy"
         }
       ],
       "expectedFingerprints": [
-        "b92392a55684d72b"
+        "5e0aca3e900aa1dd"
       ],
       "expectedPhase": "success"
     },
@@ -144,13 +144,13 @@
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": -2.2689280275926285,
-          "power": 0.7,
+          "angleRadians": -2.356194490192345,
+          "power": 0.95,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "e5eaa883d8c9745a"
+        "1d990f5bbc3bbe11"
       ],
       "expectedPhase": "success"
     },
@@ -161,13 +161,13 @@
       "copyCoreCount": 1,
       "shots": [
         {
-          "angleRadians": -2.2689280275926285,
-          "power": 0.75,
+          "angleRadians": -2.356194490192345,
+          "power": 1.0,
           "equippedTrait": null
         }
       ],
       "expectedFingerprints": [
-        "be7b4195a9c0884d"
+        "55792cd7229d7358"
       ],
       "expectedPhase": "success"
     },
@@ -630,7 +630,7 @@
         }
       ],
       "expectedFingerprints": [
-        "8186eafcfc19fc21"
+        "9e1878305a0114ac"
       ],
       "expectedPhase": "success"
     },
@@ -647,7 +647,7 @@
         }
       ],
       "expectedFingerprints": [
-        "3ee4fdc06918a738"
+        "8ad3bfd0215a1040"
       ],
       "expectedPhase": "success"
     },

@@ -261,11 +261,14 @@ void main() {
       );
       widths['${index + 1}단계'] = width;
     }
-    expect(widths['1단계']!.angle, greaterThanOrEqualTo(24));
+    // 알까기식 접촉 마찰은 1단계의 각도 띠를 조금 좁히지만, 힘 범위와
+    // 연결 면적은 넓게 유지된다. 1도 조준 스냅 기준 좌우 8도 이상이면
+    // 정밀 픽셀 조준 없이도 같은 해법군에 진입할 수 있다.
+    expect(widths['1단계']!.angle, greaterThanOrEqualTo(16));
     expect(widths['1단계']!.power, greaterThanOrEqualTo(0.20));
     expect(widths['2단계']!.angle, greaterThanOrEqualTo(8));
     expect(widths['2단계']!.power, greaterThanOrEqualTo(0.20));
-    expect(widths['1단계']!.component, greaterThanOrEqualTo(8));
+    expect(widths['1단계']!.component, greaterThanOrEqualTo(200));
     expect(widths['2단계']!.component, greaterThanOrEqualTo(8));
   });
 }
