@@ -17,7 +17,7 @@ void main() {
     final patterns = (root['patterns'] as List).cast<Map>();
 
     expect(root, buildStage9SolutionRegionReport());
-    expect(root['schemaVersion'], 1);
+    expect(root['schemaVersion'], 2);
     expect(root['directAngleStepDegrees'], 2);
     expect(root['preparedAngleStepDegrees'], 1);
     expect(root['aimSnapDegrees'], 1);
@@ -58,6 +58,17 @@ void main() {
         prepared['secondSelectableAngleBins'],
         greaterThanOrEqualTo(2),
         reason: '${pattern['patternId']} 둘째 발 연속 각도',
+      );
+      expect(
+        prepared['causalSuccessCount'],
+        prepared['successCount'],
+        reason: '${pattern['patternId']} 성공은 실제 반사판 인과 경로여야 한다.',
+      );
+      expect(
+        (prepared['finalShotReflectorSuccessCount'] as int) +
+            (prepared['preparedStateSuccessCount'] as int),
+        prepared['successCount'],
+        reason: '${pattern['patternId']} 직접 접촉 또는 반사실 준비 효과로 분류되어야 한다.',
       );
     }
   });

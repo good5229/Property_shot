@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "directAngleStepDegrees": 2,
   "chainAngleStepDegrees": 1,
   "aimSnapDegrees": 1.0,
@@ -23,45 +23,91 @@
       },
       "chain": {
         "sampleCount": 6561,
-        "successCount": 44,
-        "largestConnectedRegion": 44,
+        "successCount": 47,
+        "largestConnectedRegion": 27,
         "successfulFirstInputs": 7,
-        "successfulSecondInputs": 8,
+        "successfulSecondInputs": 9,
         "successfulFirstAngleDegrees": [
-          40
+          10,
+          11
         ],
         "successfulSecondAngleDegrees": [
-          136
+          228
         ],
-        "firstAngleSpanDegrees": 0,
-        "firstSelectableAngleBins": 1,
+        "firstAngleSpanDegrees": 1,
+        "firstSelectableAngleBins": 2,
         "firstPowerSpanPercent": 12,
         "secondAngleSpanDegrees": 0,
         "secondSelectableAngleBins": 1,
-        "secondPowerSpanPercent": 14
+        "secondPowerSpanPercent": 16,
+        "distinctCausalSignatureCount": 2,
+        "causalSignatures": [
+          {
+            "signature": "wall_left>three_balloon>wall_left>cushion_slider>spent_ball_1>wall_right|types:ball+balloon+powerSlider+wall|walls:3",
+            "successCount": 27,
+            "largestConnectedRegion": 27,
+            "targetOrder": [
+              "wall_left",
+              "three_balloon",
+              "wall_left",
+              "cushion_slider",
+              "spent_ball_1",
+              "wall_right"
+            ],
+            "entityTypes": [
+              "ball",
+              "balloon",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 3
+          },
+          {
+            "signature": "wall_left>three_balloon>wall_left>cushion_slider>spent_ball_1>field_boundary_bottom>wall_right|types:ball+balloon+powerSlider+wall|walls:4",
+            "successCount": 20,
+            "largestConnectedRegion": 20,
+            "targetOrder": [
+              "wall_left",
+              "three_balloon",
+              "wall_left",
+              "cushion_slider",
+              "spent_ball_1",
+              "field_boundary_bottom",
+              "wall_right"
+            ],
+            "entityTypes": [
+              "ball",
+              "balloon",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 4
+          }
+        ]
       }
     },
     {
       "patternId": "stage_chain_score_02",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 303,
-        "largestConnectedRegion": 130,
+        "successCount": 262,
+        "largestConnectedRegion": 90,
         "angleSpanDegrees": 292,
         "powerSpanPercent": 66
       },
       "chain": {
         "sampleCount": 6561,
-        "successCount": 358,
-        "largestConnectedRegion": 330,
-        "successfulFirstInputs": 35,
-        "successfulSecondInputs": 35,
+        "successCount": 514,
+        "largestConnectedRegion": 514,
+        "successfulFirstInputs": 43,
+        "successfulSecondInputs": 36,
         "successfulFirstAngleDegrees": [
           257,
           258,
           259,
           260,
-          261
+          261,
+          262
         ],
         "successfulSecondAngleDegrees": [
           114,
@@ -69,12 +115,132 @@
           116,
           117
         ],
-        "firstAngleSpanDegrees": 4,
-        "firstSelectableAngleBins": 5,
+        "firstAngleSpanDegrees": 5,
+        "firstSelectableAngleBins": 6,
         "firstPowerSpanPercent": 16,
         "secondAngleSpanDegrees": 3,
         "secondSelectableAngleBins": 4,
-        "secondPowerSpanPercent": 16
+        "secondPowerSpanPercent": 16,
+        "distinctCausalSignatureCount": 6,
+        "causalSignatures": [
+          {
+            "signature": "field_boundary_bottom>wall_left>chain_score_02_direct_guard>wall_left>chain_boost>spent_ball_1>spent_ball_1|types:ball+powerSlider+wall|walls:4",
+            "successCount": 262,
+            "largestConnectedRegion": 262,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "chain_score_02_direct_guard",
+              "wall_left",
+              "chain_boost",
+              "spent_ball_1",
+              "spent_ball_1"
+            ],
+            "entityTypes": [
+              "ball",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 4
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>chain_score_02_direct_guard>spent_ball_1>spent_ball_1|types:ball+wall|walls:3",
+            "successCount": 90,
+            "largestConnectedRegion": 90,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "chain_score_02_direct_guard",
+              "spent_ball_1",
+              "spent_ball_1"
+            ],
+            "entityTypes": [
+              "ball",
+              "wall"
+            ],
+            "wallReflectionCount": 3
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>chain_score_02_direct_guard>wall_left>chain_score_02_direct_guard>wall_left>chain_boost>spent_ball_1>spent_ball_1|types:ball+powerSlider+wall|walls:6",
+            "successCount": 64,
+            "largestConnectedRegion": 64,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "chain_score_02_direct_guard",
+              "wall_left",
+              "chain_score_02_direct_guard",
+              "wall_left",
+              "chain_boost",
+              "spent_ball_1",
+              "spent_ball_1"
+            ],
+            "entityTypes": [
+              "ball",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 6
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>chain_score_02_direct_guard>wall_left>chain_boost>spent_ball_1|types:ball+powerSlider+wall|walls:4",
+            "successCount": 59,
+            "largestConnectedRegion": 59,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "chain_score_02_direct_guard",
+              "wall_left",
+              "chain_boost",
+              "spent_ball_1"
+            ],
+            "entityTypes": [
+              "ball",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 4
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>spent_ball_1>chain_score_02_direct_guard>wall_left>spent_ball_1>spent_ball_1|types:ball+wall|walls:4",
+            "successCount": 27,
+            "largestConnectedRegion": 27,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "spent_ball_1",
+              "chain_score_02_direct_guard",
+              "wall_left",
+              "spent_ball_1",
+              "spent_ball_1"
+            ],
+            "entityTypes": [
+              "ball",
+              "wall"
+            ],
+            "wallReflectionCount": 4
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>chain_score_02_direct_guard>wall_left>chain_boost>spent_ball_1>wall_left|types:ball+powerSlider+wall|walls:5",
+            "successCount": 12,
+            "largestConnectedRegion": 8,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "chain_score_02_direct_guard",
+              "wall_left",
+              "chain_boost",
+              "spent_ball_1",
+              "wall_left"
+            ],
+            "entityTypes": [
+              "ball",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 5
+          }
+        ]
       }
     },
     {
@@ -88,9 +254,9 @@
       },
       "chain": {
         "sampleCount": 6561,
-        "successCount": 203,
-        "largestConnectedRegion": 203,
-        "successfulFirstInputs": 16,
+        "successCount": 235,
+        "largestConnectedRegion": 235,
+        "successfulFirstInputs": 20,
         "successfulSecondInputs": 18,
         "successfulFirstAngleDegrees": [
           236,
@@ -105,42 +271,176 @@
         ],
         "firstAngleSpanDegrees": 4,
         "firstSelectableAngleBins": 5,
-        "firstPowerSpanPercent": 6,
+        "firstPowerSpanPercent": 8,
         "secondAngleSpanDegrees": 1,
         "secondSelectableAngleBins": 2,
-        "secondPowerSpanPercent": 16
+        "secondPowerSpanPercent": 16,
+        "distinctCausalSignatureCount": 2,
+        "causalSignatures": [
+          {
+            "signature": "wall_left>speed_slider>chain_stone>bounce_wall>wall_right>spent_ball_1>spent_ball_1|types:ball+powerSlider+wall+weight|walls:3",
+            "successCount": 221,
+            "largestConnectedRegion": 221,
+            "targetOrder": [
+              "wall_left",
+              "speed_slider",
+              "chain_stone",
+              "bounce_wall",
+              "wall_right",
+              "spent_ball_1",
+              "spent_ball_1"
+            ],
+            "entityTypes": [
+              "ball",
+              "powerSlider",
+              "wall",
+              "weight"
+            ],
+            "wallReflectionCount": 3
+          },
+          {
+            "signature": "wall_left>speed_slider>chain_stone>bounce_wall>wall_right>spent_ball_1|types:ball+powerSlider+wall+weight|walls:3",
+            "successCount": 14,
+            "largestConnectedRegion": 6,
+            "targetOrder": [
+              "wall_left",
+              "speed_slider",
+              "chain_stone",
+              "bounce_wall",
+              "wall_right",
+              "spent_ball_1"
+            ],
+            "entityTypes": [
+              "ball",
+              "powerSlider",
+              "wall",
+              "weight"
+            ],
+            "wallReflectionCount": 3
+          }
+        ]
       }
     },
     {
       "patternId": "stage_chain_score_04",
       "direct": {
         "sampleCount": 8100,
-        "successCount": 340,
-        "largestConnectedRegion": 125,
-        "angleSpanDegrees": 236,
+        "successCount": 465,
+        "largestConnectedRegion": 148,
+        "angleSpanDegrees": 268,
         "powerSpanPercent": 52
       },
       "chain": {
-        "sampleCount": 6561,
-        "successCount": 103,
-        "largestConnectedRegion": 54,
+        "sampleCount": 3645,
+        "successCount": 73,
+        "largestConnectedRegion": 20,
         "successfulFirstInputs": 13,
-        "successfulSecondInputs": 9,
+        "successfulSecondInputs": 45,
         "successfulFirstAngleDegrees": [
-          317,
-          318,
-          320,
-          321
+          228,
+          229,
+          230,
+          231,
+          232
         ],
         "successfulSecondAngleDegrees": [
-          96
+          118,
+          119,
+          120,
+          121,
+          122
         ],
-        "firstAngleSpanDegrees": 1,
-        "firstSelectableAngleBins": 2,
-        "firstPowerSpanPercent": 10,
-        "secondAngleSpanDegrees": 0,
-        "secondSelectableAngleBins": 1,
-        "secondPowerSpanPercent": 16
+        "firstAngleSpanDegrees": 4,
+        "firstSelectableAngleBins": 5,
+        "firstPowerSpanPercent": 8,
+        "secondAngleSpanDegrees": 4,
+        "secondSelectableAngleBins": 5,
+        "secondPowerSpanPercent": 16,
+        "distinctCausalSignatureCount": 4,
+        "causalSignatures": [
+          {
+            "signature": "field_boundary_bottom>wall_left>spent_ball_1>score_slider>score_crate|types:ball+crate+powerSlider+wall|walls:2",
+            "successCount": 45,
+            "largestConnectedRegion": 9,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "spent_ball_1",
+              "score_slider",
+              "score_crate"
+            ],
+            "entityTypes": [
+              "ball",
+              "crate",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 2
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>spent_ball_1>score_crate>score_slider>score_jelly|types:ball+bumper+crate+powerSlider+wall|walls:2",
+            "successCount": 9,
+            "largestConnectedRegion": 9,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "spent_ball_1",
+              "score_crate",
+              "score_slider",
+              "score_jelly"
+            ],
+            "entityTypes": [
+              "ball",
+              "bumper",
+              "crate",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 2
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>spent_ball_1>score_crate>score_slider>score_jelly>wall_top|types:ball+bumper+crate+powerSlider+wall|walls:3",
+            "successCount": 11,
+            "largestConnectedRegion": 6,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "spent_ball_1",
+              "score_crate",
+              "score_slider",
+              "score_jelly",
+              "wall_top"
+            ],
+            "entityTypes": [
+              "ball",
+              "bumper",
+              "crate",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 3
+          },
+          {
+            "signature": "field_boundary_bottom>wall_left>spent_ball_1>score_slider>wall_right>score_jelly|types:ball+bumper+powerSlider+wall|walls:3",
+            "successCount": 8,
+            "largestConnectedRegion": 6,
+            "targetOrder": [
+              "field_boundary_bottom",
+              "wall_left",
+              "spent_ball_1",
+              "score_slider",
+              "wall_right",
+              "score_jelly"
+            ],
+            "entityTypes": [
+              "ball",
+              "bumper",
+              "powerSlider",
+              "wall"
+            ],
+            "wallReflectionCount": 3
+          }
+        ]
       }
     }
   ]

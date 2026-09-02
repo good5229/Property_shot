@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:property_shot/game/analysis/creative_chain_score.dart';
+import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
@@ -16,6 +18,7 @@ import 'package:property_shot/game/simulation/shot_resolver.dart';
 import '../test/fixtures/stage9_rotating_reflector_patterns.dart';
 
 const _resolver = ShotResolver();
+const _analyzer = CreativeChainScoreAnalyzer();
 
 void main(List<String> arguments) {
   final report = buildStage9SolutionRegionReport(verbose: true);
@@ -57,7 +60,7 @@ Map<String, Object?> buildStage9SolutionRegionReport({bool verbose = false}) {
   }
 
   return {
-    'schemaVersion': 1,
+    'schemaVersion': 2,
     'directAngleStepDegrees': 2,
     'preparedAngleStepDegrees': 1,
     'aimSnapDegrees': defaultAimStepDegrees,
@@ -105,6 +108,9 @@ Map<String, Object?> _preparedRegion(
   final successes = <_Grid4>{};
   final successfulFirst = <_Grid2>{};
   final successfulSecond = <_Grid2>{};
+  var rejectedNonCausalSuccessCount = 0;
+  var finalShotReflectorSuccessCount = 0;
+  var preparedStateSuccessCount = 0;
 
   for (var firstAngle = 0; firstAngle < firstAngles.length; firstAngle++) {
     for (var firstPower = 0; firstPower < firstPowers.length; firstPower++) {
@@ -127,7 +133,31 @@ Map<String, Object?> _preparedRegion(
             first.state,
             _input(secondAngles[secondAngle], secondPowers[secondPower] / 50),
           );
-          if (!_matchesFamily(first, second, solution)) continue;
+          if (!_matchesFamilySetup(first, second, solution)) continue;
+          final analysis = _analyzer.analyze([
+            first,
+            second,
+          ], parShots: pattern.parShots);
+          final unpreparedSecond = _resolver.resolve(
+            initial,
+            _input(secondAngles[secondAngle], secondPowers[secondPower] / 50),
+          );
+          final causalFamily = _causalFamily(
+            first: first,
+            second: second,
+            unpreparedSecond: unpreparedSecond,
+            analysis: analysis,
+            solution: solution,
+          );
+          if (causalFamily == _CausalFamily.none) {
+            rejectedNonCausalSuccessCount++;
+            continue;
+          }
+          if (causalFamily == _CausalFamily.finalShotReflector) {
+            finalShotReflectorSuccessCount++;
+          } else {
+            preparedStateSuccessCount++;
+          }
           successes.add(
             _Grid4(firstAngle, firstPower, secondAngle, secondPower),
           );
@@ -165,10 +195,14 @@ Map<String, Object?> _preparedRegion(
         _consecutiveSpan(successfulSecond, true, 1) + 1,
     'firstPowerSpanPercent': _consecutiveSpan(successfulFirst, false, 2),
     'secondPowerSpanPercent': _consecutiveSpan(successfulSecond, false, 2),
+    'causalSuccessCount': successes.length,
+    'finalShotReflectorSuccessCount': finalShotReflectorSuccessCount,
+    'preparedStateSuccessCount': preparedStateSuccessCount,
+    'rejectedNonCausalSuccessCount': rejectedNonCausalSuccessCount,
   };
 }
 
-bool _matchesFamily(
+bool _matchesFamilySetup(
   ShotResult first,
   ShotResult second,
   Stage9RotatingReflectorSolution solution,
@@ -196,6 +230,39 @@ bool _matchesFamily(
     return false;
   }
   return true;
+}
+
+enum _CausalFamily { none, finalShotReflector, preparedState }
+
+_CausalFamily _causalFamily({
+  required ShotResult first,
+  required ShotResult second,
+  required ShotResult unpreparedSecond,
+  required CreativeChainScoreAnalysis analysis,
+  required Stage9RotatingReflectorSolution solution,
+}) {
+  if (analysis.holeShotIndex != 1) return _CausalFamily.none;
+  final expectedReflectors = solution.expectedRotationOrder.toSet();
+  final finalShotUsesReflector = second.physicsEvents.any(
+    (event) =>
+        analysis.causalEventIds.contains('1:${event.eventId}') &&
+        event.kind == PhysicsEventKind.impact &&
+        event.targetType == EntityType.rotatingReflector &&
+        expectedReflectors.contains(event.targetEntityId),
+  );
+  if (finalShotUsesReflector) return _CausalFamily.finalShotReflector;
+
+  // 준비 발사는 최종 발 사건의 직접 부모가 아니다. 같은 둘째 발을 초기
+  // 상태에 반사실로 재생해 실패할 때만 첫 발의 반사판 상태 변경을 원인으로
+  // 인정한다. 따라서 반사판을 돌린 뒤 직접 우회한 성공은 제외된다.
+  final firstPreparedExpectedReflector = first.reflectorRotations.any(
+    (rotation) => expectedReflectors.contains(rotation.reflectorEntityId),
+  );
+  if (firstPreparedExpectedReflector &&
+      unpreparedSecond.state.phase != GamePhase.success) {
+    return _CausalFamily.preparedState;
+  }
+  return _CausalFamily.none;
 }
 
 GameState _state(StageDefinition stage, StagePattern pattern) => pattern

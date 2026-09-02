@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../domain/geometry.dart';
+import 'contact_island_solver.dart';
 
 typedef MotionPositionSampler = Vec2 Function(String entityId, double cursor);
 
@@ -19,6 +20,9 @@ class CoupledMotionContact {
     required this.targetCorrectionWeight,
     required this.startCursor,
     required this.endCursor,
+    this.sourceMass = 1,
+    this.targetMass = 1,
+    this.restitution = 0.8,
   });
 
   final String sourceEntityId;
@@ -29,6 +33,9 @@ class CoupledMotionContact {
   final double targetCorrectionWeight;
   final double startCursor;
   final double endCursor;
+  final double sourceMass;
+  final double targetMass;
+  final double restitution;
 }
 
 /// 판정 결과 경로를 240Hz 고정 하위 스텝에서 결합된 강체 운동으로 재생한다.
@@ -49,10 +56,13 @@ class CoupledMotionTimeline {
   static const int simulationHertz = 60;
   static const int subSteps = 4;
   static const int solverIterations = 4;
+  static const int velocitySolverIterations = 10;
   static const double _contactSlop = 0.35;
   static const double _contactReleaseSlop = 4.0;
   static const double _positionCorrection = 1.0;
   static const double _positionErrorDecay = 12.0;
+  static const double _velocityErrorDecay = 9.0;
+  static const double _contactIslandCursorWindow = 2.0;
 
   final double cursorUnitsPerSecond;
   final double stepCursor;
@@ -97,6 +107,11 @@ class CoupledMotionTimeline {
       for (final id in ids) id: <double>[],
     };
     final offsets = <String, Vec2>{for (final id in ids) id: Vec2.zero};
+    final velocityOffsets = <String, Vec2>{for (final id in ids) id: Vec2.zero};
+    final resolvedVelocityContacts = <int>{};
+    const velocitySolver = ContactIslandSolver(
+      iterations: velocitySolverIterations,
+    );
 
     for (var sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
       final cursor = math.min(endCursor, sampleIndex * stepCursor);
@@ -107,6 +122,72 @@ class CoupledMotionTimeline {
         for (final id in ids) id: raw[id]! + offsets[id]!,
       };
       final constrainedIds = <String>{};
+
+      // 서로 가까운 시각 사건은 하나의 접촉군으로 묶어 같은 하위 스텝에서
+      // 속도를 반복 해석한다. 재귀 경로의 순서를 그대로 재생할 때 생기던
+      // 'A 정지 → B 이동 → B 정지 → C 이동' 계단 현상을 줄이고, 알까기처럼
+      // 최초 충격이 연쇄 끝까지 거의 동시에 전달되어 보이게 한다.
+      final earliestPending = <int>[
+        for (var index = 0; index < orderedContacts.length; index++)
+          if (!resolvedVelocityContacts.contains(index) &&
+              orderedContacts[index].startCursor <= cursor + stepCursor)
+            index,
+      ];
+      if (earliestPending.isNotEmpty) {
+        final earliestStart =
+            orderedContacts[earliestPending.first].startCursor;
+        final islandIndices = <int>[
+          for (var index = 0; index < orderedContacts.length; index++)
+            if (!resolvedVelocityContacts.contains(index) &&
+                orderedContacts[index].startCursor >=
+                    earliestStart - stepCursor &&
+                orderedContacts[index].startCursor <=
+                    earliestStart + _contactIslandCursorWindow)
+              index,
+        ];
+        final bodyMasses = <String, double>{};
+        for (final index in islandIndices) {
+          final contact = orderedContacts[index];
+          bodyMasses[contact.sourceEntityId] = contact.sourceMass;
+          bodyMasses[contact.targetEntityId] = contact.targetMass;
+        }
+        final nextCursor = math.min(endCursor, cursor + stepCursor);
+        final rawVelocities = <String, Vec2>{
+          for (final entry in bodyMasses.entries)
+            entry.key:
+                (sampleRawPosition(entry.key, nextCursor) - raw[entry.key]!) *
+                    (1 / stepSeconds) +
+                velocityOffsets[entry.key]!,
+        };
+        final solved = velocitySolver.solve(
+          bodies: [
+            for (final entry in bodyMasses.entries)
+              ContactIslandBody(
+                entityId: entry.key,
+                velocity: rawVelocities[entry.key]!,
+                mass: entry.value,
+              ),
+          ],
+          contacts: [
+            for (final index in islandIndices)
+              ContactIslandConstraint(
+                sourceEntityId: orderedContacts[index].sourceEntityId,
+                targetEntityId: orderedContacts[index].targetEntityId,
+                normal: orderedContacts[index].normal,
+                restitution: orderedContacts[index].restitution,
+              ),
+          ],
+        );
+        for (final entry in solved.entries) {
+          final rawVelocity =
+              (sampleRawPosition(entry.key, nextCursor) - raw[entry.key]!) *
+              (1 / stepSeconds);
+          velocityOffsets[entry.key] = entry.value - rawVelocity;
+          positions[entry.key] =
+              positions[entry.key]! + velocityOffsets[entry.key]! * stepSeconds;
+        }
+        resolvedVelocityContacts.addAll(islandIndices);
+      }
 
       for (var iteration = 0; iteration < solverIterations; iteration++) {
         var correctedAnyContact = false;
@@ -170,11 +251,13 @@ class CoupledMotionTimeline {
       }
 
       final positionDecay = math.exp(-_positionErrorDecay * stepSeconds);
+      final velocityDecay = math.exp(-_velocityErrorDecay * stepSeconds);
       for (final id in ids) {
         final nextOffset = positions[id]! - raw[id]!;
         offsets[id] = constrainedIds.contains(id)
             ? nextOffset
             : nextOffset * positionDecay;
+        velocityOffsets[id] = velocityOffsets[id]! * velocityDecay;
         final position = raw[id]! + offsets[id]!;
         final entitySamples = samples[id]!;
         final entityDistances = travelDistances[id]!;

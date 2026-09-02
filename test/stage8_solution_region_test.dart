@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../tool/generate_stage8_solution_regions.dart';
+
 void main() {
   test('8단계 정밀 뱅크·고연쇄 해법은 의도한 입력 허용 영역을 가진다', () {
     final root =
@@ -14,7 +16,8 @@ void main() {
             as Map<String, Object?>;
     final patterns = (root['patterns'] as List).cast<Map>();
 
-    expect(root['schemaVersion'], 1);
+    expect(root, buildStage8SolutionRegionReport());
+    expect(root['schemaVersion'], 2);
     expect(root['directAngleStepDegrees'], 2);
     expect(root['chainAngleStepDegrees'], 1);
     expect(root['aimSnapDegrees'], 1);
@@ -78,6 +81,19 @@ void main() {
         chain['secondPowerSpanPercent'],
         greaterThanOrEqualTo(4),
         reason: '${pattern['patternId']} 둘째 발 힘 허용 폭',
+      );
+      expect(
+        chain['distinctCausalSignatureCount'],
+        greaterThanOrEqualTo(2),
+        reason: '${pattern['patternId']} 서로 다른 실제 연쇄 인과 경로',
+      );
+      final signatures = (chain['causalSignatures'] as List).cast<Map>();
+      expect(
+        signatures.where(
+          (signature) => (signature['largestConnectedRegion'] as int) >= 2,
+        ),
+        hasLength(greaterThanOrEqualTo(2)),
+        reason: '${pattern['patternId']} 단일 우연 입력이 아닌 복수 연쇄 영역',
       );
     }
   });

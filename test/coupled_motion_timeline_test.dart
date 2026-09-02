@@ -143,4 +143,74 @@ void main() {
       reason: '12중 연쇄 타임라인 사전 계산이 발사 순간을 막아서는 안 된다.',
     );
   });
+
+  test('가까운 3중 추돌은 뒤 물체가 앞 물체 종료를 기다리지 않고 움직인다', () {
+    Vec2 rawPosition(String id, double cursor) => switch (id) {
+      'a' => Vec2(math.min(cursor, 4) * 5, 100),
+      'b' => Vec2(30 + math.max(0, math.min(cursor - 4, 4)) * 5, 100),
+      'c' => Vec2(40 + math.max(0, cursor - 8) * 5, 100),
+      _ => Vec2.zero,
+    };
+
+    final timeline = CoupledMotionTimeline.build(
+      entityIds: const ['a', 'b', 'c'],
+      contacts: const [
+        CoupledMotionContact(
+          sourceEntityId: 'a',
+          targetEntityId: 'b',
+          normal: Vec2(-1, 0),
+          separation: 10,
+          sourceCorrectionWeight: 1,
+          targetCorrectionWeight: 0.01,
+          sourceMass: 1,
+          targetMass: 1,
+          restitution: 0.92,
+          startCursor: 4,
+          endCursor: 12,
+        ),
+        CoupledMotionContact(
+          sourceEntityId: 'b',
+          targetEntityId: 'c',
+          normal: Vec2(-1, 0),
+          separation: 10,
+          sourceCorrectionWeight: 1,
+          targetCorrectionWeight: 0.01,
+          sourceMass: 1,
+          targetMass: 1,
+          restitution: 0.92,
+          startCursor: 5,
+          endCursor: 12,
+        ),
+      ],
+      sampleRawPosition: rawPosition,
+      endCursor: 12,
+      cursorUnitsPerSecond: 34,
+    );
+
+    expect(
+      timeline.positionAt('c', 4.5)!.x,
+      greaterThan(rawPosition('c', 4.5).x),
+      reason: '접촉군의 마지막 물체가 재귀 경로 차례까지 정지해 있으면 안 된다.',
+    );
+    for (final framesPerSecond in [30, 45, 60]) {
+      final step = 34 / framesPerSecond;
+      double? previousStep;
+      Vec2? previous;
+      for (var cursor = 3.5; cursor <= 7; cursor += step) {
+        final current = timeline.positionAt('b', cursor)!;
+        if (previous != null) {
+          final currentStep = current.distanceTo(previous);
+          if (previousStep != null) {
+            expect(
+              (currentStep - previousStep).abs(),
+              lessThan(8),
+              reason: '$framesPerSecond FPS에서 중간 물체가 멈췄다 출발함',
+            );
+          }
+          previousStep = currentStep;
+        }
+        previous = current;
+      }
+    }
+  });
 }

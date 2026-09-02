@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "directAngleStepDegrees": 2,
   "preparedAngleStepDegrees": 1,
   "aimSnapDegrees": 1.0,
@@ -18,10 +18,10 @@
       },
       "prepared": {
         "sampleCount": 3645,
-        "successCount": 1068,
-        "largestConnectedRegion": 1067,
+        "successCount": 1056,
+        "largestConnectedRegion": 1055,
         "successfulFirstInputs": 43,
-        "successfulSecondInputs": 57,
+        "successfulSecondInputs": 45,
         "successfulFirstAngleDegrees": [
           298,
           299,
@@ -34,8 +34,6 @@
           306
         ],
         "successfulSecondAngleDegrees": [
-          122,
-          123,
           124,
           125,
           126,
@@ -45,9 +43,13 @@
           130
         ],
         "firstSelectableAngleBins": 9,
-        "secondSelectableAngleBins": 9,
+        "secondSelectableAngleBins": 7,
         "firstPowerSpanPercent": 8,
-        "secondPowerSpanPercent": 16
+        "secondPowerSpanPercent": 16,
+        "causalSuccessCount": 1056,
+        "finalShotReflectorSuccessCount": 1018,
+        "preparedStateSuccessCount": 38,
+        "rejectedNonCausalSuccessCount": 12
       }
     },
     {
@@ -79,7 +81,11 @@
         "firstSelectableAngleBins": 5,
         "secondSelectableAngleBins": 2,
         "firstPowerSpanPercent": 2,
-        "secondPowerSpanPercent": 16
+        "secondPowerSpanPercent": 16,
+        "causalSuccessCount": 74,
+        "finalShotReflectorSuccessCount": 74,
+        "preparedStateSuccessCount": 0,
+        "rejectedNonCausalSuccessCount": 0
       }
     },
     {
@@ -111,7 +117,11 @@
         "firstSelectableAngleBins": 2,
         "secondSelectableAngleBins": 7,
         "firstPowerSpanPercent": 8,
-        "secondPowerSpanPercent": 16
+        "secondPowerSpanPercent": 16,
+        "causalSuccessCount": 102,
+        "finalShotReflectorSuccessCount": 54,
+        "preparedStateSuccessCount": 48,
+        "rejectedNonCausalSuccessCount": 0
       }
     },
     {
@@ -123,25 +133,26 @@
       },
       "prepared": {
         "sampleCount": 6561,
-        "successCount": 378,
-        "largestConnectedRegion": 378,
+        "successCount": 198,
+        "largestConnectedRegion": 198,
         "successfulFirstInputs": 9,
-        "successfulSecondInputs": 42,
+        "successfulSecondInputs": 22,
         "successfulFirstAngleDegrees": [
           200
         ],
         "successfulSecondAngleDegrees": [
           71,
           72,
-          73,
-          74,
-          75,
-          76
+          73
         ],
         "firstSelectableAngleBins": 1,
-        "secondSelectableAngleBins": 6,
+        "secondSelectableAngleBins": 3,
         "firstPowerSpanPercent": 16,
-        "secondPowerSpanPercent": 14
+        "secondPowerSpanPercent": 14,
+        "causalSuccessCount": 198,
+        "finalShotReflectorSuccessCount": 0,
+        "preparedStateSuccessCount": 198,
+        "rejectedNonCausalSuccessCount": 180
       }
     }
   ]

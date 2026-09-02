@@ -2072,6 +2072,12 @@ class PropertyShotGame extends FlameGame {
           targetCorrectionWeight: 0.01 / ShotResolver.massOf(target),
           startCursor: contactStart,
           endCursor: contactEnd,
+          sourceMass: ShotResolver.massOf(source),
+          targetMass: ShotResolver.massOf(target),
+          restitution:
+              source.type == EntityType.ball && target.type == EntityType.ball
+              ? 0.92
+              : 0.72,
         ),
       );
     }

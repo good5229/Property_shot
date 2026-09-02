@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import 'package:property_shot/game/analysis/creative_chain_score.dart';
 import 'package:property_shot/game/analysis/stage_chain_challenge.dart';
+import 'package:property_shot/game/domain/entity_state.dart';
 import 'package:property_shot/game/domain/game_state.dart';
 import 'package:property_shot/game/domain/geometry.dart';
 import 'package:property_shot/game/domain/shot_input.dart';
@@ -24,6 +25,23 @@ const _analyzer = CreativeChainScoreAnalyzer();
 const _challenge = StageChainChallengeEvaluator();
 
 void main(List<String> arguments) {
+  final report = buildStage8SolutionRegionReport(verbose: true);
+  final output = const JsonEncoder.withIndent('  ').convert(report);
+  final file = File('harness_docs/qa/replays/stage8_solution_regions.json');
+  if (arguments.contains('--check')) {
+    if (!file.existsSync() || file.readAsStringSync().trim() != output.trim()) {
+      stderr.writeln('8단계 성공 영역 기록이 생성 결과와 다릅니다.');
+      exitCode = 1;
+      return;
+    }
+    print('8단계 성공 영역 기록 동기화 확인');
+    return;
+  }
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync('$output\n');
+}
+
+Map<String, Object?> buildStage8SolutionRegionReport({bool verbose = false}) {
   final stage = generatedStageCatalog.stageById('stage_chain_score');
   final validation = StagePatternValidator().validateWithRuntimeProbe(
     stage,
@@ -40,11 +58,11 @@ void main(List<String> arguments) {
     ),
   );
   if (!validation.isValid) {
-    for (final issue in validation.issues) {
-      stderr.writeln('${issue.codeName}: ${issue.message}');
-    }
-    exitCode = 1;
-    return;
+    throw StateError(
+      validation.issues
+          .map((issue) => '${issue.codeName}: ${issue.message}')
+          .join('\n'),
+    );
   }
   final records = <Map<String, Object?>>[];
   for (final solution in stageChainScoreSolutions) {
@@ -56,15 +74,18 @@ void main(List<String> arguments) {
       'direct': direct,
       'chain': chain,
     });
-    print(
-      '${pattern.patternId}: 직접 ${direct['successCount']}개/'
-      '연결 ${direct['largestConnectedRegion']}개, '
-      '연쇄 ${chain['successCount']}개/연결 '
-      '${chain['largestConnectedRegion']}개',
-    );
+    if (verbose) {
+      print(
+        '${pattern.patternId}: 직접 ${direct['successCount']}개/'
+        '연결 ${direct['largestConnectedRegion']}개, '
+        '연쇄 ${chain['successCount']}개/연결 '
+        '${chain['largestConnectedRegion']}개, 인과 서명 '
+        '${chain['distinctCausalSignatureCount']}개',
+      );
+    }
   }
-  final output = const JsonEncoder.withIndent('  ').convert({
-    'schemaVersion': 1,
+  return {
+    'schemaVersion': 2,
     'directAngleStepDegrees': 2,
     'chainAngleStepDegrees': 1,
     'aimSnapDegrees': defaultAimStepDegrees,
@@ -72,19 +93,7 @@ void main(List<String> arguments) {
     'chainNeighborhood': {'angleRadiusDegrees': 4, 'powerRadiusPercent': 8},
     'validator': {'staticAndRuntimeIssueCount': validation.issues.length},
     'patterns': records,
-  });
-  final file = File('harness_docs/qa/replays/stage8_solution_regions.json');
-  if (arguments.contains('--check')) {
-    if (!file.existsSync() || file.readAsStringSync().trim() != output.trim()) {
-      stderr.writeln('8단계 성공 영역 기록이 생성 결과와 다릅니다.');
-      exitCode = 1;
-      return;
-    }
-    print('8단계 성공 영역 기록 동기화 확인');
-    return;
-  }
-  file.parent.createSync(recursive: true);
-  file.writeAsStringSync('$output\n');
+  };
 }
 
 Map<String, Object?> _directRegion(
@@ -124,6 +133,8 @@ Map<String, Object?> _chainRegion(
   final secondAngles = _angleValues(solution.secondDegree, 4);
   final secondPowers = _indices((solution.secondPower * 50).round(), 4, 6, 50);
   final successes = <_Grid4>{};
+  final successesBySignature = <String, Set<_Grid4>>{};
+  final signatureDetails = <String, _CausalSignature>{};
   final successfulFirst = <_Grid2>{};
   final successfulSecond = <_Grid2>{};
   for (var firstAngle = 0; firstAngle < firstAngles.length; firstAngle++) {
@@ -161,9 +172,18 @@ Map<String, Object?> _chainRegion(
           )) {
             continue;
           }
-          successes.add(
-            _Grid4(firstAngle, firstPower, secondAngle, secondPower),
+          final point = _Grid4(
+            firstAngle,
+            firstPower,
+            secondAngle,
+            secondPower,
           );
+          final signature = _causalSignature(second, analysis);
+          successes.add(point);
+          successesBySignature
+              .putIfAbsent(signature.key, () => <_Grid4>{})
+              .add(point);
+          signatureDetails[signature.key] = signature;
           successfulFirst.add(_Grid2(firstAngle, firstPower));
           successfulSecond.add(_Grid2(secondAngle, secondPower));
         }
@@ -177,6 +197,31 @@ Map<String, Object?> _chainRegion(
       secondPowers.length;
   final firstAngleSpan = _consecutiveSpan(successfulFirst, true, 1);
   final secondAngleSpan = _consecutiveSpan(successfulSecond, true, 1);
+  final causalSignatures =
+      [
+        for (final entry in successesBySignature.entries)
+          {
+            'signature': entry.key,
+            'successCount': entry.value.length,
+            'largestConnectedRegion': _largestRegion4(entry.value),
+            'targetOrder': signatureDetails[entry.key]!.targetOrder,
+            'entityTypes': signatureDetails[entry.key]!.entityTypes,
+            'wallReflectionCount':
+                signatureDetails[entry.key]!.wallReflectionCount,
+          },
+      ]..sort((first, second) {
+        final byRegion = (second['largestConnectedRegion'] as int).compareTo(
+          first['largestConnectedRegion'] as int,
+        );
+        if (byRegion != 0) return byRegion;
+        final byCount = (second['successCount'] as int).compareTo(
+          first['successCount'] as int,
+        );
+        if (byCount != 0) return byCount;
+        return (first['signature'] as String).compareTo(
+          second['signature'] as String,
+        );
+      });
   return {
     'sampleCount': sampleCount,
     'successCount': successes.length,
@@ -197,7 +242,48 @@ Map<String, Object?> _chainRegion(
     'secondAngleSpanDegrees': secondAngleSpan,
     'secondSelectableAngleBins': secondAngleSpan + 1,
     'secondPowerSpanPercent': _consecutiveSpan(successfulSecond, false, 2),
+    'distinctCausalSignatureCount': causalSignatures.length,
+    'causalSignatures': causalSignatures,
   };
+}
+
+_CausalSignature _causalSignature(
+  ShotResult result,
+  CreativeChainScoreAnalysis analysis,
+) {
+  final causalEvents = result.physicsEvents
+      .where((event) => analysis.causalEventIds.contains('1:${event.eventId}'))
+      .where((event) => event.targetType != EntityType.hole)
+      .toList(growable: false);
+  final targetOrder = [for (final event in causalEvents) event.targetEntityId];
+  final entityTypes = {
+    for (final event in causalEvents) event.targetType.name,
+  }.toList()..sort();
+  final wallReflectionCount = causalEvents
+      .where((event) => event.targetType == EntityType.wall)
+      .length;
+  final compactOrder = targetOrder.join('>');
+  final typeKey = entityTypes.join('+');
+  return _CausalSignature(
+    key: '$compactOrder|types:$typeKey|walls:$wallReflectionCount',
+    targetOrder: targetOrder,
+    entityTypes: entityTypes,
+    wallReflectionCount: wallReflectionCount,
+  );
+}
+
+class _CausalSignature {
+  const _CausalSignature({
+    required this.key,
+    required this.targetOrder,
+    required this.entityTypes,
+    required this.wallReflectionCount,
+  });
+
+  final String key;
+  final List<String> targetOrder;
+  final List<String> entityTypes;
+  final int wallReflectionCount;
 }
 
 GameState _state(StageDefinition stage, StagePattern pattern) => pattern
