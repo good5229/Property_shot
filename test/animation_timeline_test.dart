@@ -64,6 +64,52 @@ void main() {
     }
   });
 
+  test('충돌 중에도 보드 전체에는 반응형 배율 한 번만 적용한다', () {
+    final start = levels[0].createState(0);
+    const impact = ShotImpact(
+      entityId: 'hole',
+      entityType: EntityType.hole,
+      position: Vec2(180, 120),
+      normal: Vec2(0, 1),
+      pathIndex: 1,
+      strength: 1,
+      impulse: 1,
+    );
+    final game = PropertyShotGame(
+      start,
+      loadVisualAssets: false,
+      screenShake: false,
+    );
+    game.onGameResize(Vector2(360, 560));
+    game.setStateSnapshot(
+      start,
+      path: const [
+        Vec2(180, 300),
+        Vec2(180, 260),
+        Vec2(180, 220),
+        Vec2(180, 180),
+        Vec2(180, 140),
+        Vec2(180, 120),
+      ],
+      transitionStart: start,
+      impacts: const [impact],
+      animationTransaction: true,
+    );
+    game.setAnimationCursorForTest(5);
+
+    final canvas = _TransformRecordingCanvas();
+    game.render(canvas);
+
+    final firstDraw = canvas.operations.indexOf('draw');
+    expect(firstDraw, greaterThan(0));
+    expect(
+      canvas.operations.take(firstDraw).where((event) => event == 'scale'),
+      hasLength(1),
+      reason: '충돌 피드백이 반응형 배율 뒤에 보드 전체를 다시 확대함',
+    );
+    game.onRemove();
+  });
+
   test('공유 물리 이벤트 스트림은 애니메이션 콜백과 일대일로 재생된다', () {
     const resolver = ShotResolver();
     final start = levels[0].createState(0);
@@ -744,4 +790,17 @@ GameState _chainAnimationState(int chainLength) {
       ),
     ],
   );
+}
+
+class _TransformRecordingCanvas implements ui.Canvas {
+  final List<String> operations = [];
+
+  @override
+  void scale(double sx, [double? sy]) => operations.add('scale');
+
+  @override
+  void drawPicture(ui.Picture picture) => operations.add('draw');
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }

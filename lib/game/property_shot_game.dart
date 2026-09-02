@@ -234,7 +234,6 @@ class PropertyShotGame extends FlameGame {
   List<ShotImpact> _animationImpactsByPath = const [];
   List<ShotImpact> _bouncyWallImpacts = const [];
   List<ShotImpact> _cinematicImpacts = const [];
-  List<ShotAnimationMove> _causalAnimationMoves = const [];
   List<PhysicsEvent> _animationPhysicsEvents = const [];
   List<_ReflectorAnimationStep> _animationReflectorSchedule = const [];
   Map<String, List<_ReflectorAnimationStep>> _reflectorStepsByEntity = const {};
@@ -458,7 +457,6 @@ class PropertyShotGame extends FlameGame {
     _animationImpactsByPath = const [];
     _bouncyWallImpacts = const [];
     _cinematicImpacts = const [];
-    _causalAnimationMoves = const [];
     _animationPhysicsEvents = const [];
     _animationReflectorSchedule = const [];
     _reflectorStepsByEntity = const {};
@@ -589,7 +587,8 @@ class PropertyShotGame extends FlameGame {
     );
     canvas.scale(scale);
     if (_animationPath.isNotEmpty) {
-      _applyCinematicCamera(canvas);
+      // 충돌 피드백은 보드의 크기를 바꾸지 않는다. 화면 전체 확대는 조준
+      // 기준과 물체의 겉보기 위치를 순간적으로 바꿔 멀미와 오조작을 만든다.
       _drawScreenShake(canvas);
     }
     _drawBoardWithCache(canvas);
@@ -924,50 +923,6 @@ class PropertyShotGame extends FlameGame {
 
   Offset screenShakeOffsetForTest() => _screenShakeOffset();
 
-  /// Adds a brief, deterministic camera punch around meaningful impacts.
-  ///
-  /// This transform is visual only: the resolver, hitboxes and replay input stay
-  /// in logical board coordinates. Reduced-motion users keep a stable camera.
-  void _applyCinematicCamera(Canvas canvas) {
-    if (reducedMotion) {
-      return;
-    }
-    final latest = _latestImpactAt(
-      _animationCursor,
-      impacts: _cinematicImpacts,
-    );
-    final latestCausalMove = _latestMoveAt(
-      _causalAnimationMoves,
-      _animationCursor,
-    );
-    final useMove =
-        latestCausalMove != null &&
-        (latest == null ||
-            _movePresentationCursor(latestCausalMove) >=
-                _impactPresentationCursor(latest));
-    if (latest == null && !useMove) return;
-    final eventIndex = useMove
-        ? _movePresentationCursor(latestCausalMove)
-        : _impactPresentationCursor(latest!);
-    final elapsed = _animationCursor - eventIndex;
-    if (elapsed < 0 || elapsed > 8) return;
-
-    final importance = useMove
-        ? 0.86
-        : switch (latest!.entityType) {
-            EntityType.hole => 1.0,
-            EntityType.balloon || EntityType.switchPad => 0.78,
-            EntityType.powerSlider || EntityType.rotatingReflector => 0.68,
-            _ => (0.38 + latest.strength * 0.34).clamp(0.38, 0.72),
-          };
-    final envelope = math.sin((elapsed / 8) * math.pi).clamp(0.0, 1.0);
-    final zoom = 1 + 0.008 * importance * envelope;
-    final focus = _project(useMove ? latestCausalMove.to : latest!.position);
-    canvas.translate(focus.dx, focus.dy);
-    canvas.scale(zoom);
-    canvas.translate(-focus.dx, -focus.dy);
-  }
-
   void _drawStage4Relations(Canvas canvas, List<EntityState> entities) {
     if (state.levelIndex != 3) {
       return;
@@ -1038,13 +993,6 @@ class PropertyShotGame extends FlameGame {
             : const Color(0xFFFFF2A8),
     );
   }
-
-  bool _isCausalRevealState(String visualState) =>
-      visualState == HiddenMechanicState.opening ||
-      visualState == HiddenMechanicState.revealed ||
-      visualState == 'pressed' ||
-      visualState == 'opening' ||
-      visualState == 'open';
 
   void _drawCausalPulse(
     Canvas canvas,
@@ -1928,11 +1876,6 @@ class PropertyShotGame extends FlameGame {
     _cinematicImpacts = List<ShotImpact>.unmodifiable(
       _animationImpactsByPath.where(_isCinematicImpact),
     );
-    _causalAnimationMoves = List<ShotAnimationMove>.unmodifiable(
-      _animationMovesByTrigger.where(
-        (move) => _isCausalRevealState(move.visualState),
-      ),
-    );
     _animatedEntityIds = Set<String>.unmodifiable(movesByEntity.keys);
     _animationMoveDistances = Map.unmodifiable(distances);
     _animationMoveDurations = Map.unmodifiable(durations);
@@ -2241,23 +2184,6 @@ class PropertyShotGame extends FlameGame {
       }
     }
     return low;
-  }
-
-  ShotAnimationMove? _latestMoveAt(
-    List<ShotAnimationMove> moves,
-    double cursor,
-  ) {
-    var low = 0;
-    var high = moves.length;
-    while (low < high) {
-      final middle = low + ((high - low) >> 1);
-      if (_movePresentationCursor(moves[middle]) <= cursor) {
-        low = middle + 1;
-      } else {
-        high = middle;
-      }
-    }
-    return low == 0 ? null : moves[low - 1];
   }
 
   double _scaleFor(Vector2 size) {
