@@ -122,21 +122,26 @@ void main() {
     await tester.tap(find.byKey(const Key('verified_demo_launch')));
     for (var attempt = 0; attempt < 20; attempt++) {
       await tester.pump(const Duration(milliseconds: 50));
-      if (find.textContaining('탄성 유지 · 벽·문').evaluate().isNotEmpty) {
+      final feedbackLabel = tester
+          .getSemantics(
+            find.byKey(const Key('trait_effect_feedback_semantics')),
+          )
+          .label;
+      if (feedbackLabel.contains('탄성 유지 · 벽·문')) {
         break;
       }
     }
     await tester.pump();
 
-    expect(find.textContaining('탄성 유지 · 벽·문'), findsOneWidget);
-    expect(find.textContaining('강한 반사'), findsOneWidget);
+    expect(find.textContaining('탄성 유지 · 벽·문'), findsNothing);
+    expect(find.textContaining('강한 반사'), findsNothing);
     expect(
       tester
           .getSemantics(
             find.byKey(const Key('trait_effect_feedback_semantics')),
           )
           .label,
-      startsWith('탄성 유지'),
+      allOf(contains('탄성 유지 · 벽·문'), contains('강한 반사')),
     );
     semantics.dispose();
   });
