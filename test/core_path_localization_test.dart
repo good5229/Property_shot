@@ -174,7 +174,7 @@ void main() {
     await tester.pump();
 
     final game = tester.widget<GameScreen>(find.byType(GameScreen));
-    expect(game.objectiveOverride, contains('CORE PLAY 3/3'));
+    expect(game.objectiveOverride, isNot(contains('CORE PLAY')));
     expect(game.objectiveOverride, contains('bumper or stopper'));
     expect(game.nextActionLabel, 'FINISH CORE PLAY');
     expect(game.initialState!.message, contains('missed ball stays'));

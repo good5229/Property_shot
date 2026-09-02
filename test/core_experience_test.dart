@@ -466,7 +466,7 @@ void main() {
     expect(game.sequenceLength, 3);
     expect(game.intentAssistPolicyOverride?.preserveRawTrajectory, isTrue);
     expect(game.initialState?.aimDirection, const Vec2(0, -1));
-    expect(game.objectiveOverride, contains('핵심 체험 1/3'));
+    expect(game.objectiveOverride, isNot(contains('핵심 체험')));
     expect(game.showDiscoveryHud, isFalse);
     expect(
       telemetry.events.any(
@@ -509,12 +509,9 @@ void main() {
     expect(game.sequencePosition, 2);
     expect(game.sequenceLength, 3);
     expect(game.nextActionLabel, '체험 마치기');
-    expect(game.objectiveOverride, contains('핵심 체험 3/3'));
+    expect(game.objectiveOverride, isNot(contains('핵심 체험')));
     expect(game.objectiveOverride, contains('남겨 둔 첫 공'));
-    expect(
-      find.byKey(const Key('persistent_objective_banner')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('persistent_objective_banner')), findsNothing);
     expect(
       telemetry.events.any(
         (event) => event['event_code'] == 'core_scene_entered',

@@ -362,6 +362,22 @@ void main() {
     );
     await tester.pump();
 
+    final exitIcon = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('home_button')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(exitIcon.image, isA<AssetImage>());
+    expect(
+      (exitIcon.image as AssetImage).assetName,
+      'assets/generated/nav-exit-door-v1.png',
+    );
+    expect(
+      (exitIcon.image as AssetImage).assetName,
+      isNot('assets/generated/nav-stage-map-v1.png'),
+    );
+
     await tester.tap(find.byKey(const Key('stage_abandon_button')));
     await tester.pump();
     expect(find.byKey(const Key('stage_abandon_dialog')), findsOneWidget);
@@ -1392,8 +1408,17 @@ void main() {
     await tester.tap(find.byKey(const Key('transfer_button')));
     await tester.pump();
 
-    expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
-    expect(find.textContaining('무거움 · 상자 밀기 · 무게 스위치'), findsOneWidget);
+    expect(find.textContaining('공 속성: 무거움'), findsNothing);
+    expect(find.textContaining('무거움 · 상자 밀기 · 무게 스위치'), findsNothing);
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const Key('trait_effect_feedback_semantics')),
+          )
+          .getSemanticsData()
+          .label,
+      contains('공 속성 무거움'),
+    );
     expect(
       tester
           .getSemantics(find.byKey(const Key('compact_message')))
@@ -1402,7 +1427,7 @@ void main() {
       contains('추천 경로를 준비했습니다'),
     );
     expect(find.text('상자를 밀도록 조준해 발사해요'), findsOneWidget);
-    expect(find.text('공을 길게 눌러 힘을 모으세요'), findsOneWidget);
+    expect(find.text('공을 길게 눌러 힘을 모으세요'), findsNothing);
   });
 
   testWidgets('2단계 첫 화면은 젤리 탄성과 반사를 행동으로 안내한다', (tester) async {
@@ -1469,10 +1494,27 @@ void main() {
 
     expect(savedSourceId, 'anvil');
     expect(savedAction, RunTraitAction.transfer);
-    expect(find.textContaining('공 속성: 없음'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const Key('trait_effect_feedback_semantics')),
+          )
+          .getSemanticsData()
+          .label,
+      contains('공 속성 없음'),
+    );
     persisted.complete();
     await _pumpForAsyncWork(tester);
-    expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
+    expect(find.textContaining('공 속성: 무거움'), findsNothing);
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const Key('trait_effect_feedback_semantics')),
+          )
+          .getSemanticsData()
+          .label,
+      contains('공 속성 무거움'),
+    );
   });
 
   testWidgets('속성을 선택해 공으로 복사할 수 있다', (tester) async {
@@ -1490,7 +1532,16 @@ void main() {
     await tester.tap(find.byKey(const Key('copy_button')));
     await tester.pump();
 
-    expect(find.textContaining('공 속성: 무거움'), findsOneWidget);
+    expect(find.textContaining('공 속성: 무거움'), findsNothing);
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const Key('trait_effect_feedback_semantics')),
+          )
+          .getSemanticsData()
+          .label,
+      contains('공 속성 무거움'),
+    );
     expect(
       tester
           .getSemantics(find.byKey(const Key('compact_message')))

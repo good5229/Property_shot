@@ -4569,10 +4569,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                         ? _openDebugMenu
                                         : null,
                                     objectiveOverride: widget.objectiveOverride,
-                                    persistentObjective:
-                                        widget.sequencePosition == null
-                                        ? null
-                                        : widget.objectiveOverride,
                                     showDiscovery: widget.showDiscoveryHud,
                                     exitTooltipOverride:
                                         widget.exitTooltipOverride,
@@ -4619,10 +4615,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                           : null,
                                       objectiveOverride:
                                           widget.objectiveOverride,
-                                      persistentObjective:
-                                          widget.sequencePosition == null
-                                          ? null
-                                          : widget.objectiveOverride,
                                       showDiscovery: widget.showDiscoveryHud,
                                       exitTooltipOverride:
                                           widget.exitTooltipOverride,
@@ -5153,12 +5145,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     ),
                                     child: _ControlPanel(
                                       compact: true,
-                                      dense: denseCompact,
                                       showPrecisionControls:
                                           _difficulty == PlayerDifficulty.easy,
-                                      tutorialActive:
-                                          tutorialTarget != null &&
-                                          _state.equippedTrait == null,
                                       state: _state,
                                       effectFeedback: _traitEffectFeedback,
                                       onRewind: _rewind,
@@ -8360,7 +8348,6 @@ class _Hud extends StatelessWidget {
     this.hudScore,
     this.onDebug,
     this.objectiveOverride,
-    this.persistentObjective,
     this.showDiscovery = true,
     this.exitTooltipOverride,
     this.hintVisible = false,
@@ -8384,7 +8371,6 @@ class _Hud extends StatelessWidget {
   final int? hudScore;
   final VoidCallback? onDebug;
   final String? objectiveOverride;
-  final String? persistentObjective;
   final bool showDiscovery;
   final String? exitTooltipOverride;
   final bool hintVisible;
@@ -8502,7 +8488,7 @@ class _Hud extends StatelessWidget {
                       tooltip: exitLabel,
                       onPressed: onExit,
                       icon: Image.asset(
-                        'assets/generated/nav-stage-map-v1.png',
+                        'assets/generated/nav-exit-door-v1.png',
                         fit: BoxFit.contain,
                         filterQuality: FilterQuality.high,
                         excludeFromSemantics: true,
@@ -8544,13 +8530,6 @@ class _Hud extends StatelessWidget {
                   ),
               ],
             ),
-            if (persistentObjective != null) ...[
-              const SizedBox(height: 4),
-              _PersistentObjectiveBanner(
-                objective: persistentObjective!,
-                dense: dense,
-              ),
-            ],
             if (!dense) const SizedBox(height: 2),
             if (showStageSelector && !dense)
               SizedBox(
@@ -8645,7 +8624,7 @@ class _Hud extends StatelessWidget {
                     icon: SizedBox.square(
                       dimension: 38,
                       child: Image.asset(
-                        'assets/generated/nav-stage-map-v1.png',
+                        'assets/generated/nav-exit-door-v1.png',
                         fit: BoxFit.contain,
                         filterQuality: FilterQuality.high,
                         excludeFromSemantics: true,
@@ -8680,10 +8659,6 @@ class _Hud extends StatelessWidget {
                 ),
             ],
           ),
-          if (persistentObjective != null) ...[
-            const SizedBox(height: 6),
-            _PersistentObjectiveBanner(objective: persistentObjective!),
-          ],
           const SizedBox(height: 8),
           if (showStageSelector)
             Row(
@@ -8715,50 +8690,6 @@ class _Hud extends StatelessWidget {
               ],
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _PersistentObjectiveBanner extends StatelessWidget {
-  const _PersistentObjectiveBanner({
-    required this.objective,
-    this.dense = false,
-  });
-
-  final String objective;
-  final bool dense;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      liveRegion: true,
-      label: '현재 목표: $objective',
-      child: Container(
-        key: const Key('persistent_objective_banner'),
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: dense ? 8 : 10,
-          vertical: dense ? 4 : 6,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF4C7),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF9B7A36)),
-        ),
-        child: Text(
-          objective,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: const Color(0xFF4E3C20),
-            fontSize: dense ? 10 : 12,
-            fontWeight: FontWeight.w900,
-            height: 1.15,
-          ),
-        ),
       ),
     );
   }
@@ -8874,8 +8805,6 @@ class _TutorialCoachMark extends StatelessWidget {
 class _ControlPanel extends StatelessWidget {
   const _ControlPanel({
     this.compact = false,
-    this.dense = false,
-    this.tutorialActive = false,
     this.showPrecisionControls = false,
     required this.state,
     this.effectFeedback,
@@ -8890,8 +8819,6 @@ class _ControlPanel extends StatelessWidget {
   });
 
   final bool compact;
-  final bool dense;
-  final bool tutorialActive;
   final bool showPrecisionControls;
   final GameState state;
   final String? effectFeedback;
@@ -8906,10 +8833,58 @@ class _ControlPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ballTraitLabel = state.equippedTrait == null
+        ? '공 속성 없음'
+        : '공 속성 ${state.equippedTrait!.label}. '
+              '${state.equippedTrait!.compactEffect}';
+    final statusLabel = effectFeedback == null
+        ? ballTraitLabel
+        : '$effectFeedback. $ballTraitLabel';
+    final statusSemantics = Semantics(
+      key: const Key('trait_effect_feedback_semantics'),
+      container: true,
+      liveRegion: effectFeedback != null,
+      label: statusLabel,
+      child: const SizedBox(
+        key: Key('trait_effect_feedback'),
+        width: 0,
+        height: 0,
+      ),
+    );
+
+    Widget actionButtons({required bool compact}) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          key: const Key('rewind_button'),
+          tooltip: '되감기',
+          visualDensity: compact ? VisualDensity.compact : null,
+          onPressed: onRewind,
+          icon: Icon(Icons.undo, size: compact ? 20 : null),
+        ),
+        if (canCancelReward)
+          IconButton(
+            key: const Key('cancel_launch_reward_button'),
+            tooltip: '발사 취소 보조 사용',
+            visualDensity: compact ? VisualDensity.compact : null,
+            onPressed: onCancelReward,
+            icon: Icon(Icons.cancel_outlined, size: compact ? 20 : null),
+          ),
+        IconButton(
+          key: const Key('reset_button'),
+          tooltip: '단계 다시 시작',
+          visualDensity: compact ? VisualDensity.compact : null,
+          onPressed: onReset,
+          icon: Icon(Icons.refresh, size: compact ? 20 : null),
+        ),
+      ],
+    );
+
     if (compact) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          statusSemantics,
           if (showPrecisionControls)
             _PrecisionAimControls(
               compact: true,
@@ -8921,7 +8896,8 @@ class _ControlPanel extends StatelessWidget {
             ),
           Container(
             key: const Key('compact_control_panel'),
-            padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: BoxDecoration(
               color: const Color(0xE6F7FAF3),
               borderRadius: BorderRadius.circular(10),
@@ -8934,81 +8910,7 @@ class _ControlPanel extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                if (effectFeedback != null || (!tutorialActive && !dense))
-                  Expanded(
-                    child: Semantics(
-                      key: const Key('trait_effect_feedback_semantics'),
-                      container: true,
-                      liveRegion: effectFeedback != null,
-                      label: effectFeedback,
-                      excludeSemantics: effectFeedback != null,
-                      child: Text(
-                        effectFeedback ??
-                            (state.equippedTrait != null
-                                ? '공을 길게 눌러 힘 모으기'
-                                : state.selectedTrait == null
-                                ? state.traitSources.isEmpty
-                                      ? '공을 길게 눌러 힘 모으기'
-                                      : '물체를 눌러 속성 고르기'
-                                : '선택: ${state.selectedTrait!.label}'),
-                        key: const Key('trait_effect_feedback'),
-                        maxLines: 2,
-                        softWrap: true,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  )
-                else if (state.equippedTrait != null)
-                  Expanded(
-                    child: Text(
-                      '공을 길게 눌러 힘을 모으세요',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  )
-                else
-                  const Spacer(),
-                Flexible(
-                  child: Text(
-                    state.equippedTrait == null
-                        ? '공 속성: 없음'
-                        : '공 속성: ${state.equippedTrait!.label} · '
-                              '${state.equippedTrait!.compactEffect}',
-                    maxLines: dense ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: !dense,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  key: const Key('rewind_button'),
-                  tooltip: '되감기',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onRewind,
-                  icon: const Icon(Icons.undo, size: 20),
-                ),
-                if (canCancelReward)
-                  IconButton(
-                    key: const Key('cancel_launch_reward_button'),
-                    tooltip: '발사 취소 보조 사용',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: onCancelReward,
-                    icon: const Icon(Icons.cancel_outlined, size: 20),
-                  ),
-                IconButton(
-                  key: const Key('reset_button'),
-                  tooltip: '단계 다시 시작',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onReset,
-                  icon: const Icon(Icons.refresh, size: 20),
-                ),
-              ],
-            ),
+            child: actionButtons(compact: true),
           ),
         ],
       );
@@ -9018,6 +8920,7 @@ class _ControlPanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          statusSemantics,
           if (showPrecisionControls) ...[
             _PrecisionAimControls(
               power: state.aimPower,
@@ -9028,61 +8931,9 @@ class _ControlPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  key: const Key('trait_effect_feedback_semantics'),
-                  container: true,
-                  liveRegion: effectFeedback != null,
-                  label: effectFeedback,
-                  excludeSemantics: effectFeedback != null,
-                  child: Text(
-                    effectFeedback ??
-                        (state.equippedTrait != null
-                            ? '공을 길게 눌러 힘 모으기'
-                            : state.selectedTrait == null
-                            ? state.traitSources.isEmpty
-                                  ? '공을 길게 눌러 힘 모으기'
-                                  : '물체를 눌러 속성 고르기'
-                            : '선택: ${state.selectedTrait!.label}'),
-                    key: const Key('trait_effect_feedback'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  state.equippedTrait == null
-                      ? '공 속성: 없음'
-                      : '공 속성: ${state.equippedTrait!.label} · '
-                            '${state.equippedTrait!.compactEffect}',
-                ),
-              ),
-              IconButton(
-                key: const Key('rewind_button'),
-                tooltip: '되감기',
-                onPressed: onRewind,
-                icon: const Icon(Icons.undo),
-              ),
-              if (canCancelReward)
-                IconButton(
-                  key: const Key('cancel_launch_reward_button'),
-                  tooltip: '발사 취소 보조 사용',
-                  onPressed: onCancelReward,
-                  icon: const Icon(Icons.cancel_outlined),
-                ),
-              IconButton(
-                key: const Key('reset_button'),
-                tooltip: '단계 다시 시작',
-                onPressed: onReset,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: actionButtons(compact: false),
           ),
         ],
       ),

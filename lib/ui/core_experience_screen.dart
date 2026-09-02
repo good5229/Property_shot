@@ -374,9 +374,7 @@ class _CoreExperienceScreenState extends State<CoreExperienceScreen> {
       loadGameAssets: widget.loadGameAssets,
       showTutorialFailureHints: true,
       showDiscoveryHud: false,
-      objectiveOverride: widget.language.isEnglish
-          ? 'CORE PLAY ${_sceneIndex + 1}/${coreExperienceScenes.length} · ${copy.objective}'
-          : '핵심 체험 ${_sceneIndex + 1}/${coreExperienceScenes.length} · ${copy.objective}',
+      objectiveOverride: copy.objective,
       exitTooltipOverride: widget.language.pick('핵심 체험 나가기', 'Exit core play'),
       sequencePosition: _sceneIndex,
       sequenceLength: coreExperienceScenes.length,

@@ -25,6 +25,7 @@ void main() {
         'assets/generated/nav-reward-satchel-v1.png',
         'assets/generated/nav-helm-v1.png',
         'assets/generated/nav-stage-map-v1.png',
+        'assets/generated/nav-exit-door-v1.png',
         'assets/generated/nav-replay-v1.png',
         'assets/generated/nav-daily-challenge-v1.png',
         'assets/generated/nav-activities-v1.png',
